@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "kartellmod",
+  "version": "1.0.2",
+  "name": "Kartell Mod",
+  "description": "Kartell quality-of-life mod for nametags, blacklist tools, HUD and utilities.",
+  "authors": ["FABI1441"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "main": ["com.kartellmod.KartellMod"],
+    "client": ["com.kartellmod.KartellModClient"]
+  },
+  "mixins": ["kartellmod.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "fabric-api": "*",
+    "minecraft": "~1.21"
+  }
+}

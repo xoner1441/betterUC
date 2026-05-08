@@ -1,0 +1,50 @@
+# Changelog
+
+## [1.0.2] - 2026-05-03
+
+### Neu
+- **Fullbright** als togglebares Feature im Settings-HUD.
+- **FPS-HUD** mit Toggle und frei einstellbarer Position.
+- **Payday-HUD** auf Basis von `/stats` (`Payday: x/60 Minuten`).
+- **CookDrug-Timer-HUD**:
+  - Start bei `[CookDrug] Das Pseudoephedrin aus der Medizin muss nun einige Minuten kochen.`
+  - 9-Minuten-Timer
+  - Sofortiges Beenden/Reset bei `[CookDrug] Die Kristalle sind fertig gekocht.`
+- **Ammo-HUD** aus der orangenen Munitionseinblendung (Ammo + Waffenname).
+- **Kontostand-HUD (Bank)**:
+  - Live-Update aus Kontoauszug-Chatzeilen
+  - Toggle + X/Y-Position im Settings-HUD
+  - Persistenter letzter Kontostand (bleibt nach Rejoin/Restart erhalten)
+  - Anzeige mit Tausendertrennpunkten (z. B. `88.375$`)
+- Neuer Custom-Command **`/eigenbedarf`**:
+  - ersetzt die manuelle Nutzung von `/dbank get <Droge> <Menge> <Reinheit>`
+  - 2 konfigurierbare Felder im Settings-HUD (Droge, Menge, Reinheit 0-3)
+  - unterstuetzt: `Pulver`, `Kraeuter`, `Kristalle`, `Wundertuete`
+  - Ausfuehrung ueber `/eigenbedarf` (beide Felder) oder `/eigenbedarf 1|2`
+- **Auto-Marker fuer Fahrzeuge**:
+  - Marker/Hologramm beim Aussteigen (mit Render-Range)
+  - Marker verschwindet beim erneuten Einsteigen.
+
+### Geaendert
+- Settings-HUD strukturell verbessert (Seitenaufteilung), damit Optionen nicht mehr aus dem Bildschirm laufen.
+- HUD-Darstellung fuer ToggleSprint/FPS/Payday auf transparente Textdarstellung umgestellt (kein dunkler Block mehr).
+- Payday-Logik erweitert:
+  - `/stats` beim ersten Join zur Initialisierung
+  - Minuten laufen lokal weiter
+  - Reset bei Payday-Header im Chat.
+- AFK-Integration:
+  - Payday pausiert bei `Du bist nun im AFK-Modus`
+  - laeuft weiter bei `Du bist nun nicht mehr im AFK-Modus`
+  - zusaetzlicher stiller `/stats`-Refresh nach AFK-Ende.
+- Auto-Reload (`/memberinfoall kartell` + `/blacklist`) pausiert im AFK-Modus und laeuft danach wieder weiter.
+
+### Behoben
+- FPS-HUD zeigte teils keine korrekten FPS an.
+- Fullbright wirkte nicht vollstaendig: Schattendarstellung/Ambient-Anteile wurden nachgezogen.
+- `memberinfoall`-Ausgabe:
+  - **Auto-Refresh bleibt unterdrueckt**
+  - **manueller `/memberinfoall kartell` bleibt sichtbar**.
+- Car-Marker-/Render-Implementierung fuer die vorhandene Fabric/Yarn-API stabilisiert.
+
+### Versionierung
+- Mod-Version auf **`1.0.2`** gesetzt.

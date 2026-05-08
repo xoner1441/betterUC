@@ -1,0 +1,29 @@
+# Gradle / build output
+.gradle/
+.gradle-user*/
+build/
+out/
+
+# Minecraft/Fabric runtime output
+run/
+logs/
+crash-reports/
+
+# IDE / editor files
+.idea/
+*.iml
+.vscode/
+
+# Local scratch and generated inspection files
+.tmp-java*/
+.git-index-codex*
+tmp-src/
+tmp-chat-src.jar
+ZipFsCheck.java
+ZipFsCheck.class
+build_fail.log
+
+# Java artifacts
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
