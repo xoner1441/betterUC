@@ -15,6 +15,7 @@ dependencies {
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
 }
 
 processResources {
@@ -41,4 +42,103 @@ java {
 
 jar {
     from("LICENSE") { rename { "${it}_${project.base.archivesName.get()}" } }
+}
+
+test {
+    useJUnitPlatform()
+}
+
+def minecraftModsDir = providers.gradleProperty("minecraftModsDir")
+        .orElse(providers.environmentVariable("MINECRAFT_MODS_DIR"))
+        .orElse(providers.environmentVariable("APPDATA").map { "${it}/.minecraft/mods" })
+        .orElse("${projectDir}/run/mods")
+
+def isMinecraftRunning = {
+    def stream = ProcessHandle.allProcesses()
+    try {
+        def iterator = stream.iterator()
+        while (iterator.hasNext()) {
+            def processInfo = iterator.next().info()
+            def command = processInfo.command().orElse("").toLowerCase(java.util.Locale.ROOT)
+            if (!command.contains("java")) continue
+
+            def commandLine = processInfo.commandLine().orElse("").toLowerCase(java.util.Locale.ROOT)
+            if (commandLine.contains("knotclient")
+                    || commandLine.contains("net.minecraft.client.main.main")
+                    || commandLine.contains("fabric-loader")) {
+                return true
+            }
+        }
+        return false
+    } catch (Exception ignored) {
+        return false
+    } finally {
+        stream.close()
+    }
+}
+
+tasks.register("copyModToMinecraftMods", Copy) {
+    group = "build"
+    description = "Copies the remapped mod jar into the local Minecraft mods folder."
+
+    dependsOn tasks.named("remapJar")
+    from(tasks.named("remapJar").flatMap { it.archiveFile })
+    into(minecraftModsDir.map { file(it) })
+
+    doFirst {
+        if (isMinecraftRunning()) {
+            throw new GradleException(
+                    "Minecraft appears to be running. Refusing to overwrite files in mods/ while the game is open " +
+                            "because this can corrupt live class loading. Close Minecraft and rerun the build."
+            )
+        }
+
+        def targetDir = file(minecraftModsDir.get())
+        if (!targetDir.exists() && !targetDir.mkdirs()) {
+            throw new GradleException("Could not create Minecraft mods directory: ${targetDir}")
+        }
+
+        def currentJar = tasks.named("remapJar").get().archiveFile.get().asFile.name
+        def archiveBase = project.base.archivesName.get()
+        targetDir.eachFile { jarFile ->
+            if (!jarFile.name.endsWith(".jar")) return
+
+            def lowerName = jarFile.name.toLowerCase()
+            def staleModJar = jarFile.name.startsWith("${archiveBase}-")
+                    || lowerName.startsWith("betteruc-")
+            if (!staleModJar || jarFile.name == currentJar || lowerName.endsWith("-sources.jar")) return
+
+            try {
+                if (jarFile.delete()) {
+                    logger.lifecycle("Removed stale mod jar ${jarFile.name}")
+                } else {
+                    logger.warn("Could not remove stale mod jar ${jarFile}; it may be in use.")
+                }
+            } catch (Exception ignored) {
+                logger.warn("Could not remove stale mod jar ${jarFile}; it may be in use.")
+            }
+        }
+        logger.lifecycle("Copying ${currentJar} to ${targetDir}")
+    }
+
+    doLast {
+        def copiedJar = file("${minecraftModsDir.get()}/${tasks.named("remapJar").get().archiveFile.get().asFile.name}")
+        try {
+            def zip = new java.util.zip.ZipFile(copiedJar)
+            try {
+                def entries = zip.entries()
+                while (entries.hasMoreElements()) {
+                    entries.nextElement()
+                }
+            } finally {
+                zip.close()
+            }
+        } catch (Exception ex) {
+            throw new GradleException("Copied mod jar is unreadable or corrupted: ${copiedJar}", ex)
+        }
+    }
+}
+
+tasks.named("build") {
+    dependsOn tasks.named("copyModToMinecraftMods")
 }

@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "id": "kartellmod",
-  "version": "1.0.2",
-  "name": "Kartell Mod",
-  "description": "Kartell quality-of-life mod for nametags, blacklist tools, HUD and utilities.",
+  "id": "betteruc",
+  "version": "1.0.0",
+  "name": "betterUC",
+  "description": "betterUC quality-of-life mod for nametags, blacklist tools, HUD and utilities.",
   "authors": ["FABI1441"],
   "license": "MIT",
   "environment": "client",
   "entrypoints": {
-    "main": ["com.kartellmod.KartellMod"],
-    "client": ["com.kartellmod.KartellModClient"]
+    "main": ["com.betteruc.BetterUCMod"],
+    "client": ["com.betteruc.BetterUCClient"]
   },
-  "mixins": ["kartellmod.mixins.json"],
+  "mixins": ["betteruc.mixins.json"],
   "depends": {
     "fabricloader": ">=0.15.0",
     "fabric-api": "*",
