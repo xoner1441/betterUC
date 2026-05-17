@@ -7,21 +7,10 @@ import org.lwjgl.glfw.GLFW;
 
 public final class MovementController {
 
-    private static final float ZOOM_SMOOTH_LERP = 0.30f;
-    private static final float ZOOM_SNAP_EPSILON = 0.01f;
-    private static final double FULLBRIGHT_GAMMA_VALUE = 1.0;
-    private static final int FULLBRIGHT_REAPPLY_INTERVAL_TICKS = 20;
-
     private static boolean toggleSprintActive = false;
     private static boolean toggleSprintWasActiveLastTick = false;
     private static boolean toggleSprintHudActive = false;
     private static float zoomProgress = 0.0f;
-    private static Double fullbrightPreviousGamma = null;
-    private static Double fullbrightPreviousDarknessScale = null;
-    private static Boolean fullbrightPreviousAo = null;
-    private static Boolean fullbrightPreviousEntityShadows = null;
-    private static boolean fullbrightApplied = false;
-    private static int fullbrightReapplyTicks = 0;
 
     private MovementController() {
     }
@@ -41,7 +30,6 @@ public final class MovementController {
     public static void tick(MinecraftClient client) {
         handleToggleSprint(client);
         tickZoom(client);
-        handleFullbright(client);
     }
 
     public static void reset(MinecraftClient client) {
@@ -49,13 +37,6 @@ public final class MovementController {
         toggleSprintWasActiveLastTick = false;
         toggleSprintHudActive = false;
         zoomProgress = 0.0f;
-        restoreFullbright(client);
-        fullbrightApplied = false;
-        fullbrightPreviousGamma = null;
-        fullbrightPreviousDarknessScale = null;
-        fullbrightPreviousAo = null;
-        fullbrightPreviousEntityShadows = null;
-        fullbrightReapplyTicks = 0;
 
         if (client != null && client.options != null && client.options.sprintKey != null) {
             client.options.sprintKey.setPressed(false);
@@ -108,67 +89,6 @@ public final class MovementController {
                 && keyCode > 0
                 && client.currentScreen == null
                 && GLFW.glfwGetKey(client.getWindow().getHandle(), keyCode) == GLFW.GLFW_PRESS;
-        float target = zoomDown ? 1.0f : 0.0f;
-        if (BetterUCConfig.INSTANCE.zoomInstant) {
-            zoomProgress = target;
-            return;
-        }
-
-        zoomProgress += (target - zoomProgress) * ZOOM_SMOOTH_LERP;
-        if (Math.abs(target - zoomProgress) < ZOOM_SNAP_EPSILON) {
-            zoomProgress = target;
-        }
-    }
-
-    private static void handleFullbright(MinecraftClient client) {
-        if (client.options == null) return;
-
-        if (BetterUCConfig.INSTANCE.fullbrightEnabled) {
-            if (!fullbrightApplied) {
-                fullbrightPreviousGamma = client.options.getGamma().getValue();
-                fullbrightPreviousDarknessScale = client.options.getDarknessEffectScale().getValue();
-                fullbrightPreviousAo = client.options.getAo().getValue();
-                fullbrightPreviousEntityShadows = client.options.getEntityShadows().getValue();
-                applyFullbrightVisualOptions(client);
-                fullbrightApplied = true;
-                fullbrightReapplyTicks = FULLBRIGHT_REAPPLY_INTERVAL_TICKS;
-                return;
-            }
-
-            if (fullbrightReapplyTicks <= 0) {
-                applyFullbrightVisualOptions(client);
-                fullbrightReapplyTicks = FULLBRIGHT_REAPPLY_INTERVAL_TICKS;
-            } else {
-                fullbrightReapplyTicks--;
-            }
-            return;
-        }
-
-        restoreFullbright(client);
-    }
-
-    private static void restoreFullbright(MinecraftClient client) {
-        if (client == null || client.options == null) return;
-        if (!fullbrightApplied && fullbrightPreviousGamma == null && fullbrightPreviousDarknessScale == null
-                && fullbrightPreviousAo == null && fullbrightPreviousEntityShadows == null) return;
-
-        if (fullbrightPreviousGamma != null) client.options.getGamma().setValue(fullbrightPreviousGamma);
-        if (fullbrightPreviousDarknessScale != null) client.options.getDarknessEffectScale().setValue(fullbrightPreviousDarknessScale);
-        if (fullbrightPreviousAo != null) client.options.getAo().setValue(fullbrightPreviousAo);
-        if (fullbrightPreviousEntityShadows != null) client.options.getEntityShadows().setValue(fullbrightPreviousEntityShadows);
-
-        fullbrightApplied = false;
-        fullbrightPreviousGamma = null;
-        fullbrightPreviousDarknessScale = null;
-        fullbrightPreviousAo = null;
-        fullbrightPreviousEntityShadows = null;
-        fullbrightReapplyTicks = 0;
-    }
-
-    private static void applyFullbrightVisualOptions(MinecraftClient client) {
-        client.options.getGamma().setValue(FULLBRIGHT_GAMMA_VALUE);
-        client.options.getDarknessEffectScale().setValue(0.0);
-        client.options.getAo().setValue(false);
-        client.options.getEntityShadows().setValue(false);
+        zoomProgress = zoomDown ? 1.0f : 0.0f;
     }
 }

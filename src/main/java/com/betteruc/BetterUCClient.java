@@ -6,7 +6,6 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.betteruc.client.AutoCarController;
 import com.betteruc.client.ClientScheduler;
-import com.betteruc.client.MemberSyncController;
 import com.betteruc.client.MovementController;
 import com.betteruc.client.ServerCommandUtil;
 import com.betteruc.config.BetterUCConfig;
@@ -15,12 +14,12 @@ import com.betteruc.gui.BetterUCScreen;
 import com.betteruc.hud.AmmoHud;
 import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.CarMarkerHud;
-import com.betteruc.hud.CookDrugHud;
 import com.betteruc.hud.FpsHud;
 import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.HealthHud;
 import com.betteruc.hud.PaydayHud;
 import com.betteruc.hud.PlantageHud;
+import com.betteruc.hud.PotionEffectsHud;
 import com.betteruc.hud.ToggleSprintHud;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -32,12 +31,14 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.command.CommandSource;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -52,10 +53,12 @@ public class BetterUCClient implements ClientModInitializer {
     private static final int MAX_PRICE = 10_000;
     private static final int MIN_PRICE = 100;
     private static final int EIGENBEDARF_REQUEST_SPACING_MS = 1000;
+    private static final int AUTO_STATS_ON_JOIN_DELAY_TICKS = 100;
+    private static final long BLINFO_CACHE_MAX_AGE_MS = 20_000L;
+    private static final long BLINFO_TIMEOUT_MS = 5000L;
     private boolean keyWasDown = false;
     private boolean keyWasDown2 = false;
     private int statsOnJoinDelay = -1;
-    private final MemberSyncController memberSyncController = new MemberSyncController();
     private final AutoCarController autoCarController = new AutoCarController();
     private final Map<Integer, Boolean> hotkeyPressedState = new HashMap<>();
 
@@ -108,7 +111,6 @@ public class BetterUCClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         BetterUCConfig.load();
-        FactionLoader.start();
         registerHudElements();
         registerConnectionEvents();
         registerClientCommands();
@@ -117,14 +119,6 @@ public class BetterUCClient implements ClientModInitializer {
     }
 
     private void registerMessageEvents() {
-        ClientSendMessageEvents.COMMAND.register(command -> {
-            String root = getCommandRoot(command);
-            if (!isBlacklistListCommand(command, root)) return;
-
-            BetterUCSuppressFlags.markManualBlacklistCommand();
-            BetterUCMod.LOGGER.info("Manual blacklist refresh requested via /{}", root);
-        });
-
         ClientSendMessageEvents.COMMAND.register(command -> {
             String root = getCommandRoot(command);
             if (!isCarFindCommand(command, root)) return;
@@ -140,11 +134,6 @@ public class BetterUCClient implements ClientModInitializer {
         return parts.length == 0 ? "" : parts[0];
     }
 
-    private boolean isBlacklistListCommand(String command, String commandRoot) {
-        if ("blacklist".equals(commandRoot)) return true;
-        return "bl".equals(commandRoot) && command != null && command.trim().equalsIgnoreCase("bl");
-    }
-
     private boolean isCarFindCommand(String command, String commandRoot) {
         if (!"car".equals(commandRoot) || command == null) return false;
         String[] parts = command.trim().toLowerCase(Locale.ROOT).split("\\s+");
@@ -153,7 +142,6 @@ public class BetterUCClient implements ClientModInitializer {
 
     private void registerHudElements() {
         HackTimerHud.register();
-        CookDrugHud.register();
         AmmoHud.register();
         BankBalanceHud.register();
         HealthHud.register();
@@ -162,19 +150,19 @@ public class BetterUCClient implements ClientModInitializer {
         PaydayHud.register();
         PlantageHud.register();
         CarMarkerHud.register();
+        PotionEffectsHud.register();
     }
 
     private void registerConnectionEvents() {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-            BetterUCConfig.clearRemoteFactionRuntime();
             BetterUCConfig.clearChatBlacklistRuntime();
             PaydayHud.clear();
             AmmoHud.clear();
             BankBalanceHud.clear();
-            PlantageHud.clear();
             CarMarkerHud.clear();
-            statsOnJoinDelay = 30;
-            memberSyncController.onJoin();
+            statsOnJoinDelay = BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled
+                    ? AUTO_STATS_ON_JOIN_DELAY_TICKS
+                    : -1;
         });
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> resetRuntimeState(client));
@@ -200,6 +188,7 @@ public class BetterUCClient implements ClientModInitializer {
             registerSeinzahlenCommand(dispatcher);
             registerScallCommand(dispatcher, playerSuggestions);
             registerSetBlacklistCommands(dispatcher, playerSuggestions, reasonSuggestions);
+            registerBlacklistInfoCommand(dispatcher, playerSuggestions);
             registerModBlCommand(dispatcher, playerSuggestions, modBlReasonSuggestions);
             registerSetRpCommand(dispatcher, playerSuggestions);
             registerEigenbedarfCommand(dispatcher);
@@ -220,7 +209,6 @@ public class BetterUCClient implements ClientModInitializer {
         }
 
         names.addAll(BetterUCConfig.INSTANCE.chatBlacklistPlayers);
-        names.addAll(BetterUCConfig.INSTANCE.remoteFactionPlayers);
         return names;
     }
 
@@ -359,6 +347,22 @@ public class BetterUCClient implements ClientModInitializer {
                                 }))));
     }
 
+    private void registerBlacklistInfoCommand(
+            CommandDispatcher<FabricClientCommandSource> dispatcher,
+            SuggestionProvider<FabricClientCommandSource> playerSuggestions
+    ) {
+        dispatcher.register(ClientCommandManager.literal("blinfo")
+                .then(ClientCommandManager.argument("spieler", StringArgumentType.word())
+                        .suggests(playerSuggestions)
+                        .executes(context -> {
+                            MinecraftClient client = MinecraftClient.getInstance();
+                            if (client.player == null) return 0;
+
+                            String spieler = StringArgumentType.getString(context, "spieler");
+                            return executeBlacklistInfo(client, spieler);
+                        })));
+    }
+
     private void registerSetRpCommand(
             CommandDispatcher<FabricClientCommandSource> dispatcher,
             SuggestionProvider<FabricClientCommandSource> playerSuggestions
@@ -462,6 +466,34 @@ public class BetterUCClient implements ClientModInitializer {
         return String.format("dbank get %s %d %d", droge, menge, reinheit);
     }
 
+    private int executeBlacklistInfo(MinecraftClient client, String spieler) {
+        if (client.player == null) return 0;
+        if (!ensureAllowedServerForManualCommand(client)) return 0;
+
+        if (!isValidPlayerName(spieler)) {
+            client.player.sendMessage(Text.literal("\u00A7cUngueltiger Spielername: \u00A7f" + spieler), false);
+            return 0;
+        }
+
+        String requestedName = spieler.trim();
+        if (isFreshBlacklistCacheAvailable() && findStoredBlacklistName(requestedName) != null) {
+            showBlacklistInfoFromLoadedData(client, requestedName);
+            return 1;
+        }
+
+        client.player.sendMessage(Text.literal(
+                "\u00A77Suche Blacklist-Eintrag fuer \u00A7f" + requestedName + "\u00A77..."
+        ), false);
+
+        BetterUCSuppressFlags.beginBlacklistInfoLookup(requestedName);
+        BetterUCSuppressFlags.suppressModBlOutput = true;
+        BetterUCSuppressFlags.modBlCallback = () -> showBlacklistInfoFromLoadedData(client, requestedName);
+
+        sendServerCommand(client, "blacklist");
+        startBlacklistLoadTimeoutFallback(client, "blinfo", BLINFO_TIMEOUT_MS);
+        return 1;
+    }
+
     private int executeModBl(MinecraftClient client, String spieler, String neuerGrund) {
         if (client.player == null) return 0;
         if (!ensureAllowedServerForManualCommand(client)) return 0;
@@ -487,7 +519,7 @@ public class BetterUCClient implements ClientModInitializer {
         BetterUCSuppressFlags.modBlCallback = () -> applyModBlFromLoadedData(client, spieler, isVogelfreiFlag, finalMatched);
 
         sendServerCommand(client, "blacklist");
-        startModBlTimeoutFallback(client);
+        startBlacklistLoadTimeoutFallback(client, "modbl");
         return 1;
     }
 
@@ -507,7 +539,7 @@ public class BetterUCClient implements ClientModInitializer {
         BetterUCSuppressFlags.modBlCallback = () -> applySetRpFromLoadedData(client, spieler, stufe);
 
         sendServerCommand(client, "blacklist");
-        startModBlTimeoutFallback(client);
+        startBlacklistLoadTimeoutFallback(client, "setrp");
         return 1;
     }
 
@@ -522,7 +554,7 @@ public class BetterUCClient implements ClientModInitializer {
         }
 
         String neuerGrund = buildReasonWithRpStage(spieler, altGrund, stufe);
-        String commandGrundArg = toCommandReasonArg(neuerGrund, true);
+        String commandGrundArg = toSetRpCommandReasonArg(neuerGrund);
         int finalKills = clampModBlKills(altStats.length > 0 ? altStats[0] : 0);
         int finalPreis = clampModBlPrice(altStats.length > 1 ? altStats[1] : 0);
 
@@ -582,7 +614,7 @@ public class BetterUCClient implements ClientModInitializer {
 
         String kombinierterGrund = buildCombinedReason(spieler, altGrund, isVogelfreiFlag, matched == null ? null : matched.key, client);
         if (kombinierterGrund == null) return;
-        String commandGrundArg = toCommandReasonArg(kombinierterGrund, false);
+        String commandGrundArg = toCommandReasonArg(kombinierterGrund, true);
 
         BetterUCSuppressFlags.markPendingModBlReadd(spieler);
         sendServerCommand(client, "bl remove " + spieler);
@@ -606,6 +638,7 @@ public class BetterUCClient implements ClientModInitializer {
             MinecraftClient client
     ) {
         LinkedHashSet<String> grundTeile = extractReasonPartsWithoutRpAndVogelfrei(altGrund);
+        String rpStageToken = extractRpStageToken(altGrund);
 
         boolean altHatVogelfrei = altGrund.toLowerCase().contains("(vogelfrei)");
         if (isVogelfreiFlag) {
@@ -614,8 +647,7 @@ public class BetterUCClient implements ClientModInitializer {
                     client.player.sendMessage(Text.literal("\u00A7e" + spieler + " hat bereits (Vogelfrei)!"), false);
                 }
             }
-            String basis = String.join(" + ", grundTeile);
-            return basis.isEmpty() ? "(Vogelfrei)" : basis + " (Vogelfrei)";
+            return formatBlacklistReason(grundTeile, rpStageToken, true);
         }
 
         String cleanedNewReason = sanitizeReasonToken(newReasonKey);
@@ -627,14 +659,11 @@ public class BetterUCClient implements ClientModInitializer {
             grundTeile.add(cleanedNewReason);
         }
 
-        String basis = String.join(" + ", grundTeile);
-        if (basis.isEmpty()) basis = cleanedNewReason;
-
-        if ((BetterUCConfig.isVogelfrei(spieler) || altHatVogelfrei)
-                && !basis.toLowerCase().contains("(vogelfrei)")) {
-            basis = basis + " (Vogelfrei)";
-        }
-        return basis;
+        return formatBlacklistReason(
+                grundTeile,
+                rpStageToken,
+                BetterUCConfig.isVogelfrei(spieler) || altHatVogelfrei
+        );
     }
 
     private String sanitizeReasonToken(String raw) {
@@ -657,20 +686,16 @@ public class BetterUCClient implements ClientModInitializer {
         boolean hasVogelfrei = cleaned.toLowerCase(Locale.ROOT).contains("(vogelfrei)")
                 || cleaned.equalsIgnoreCase("vogelfrei");
 
-        Matcher rpStageMatcher = Pattern.compile("\\(\\s*([123])\\s*/\\s*3\\s*\\)").matcher(cleaned);
-        String rpStageToken = null;
-        if (rpStageMatcher.find()) {
-            rpStageToken = "(" + rpStageMatcher.group(1) + "/3)";
-        }
+        String rpStageToken = extractRpStageToken(cleaned);
 
         LinkedHashSet<String> parts = extractReasonPartsWithoutRpAndVogelfrei(cleaned);
-        if (hasVogelfrei) {
-            parts.add("Vogelfrei");
-        } else if (keepRpStage && rpStageToken != null) {
-            parts.add(rpStageToken);
-        }
-        if (parts.isEmpty()) return "Unbekannt";
-        return String.join("+", parts);
+        String formatted = formatBlacklistReason(parts, keepRpStage ? rpStageToken : null, hasVogelfrei);
+        return formatted.isEmpty() ? "Unbekannt" : formatted;
+    }
+
+    private String toSetRpCommandReasonArg(String prettyReason) {
+        String cleaned = sanitizeReasonToken(prettyReason);
+        return cleaned.isEmpty() ? "Unbekannt" : cleaned;
     }
 
     private void sendUpdatedBlacklistEntry(
@@ -724,10 +749,148 @@ public class BetterUCClient implements ClientModInitializer {
         BetterUCMod.LOGGER.info("setrp: /{}", cmd);
     }
 
-    private void startModBlTimeoutFallback(MinecraftClient client) {
-        runDelayedOnClient(client, 1500, () -> {
+    private void showBlacklistInfoFromLoadedData(MinecraftClient client, String spieler) {
+        if (client.player == null) return;
+
+        String storedName = findStoredBlacklistName(spieler);
+        if (storedName == null) {
+            BetterUCSuppressFlags.clearBlacklistInfoLookup();
+            client.player.sendMessage(Text.literal(
+                    "\u00A7cKein Blacklist-Eintrag fuer \u00A7f" + spieler + "\u00A7c gefunden."
+            ), false);
+            return;
+        }
+
+        String rest = getBlacklistEntryRest(storedName);
+        if (rest == null || rest.isBlank()) {
+            rest = buildFallbackBlacklistRest(storedName);
+        }
+        BetterUCSuppressFlags.clearBlacklistInfoLookup();
+        BetterUCSuppressFlags.markNextBlacklistInfoLocalMessageBypass();
+        client.player.sendMessage(buildBlacklistInfoText(storedName, rest), false);
+    }
+
+    private boolean isFreshBlacklistCacheAvailable() {
+        long lastSync = BetterUCConfig.INSTANCE.lastBlacklistSyncMs;
+        return lastSync > 0L && System.currentTimeMillis() - lastSync <= BLINFO_CACHE_MAX_AGE_MS;
+    }
+
+    private String findStoredBlacklistName(String input) {
+        String key = normalizePlayerLookupKey(input);
+        if (key.isEmpty()) return null;
+
+        String fromRest = findMatchingName(
+                BetterUCConfig.INSTANCE.blacklistEntryRests == null
+                        ? List.of()
+                        : BetterUCConfig.INSTANCE.blacklistEntryRests.keySet(),
+                key
+        );
+        if (fromRest != null) return fromRest;
+
+        String fromBlacklist = findMatchingName(BetterUCConfig.INSTANCE.chatBlacklistPlayers, key);
+        if (fromBlacklist != null) return fromBlacklist;
+
+        return findMatchingName(BetterUCConfig.INSTANCE.blacklistReasons.keySet(), key);
+    }
+
+    private String findMatchingName(Iterable<String> names, String key) {
+        if (names == null || key == null || key.isEmpty()) return null;
+        for (String name : names) {
+            if (normalizePlayerLookupKey(name).equals(key)) {
+                return name;
+            }
+        }
+        return null;
+    }
+
+    private String getBlacklistEntryRest(String name) {
+        if (BetterUCConfig.INSTANCE.blacklistEntryRests == null) return "";
+        String direct = BetterUCConfig.INSTANCE.blacklistEntryRests.get(name);
+        if (direct != null) return direct;
+
+        String key = normalizePlayerLookupKey(name);
+        for (Map.Entry<String, String> entry : BetterUCConfig.INSTANCE.blacklistEntryRests.entrySet()) {
+            if (normalizePlayerLookupKey(entry.getKey()).equals(key)) {
+                return entry.getValue();
+            }
+        }
+        return "";
+    }
+
+    private Text buildBlacklistInfoText(String name, String rest) {
+        MutableText line = Text.literal("\u00A77\u00BB \u00A7a" + name);
+        if (rest == null || rest.isBlank()) return line;
+
+        for (String segment : rest.split("\\|", -1)) {
+            String cleaned = segment.trim();
+            if (!cleaned.isEmpty()) {
+                line.append(Text.literal(" \u00A77| \u00A7a" + cleaned));
+            }
+        }
+        return line;
+    }
+
+    private String buildFallbackBlacklistRest(String name) {
+        String reason = getBlacklistReason(name);
+        int[] stats = getBlacklistStats(name);
+
+        StringBuilder builder = new StringBuilder();
+        if (reason != null && !reason.isBlank()) {
+            builder.append(reason.trim());
+        }
+        if (stats != null && stats.length > 0 && stats[0] > 0) {
+            if (builder.length() > 0) builder.append(" | ");
+            builder.append(stats[0]).append(" Kills");
+        }
+        if (stats != null && stats.length > 1 && stats[1] > 0) {
+            if (builder.length() > 0) builder.append(" | ");
+            builder.append(stats[1]).append("$");
+        }
+        return builder.toString();
+    }
+
+    private String getBlacklistReason(String name) {
+        String direct = BetterUCConfig.INSTANCE.blacklistReasons.get(name);
+        if (direct != null) return direct;
+
+        String key = normalizePlayerLookupKey(name);
+        for (Map.Entry<String, String> entry : BetterUCConfig.INSTANCE.blacklistReasons.entrySet()) {
+            if (normalizePlayerLookupKey(entry.getKey()).equals(key)) {
+                return entry.getValue();
+            }
+        }
+        return "";
+    }
+
+    private int[] getBlacklistStats(String name) {
+        int[] direct = BetterUCConfig.INSTANCE.blacklistStats.get(name);
+        if (direct != null) return direct;
+
+        String key = normalizePlayerLookupKey(name);
+        for (Map.Entry<String, int[]> entry : BetterUCConfig.INSTANCE.blacklistStats.entrySet()) {
+            if (normalizePlayerLookupKey(entry.getKey()).equals(key)) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    private boolean isValidPlayerName(String name) {
+        return name != null && name.trim().matches("[A-Za-z0-9_]{3,16}");
+    }
+
+    private String normalizePlayerLookupKey(String name) {
+        return name == null ? "" : name.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private void startBlacklistLoadTimeoutFallback(MinecraftClient client, String label) {
+        startBlacklistLoadTimeoutFallback(client, label, 1500L);
+    }
+
+    private void startBlacklistLoadTimeoutFallback(MinecraftClient client, String label, long delayMs) {
+        runDelayedOnClient(client, delayMs, () -> {
             if (BetterUCSuppressFlags.modBlCallback == null) return;
-            BetterUCMod.LOGGER.info("modbl: Timeout-Fallback ausgeloest");
+            BetterUCMod.LOGGER.info("{}: Blacklist-Load Timeout-Fallback ausgeloest", label);
             BetterUCSuppressFlags.suppressModBlOutput = false;
             Runnable cb = BetterUCSuppressFlags.modBlCallback;
             BetterUCSuppressFlags.modBlCallback = null;
@@ -760,6 +923,10 @@ public class BetterUCClient implements ClientModInitializer {
         if (!normalizedReason.isEmpty()) {
             BetterUCConfig.INSTANCE.blacklistReasons.put(name, normalizedReason);
         }
+        if (BetterUCConfig.INSTANCE.blacklistEntryRests == null) {
+            BetterUCConfig.INSTANCE.blacklistEntryRests = new LinkedHashMap<>();
+        }
+        BetterUCConfig.INSTANCE.blacklistEntryRests.put(name, buildFallbackBlacklistRest(name));
 
         boolean hasVogelfrei = normalizedReason.toLowerCase(Locale.ROOT).contains("(vogelfrei)");
         if (hasVogelfrei) {
@@ -773,12 +940,35 @@ public class BetterUCClient implements ClientModInitializer {
         if (raw == null) return "";
 
         boolean hasVogelfrei = raw.toLowerCase(Locale.ROOT).matches(".*\\b\\(?vogelfrei\\)?\\b.*");
+        String rpStageToken = extractRpStageToken(raw);
         LinkedHashSet<String> parts = extractReasonPartsWithoutRpAndVogelfrei(raw);
-        String joined = String.join(" + ", parts);
-        if (hasVogelfrei) {
-            return joined.isEmpty() ? "(Vogelfrei)" : joined + " (Vogelfrei)";
+        return formatBlacklistReason(parts, rpStageToken, hasVogelfrei);
+    }
+
+    private String extractRpStageToken(String rawReason) {
+        if (rawReason == null) return null;
+        Matcher rpStageMatcher = Pattern.compile("\\(\\s*([123])\\s*/\\s*3\\s*\\)").matcher(rawReason);
+        return rpStageMatcher.find() ? "(" + rpStageMatcher.group(1) + "/3)" : null;
+    }
+
+    private String formatBlacklistReason(
+            LinkedHashSet<String> parts,
+            String rpStageToken,
+            boolean hasVogelfrei
+    ) {
+        String basis = parts == null ? "" : String.join(" + ", parts);
+        if (!basis.isEmpty() && rpStageToken != null) {
+            basis = basis + " " + rpStageToken;
+        } else if (basis.isEmpty() && rpStageToken != null) {
+            basis = rpStageToken;
         }
-        return joined;
+
+        if (!basis.isEmpty() && hasVogelfrei) {
+            basis = basis + " (Vogelfrei)";
+        } else if (basis.isEmpty() && hasVogelfrei) {
+            basis = "(Vogelfrei)";
+        }
+        return basis;
     }
 
     private LinkedHashSet<String> extractReasonPartsWithoutRpAndVogelfrei(String rawReason) {
@@ -810,10 +1000,8 @@ public class BetterUCClient implements ClientModInitializer {
             if (client.player == null) return;
 
             HackTimerHud.tick();
-            CookDrugHud.tick();
             PlantageHud.tick();
             tickStatsOnJoin(client);
-            memberSyncController.tick(client);
             handleConfiguredHotkeys(client);
             MovementController.tick(client);
             autoCarController.tick(client);
@@ -875,22 +1063,18 @@ public class BetterUCClient implements ClientModInitializer {
     }
 
     private void resetRuntimeState(MinecraftClient client) {
-        BetterUCConfig.clearRemoteFactionRuntime();
         BetterUCConfig.clearChatBlacklistRuntime();
         statsOnJoinDelay = -1;
-        memberSyncController.reset();
         hotkeyPressedState.clear();
         MovementController.reset(client);
         autoCarController.reset();
         PaydayHud.clear();
         AmmoHud.clear();
         BankBalanceHud.clear();
-        PlantageHud.clear();
 
         BetterUCSuppressFlags.suppressModBlOutput = false;
         BetterUCSuppressFlags.modBlCallback = null;
         BetterUCSuppressFlags.clearSilentBlacklistState();
         HackTimerHud.secondsRemaining = 0;
-        CookDrugHud.clear();
     }
 }

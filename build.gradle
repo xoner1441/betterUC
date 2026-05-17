@@ -127,8 +127,19 @@ tasks.register("copyModToMinecraftMods", Copy) {
             def zip = new java.util.zip.ZipFile(copiedJar)
             try {
                 def entries = zip.entries()
+                byte[] buffer = new byte[8192]
                 while (entries.hasMoreElements()) {
-                    entries.nextElement()
+                    def entry = entries.nextElement()
+                    if (!entry.isDirectory()) {
+                        def input = zip.getInputStream(entry)
+                        try {
+                            while (input.read(buffer) != -1) {
+                                // Read every entry so corrupt local ZIP headers fail during the build.
+                            }
+                        } finally {
+                            input.close()
+                        }
+                    }
                 }
             } finally {
                 zip.close()

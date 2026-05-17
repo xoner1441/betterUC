@@ -21,7 +21,13 @@ import java.util.regex.Pattern;
 
 public final class AutoCarController {
 
-    private static final int CAR_AUTO_START_DELAY_TICKS = 8;
+    private static final int CAR_AUTO_LOCK_DELAY_TICKS = 10;
+    private static final int CAR_AUTO_START_DELAY_TICKS = 10;
+    private static final int CAR_CONTROL_CLICK_DELAY_TICKS = 0;
+    private static final int PARK_MARKER_MIN_SETTLE_TICKS = 6;
+    private static final int PARK_MARKER_MAX_SETTLE_TICKS = 50;
+    private static final int PARK_MARKER_STABLE_TICKS = 5;
+    private static final double PARK_MARKER_STABLE_DISTANCE_SQ = 0.0009;
     private static final Pattern NAVI_COORDS_PATTERN = Pattern.compile(
             "(?i)(?:^|\\s)/?navi\\s+(-?\\d+)\\s*/\\s*(-?\\d+)\\s*/\\s*(-?\\d+)(?:\\b|$)"
     );
@@ -40,9 +46,18 @@ public final class AutoCarController {
     private static Integer pendingFindZ = null;
 
     private boolean wasRidingMinecart = false;
+    private AbstractMinecartEntity lastMinecartEntity = null;
     private Vec3d lastMinecartPos = null;
+    private boolean pendingParkMarker = false;
+    private int pendingParkMarkerTicks = -1;
+    private int pendingParkStableTicks = 0;
+    private Vec3d pendingParkLastObservedPos = null;
+    private int pendingCarLockTicks = -1;
     private int pendingCarStartTicks = -1;
     private int lastHandledCarControlSyncId = -1;
+    private int pendingCarControlSyncId = -1;
+    private int pendingCarControlSlotId = -1;
+    private int pendingCarControlClickTicks = -1;
 
     public void tick(MinecraftClient client) {
         if (client.player == null) return;
@@ -59,34 +74,58 @@ public final class AutoCarController {
 
         if (ridingMinecart && !wasRidingMinecart) {
             CarMarkerHud.clear();
+            clearPendingParkMarker();
         }
 
         if (minecart != null) {
-            lastMinecartPos = new Vec3d(minecart.getX(), minecart.getY(), minecart.getZ());
+            lastMinecartEntity = minecart;
+            lastMinecartPos = getMinecartPos(minecart);
         } else if (wasRidingMinecart && lastMinecartPos != null) {
-            CarMarkerHud.setMarker(client, lastMinecartPos);
-            BetterUCMod.LOGGER.info("Auto-car: Marker gesetzt bei {}", lastMinecartPos);
+            beginPendingParkMarker();
+        }
+
+        if (!ridingMinecart) {
+            tickPendingParkMarker(client);
         }
 
         if (enabled) {
             if (ridingMinecart && !wasRidingMinecart) {
-                ServerCommandUtil.send(client, "car lock");
-                pendingCarStartTicks = CAR_AUTO_START_DELAY_TICKS;
+                pendingCarLockTicks = CAR_AUTO_LOCK_DELAY_TICKS;
+                pendingCarStartTicks = -1;
                 lastHandledCarControlSyncId = -1;
-                BetterUCMod.LOGGER.info("Auto-car: Minecart betreten -> /car lock");
+                resetPendingCarControlClick();
+                BetterUCMod.LOGGER.info("Auto-car: Minecart betreten -> /car lock in {} Ticks", pendingCarLockTicks);
             }
             autoClickCarControlScreen(client);
         } else {
+            pendingCarLockTicks = -1;
             pendingCarStartTicks = -1;
             lastHandledCarControlSyncId = -1;
+            resetPendingCarControlClick();
+        }
+
+        if (enabled && pendingCarLockTicks >= 0) {
+            if (!ridingMinecart) {
+                pendingCarLockTicks = -1;
+            } else if (pendingCarLockTicks == 0) {
+                ServerCommandUtil.send(client, "car lock");
+                pendingCarStartTicks = CAR_AUTO_START_DELAY_TICKS;
+                pendingCarLockTicks = -1;
+                BetterUCMod.LOGGER.info(
+                        "Auto-car: /car lock -> /car start in {} Ticks",
+                        pendingCarStartTicks
+                );
+            } else {
+                pendingCarLockTicks--;
+            }
         }
 
         if (enabled && pendingCarStartTicks >= 0) {
-            if (pendingCarStartTicks == 0) {
-                if (ridingMinecart) {
-                    ServerCommandUtil.send(client, "car start");
-                    BetterUCMod.LOGGER.info("Auto-car: /car start");
-                }
+            if (!ridingMinecart) {
+                pendingCarStartTicks = -1;
+            } else if (pendingCarStartTicks == 0) {
+                ServerCommandUtil.send(client, "car start");
+                BetterUCMod.LOGGER.info("Auto-car: /car start");
                 pendingCarStartTicks = -1;
             } else {
                 pendingCarStartTicks--;
@@ -185,9 +224,69 @@ public final class AutoCarController {
     }
 
     private void resetTransientState() {
+        pendingCarLockTicks = -1;
         pendingCarStartTicks = -1;
         lastHandledCarControlSyncId = -1;
+        resetPendingCarControlClick();
         wasRidingMinecart = false;
+        lastMinecartEntity = null;
+        clearPendingParkMarker();
+    }
+
+    private void beginPendingParkMarker() {
+        pendingParkMarker = true;
+        pendingParkMarkerTicks = 0;
+        pendingParkStableTicks = 0;
+        pendingParkLastObservedPos = lastMinecartPos;
+        BetterUCMod.LOGGER.info("Auto-car: Parkmarker wartet auf Minecart-Stillstand bei {}", lastMinecartPos);
+    }
+
+    private void tickPendingParkMarker(MinecraftClient client) {
+        if (!pendingParkMarker || lastMinecartPos == null) return;
+
+        Vec3d currentPos = getTrackedMinecartPos();
+        if (currentPos != null) {
+            lastMinecartPos = currentPos;
+            if (pendingParkLastObservedPos != null
+                    && pendingParkLastObservedPos.squaredDistanceTo(currentPos) <= PARK_MARKER_STABLE_DISTANCE_SQ) {
+                pendingParkStableTicks++;
+            } else {
+                pendingParkStableTicks = 0;
+            }
+            pendingParkLastObservedPos = currentPos;
+        }
+
+        pendingParkMarkerTicks++;
+        boolean waitedLongEnough = pendingParkMarkerTicks >= PARK_MARKER_MIN_SETTLE_TICKS;
+        boolean minecartLooksStopped = pendingParkStableTicks >= PARK_MARKER_STABLE_TICKS;
+        boolean timedOut = pendingParkMarkerTicks >= PARK_MARKER_MAX_SETTLE_TICKS;
+        if (!timedOut && (!waitedLongEnough || !minecartLooksStopped)) return;
+
+        CarMarkerHud.setMarker(client, lastMinecartPos);
+        BetterUCMod.LOGGER.info(
+                "Auto-car: Marker gesetzt bei {} ({} Ticks, {})",
+                lastMinecartPos,
+                pendingParkMarkerTicks,
+                timedOut ? "Timeout" : "stabil"
+        );
+        clearPendingParkMarker();
+        lastMinecartEntity = null;
+    }
+
+    private Vec3d getTrackedMinecartPos() {
+        if (lastMinecartEntity == null || lastMinecartEntity.isRemoved()) return null;
+        return getMinecartPos(lastMinecartEntity);
+    }
+
+    private Vec3d getMinecartPos(AbstractMinecartEntity minecart) {
+        return new Vec3d(minecart.getX(), minecart.getY(), minecart.getZ());
+    }
+
+    private void clearPendingParkMarker() {
+        pendingParkMarker = false;
+        pendingParkMarkerTicks = -1;
+        pendingParkStableTicks = 0;
+        pendingParkLastObservedPos = null;
     }
 
     private static void clearFindAutomationState() {
@@ -202,15 +301,22 @@ public final class AutoCarController {
     private void autoClickCarControlScreen(MinecraftClient client) {
         if (!(client.currentScreen instanceof HandledScreen<?> handledScreen)) {
             lastHandledCarControlSyncId = -1;
+            resetPendingCarControlClick();
             return;
         }
         if (client.interactionManager == null || client.player == null) return;
 
         String title = handledScreen.getTitle().getString();
-        if (title == null || !title.toLowerCase(Locale.ROOT).contains("carcontrol")) return;
+        if (title == null || !title.toLowerCase(Locale.ROOT).contains("carcontrol")) {
+            resetPendingCarControlClick();
+            return;
+        }
 
         ScreenHandler handler = client.player.currentScreenHandler;
-        if (handler == null || handler == client.player.playerScreenHandler) return;
+        if (handler == null || handler == client.player.playerScreenHandler) {
+            resetPendingCarControlClick();
+            return;
+        }
 
         int syncId = handler.syncId;
         if (lastHandledCarControlSyncId == syncId) return;
@@ -219,12 +325,41 @@ public final class AutoCarController {
         if (slotId < 0) {
             slotId = findCarControlActionSlot(client, handler, Items.REDSTONE);
         }
-        if (slotId < 0) return;
+        if (slotId < 0) {
+            resetPendingCarControlClick();
+            return;
+        }
+
+        if (pendingCarControlSyncId != syncId || pendingCarControlSlotId != slotId) {
+            pendingCarControlSyncId = syncId;
+            pendingCarControlSlotId = slotId;
+            pendingCarControlClickTicks = CAR_CONTROL_CLICK_DELAY_TICKS;
+            BetterUCMod.LOGGER.info(
+                    "Auto-car: CarControl Slot {} erkannt -> Klick in {} Ticks",
+                    slotId,
+                    pendingCarControlClickTicks
+            );
+            if (pendingCarControlClickTicks > 0) {
+                return;
+            }
+        }
+
+        if (pendingCarControlClickTicks > 0) {
+            pendingCarControlClickTicks--;
+            return;
+        }
 
         client.interactionManager.clickSlot(syncId, slotId, 0, SlotActionType.PICKUP, client.player);
         client.player.closeHandledScreen();
         lastHandledCarControlSyncId = syncId;
+        resetPendingCarControlClick();
         BetterUCMod.LOGGER.info("Auto-car: CarControl Slot {} geklickt", slotId);
+    }
+
+    private void resetPendingCarControlClick() {
+        pendingCarControlSyncId = -1;
+        pendingCarControlSlotId = -1;
+        pendingCarControlClickTicks = -1;
     }
 
     private int findCarControlActionSlot(MinecraftClient client, ScreenHandler handler, Item item) {

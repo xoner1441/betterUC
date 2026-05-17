@@ -48,6 +48,8 @@ public class BetterUCConfig {
     public transient Map<String, String> blacklistReasons = new LinkedHashMap<>();
     // Name -> [kills, price]
     public transient Map<String, int[]> blacklistStats = new LinkedHashMap<>();
+    // Name -> Original-Rest der Blacklist-Zeile nach dem Spielernamen.
+    public transient Map<String, String> blacklistEntryRests = new LinkedHashMap<>();
 
     public transient int currentMoney = 0;
     public transient int currentBlackMoney = 0;
@@ -62,6 +64,9 @@ public class BetterUCConfig {
     public static final int DEFAULT_FPS_HUD_COLOR = 0xFF55FFFF;
     public static final int DEFAULT_PAYDAY_HUD_COLOR = 0xFFFFD866;
     public static final int DEFAULT_BANK_HUD_COLOR = 0xFF55FFFF;
+    public static final int DEFAULT_HEALTH_HUD_COLOR = 0xFFFF5555;
+    public static final int DEFAULT_HEALTH_HUD_HEART_COLOR = DEFAULT_HEALTH_HUD_COLOR;
+    public static final int DEFAULT_HEALTH_HUD_TEXT_COLOR = DEFAULT_HEALTH_HUD_COLOR;
     public static BetterUCConfig INSTANCE = new BetterUCConfig();
     private static final List<TrackableFaction> TRACKABLE_FACTIONS = List.of(
             new TrackableFaction("Polizei", "polizei"),
@@ -74,7 +79,6 @@ public class BetterUCConfig {
             new TrackableFaction("Yakuza", "yakuza"),
             new TrackableFaction("S\u00F6ldner", "soeldner")
     );
-    private static final Set<String> TAB_COLOR_EXCLUDED_FACTIONS = Set.of("polizei", "fbi", "medic");
 
     public static final class TrackableFaction {
         public final String label;
@@ -110,20 +114,34 @@ public class BetterUCConfig {
         }
     }
 
+    public static class PlantTimerState {
+        public long plantedAtMs = 0L;
+        public long nextWaterAtMs = 0L;
+        public long nextFertilizeAtMs = 0L;
+        public int count = 0;
+
+        public PlantTimerState() {}
+
+        public PlantTimerState(long plantedAtMs, long nextWaterAtMs, long nextFertilizeAtMs, int count) {
+            this.plantedAtMs = plantedAtMs;
+            this.nextWaterAtMs = nextWaterAtMs;
+            this.nextFertilizeAtMs = nextFertilizeAtMs;
+            this.count = count;
+        }
+    }
+
     public List<HotkeyCommand> hotkeyCommands = new ArrayList<>();
     public EigenbedarfPreset eigenbedarfSlot1 = new EigenbedarfPreset(EIGENBEDARF_DRUG_OPTIONS[0], 0, 0);
     public EigenbedarfPreset eigenbedarfSlot2 = new EigenbedarfPreset(EIGENBEDARF_DRUG_OPTIONS[1], 0, 0);
 
-    public int factionColor = 0x00FF00;
-    public int blacklistColor = 0xFF0000;
     public int timerX = 10;
     public int timerY = 10;
     public int hackTimerX = 10;
     public int hackTimerY = 10;
-    public int methTimerX = 10;
-    public int methTimerY = 28;
     public int plantTimerX = 10;
     public int plantTimerY = 46;
+    public int healthHudX = -1;
+    public int healthHudY = -1;
     public int toggleSprintHudX = 10;
     public int toggleSprintHudY = 28;
     public int fpsHudX = 10;
@@ -134,23 +152,29 @@ public class BetterUCConfig {
     public int ammoHudY = 82;
     public int bankHudX = 10;
     public int bankHudY = 100;
+    public int potionHudX = 10;
+    public int potionHudY = 118;
     public int lastKnownBankBalance = -1;
     public int toggleSprintHudColor = DEFAULT_TOGGLE_SPRINT_HUD_COLOR;
     public int fpsHudColor = DEFAULT_FPS_HUD_COLOR;
     public int paydayHudColor = DEFAULT_PAYDAY_HUD_COLOR;
     public int bankHudColor = DEFAULT_BANK_HUD_COLOR;
+    public int healthHudHeartColor = 0;
+    public int healthHudTextColor = 0;
+    public int healthHudColor = DEFAULT_HEALTH_HUD_COLOR;
     public boolean showHealthHud = true;
     public boolean showFpsHud = true;
     public boolean showPaydayHud = true;
     public boolean showAmmoHud = true;
     public boolean showBankHud = true;
+    public boolean showPotionEffectsHud = true;
     public boolean toggleSprintEnabled = false;
     public boolean zoomEnabled = true;
     public int zoomKeyCode = 67; // GLFW_KEY_C
     public float zoomFovMultiplier = 0.25f;
-    public boolean zoomInstant = true;
-    public boolean fullbrightEnabled = false;
     public boolean carAutomationEnabled = true;
+    public boolean autoStatsOnJoinEnabled = true;
+    public Map<String, PlantTimerState> plantTimerStates = new LinkedHashMap<>();
 
     public String factionUrl = "https://example.com/faction.json";
     public int reloadIntervalMinutes = 5;
@@ -462,6 +486,11 @@ public class BetterUCConfig {
         } else {
             INSTANCE.blacklistStats.clear();
         }
+        if (INSTANCE.blacklistEntryRests == null) {
+            INSTANCE.blacklistEntryRests = new LinkedHashMap<>();
+        } else {
+            INSTANCE.blacklistEntryRests.clear();
+        }
         INSTANCE.lastBlacklistSyncMs = 0L;
         INSTANCE.lastBlacklistSyncPlayerCount = -1;
         refreshBlacklistNameCaches();
@@ -486,6 +515,7 @@ public class BetterUCConfig {
         INSTANCE.vogelfreiPlayers.removeIf(s -> playerKey(s).equals(key));
         INSTANCE.blacklistReasons.entrySet().removeIf(e -> playerKey(e.getKey()).equals(key));
         INSTANCE.blacklistStats.entrySet().removeIf(e -> playerKey(e.getKey()).equals(key));
+        INSTANCE.blacklistEntryRests.entrySet().removeIf(e -> playerKey(e.getKey()).equals(key));
         refreshBlacklistNameCaches();
     }
 
@@ -562,6 +592,7 @@ public class BetterUCConfig {
         if (INSTANCE.vogelfreiPlayers == null) INSTANCE.vogelfreiPlayers = new ArrayList<>();
         if (INSTANCE.blacklistReasons == null) INSTANCE.blacklistReasons = new LinkedHashMap<>();
         if (INSTANCE.blacklistStats == null) INSTANCE.blacklistStats = new LinkedHashMap<>();
+        if (INSTANCE.blacklistEntryRests == null) INSTANCE.blacklistEntryRests = new LinkedHashMap<>();
         if (INSTANCE.manualFactionPlayers == null) INSTANCE.manualFactionPlayers = new ArrayList<>();
         if (INSTANCE.manualBlacklistPlayers == null) INSTANCE.manualBlacklistPlayers = new ArrayList<>();
         if (INSTANCE.manualFactionPlayerKeys == null) INSTANCE.manualFactionPlayerKeys = new LinkedHashSet<>();
@@ -651,6 +682,11 @@ public class BetterUCConfig {
                 INSTANCE.bankHudY = 100;
                 INSTANCE.showBankHud = true;
             }
+            if (INSTANCE.potionHudX == 0 && INSTANCE.potionHudY == 0) {
+                INSTANCE.potionHudX = 10;
+                INSTANCE.potionHudY = 118;
+                INSTANCE.showPotionEffectsHud = true;
+            }
             if (INSTANCE.lastKnownBankBalance < -1) {
                 INSTANCE.lastKnownBankBalance = -1;
             }
@@ -659,6 +695,9 @@ public class BetterUCConfig {
             INSTANCE.fpsHudColor = sanitizeHudColor(INSTANCE.fpsHudColor, DEFAULT_FPS_HUD_COLOR);
             INSTANCE.paydayHudColor = sanitizeHudColor(INSTANCE.paydayHudColor, DEFAULT_PAYDAY_HUD_COLOR);
             INSTANCE.bankHudColor = sanitizeHudColor(INSTANCE.bankHudColor, DEFAULT_BANK_HUD_COLOR);
+            INSTANCE.healthHudColor = sanitizeHudColor(INSTANCE.healthHudColor, DEFAULT_HEALTH_HUD_COLOR);
+            INSTANCE.healthHudHeartColor = sanitizeHudColor(INSTANCE.healthHudHeartColor, INSTANCE.healthHudColor);
+            INSTANCE.healthHudTextColor = sanitizeHudColor(INSTANCE.healthHudTextColor, INSTANCE.healthHudColor);
             INSTANCE.eigenbedarfSlot1 = sanitizeEigenbedarfPreset(
                     INSTANCE.eigenbedarfSlot1,
                     EIGENBEDARF_DRUG_OPTIONS[0]
@@ -669,6 +708,9 @@ public class BetterUCConfig {
             );
             if (INSTANCE.blReasons == null || INSTANCE.blReasons.isEmpty()) {
                 INSTANCE.blReasons = defaultBlacklistReasons();
+            }
+            if (INSTANCE.plantTimerStates == null) {
+                INSTANCE.plantTimerStates = new LinkedHashMap<>();
             }
             sanitizeTrackedFactions();
             rebuildRemoteFactionUnion();
@@ -684,10 +726,6 @@ public class BetterUCConfig {
         if (INSTANCE.hackTimerX == 10 && INSTANCE.hackTimerY == 10) {
             INSTANCE.hackTimerX = INSTANCE.timerX;
             INSTANCE.hackTimerY = INSTANCE.timerY;
-        }
-        if (INSTANCE.methTimerX == 10 && INSTANCE.methTimerY == 28) {
-            INSTANCE.methTimerX = INSTANCE.timerX;
-            INSTANCE.methTimerY = INSTANCE.timerY + 18;
         }
         if (INSTANCE.plantTimerX == 10 && INSTANCE.plantTimerY == 46) {
             INSTANCE.plantTimerX = INSTANCE.timerX;
@@ -709,43 +747,6 @@ public class BetterUCConfig {
         return !key.isEmpty()
                 && (INSTANCE.manualFactionPlayerKeys.contains(key)
                 || INSTANCE.remoteFactionPlayerKeys.contains(key));
-    }
-
-    public static boolean shouldColorFactionInTab(String name) {
-        return isFaction(name) && !isTabColorExcludedFactionMember(name);
-    }
-
-    public static boolean shouldSortAsSelectedFactionInTab(String name) {
-        String selectedFaction = getSelectedFactionQuery();
-        if (selectedFaction.isEmpty() || TAB_COLOR_EXCLUDED_FACTIONS.contains(selectedFaction)) return false;
-        return isMemberOfRemoteFaction(name, selectedFaction);
-    }
-
-    private static boolean isTabColorExcludedFactionMember(String name) {
-        for (String factionQuery : TAB_COLOR_EXCLUDED_FACTIONS) {
-            if (isMemberOfRemoteFaction(name, factionQuery)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean isMemberOfRemoteFaction(String name, String factionQuery) {
-        ensureRuntimeCollections();
-        String key = playerKey(name);
-        if (key.isEmpty() || INSTANCE.remoteFactionMembersByFaction == null) return false;
-
-        String normalizedFaction = normalizeFactionQuery(factionQuery);
-        if (normalizedFaction.isEmpty()) return false;
-
-        List<String> members = INSTANCE.remoteFactionMembersByFaction.get(normalizedFaction);
-        if (members == null) return false;
-        for (String member : members) {
-            if (playerKey(member).equals(key)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     public static boolean isBlacklist(String name) {

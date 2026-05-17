@@ -9,7 +9,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.text.Text;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class CommandGui extends Screen {
@@ -17,19 +16,23 @@ public class CommandGui extends Screen {
     private static final int SLOT_SIZE = 18;
     private static final int COLS = 9;
     private static final int ROWS = 3;
-
-    private record CommandSlot(String name, ItemStack icon, String command) {
-    }
-
-    private final List<CommandSlot> slots = new ArrayList<>();
+    private static final String[] NAMES = new String[]{
+            "Papierfabrik",
+            "SH-Park",
+            "Japan",
+            "Flughafen Parkplatz",
+            "Kirche Camper"
+    };
+    private static final String[] COMMANDS = new String[]{
+            "navi -36/70/-278",
+            "navi 65/67/347",
+            "navi 592/69/91",
+            "navi -312/69/670",
+            "navi 304/71/-205"
+    };
 
     public CommandGui() {
         super(Text.literal("Command Menu"));
-        slots.add(new CommandSlot("Papierfabrik", new ItemStack(Items.FERN), "navi -36/70/-278"));
-        slots.add(new CommandSlot("SH-Park", new ItemStack(Items.FERN), "navi 65/67/347"));
-        slots.add(new CommandSlot("Japan", new ItemStack(Items.FERN), "navi 592/69/91"));
-        slots.add(new CommandSlot("Flughafen Parkplatz", new ItemStack(Items.FERN), "navi -312/69/670"));
-        slots.add(new CommandSlot("Kirche Camper", new ItemStack(Items.FERN), "navi 304/71/-205"));
     }
 
     @Override
@@ -39,7 +42,7 @@ public class CommandGui extends Screen {
         int startX = width / 2 - guiWidth / 2;
         int startY = height / 2 - guiHeight / 2;
 
-        for (int i = 0; i < slots.size(); i++) {
+        for (int i = 0; i < COMMANDS.length; i++) {
             int col = i % COLS;
             int row = i / COLS;
             int slotX = startX + 4 + col * SLOT_SIZE;
@@ -55,7 +58,7 @@ public class CommandGui extends Screen {
                         ), false);
                         return;
                     }
-                    client.player.networkHandler.sendChatCommand(slots.get(index).command());
+                    client.player.networkHandler.sendChatCommand(COMMANDS[index]);
                     close();
                 }
             }).dimensions(slotX, slotY, SLOT_SIZE - 2, SLOT_SIZE - 2).build());
@@ -75,15 +78,15 @@ public class CommandGui extends Screen {
 
         super.render(context, mouseX, mouseY, delta);
 
-        for (int i = 0; i < slots.size(); i++) {
+        for (int i = 0; i < COMMANDS.length; i++) {
             int col = i % COLS;
             int row = i / COLS;
             int slotX = startX + 4 + col * SLOT_SIZE;
             int slotY = startY + 18 + row * SLOT_SIZE;
-            context.drawItem(slots.get(i).icon(), slotX + 1, slotY + 1);
+            context.drawItem(new ItemStack(Items.FERN), slotX + 1, slotY + 1);
         }
 
-        for (int i = 0; i < slots.size(); i++) {
+        for (int i = 0; i < COMMANDS.length; i++) {
             int col = i % COLS;
             int row = i / COLS;
             int slotX = startX + 4 + col * SLOT_SIZE;
@@ -92,8 +95,8 @@ public class CommandGui extends Screen {
             if (mouseX >= slotX && mouseX <= slotX + SLOT_SIZE - 2
                     && mouseY >= slotY && mouseY <= slotY + SLOT_SIZE - 2) {
                 context.drawTooltip(textRenderer, List.of(
-                        Text.literal("\u00A7e" + slots.get(i).name()),
-                        Text.literal("\u00A77/" + slots.get(i).command())
+                        Text.literal("\u00A7e" + NAMES[i]),
+                        Text.literal("\u00A77/" + COMMANDS[i])
                 ), mouseX, mouseY);
             }
         }

@@ -71,23 +71,39 @@ public class PlantageHud {
     }
 
     public static void register() {
+        restoreFromConfig();
         HudRenderCallback.EVENT.register((drawContext, tickCounter) -> render(drawContext));
     }
 
     public static void clear() {
+        boolean changed = false;
         for (PlantageState state : STATES.values()) {
+            if (state.plantedAtMs > 0L || state.nextWaterAtMs > 0L || state.nextFertilizeAtMs > 0L || state.count > 0) {
+                changed = true;
+            }
             state.clear();
+        }
+        if (lastPlacedType != null || lastPlacedMessageMs != 0L) {
+            changed = true;
         }
         lastPlacedType = null;
         lastPlacedMessageMs = 0L;
+        if (changed) {
+            persistState();
+        }
     }
 
     public static void tick() {
         long now = System.currentTimeMillis();
+        boolean changed = false;
         for (PlantageState state : STATES.values()) {
             if (state.plantedAtMs > 0L && !state.isActive(now)) {
                 state.clear();
+                changed = true;
             }
+        }
+        if (changed) {
+            persistState();
         }
     }
 
@@ -95,20 +111,32 @@ public class PlantageHud {
         if (client == null || client.player == null || raw == null || raw.isBlank()) return;
 
         long now = System.currentTimeMillis();
-        handleCountLine(raw, now);
+        boolean changed = handleCountLine(raw, now);
 
         String folded = fold(raw);
-        if (!folded.contains("plantage")) return;
+        if (!folded.contains("plantage")) {
+            if (changed) persistState();
+            return;
+        }
 
         PlantageType type = detectType(folded);
-        if (type == null) return;
+        if (type == null) {
+            if (changed) persistState();
+            return;
+        }
 
         String profileName = PlayerNameUtil.resolveProfileName(client.player.getGameProfile());
         String ownName = fold(profileName == null || profileName.isBlank() ? client.player.getName().getString() : profileName);
-        if (!ownName.isBlank() && !isOwnPlantageMessage(folded, ownName)) return;
+        if (!ownName.isBlank() && !isOwnPlantageMessage(folded, ownName)) {
+            if (changed) persistState();
+            return;
+        }
 
         PlantageState state = STATES.get(type);
-        if (state == null) return;
+        if (state == null) {
+            if (changed) persistState();
+            return;
+        }
 
         if (folded.contains(" gelegt")) {
             state.plantedAtMs = now;
@@ -116,38 +144,52 @@ public class PlantageHud {
             state.nextFertilizeAtMs = now + FERTILIZE_INTERVAL_MS;
             lastPlacedType = type;
             lastPlacedMessageMs = now;
+            persistState();
             return;
         }
 
         if (folded.contains(" gewassert")) {
             state.nextWaterAtMs = now + WATER_INTERVAL_MS;
+            persistState();
             return;
         }
 
         if (folded.contains(" gedungt")) {
             state.nextFertilizeAtMs = now + FERTILIZE_INTERVAL_MS;
+            persistState();
             return;
         }
 
         if (folded.contains(" geerntet")) {
             state.clear();
+            persistState();
+            return;
+        }
+
+        if (changed) {
+            persistState();
         }
     }
 
-    private static void handleCountLine(String raw, long now) {
-        if (lastPlacedType == null || now - lastPlacedMessageMs > RECENT_PLANT_WINDOW_MS) return;
+    private static boolean handleCountLine(String raw, long now) {
+        if (lastPlacedType == null || now - lastPlacedMessageMs > RECENT_PLANT_WINDOW_MS) return false;
 
         Matcher matcher = COUNT_PATTERN.matcher(raw);
-        if (!matcher.find()) return;
+        if (!matcher.find()) return false;
 
         try {
             int count = Integer.parseInt(matcher.group(1));
             PlantageState state = STATES.get(lastPlacedType);
             if (state != null) {
-                state.count = Math.max(1, Math.min(10, count));
+                int clamped = Math.max(1, Math.min(10, count));
+                if (state.count != clamped) {
+                    state.count = clamped;
+                    return true;
+                }
             }
         } catch (NumberFormatException ignored) {
         }
+        return false;
     }
 
     private static boolean isOwnPlantageMessage(String folded, String ownName) {
@@ -172,6 +214,62 @@ public class PlantageHud {
                 .replaceAll("[^a-z0-9/]+", " ")
                 .replaceAll("\\s+", " ")
                 .trim();
+    }
+
+    private static void restoreFromConfig() {
+        if (BetterUCConfig.INSTANCE.plantTimerStates == null) {
+            BetterUCConfig.INSTANCE.plantTimerStates = new LinkedHashMap<>();
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        boolean changed = false;
+        for (PlantageState state : STATES.values()) {
+            BetterUCConfig.PlantTimerState saved = BetterUCConfig.INSTANCE.plantTimerStates.get(state.type.name());
+            if (saved == null) {
+                state.clear();
+                continue;
+            }
+
+            state.plantedAtMs = Math.max(0L, saved.plantedAtMs);
+            state.nextWaterAtMs = Math.max(0L, saved.nextWaterAtMs);
+            state.nextFertilizeAtMs = Math.max(0L, saved.nextFertilizeAtMs);
+            state.count = Math.max(0, Math.min(10, saved.count));
+
+            if (state.plantedAtMs > 0L && !state.isActive(now)) {
+                state.clear();
+                changed = true;
+            }
+        }
+
+        lastPlacedType = null;
+        lastPlacedMessageMs = 0L;
+
+        if (changed) {
+            persistState();
+        }
+    }
+
+    private static void persistState() {
+        if (BetterUCConfig.INSTANCE.plantTimerStates == null) {
+            BetterUCConfig.INSTANCE.plantTimerStates = new LinkedHashMap<>();
+        }
+
+        BetterUCConfig.INSTANCE.plantTimerStates.clear();
+        for (PlantageState state : STATES.values()) {
+            if (state.plantedAtMs <= 0L) continue;
+
+            BetterUCConfig.INSTANCE.plantTimerStates.put(
+                    state.type.name(),
+                    new BetterUCConfig.PlantTimerState(
+                            state.plantedAtMs,
+                            state.nextWaterAtMs,
+                            state.nextFertilizeAtMs,
+                            Math.max(0, Math.min(10, state.count))
+                    )
+            );
+        }
+        BetterUCConfig.save();
     }
 
     private static void render(DrawContext context) {

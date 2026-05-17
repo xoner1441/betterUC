@@ -3,7 +3,7 @@
   "id": "betteruc",
   "version": "1.0.0",
   "name": "betterUC",
-  "description": "betterUC quality-of-life mod for nametags, blacklist tools, HUD and utilities.",
+  "description": "betterUC quality-of-life mod for blacklist tools, HUD and utilities.",
   "authors": ["FABI1441"],
   "license": "MIT",
   "environment": "client",

@@ -4,11 +4,8 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "ChatBlacklistMixin",
-    "GameRendererFullbrightMixin",
     "GameRendererZoomMixin",
-    "InGameHudAmmoMixin",
-    "PlayerListHudMixin",
-    "PlayerEntityRendererMixin"
+    "InGameHudAmmoMixin"
   ],
   "client": [],
   "injectors": {

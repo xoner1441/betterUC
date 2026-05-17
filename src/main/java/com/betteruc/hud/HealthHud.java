@@ -29,16 +29,22 @@ public class HealthHud {
         int textWidth = client.textRenderer.getWidth(healthText);
         int totalWidth = 9 + 2 + textWidth;
 
-        int startX = centerX - totalWidth / 2;
-        int y = centerY + 15;
+        int startX = BetterUCConfig.INSTANCE.healthHudX >= 0
+                ? BetterUCConfig.INSTANCE.healthHudX
+                : centerX - totalWidth / 2;
+        int y = BetterUCConfig.INSTANCE.healthHudY >= 0
+                ? BetterUCConfig.INSTANCE.healthHudY
+                : centerY + 15;
+        int heartColor = BetterUCConfig.INSTANCE.healthHudHeartColor;
+        int textColor = BetterUCConfig.INSTANCE.healthHudTextColor;
 
         context.drawGuiTexture(
                 net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED,
                 net.minecraft.util.Identifier.ofVanilla("hud/heart/full"),
                 startX, y, 9, 9,
-                net.minecraft.util.math.ColorHelper.getWhite(1.0f)
+                heartColor
         );
 
-        context.drawText(client.textRenderer, Text.literal(healthText), startX + 11, y, 0xFFFF5555, true);
+        context.drawText(client.textRenderer, Text.literal(healthText), startX + 11, y, textColor, true);
     }
 }

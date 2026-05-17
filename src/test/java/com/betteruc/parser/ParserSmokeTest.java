@@ -38,6 +38,20 @@ class ParserSmokeTest {
     }
 
     @Test
+    void blacklistEntryKeepsOriginalRestForInfoCommand() {
+        BlacklistParser.Entry entry = BlacklistParser.parseEntry(
+                "> Eckiges | Gangzone (Vogelfrei) + Fraktionsschaedigung | 23.4.2026 14:4 | 30 Kills | 6500$ (AFK)"
+        );
+
+        assertNotNull(entry);
+        assertEquals("Eckiges", entry.name());
+        assertEquals(
+                "Gangzone (Vogelfrei) + Fraktionsschaedigung | 23.4.2026 14:4 | 30 Kills | 6500$ (AFK)",
+                entry.rest().trim()
+        );
+    }
+
+    @Test
     void memberInfoParsesHeaderAndStructuredLine() {
         MemberInfoParser.Header header = MemberInfoParser.parseHeader("=== Mitglieder von Calderon Kartell (2/50) ===");
         MemberInfoParser.ParsedLine line = MemberInfoParser.parseLine("1 | SpielerEins | online", null);

@@ -22,20 +22,6 @@ public class ColorPickerScreen extends Screen {
     private int g;
     private int b;
 
-    public ColorPickerScreen(Screen parent, boolean isBlacklist, int color) {
-        this(
-                parent,
-                isBlacklist ? "Blacklist Farbe" : "Fraktion Farbe",
-                isBlacklist ? "\u00A7cBlacklist Farbe waehlen" : "\u00A7aFraktion Farbe waehlen",
-                color,
-                c -> {
-                    if (isBlacklist) BetterUCConfig.INSTANCE.blacklistColor = c;
-                    else BetterUCConfig.INSTANCE.factionColor = c;
-                },
-                false
-        );
-    }
-
     public ColorPickerScreen(Screen parent, String title, String headingText, int color, ColorApplyTarget applyTarget) {
         this(parent, title, headingText, color, applyTarget, true);
     }
