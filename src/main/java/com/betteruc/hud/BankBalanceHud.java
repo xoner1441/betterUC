@@ -23,6 +23,8 @@ public class BankBalanceHud {
 
     private static int currentBankBalance = -1;
     private static final DecimalFormat MONEY_FORMAT = createMoneyFormat();
+    private static int cachedBalance = Integer.MIN_VALUE;
+    private static Text cachedText = Text.literal("");
 
     public static void register() {
         restoreFromConfig();
@@ -72,8 +74,7 @@ public class BankBalanceHud {
 
         int x = BetterUCConfig.INSTANCE.bankHudX;
         int y = BetterUCConfig.INSTANCE.bankHudY;
-        String text = "Bank: " + formatMoney(currentBankBalance) + "$";
-        context.drawTextWithShadow(client.textRenderer, Text.literal(text), x, y, BetterUCConfig.INSTANCE.bankHudColor);
+        context.drawTextWithShadow(client.textRenderer, getDisplayText(), x, y, BetterUCConfig.INSTANCE.bankHudColor);
     }
 
     private static Integer parseMoneyValue(String raw) {
@@ -100,6 +101,14 @@ public class BankBalanceHud {
         if (changed) {
             BetterUCConfig.save();
         }
+    }
+
+    private static Text getDisplayText() {
+        if (currentBankBalance != cachedBalance) {
+            cachedBalance = currentBankBalance;
+            cachedText = Text.literal("Bank: " + formatMoney(currentBankBalance) + "$");
+        }
+        return cachedText;
     }
 
     private static DecimalFormat createMoneyFormat() {

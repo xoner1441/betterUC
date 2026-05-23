@@ -11,6 +11,8 @@ public class FpsHud {
     private static long sampleWindowStartMs = 0L;
     private static int framesInWindow = 0;
     private static int currentFps = 0;
+    private static int cachedFps = -1;
+    private static Text cachedText = Text.literal("FPS: 0");
 
     public static void register() {
         HudRenderCallback.EVENT.register((drawContext, tickCounter) -> render(drawContext));
@@ -22,10 +24,10 @@ public class FpsHud {
         if (!BetterUCConfig.INSTANCE.showFpsHud) return;
 
         updateFpsSample();
-        String text = "FPS: " + Math.max(0, currentFps);
+        Text text = getDisplayText();
         int x = BetterUCConfig.INSTANCE.fpsHudX;
         int y = BetterUCConfig.INSTANCE.fpsHudY;
-        context.drawTextWithShadow(client.textRenderer, Text.literal(text), x, y, BetterUCConfig.INSTANCE.fpsHudColor);
+        context.drawTextWithShadow(client.textRenderer, text, x, y, BetterUCConfig.INSTANCE.fpsHudColor);
     }
 
     private static void updateFpsSample() {
@@ -41,5 +43,14 @@ public class FpsHud {
             framesInWindow = 0;
             sampleWindowStartMs = now;
         }
+    }
+
+    private static Text getDisplayText() {
+        int fps = Math.max(0, currentFps);
+        if (fps != cachedFps) {
+            cachedFps = fps;
+            cachedText = Text.literal("FPS: " + fps);
+        }
+        return cachedText;
     }
 }

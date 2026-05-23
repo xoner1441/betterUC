@@ -20,7 +20,11 @@ public final class ClientScheduler {
 
     public static void runDelayedOnClient(MinecraftClient client, long delayMs, Runnable task) {
         if (client == null || task == null) return;
+        Object scheduledNetworkHandler = client.getNetworkHandler();
         long safeDelayMs = Math.max(0L, delayMs);
-        DELAY_EXECUTOR.schedule(() -> client.execute(task), safeDelayMs, TimeUnit.MILLISECONDS);
+        DELAY_EXECUTOR.schedule(() -> client.execute(() -> {
+            if (client.getNetworkHandler() != scheduledNetworkHandler) return;
+            task.run();
+        }), safeDelayMs, TimeUnit.MILLISECONDS);
     }
 }

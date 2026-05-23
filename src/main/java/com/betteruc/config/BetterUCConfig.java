@@ -51,15 +51,8 @@ public class BetterUCConfig {
     // Name -> Original-Rest der Blacklist-Zeile nach dem Spielernamen.
     public transient Map<String, String> blacklistEntryRests = new LinkedHashMap<>();
 
-    public transient int currentMoney = 0;
     public transient int currentBlackMoney = 0;
     public List<String> trackedFactionQueries = defaultTrackedFactionQueries();
-    public static final String[] EIGENBEDARF_DRUG_OPTIONS = new String[]{
-            "Pulver",
-            "Kr\u00E4uter",
-            "Kristalle",
-            "Wundert\u00FCte"
-    };
     public static final int DEFAULT_TOGGLE_SPRINT_HUD_COLOR = 0xFF55FF55;
     public static final int DEFAULT_FPS_HUD_COLOR = 0xFF55FFFF;
     public static final int DEFAULT_PAYDAY_HUD_COLOR = 0xFFFFD866;
@@ -100,20 +93,6 @@ public class BetterUCConfig {
         }
     }
 
-    public static class EigenbedarfPreset {
-        public String droge = EIGENBEDARF_DRUG_OPTIONS[0];
-        public int menge = 0;
-        public int reinheit = 0;
-
-        public EigenbedarfPreset() {}
-
-        public EigenbedarfPreset(String droge, int menge, int reinheit) {
-            this.droge = droge;
-            this.menge = menge;
-            this.reinheit = reinheit;
-        }
-    }
-
     public static class PlantTimerState {
         public long plantedAtMs = 0L;
         public long nextWaterAtMs = 0L;
@@ -131,8 +110,6 @@ public class BetterUCConfig {
     }
 
     public List<HotkeyCommand> hotkeyCommands = new ArrayList<>();
-    public EigenbedarfPreset eigenbedarfSlot1 = new EigenbedarfPreset(EIGENBEDARF_DRUG_OPTIONS[0], 0, 0);
-    public EigenbedarfPreset eigenbedarfSlot2 = new EigenbedarfPreset(EIGENBEDARF_DRUG_OPTIONS[1], 0, 0);
 
     public int timerX = 10;
     public int timerY = 10;
@@ -172,7 +149,6 @@ public class BetterUCConfig {
     public boolean zoomEnabled = true;
     public int zoomKeyCode = 67; // GLFW_KEY_C
     public float zoomFovMultiplier = 0.25f;
-    public boolean carAutomationEnabled = true;
     public boolean autoStatsOnJoinEnabled = true;
     public Map<String, PlantTimerState> plantTimerStates = new LinkedHashMap<>();
 
@@ -189,36 +165,6 @@ public class BetterUCConfig {
             this.kills = kills;
             this.price = price;
         }
-    }
-
-    public static int clampEigenbedarfPurity(int value) {
-        return Math.max(0, Math.min(value, 3));
-    }
-
-    public static int clampEigenbedarfAmount(int value) {
-        return Math.max(0, value);
-    }
-
-    public static String normalizeEigenbedarfDrug(String raw) {
-        if (raw == null) return EIGENBEDARF_DRUG_OPTIONS[0];
-        String trimmed = raw.trim();
-        if (trimmed.isEmpty()) return EIGENBEDARF_DRUG_OPTIONS[0];
-
-        if (trimmed.equalsIgnoreCase("Kraeuter")) return EIGENBEDARF_DRUG_OPTIONS[1];
-        if (trimmed.equalsIgnoreCase("Wundertuete")) return EIGENBEDARF_DRUG_OPTIONS[3];
-
-        for (String option : EIGENBEDARF_DRUG_OPTIONS) {
-            if (option.equalsIgnoreCase(trimmed)) return option;
-        }
-        return EIGENBEDARF_DRUG_OPTIONS[0];
-    }
-
-    private static EigenbedarfPreset sanitizeEigenbedarfPreset(EigenbedarfPreset preset, String fallbackDrug) {
-        EigenbedarfPreset safe = preset == null ? new EigenbedarfPreset() : preset;
-        safe.droge = normalizeEigenbedarfDrug(safe.droge == null || safe.droge.isBlank() ? fallbackDrug : safe.droge);
-        safe.menge = clampEigenbedarfAmount(safe.menge);
-        safe.reinheit = clampEigenbedarfPurity(safe.reinheit);
-        return safe;
     }
 
     private static int sanitizeHudColor(int color, int fallback) {
@@ -698,14 +644,6 @@ public class BetterUCConfig {
             INSTANCE.healthHudColor = sanitizeHudColor(INSTANCE.healthHudColor, DEFAULT_HEALTH_HUD_COLOR);
             INSTANCE.healthHudHeartColor = sanitizeHudColor(INSTANCE.healthHudHeartColor, INSTANCE.healthHudColor);
             INSTANCE.healthHudTextColor = sanitizeHudColor(INSTANCE.healthHudTextColor, INSTANCE.healthHudColor);
-            INSTANCE.eigenbedarfSlot1 = sanitizeEigenbedarfPreset(
-                    INSTANCE.eigenbedarfSlot1,
-                    EIGENBEDARF_DRUG_OPTIONS[0]
-            );
-            INSTANCE.eigenbedarfSlot2 = sanitizeEigenbedarfPreset(
-                    INSTANCE.eigenbedarfSlot2,
-                    EIGENBEDARF_DRUG_OPTIONS[1]
-            );
             if (INSTANCE.blReasons == null || INSTANCE.blReasons.isEmpty()) {
                 INSTANCE.blReasons = defaultBlacklistReasons();
             }

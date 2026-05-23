@@ -81,10 +81,9 @@ public class BetterUCScreen extends Screen {
         int y = startY;
 
         addPageOneButton(leftX, y, pageOneButtonW, "\u00A76Blacklist Gruende", b -> openScreen(new BlacklistConfigScreen(this)));
-        addPageOneButton(rightX, y, pageOneButtonW, "\u00A7dEigenbedarf", b -> openScreen(new EigenbedarfConfigScreen(this)));
+        addPageOneButton(rightX, y, pageOneButtonW, "\u00A7bHotkey Commands", b -> openScreen(new HotkeyCommandsScreen(this)));
 
         y += PAGE_ONE_ROW_STEP;
-        addPageOneButton(leftX, y, pageOneButtonW, "\u00A7bHotkey Commands", b -> openScreen(new HotkeyCommandsScreen(this)));
         addPageOneButton(rightX, y, pageOneButtonW, zoomKeyLabel(), b -> {
             capturingZoomKey = true;
             refreshWidgets();
@@ -121,11 +120,6 @@ public class BetterUCScreen extends Screen {
         addPageOneToggleButton(rightX, y, pageOneButtonW, BetterUCConfig.INSTANCE.zoomEnabled,
                 "\u00A7aZoom: AN", "\u00A77Zoom: AUS",
                 () -> BetterUCConfig.INSTANCE.zoomEnabled = !BetterUCConfig.INSTANCE.zoomEnabled, true);
-
-        y += PAGE_ONE_ROW_STEP;
-        addPageOneToggleButton(leftX, y, pageOneButtonW, BetterUCConfig.INSTANCE.carAutomationEnabled,
-                "\u00A7aCar Auto: AN", "\u00A77Car Auto: AUS",
-                () -> BetterUCConfig.INSTANCE.carAutomationEnabled = !BetterUCConfig.INSTANCE.carAutomationEnabled, true);
 
         y += PAGE_ONE_ROW_STEP;
         addPageOneToggleButton(leftX, y, pageOneButtonW, BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled,
@@ -246,17 +240,6 @@ public class BetterUCScreen extends Screen {
             capturingZoomKey = true;
             refreshWidgets();
         }, BUTTON_STEP_SMALL);
-
-        y = addToggleButton(
-                centerX,
-                y,
-                BetterUCConfig.INSTANCE.carAutomationEnabled,
-                "\u00A7aCar Auto: AN",
-                "\u00A77Car Auto: AUS",
-                () -> BetterUCConfig.INSTANCE.carAutomationEnabled = !BetterUCConfig.INSTANCE.carAutomationEnabled,
-                true,
-                BUTTON_STEP_SMALL
-        );
 
         return y + SECTION_GAP;
     }
@@ -382,44 +365,6 @@ public class BetterUCScreen extends Screen {
         return y + BUTTON_STEP_NORMAL;
     }
 
-    private int addHackTimerXSlider(int centerX, int y, int maxScreenX) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Hack-Timer X: " + BetterUCConfig.INSTANCE.hackTimerX),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.hackTimerX / (double) maxScreenX))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("Hack-Timer X: " + (int) (value * maxScreenX)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.hackTimerX = (int) (value * maxScreenX);
-            }
-        });
-        return y + BUTTON_STEP_SMALL;
-    }
-
-    private int addHackTimerYSlider(int centerX, int y, int maxScreenY) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Hack-Timer Y: " + BetterUCConfig.INSTANCE.hackTimerY),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.hackTimerY / (double) maxScreenY))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("Hack-Timer Y: " + (int) (value * maxScreenY)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.hackTimerY = (int) (value * maxScreenY);
-            }
-        });
-        return y + BUTTON_STEP_NORMAL;
-    }
-
     private int addPlantTimerXSlider(int centerX, int y, int maxScreenX) {
         addDrawableChild(new SliderWidget(
                 centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
@@ -453,6 +398,44 @@ public class BetterUCScreen extends Screen {
             @Override
             protected void applyValue() {
                 BetterUCConfig.INSTANCE.plantTimerY = (int) (value * maxScreenY);
+            }
+        });
+        return y + BUTTON_STEP_NORMAL;
+    }
+
+    private int addHackTimerXSlider(int centerX, int y, int maxScreenX) {
+        addDrawableChild(new SliderWidget(
+                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
+                Text.literal("Hack-Timer X: " + BetterUCConfig.INSTANCE.hackTimerX),
+                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.hackTimerX / (double) maxScreenX))
+        ) {
+            @Override
+            protected void updateMessage() {
+                setMessage(Text.literal("Hack-Timer X: " + (int) (value * maxScreenX)));
+            }
+
+            @Override
+            protected void applyValue() {
+                BetterUCConfig.INSTANCE.hackTimerX = (int) (value * maxScreenX);
+            }
+        });
+        return y + BUTTON_STEP_SMALL;
+    }
+
+    private int addHackTimerYSlider(int centerX, int y, int maxScreenY) {
+        addDrawableChild(new SliderWidget(
+                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
+                Text.literal("Hack-Timer Y: " + BetterUCConfig.INSTANCE.hackTimerY),
+                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.hackTimerY / (double) maxScreenY))
+        ) {
+            @Override
+            protected void updateMessage() {
+                setMessage(Text.literal("Hack-Timer Y: " + (int) (value * maxScreenY)));
+            }
+
+            @Override
+            protected void applyValue() {
+                BetterUCConfig.INSTANCE.hackTimerY = (int) (value * maxScreenY);
             }
         });
         return y + BUTTON_STEP_NORMAL;

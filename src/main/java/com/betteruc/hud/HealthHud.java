@@ -9,6 +9,10 @@ import net.minecraft.text.Text;
 
 public class HealthHud {
 
+    private static int cachedHearts = Integer.MIN_VALUE;
+    private static String cachedHealthString = "";
+    private static Text cachedHealthText = Text.literal("");
+
     public static void register() {
         HudRenderCallback.EVENT.register((drawContext, tickCounter) -> render(drawContext));
     }
@@ -21,12 +25,12 @@ public class HealthHud {
         PlayerEntity player = client.player;
         int health = (int) Math.ceil(player.getHealth());
         int fullHearts = health / 2;
+        Text healthText = getHealthText(fullHearts);
 
         int centerX = client.getWindow().getScaledWidth() / 2;
         int centerY = client.getWindow().getScaledHeight() / 2;
 
-        String healthText = String.valueOf(fullHearts);
-        int textWidth = client.textRenderer.getWidth(healthText);
+        int textWidth = client.textRenderer.getWidth(cachedHealthString);
         int totalWidth = 9 + 2 + textWidth;
 
         int startX = BetterUCConfig.INSTANCE.healthHudX >= 0
@@ -45,6 +49,15 @@ public class HealthHud {
                 heartColor
         );
 
-        context.drawText(client.textRenderer, Text.literal(healthText), startX + 11, y, textColor, true);
+        context.drawText(client.textRenderer, healthText, startX + 11, y, textColor, true);
+    }
+
+    private static Text getHealthText(int fullHearts) {
+        if (fullHearts != cachedHearts) {
+            cachedHearts = fullHearts;
+            cachedHealthString = String.valueOf(fullHearts);
+            cachedHealthText = Text.literal(cachedHealthString);
+        }
+        return cachedHealthText;
     }
 }

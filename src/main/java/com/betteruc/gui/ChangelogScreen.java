@@ -13,13 +13,14 @@ public class ChangelogScreen extends Screen {
     private static final Page[] PAGES = new Page[]{
             new Page(
                     "Highlights",
-                    "betterUC 1.0.0",
+                    "betterUC 1.0.8",
                     new String[]{
                             "Potion-HUD im Inventar-Stil mit Icon, Name und Dauer",
                             "CookDrug-Timer entfernt, weil der Server nun einen eigenen Timer hat",
+                            "Plant-Timer fuer eigene Plantagen mit Wasser- und Duengerzeiten",
                             "Payday-, Bank-, Ammo-, FPS-, Herz- und ToggleSprint-HUDs",
                             "HUD-Positionen koennen im Settings-Menue angepasst werden",
-                            "Zoom, Auto-Car und Auto-Stats Join direkt im Settings-HUD schaltbar",
+                            "Zoom und Auto-Stats Join direkt im Settings-HUD schaltbar",
                             "Build kopiert die Mod-JAR automatisch in den Minecraft-Mods-Ordner"
                     }
             ),
@@ -42,13 +43,10 @@ public class ChangelogScreen extends Screen {
                     "Tools & Commands",
                     "Alltag im Spiel",
                     new String[]{
-                            "/einzahlen zahlt gefundenes Bargeld automatisch ein",
                             "/seinzahlen zahlt Schwarzgeld automatisch in die S-Kasse ein",
-                            "/eigenbedarf nutzt deine gespeicherten Eigenbedarf-Presets",
                             "Hotkey Commands: eigene Befehle auf Tasten legen",
                             "Zoom-Taste frei waehlbar, Zoom reagiert sofort",
-                            "Auto-Car: optional car lock und car start beim Einsteigen",
-                            "/car find Koordinaten koennen automatisch ins Navi uebernommen werden",
+                            "/car find Koordinaten werden automatisch ins Navi uebernommen",
                             "Chat-Zeitstempel und groessere Chat-Historie"
                     }
             ),

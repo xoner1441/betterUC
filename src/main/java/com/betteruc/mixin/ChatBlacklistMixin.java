@@ -3,7 +3,9 @@ package com.betteruc.mixin;
 import com.betteruc.BetterUCMod;
 import com.betteruc.BetterUCSuppressFlags;
 import com.betteruc.ServerGate;
-import com.betteruc.client.AutoCarController;
+import com.betteruc.client.CarFindTracker;
+import com.betteruc.client.ClientScheduler;
+import com.betteruc.client.ServerCommandUtil;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.HackTimerHud;
@@ -34,7 +36,6 @@ import java.util.regex.Pattern;
 @Mixin(ChatHud.class)
 public class ChatBlacklistMixin {
 
-    private static final Pattern MONEY_PATTERN = Pattern.compile("-\\s*Geld:\\s*([0-9.]+)\\$");
     private static final Pattern BLACK_MONEY_PATTERN = Pattern.compile("-\\s*Schwarzgeld:\\s*([0-9.]+)\\$", Pattern.CASE_INSENSITIVE);
     private static final Pattern PAYDAY_PATTERN = Pattern.compile(
             "Zeit seit PayDay:\\s*(\\d+)\\s*/\\s*(\\d+)\\s*Minuten",
@@ -108,7 +109,7 @@ public class ChatBlacklistMixin {
         }
 
         String raw = message.getString();
-        AutoCarController.handleIncomingChatForCarFind(MinecraftClient.getInstance(), raw);
+        CarFindTracker.handleIncomingChat(MinecraftClient.getInstance(), raw);
         PlantageHud.handleChatMessage(MinecraftClient.getInstance(), raw);
 
         if (BetterUCSuppressFlags.consumeBlacklistInfoLocalMessageBypass()) {
@@ -174,21 +175,20 @@ public class ChatBlacklistMixin {
 
         client.execute(() -> {
             if (client.player == null || !ServerGate.isAllowedServer(client)) return;
-            BetterUCSuppressFlags.markSilentStatsRequest();
-            forceHideStatsLinesUntilMs = System.currentTimeMillis() + FORCE_HIDE_STATS_WINDOW_MS;
-            forceHideDashStatsLinesUntilMs = System.currentTimeMillis() + FORCE_HIDE_DASH_STATS_WINDOW_MS;
-            client.player.networkHandler.sendChatCommand("stats");
-            BetterUCMod.LOGGER.info("AFK-Exit: silent /stats refresh requested");
+            if (!ServerCommandUtil.isAutomaticSendReady(client)) return;
+            if (ServerCommandUtil.sendAutomatic(client, "stats")) {
+                BetterUCSuppressFlags.markSilentStatsRequest();
+                forceHideStatsLinesUntilMs = System.currentTimeMillis() + FORCE_HIDE_STATS_WINDOW_MS;
+                forceHideDashStatsLinesUntilMs = System.currentTimeMillis() + FORCE_HIDE_DASH_STATS_WINDOW_MS;
+                ClientScheduler.runDelayedOnClient(client, BetterUCSuppressFlags.SILENT_STATS_TIMEOUT_MS,
+                        BetterUCSuppressFlags::cleanupStaleSilentStatsState);
+                BetterUCMod.LOGGER.info("AFK-Exit: silent /stats refresh requested");
+            }
         });
     }
 
     private void updateMoney(String raw) {
         BankBalanceHud.updateFromChatLine(raw);
-
-        Matcher moneyMatcher = MONEY_PATTERN.matcher(raw);
-        if (moneyMatcher.find()) {
-            BetterUCConfig.INSTANCE.currentMoney = parseStatMoneyValue(moneyMatcher.group(1));
-        }
 
         Matcher blackMoneyMatcher = BLACK_MONEY_PATTERN.matcher(raw);
         if (blackMoneyMatcher.find()) {

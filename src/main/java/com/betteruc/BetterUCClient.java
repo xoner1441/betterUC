@@ -4,7 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
-import com.betteruc.client.AutoCarController;
+import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.MovementController;
 import com.betteruc.client.ServerCommandUtil;
@@ -13,7 +13,6 @@ import com.betteruc.gui.CommandGui;
 import com.betteruc.gui.BetterUCScreen;
 import com.betteruc.hud.AmmoHud;
 import com.betteruc.hud.BankBalanceHud;
-import com.betteruc.hud.CarMarkerHud;
 import com.betteruc.hud.FpsHud;
 import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.HealthHud;
@@ -52,15 +51,14 @@ public class BetterUCClient implements ClientModInitializer {
     private static final int MAX_KILLS = 100;
     private static final int MAX_PRICE = 10_000;
     private static final int MIN_PRICE = 100;
-    private static final int EIGENBEDARF_REQUEST_SPACING_MS = 1000;
-    private static final int AUTO_STATS_ON_JOIN_DELAY_TICKS = 100;
+    private static final int AUTO_STATS_ON_JOIN_DELAY_TICKS = 240;
     private static final long BLINFO_CACHE_MAX_AGE_MS = 20_000L;
     private static final long BLINFO_TIMEOUT_MS = 5000L;
     private boolean keyWasDown = false;
     private boolean keyWasDown2 = false;
     private int statsOnJoinDelay = -1;
-    private final AutoCarController autoCarController = new AutoCarController();
     private final Map<Integer, Boolean> hotkeyPressedState = new HashMap<>();
+    private final Set<Integer> activeHotkeyKeys = new HashSet<>();
 
     private static final class MatchedReason {
         private final String key;
@@ -119,25 +117,7 @@ public class BetterUCClient implements ClientModInitializer {
     }
 
     private void registerMessageEvents() {
-        ClientSendMessageEvents.COMMAND.register(command -> {
-            String root = getCommandRoot(command);
-            if (!isCarFindCommand(command, root)) return;
-
-            AutoCarController.markCarFindCommand();
-            BetterUCMod.LOGGER.info("Auto-car: /car find erkannt, warte auf Koordinaten-Nachricht");
-        });
-    }
-
-    private String getCommandRoot(String command) {
-        if (command == null || command.isBlank()) return "";
-        String[] parts = command.trim().toLowerCase(Locale.ROOT).split("\\s+", 2);
-        return parts.length == 0 ? "" : parts[0];
-    }
-
-    private boolean isCarFindCommand(String command, String commandRoot) {
-        if (!"car".equals(commandRoot) || command == null) return false;
-        String[] parts = command.trim().toLowerCase(Locale.ROOT).split("\\s+");
-        return parts.length >= 2 && "find".equals(parts[1]);
+        ClientSendMessageEvents.COMMAND.register(CarFindTracker::handleOutgoingCommand);
     }
 
     private void registerHudElements() {
@@ -149,23 +129,25 @@ public class BetterUCClient implements ClientModInitializer {
         FpsHud.register();
         PaydayHud.register();
         PlantageHud.register();
-        CarMarkerHud.register();
         PotionEffectsHud.register();
     }
 
     private void registerConnectionEvents() {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+            ServerCommandUtil.markJoined(client);
             BetterUCConfig.clearChatBlacklistRuntime();
             PaydayHud.clear();
             AmmoHud.clear();
             BankBalanceHud.clear();
-            CarMarkerHud.clear();
             statsOnJoinDelay = BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled
                     ? AUTO_STATS_ON_JOIN_DELAY_TICKS
                     : -1;
         });
 
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> resetRuntimeState(client));
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            ServerCommandUtil.markDisconnected();
+            resetRuntimeState(client);
+        });
     }
 
     private void registerClientCommands() {
@@ -184,14 +166,12 @@ public class BetterUCClient implements ClientModInitializer {
                         return builder.buildFuture();
                     };
 
-            registerEinzahlenCommand(dispatcher);
             registerSeinzahlenCommand(dispatcher);
             registerScallCommand(dispatcher, playerSuggestions);
             registerSetBlacklistCommands(dispatcher, playerSuggestions, reasonSuggestions);
             registerBlacklistInfoCommand(dispatcher, playerSuggestions);
             registerModBlCommand(dispatcher, playerSuggestions, modBlReasonSuggestions);
             registerSetRpCommand(dispatcher, playerSuggestions);
-            registerEigenbedarfCommand(dispatcher);
         });
     }
 
@@ -210,29 +190,6 @@ public class BetterUCClient implements ClientModInitializer {
 
         names.addAll(BetterUCConfig.INSTANCE.chatBlacklistPlayers);
         return names;
-    }
-
-    private void registerEinzahlenCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
-        dispatcher.register(ClientCommandManager.literal("einzahlen").executes(context -> {
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client.player == null) return 0;
-            if (!ensureAllowedServerForManualCommand(client)) return 0;
-
-            sendServerCommand(client, "stats");
-            runDelayedOnClient(client, 1500, () -> {
-                if (client.player == null) return;
-                if (BetterUCConfig.INSTANCE.currentMoney <= 0) {
-                    client.player.sendMessage(Text.literal("\u00A7cKein Geld gefunden!"), false);
-                    return;
-                }
-                sendServerCommand(client, "bank einzahlen " + BetterUCConfig.INSTANCE.currentMoney);
-                client.player.sendMessage(
-                        Text.literal("\u00A7a[OK] Einzahlung: \u00A7f" + BetterUCConfig.INSTANCE.currentMoney + "$"),
-                        false
-                );
-            });
-            return 1;
-        }));
     }
 
     private void registerSeinzahlenCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
@@ -385,85 +342,6 @@ public class BetterUCClient implements ClientModInitializer {
                                     int stufe = IntegerArgumentType.getInteger(context, "stufe");
                                     return executeSetRp(client, spieler, stufe);
                                 }))));
-    }
-
-    private void registerEigenbedarfCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
-        dispatcher.register(ClientCommandManager.literal("eigenbedarf")
-                .executes(context -> executeEigenbedarf(MinecraftClient.getInstance(), 0))
-                .then(ClientCommandManager.argument("feld", IntegerArgumentType.integer(1, 2))
-                        .executes(context -> executeEigenbedarf(
-                                MinecraftClient.getInstance(),
-                                IntegerArgumentType.getInteger(context, "feld")
-                        ))));
-    }
-
-    private int executeEigenbedarf(MinecraftClient client, int field) {
-        if (client == null || client.player == null) return 0;
-        if (!ensureAllowedServerForManualCommand(client)) return 0;
-
-        if (field == 1 || field == 2) {
-            BetterUCConfig.EigenbedarfPreset preset = field == 1
-                    ? BetterUCConfig.INSTANCE.eigenbedarfSlot1
-                    : BetterUCConfig.INSTANCE.eigenbedarfSlot2;
-
-            String cmd = buildEigenbedarfCommand(preset);
-            if (cmd == null) {
-                client.player.sendMessage(Text.literal(
-                        "\u00A7cEigenbedarf Feld " + field + " ist ungueltig. "
-                                + "\u00A77Bitte Droge/Menge/Reinheit im Settings-HUD setzen."
-                ), false);
-                return 0;
-            }
-
-            sendServerCommand(client, cmd);
-            client.player.sendMessage(Text.literal(
-                    "\u00A7a[OK] Eigenbedarf Feld " + field + ": \u00A7f/" + cmd
-            ), false);
-            return 1;
-        }
-
-        List<String> commands = new ArrayList<>();
-        String cmd1 = buildEigenbedarfCommand(BetterUCConfig.INSTANCE.eigenbedarfSlot1);
-        String cmd2 = buildEigenbedarfCommand(BetterUCConfig.INSTANCE.eigenbedarfSlot2);
-        if (cmd1 != null) commands.add(cmd1);
-        if (cmd2 != null) commands.add(cmd2);
-
-        if (commands.isEmpty()) {
-            client.player.sendMessage(Text.literal(
-                    "\u00A7cKein Eigenbedarf-Preset aktiv. \u00A77Setze Menge > 0 in Feld 1 oder Feld 2."
-            ), false);
-            return 0;
-        }
-
-        for (int i = 0; i < commands.size(); i++) {
-            String cmd = commands.get(i);
-            if (i == 0) {
-                sendServerCommand(client, cmd);
-            } else {
-                long delay = (long) EIGENBEDARF_REQUEST_SPACING_MS * i;
-                runDelayedOnClient(client, delay, () -> {
-                    if (client.player != null) {
-                        sendServerCommand(client, cmd);
-                    }
-                });
-            }
-        }
-
-        client.player.sendMessage(Text.literal(
-                "\u00A7a[OK] Eigenbedarf: \u00A7f" + commands.size() + "x /dbank get gesendet."
-        ), false);
-        return 1;
-    }
-
-    private String buildEigenbedarfCommand(BetterUCConfig.EigenbedarfPreset preset) {
-        if (preset == null) return null;
-
-        String droge = BetterUCConfig.normalizeEigenbedarfDrug(preset.droge);
-        int menge = BetterUCConfig.clampEigenbedarfAmount(preset.menge);
-        int reinheit = BetterUCConfig.clampEigenbedarfPurity(preset.reinheit);
-
-        if (menge <= 0) return null;
-        return String.format("dbank get %s %d %d", droge, menge, reinheit);
     }
 
     private int executeBlacklistInfo(MinecraftClient client, String spieler) {
@@ -1001,10 +879,10 @@ public class BetterUCClient implements ClientModInitializer {
 
             HackTimerHud.tick();
             PlantageHud.tick();
+            AmmoHud.tickReloadKey(client);
             tickStatsOnJoin(client);
             handleConfiguredHotkeys(client);
             MovementController.tick(client);
-            autoCarController.tick(client);
             handleScreenHotkeys(client);
         });
     }
@@ -1012,9 +890,14 @@ public class BetterUCClient implements ClientModInitializer {
     private void tickStatsOnJoin(MinecraftClient client) {
         if (!ServerGate.isAllowedServer(client)) return;
         if (statsOnJoinDelay == 0) {
-            sendServerCommand(client, "stats");
-            BetterUCMod.LOGGER.info("Auto-sent /stats for Payday initialization");
-            statsOnJoinDelay = -1;
+            if (!ServerCommandUtil.isAutomaticSendReady(client)) return;
+            if (ServerCommandUtil.sendAutomatic(client, "stats")) {
+                BetterUCSuppressFlags.markSilentStatsRequest();
+                runDelayedOnClient(client, BetterUCSuppressFlags.SILENT_STATS_TIMEOUT_MS,
+                        BetterUCSuppressFlags::cleanupStaleSilentStatsState);
+                BetterUCMod.LOGGER.info("Auto-sent /stats for Payday initialization");
+                statsOnJoinDelay = -1;
+            }
         } else if (statsOnJoinDelay > 0) {
             statsOnJoinDelay--;
         }
@@ -1037,8 +920,14 @@ public class BetterUCClient implements ClientModInitializer {
     private void handleConfiguredHotkeys(MinecraftClient client) {
         if (client.player == null || client.currentScreen != null) return;
 
-        Set<Integer> activeKeys = new HashSet<>();
-        for (BetterUCConfig.HotkeyCommand entry : BetterUCConfig.INSTANCE.hotkeyCommands) {
+        List<BetterUCConfig.HotkeyCommand> hotkeys = BetterUCConfig.INSTANCE.hotkeyCommands;
+        if (hotkeys == null || hotkeys.isEmpty()) {
+            hotkeyPressedState.clear();
+            return;
+        }
+
+        activeHotkeyKeys.clear();
+        for (BetterUCConfig.HotkeyCommand entry : hotkeys) {
             if (entry == null) continue;
             int keyCode = entry.keyCode;
             if (keyCode < 0 || entry.command == null) continue;
@@ -1046,7 +935,7 @@ public class BetterUCClient implements ClientModInitializer {
             String command = entry.command.trim();
             if (command.isEmpty()) continue;
 
-            activeKeys.add(keyCode);
+            activeHotkeyKeys.add(keyCode);
             boolean isDown = GLFW.glfwGetKey(client.getWindow().getHandle(), keyCode) == GLFW.GLFW_PRESS;
             boolean wasDown = hotkeyPressedState.getOrDefault(keyCode, false);
 
@@ -1059,7 +948,7 @@ public class BetterUCClient implements ClientModInitializer {
             hotkeyPressedState.put(keyCode, isDown);
         }
 
-        hotkeyPressedState.keySet().removeIf(k -> !activeKeys.contains(k));
+        hotkeyPressedState.keySet().removeIf(k -> !activeHotkeyKeys.contains(k));
     }
 
     private void resetRuntimeState(MinecraftClient client) {
@@ -1067,7 +956,6 @@ public class BetterUCClient implements ClientModInitializer {
         statsOnJoinDelay = -1;
         hotkeyPressedState.clear();
         MovementController.reset(client);
-        autoCarController.reset();
         PaydayHud.clear();
         AmmoHud.clear();
         BankBalanceHud.clear();

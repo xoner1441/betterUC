@@ -29,6 +29,7 @@ public class PotionEffectsHud {
     private static final int EFFECT_BASE_SPACING = 33;
     private static final int EFFECT_MAX_SPAN = 132;
     private static final int DURATION_COLOR = -8421505;
+    private static final List<StatusEffectInstance> ACTIVE_EFFECTS = new ArrayList<>();
 
     public static void register() {
         HudRenderCallback.EVENT.register((drawContext, tickCounter) -> render(drawContext));
@@ -39,19 +40,21 @@ public class PotionEffectsHud {
         if (client.player == null) return;
         if (!BetterUCConfig.INSTANCE.showPotionEffectsHud) return;
 
-        List<StatusEffectInstance> activeEffects = new ArrayList<>(client.player.getStatusEffects());
-        if (activeEffects.isEmpty()) return;
+        ACTIVE_EFFECTS.clear();
+        ACTIVE_EFFECTS.addAll(client.player.getStatusEffects());
+        if (ACTIVE_EFFECTS.isEmpty()) return;
 
-        activeEffects.sort(null);
+        ACTIVE_EFFECTS.sort(null);
 
         int x = BetterUCConfig.INSTANCE.potionHudX;
         int y = BetterUCConfig.INSTANCE.potionHudY;
         int spacing = EFFECT_BASE_SPACING;
-        if (activeEffects.size() > 5) {
-            spacing = Math.max(1, EFFECT_MAX_SPAN / (activeEffects.size() - 1));
+        if (ACTIVE_EFFECTS.size() > 5) {
+            spacing = Math.max(1, EFFECT_MAX_SPAN / (ACTIVE_EFFECTS.size() - 1));
         }
+        float tickRate = client.world == null ? 20.0F : client.world.getTickManager().getTickRate();
 
-        for (StatusEffectInstance effect : activeEffects) {
+        for (StatusEffectInstance effect : ACTIVE_EFFECTS) {
             RegistryEntry<StatusEffect> entry = effect.getEffectType();
             Identifier effectIcon = InGameHud.getEffectTexture(entry);
 
@@ -61,7 +64,6 @@ public class PotionEffectsHud {
             Text effectName = buildEffectName(effect);
             context.drawTextWithShadow(client.textRenderer, effectName, x + 28, y + 6, Colors.WHITE);
 
-            float tickRate = client.world == null ? 20.0F : client.world.getTickManager().getTickRate();
             Text durationText = StatusEffectUtil.getDurationText(effect, 1.0F, tickRate);
             context.drawTextWithShadow(client.textRenderer, durationText, x + 28, y + 16, DURATION_COLOR);
 
