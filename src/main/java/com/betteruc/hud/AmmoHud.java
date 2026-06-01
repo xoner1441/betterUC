@@ -93,11 +93,17 @@ public class AmmoHud {
         int x = BetterUCConfig.INSTANCE.ammoHudX;
         int y = BetterUCConfig.INSTANCE.ammoHudY;
 
-        context.drawTextWithShadow(client.textRenderer, ammoText, x, y, 0xFFFFAA33);
-
-        if (!weaponName.isBlank()) {
-            context.drawTextWithShadow(client.textRenderer, weaponText, x, y + 10, 0xFF55FF55);
-        }
+        ModernHudRenderer.drawTwoLineModule(
+                context,
+                client,
+                x,
+                y,
+                "AMMO",
+                ammoText.getString(),
+                weaponText.getString(),
+                0xFFFFAA33,
+                0xFF7CFF8A
+        );
     }
 
     private static String extractWeaponName(String raw) {

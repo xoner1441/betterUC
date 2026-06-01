@@ -5,7 +5,6 @@ import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
 
 import java.text.Normalizer;
 import java.util.LinkedHashMap;
@@ -21,7 +20,6 @@ public class PlantageHud {
     private static final long FERTILIZE_INTERVAL_MS = 25L * 60L * 1000L;
     private static final long RECENT_PLANT_WINDOW_MS = 3500L;
     private static final long EXPIRED_DISPLAY_MS = 30L * 60L * 1000L;
-    private static final int LINE_HEIGHT = 10;
     private static final Pattern COUNT_PATTERN = Pattern.compile("\\[(\\d{1,2})\\s*/\\s*10\\]");
 
     private static final Map<PlantageType, PlantageState> STATES = new LinkedHashMap<>();
@@ -283,16 +281,23 @@ public class PlantageHud {
         for (PlantageState state : STATES.values()) {
             if (!state.isActive(now)) continue;
 
-            int blockHeight = LINE_HEIGHT * 2 + 8;
+            int blockHeight = 35;
             String title = "Plantage " + state.type.label + (state.count > 0 ? " " + state.count + "/10" : "");
             String timers = "Reif: " + formatRemaining(state.plantedAtMs + GROW_DURATION_MS - now)
                     + " | Wasser: " + formatCare(state.nextWaterAtMs - now)
                     + " | D\u00FCnger: " + formatCare(state.nextFertilizeAtMs - now);
 
-            int textWidth = Math.max(client.textRenderer.getWidth(title), client.textRenderer.getWidth(timers));
-            context.fill(x - 4, y - 4, x + textWidth + 4, y + blockHeight - 4, 0xAA000000);
-            context.drawTextWithShadow(client.textRenderer, Text.literal(title), x, y, state.type.color);
-            context.drawTextWithShadow(client.textRenderer, Text.literal(timers), x, y + LINE_HEIGHT, 0xFFFFD866);
+            ModernHudRenderer.drawTwoLineModule(
+                    context,
+                    client,
+                    x,
+                    y,
+                    "PLANT",
+                    title,
+                    timers,
+                    state.type.color,
+                    0xFFFFD866
+            );
             y += blockHeight;
         }
     }

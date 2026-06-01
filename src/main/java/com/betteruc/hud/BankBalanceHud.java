@@ -4,7 +4,6 @@ import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -23,8 +22,6 @@ public class BankBalanceHud {
 
     private static int currentBankBalance = -1;
     private static final DecimalFormat MONEY_FORMAT = createMoneyFormat();
-    private static int cachedBalance = Integer.MIN_VALUE;
-    private static Text cachedText = Text.literal("");
 
     public static void register() {
         restoreFromConfig();
@@ -74,7 +71,15 @@ public class BankBalanceHud {
 
         int x = BetterUCConfig.INSTANCE.bankHudX;
         int y = BetterUCConfig.INSTANCE.bankHudY;
-        context.drawTextWithShadow(client.textRenderer, getDisplayText(), x, y, BetterUCConfig.INSTANCE.bankHudColor);
+        ModernHudRenderer.drawModule(
+                context,
+                client,
+                x,
+                y,
+                "BANK",
+                formatMoney(currentBankBalance) + "$",
+                BetterUCConfig.INSTANCE.bankHudColor
+        );
     }
 
     private static Integer parseMoneyValue(String raw) {
@@ -101,14 +106,6 @@ public class BankBalanceHud {
         if (changed) {
             BetterUCConfig.save();
         }
-    }
-
-    private static Text getDisplayText() {
-        if (currentBankBalance != cachedBalance) {
-            cachedBalance = currentBankBalance;
-            cachedText = Text.literal("Bank: " + formatMoney(currentBankBalance) + "$");
-        }
-        return cachedText;
     }
 
     private static DecimalFormat createMoneyFormat() {

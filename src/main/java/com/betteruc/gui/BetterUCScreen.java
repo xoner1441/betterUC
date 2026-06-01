@@ -4,677 +4,267 @@ import com.betteruc.client.SyncRefreshActions;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.HackTimerHud;
+import com.betteruc.hud.ModernHudRenderer;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.SliderWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.Locale;
+import java.util.function.DoubleConsumer;
+import java.util.function.IntConsumer;
+
 public class BetterUCScreen extends Screen {
 
-    private static final int BUTTON_W = 170;
+    private static final int PANEL_BG = 0xDD0D1117;
+    private static final int PANEL_INNER = 0xCC141A22;
+    private static final int PANEL_ALT = 0xB81B222D;
+    private static final int PANEL_BORDER = 0x80333C49;
+    private static final int TEXT_PRIMARY = 0xFFF8FAFC;
+    private static final int TEXT_MUTED = 0xFF94A3B8;
+    private static final int TEXT_SOFT = 0xFFCBD5E1;
     private static final int BUTTON_H = 20;
-    private static final int BUTTON_STEP_SMALL = 25;
-    private static final int BUTTON_STEP_NORMAL = 30;
-    private static final int SECTION_GAP = 6;
-    private static final int SETTINGS_PAGES = 3;
-    private static final int PAGE_ONE_COLUMN_GAP = 14;
-    private static final int PAGE_ONE_ROW_STEP = 24;
-    private static final int PAGE_ONE_MIN_BUTTON_W = 140;
-    private static final int PAGE_ONE_SIDE_MARGIN = 16;
+    private static final int MODULE_H = 16;
+    private static final int MODULE_GAP = 3;
 
+    private Category selectedCategory = Category.HUD;
+    private ModuleOption selectedModule = ModuleOption.FPS;
     private boolean capturingZoomKey = false;
-    private int currentPage = 0;
 
     public BetterUCScreen() {
-        super(Text.literal("betterUC Einstellungen"));
+        super(Text.literal("betterUC ClickGUI"));
     }
 
     @Override
     protected void init() {
-        int centerX = width / 2;
-        int maxScreenX = Math.max(1, width - 1);
-        int maxScreenY = Math.max(1, height - 1);
-        int y = 58;
-
-        clampCurrentPage();
-        addPageSwitchButtons(centerX);
-
-        if (currentPage == 0) {
-            addPageOneTwoColumnLayout(centerX, y);
-        } else if (currentPage == 1) {
-            y = addPositionSliders(centerX, y, maxScreenX, maxScreenY);
-            addTimestampField(centerX, y);
-        } else {
-            addHudColorButtons(centerX, y);
+        if (selectedModule.category != selectedCategory) {
+            selectedModule = firstModuleFor(selectedCategory);
         }
 
-        addSaveAndCloseButton(centerX);
+        addDetailControls();
+        addDrawableChild(ButtonWidget.builder(Text.literal("Speichern & Schliessen"), b -> {
+            BetterUCConfig.save();
+            close();
+        }).dimensions(mainX() + mainW() - 150, mainY() + mainH() - 28, 138, BUTTON_H).build());
     }
 
-    private void addPageSwitchButtons(int centerX) {
-        int btnY = 32;
-        addDrawableChild(ButtonWidget.builder(Text.literal("<"), b -> {
-            if (currentPage > 0) {
-                currentPage--;
-                refreshWidgets();
-            }
-        }).dimensions(centerX - BUTTON_W / 2, btnY, 20, BUTTON_H).build()).active = currentPage > 0;
+    private void addDetailControls() {
+        int x = detailX() + 14;
+        int y = detailY() + 58;
+        int controlW = Math.max(120, Math.min(194, detailW() - 28));
+        int maxScreenX = Math.max(1, width - 1);
+        int maxScreenY = Math.max(1, height - 1);
 
-        addDrawableChild(ButtonWidget.builder(Text.literal(">"), b -> {
-            if (currentPage < SETTINGS_PAGES - 1) {
-                currentPage++;
-                refreshWidgets();
+        switch (selectedModule) {
+            case HEALTH -> {
+                y = addToggle(x, y, controlW, "Health HUD", BetterUCConfig.INSTANCE.showHealthHud,
+                        () -> BetterUCConfig.INSTANCE.showHealthHud = !BetterUCConfig.INSTANCE.showHealthHud);
+                y = addIntSlider(x, y, controlW, "Health X", resolveHealthHudPreviewX(), maxScreenX,
+                        value -> BetterUCConfig.INSTANCE.healthHudX = value);
+                y = addIntSlider(x, y, controlW, "Health Y", resolveHealthHudPreviewY(), maxScreenY,
+                        value -> BetterUCConfig.INSTANCE.healthHudY = value);
+                y = addColorButton(x, y, controlW, "Herz Farbe", BetterUCConfig.INSTANCE.healthHudHeartColor,
+                        color -> BetterUCConfig.INSTANCE.healthHudHeartColor = color);
+                addColorButton(x, y, controlW, "Zahl Farbe", BetterUCConfig.INSTANCE.healthHudTextColor,
+                        color -> BetterUCConfig.INSTANCE.healthHudTextColor = color);
             }
-        }).dimensions(centerX + BUTTON_W / 2 - 20, btnY, 20, BUTTON_H).build()).active = currentPage < SETTINGS_PAGES - 1;
+            case FPS -> {
+                y = addToggle(x, y, controlW, "FPS HUD", BetterUCConfig.INSTANCE.showFpsHud,
+                        () -> BetterUCConfig.INSTANCE.showFpsHud = !BetterUCConfig.INSTANCE.showFpsHud);
+                y = addIntSlider(x, y, controlW, "FPS X", BetterUCConfig.INSTANCE.fpsHudX, maxScreenX,
+                        value -> BetterUCConfig.INSTANCE.fpsHudX = value);
+                y = addIntSlider(x, y, controlW, "FPS Y", BetterUCConfig.INSTANCE.fpsHudY, maxScreenY,
+                        value -> BetterUCConfig.INSTANCE.fpsHudY = value);
+                addColorButton(x, y, controlW, "FPS Farbe", BetterUCConfig.INSTANCE.fpsHudColor,
+                        color -> BetterUCConfig.INSTANCE.fpsHudColor = color);
+            }
+            case PAYDAY -> {
+                y = addToggle(x, y, controlW, "Payday HUD", BetterUCConfig.INSTANCE.showPaydayHud,
+                        () -> BetterUCConfig.INSTANCE.showPaydayHud = !BetterUCConfig.INSTANCE.showPaydayHud);
+                y = addIntSlider(x, y, controlW, "Payday X", BetterUCConfig.INSTANCE.paydayHudX, maxScreenX,
+                        value -> BetterUCConfig.INSTANCE.paydayHudX = value);
+                y = addIntSlider(x, y, controlW, "Payday Y", BetterUCConfig.INSTANCE.paydayHudY, maxScreenY,
+                        value -> BetterUCConfig.INSTANCE.paydayHudY = value);
+                addColorButton(x, y, controlW, "Payday Farbe", BetterUCConfig.INSTANCE.paydayHudColor,
+                        color -> BetterUCConfig.INSTANCE.paydayHudColor = color);
+            }
+            case AMMO -> {
+                y = addToggle(x, y, controlW, "Ammo HUD", BetterUCConfig.INSTANCE.showAmmoHud,
+                        () -> BetterUCConfig.INSTANCE.showAmmoHud = !BetterUCConfig.INSTANCE.showAmmoHud);
+                y = addIntSlider(x, y, controlW, "Ammo X", BetterUCConfig.INSTANCE.ammoHudX, maxScreenX,
+                        value -> BetterUCConfig.INSTANCE.ammoHudX = value);
+                addIntSlider(x, y, controlW, "Ammo Y", BetterUCConfig.INSTANCE.ammoHudY, maxScreenY,
+                        value -> BetterUCConfig.INSTANCE.ammoHudY = value);
+            }
+            case BANK -> {
+                y = addToggle(x, y, controlW, "Bank HUD", BetterUCConfig.INSTANCE.showBankHud,
+                        () -> BetterUCConfig.INSTANCE.showBankHud = !BetterUCConfig.INSTANCE.showBankHud);
+                y = addIntSlider(x, y, controlW, "Bank X", BetterUCConfig.INSTANCE.bankHudX, maxScreenX,
+                        value -> BetterUCConfig.INSTANCE.bankHudX = value);
+                y = addIntSlider(x, y, controlW, "Bank Y", BetterUCConfig.INSTANCE.bankHudY, maxScreenY,
+                        value -> BetterUCConfig.INSTANCE.bankHudY = value);
+                addColorButton(x, y, controlW, "Bank Farbe", BetterUCConfig.INSTANCE.bankHudColor,
+                        color -> BetterUCConfig.INSTANCE.bankHudColor = color);
+            }
+            case POTION -> {
+                y = addToggle(x, y, controlW, "Potion HUD", BetterUCConfig.INSTANCE.showPotionEffectsHud,
+                        () -> BetterUCConfig.INSTANCE.showPotionEffectsHud = !BetterUCConfig.INSTANCE.showPotionEffectsHud);
+                y = addIntSlider(x, y, controlW, "Potion X", BetterUCConfig.INSTANCE.potionHudX, maxScreenX,
+                        value -> BetterUCConfig.INSTANCE.potionHudX = value);
+                addIntSlider(x, y, controlW, "Potion Y", BetterUCConfig.INSTANCE.potionHudY, maxScreenY,
+                        value -> BetterUCConfig.INSTANCE.potionHudY = value);
+            }
+            case SPRINT -> {
+                y = addToggle(x, y, controlW, "ToggleSprint", BetterUCConfig.INSTANCE.toggleSprintEnabled,
+                        () -> BetterUCConfig.INSTANCE.toggleSprintEnabled = !BetterUCConfig.INSTANCE.toggleSprintEnabled);
+                y = addIntSlider(x, y, controlW, "Sprint X", BetterUCConfig.INSTANCE.toggleSprintHudX, maxScreenX,
+                        value -> BetterUCConfig.INSTANCE.toggleSprintHudX = value);
+                y = addIntSlider(x, y, controlW, "Sprint Y", BetterUCConfig.INSTANCE.toggleSprintHudY, maxScreenY,
+                        value -> BetterUCConfig.INSTANCE.toggleSprintHudY = value);
+                addColorButton(x, y, controlW, "Sprint Farbe", BetterUCConfig.INSTANCE.toggleSprintHudColor,
+                        color -> BetterUCConfig.INSTANCE.toggleSprintHudColor = color);
+            }
+            case HACK_TIMER -> {
+                y = addIntSlider(x, y, controlW, "Hack X", BetterUCConfig.INSTANCE.hackTimerX, maxScreenX,
+                        value -> BetterUCConfig.INSTANCE.hackTimerX = value);
+                addIntSlider(x, y, controlW, "Hack Y", BetterUCConfig.INSTANCE.hackTimerY, maxScreenY,
+                        value -> BetterUCConfig.INSTANCE.hackTimerY = value);
+            }
+            case PLANT_TIMER -> {
+                y = addIntSlider(x, y, controlW, "Plant X", BetterUCConfig.INSTANCE.plantTimerX, maxScreenX,
+                        value -> BetterUCConfig.INSTANCE.plantTimerX = value);
+                addIntSlider(x, y, controlW, "Plant Y", BetterUCConfig.INSTANCE.plantTimerY, maxScreenY,
+                        value -> BetterUCConfig.INSTANCE.plantTimerY = value);
+            }
+            case ZOOM -> {
+                y = addToggle(x, y, controlW, "Zoom", BetterUCConfig.INSTANCE.zoomEnabled,
+                        () -> BetterUCConfig.INSTANCE.zoomEnabled = !BetterUCConfig.INSTANCE.zoomEnabled);
+                y = addButton(x, y, controlW, zoomKeyLabel(), b -> {
+                    capturingZoomKey = true;
+                    refreshWidgets();
+                });
+                addDoubleSlider(x, y, controlW, "Zoom FOV", BetterUCConfig.INSTANCE.zoomFovMultiplier, 0.05, 0.80,
+                        value -> BetterUCConfig.INSTANCE.zoomFovMultiplier = (float) value);
+            }
+            case AUTO_STATS -> {
+                y = addToggle(x, y, controlW, "Auto-Stats Join", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled,
+                        () -> BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled = !BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
+                addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(client, true));
+            }
+            case CHAT -> addTimestampField(x, y, controlW);
+            case BLACKLIST -> {
+                y = addButton(x, y, controlW, "Blacklist Gruende", b -> openScreen(new BlacklistConfigScreen(this)));
+                addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(client, true));
+            }
+            case HOTKEYS -> addButton(x, y, controlW, "Hotkey Commands", b -> openScreen(new HotkeyCommandsScreen(this)));
+            case COMMANDS -> {
+                y = addButton(x, y, controlW, "Command Menu", b -> openScreen(new CommandGui()));
+                addButton(x, y, controlW, "Changelog", b -> openScreen(new ChangelogScreen(this)));
+            }
+        }
     }
 
-    private void addPageOneTwoColumnLayout(int centerX, int startY) {
-        int availableWidth = Math.max(PAGE_ONE_MIN_BUTTON_W * 2 + PAGE_ONE_COLUMN_GAP, width - PAGE_ONE_SIDE_MARGIN * 2);
-        int pageOneButtonW = Math.max(PAGE_ONE_MIN_BUTTON_W, Math.min(BUTTON_W, (availableWidth - PAGE_ONE_COLUMN_GAP) / 2));
-        int leftX = centerX - (PAGE_ONE_COLUMN_GAP / 2) - pageOneButtonW;
-        int rightX = centerX + (PAGE_ONE_COLUMN_GAP / 2);
-        int y = startY;
-
-        addPageOneButton(leftX, y, pageOneButtonW, "\u00A76Blacklist Gruende", b -> openScreen(new BlacklistConfigScreen(this)));
-        addPageOneButton(rightX, y, pageOneButtonW, "\u00A7bHotkey Commands", b -> openScreen(new HotkeyCommandsScreen(this)));
-
-        y += PAGE_ONE_ROW_STEP;
-        addPageOneButton(rightX, y, pageOneButtonW, zoomKeyLabel(), b -> {
-            capturingZoomKey = true;
+    private int addToggle(int x, int y, int width, String label, boolean active, Runnable toggleAction) {
+        return addButton(x, y, width, label + ": " + (active ? "AN" : "AUS"), b -> {
+            toggleAction.run();
+            BetterUCConfig.save();
             refreshWidgets();
         });
-
-        y += PAGE_ONE_ROW_STEP;
-        addPageOneToggleButton(leftX, y, pageOneButtonW, BetterUCConfig.INSTANCE.toggleSprintEnabled,
-                "\u00A7aToggleSprint: AN", "\u00A77ToggleSprint: AUS",
-                () -> BetterUCConfig.INSTANCE.toggleSprintEnabled = !BetterUCConfig.INSTANCE.toggleSprintEnabled, true);
-        addPageOneToggleButton(rightX, y, pageOneButtonW, BetterUCConfig.INSTANCE.showHealthHud,
-                "\u00A7aHerz-Anzeige: AN", "\u00A77Herz-Anzeige: AUS",
-                () -> BetterUCConfig.INSTANCE.showHealthHud = !BetterUCConfig.INSTANCE.showHealthHud, false);
-
-        y += PAGE_ONE_ROW_STEP;
-        addPageOneToggleButton(leftX, y, pageOneButtonW, BetterUCConfig.INSTANCE.showFpsHud,
-                "\u00A7aFPS-HUD: AN", "\u00A77FPS-HUD: AUS",
-                () -> BetterUCConfig.INSTANCE.showFpsHud = !BetterUCConfig.INSTANCE.showFpsHud, true);
-        addPageOneToggleButton(rightX, y, pageOneButtonW, BetterUCConfig.INSTANCE.showPaydayHud,
-                "\u00A7aPayday-HUD: AN", "\u00A77Payday-HUD: AUS",
-                () -> BetterUCConfig.INSTANCE.showPaydayHud = !BetterUCConfig.INSTANCE.showPaydayHud, true);
-
-        y += PAGE_ONE_ROW_STEP;
-        addPageOneToggleButton(leftX, y, pageOneButtonW, BetterUCConfig.INSTANCE.showAmmoHud,
-                "\u00A7aAmmo-HUD: AN", "\u00A77Ammo-HUD: AUS",
-                () -> BetterUCConfig.INSTANCE.showAmmoHud = !BetterUCConfig.INSTANCE.showAmmoHud, true);
-        addPageOneToggleButton(rightX, y, pageOneButtonW, BetterUCConfig.INSTANCE.showBankHud,
-                "\u00A7aBank-HUD: AN", "\u00A77Bank-HUD: AUS",
-                () -> BetterUCConfig.INSTANCE.showBankHud = !BetterUCConfig.INSTANCE.showBankHud, true);
-
-        y += PAGE_ONE_ROW_STEP;
-        addPageOneToggleButton(leftX, y, pageOneButtonW, BetterUCConfig.INSTANCE.showPotionEffectsHud,
-                "\u00A7aPotion-HUD: AN", "\u00A77Potion-HUD: AUS",
-                () -> BetterUCConfig.INSTANCE.showPotionEffectsHud = !BetterUCConfig.INSTANCE.showPotionEffectsHud, true);
-        addPageOneToggleButton(rightX, y, pageOneButtonW, BetterUCConfig.INSTANCE.zoomEnabled,
-                "\u00A7aZoom: AN", "\u00A77Zoom: AUS",
-                () -> BetterUCConfig.INSTANCE.zoomEnabled = !BetterUCConfig.INSTANCE.zoomEnabled, true);
-
-        y += PAGE_ONE_ROW_STEP;
-        addPageOneToggleButton(leftX, y, pageOneButtonW, BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled,
-                "\u00A7aAuto-Stats Join: AN", "\u00A77Auto-Stats Join: AUS",
-                () -> BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled = !BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled, true);
-        addPageOneButton(rightX, y, pageOneButtonW, "\u00A7eStats neu laden",
-                b -> SyncRefreshActions.requestStatsRefresh(client, true));
-
-        y += PAGE_ONE_ROW_STEP;
-        addPageOneButton(leftX, y, pageOneButtonW, "\u00A76Changelog & Features",
-                b -> openScreen(new ChangelogScreen(this)));
     }
 
-    private void addPageOneButton(int x, int y, int buttonWidth, String label, ButtonWidget.PressAction action) {
+    private int addButton(int x, int y, int width, String label, ButtonWidget.PressAction action) {
         addDrawableChild(ButtonWidget.builder(Text.literal(label), action)
-                .dimensions(x, y, buttonWidth, BUTTON_H)
+                .dimensions(x, y, width, BUTTON_H)
                 .build());
+        return y + 24;
     }
 
-    private void addPageOneToggleButton(
+    private int addColorButton(
             int x,
             int y,
-            int buttonWidth,
-            boolean state,
-            String onLabel,
-            String offLabel,
-            Runnable toggleAction,
-            boolean saveImmediately
+            int width,
+            String label,
+            int color,
+            ColorPickerScreen.ColorApplyTarget target
     ) {
-        addPageOneButton(x, y, buttonWidth, state ? onLabel : offLabel, b -> {
-            toggleAction.run();
-            if (saveImmediately) {
-                BetterUCConfig.save();
-            }
-            refreshWidgets();
-        });
-    }
-
-    private int addFeatureToggleButtons(int centerX, int y) {
-        y = addToggleButton(
-                centerX,
-                y,
-                BetterUCConfig.INSTANCE.showHealthHud,
-                "\u00A7aHerz-Anzeige: AN",
-                "\u00A77Herz-Anzeige: AUS",
-                () -> BetterUCConfig.INSTANCE.showHealthHud = !BetterUCConfig.INSTANCE.showHealthHud,
-                false,
-                BUTTON_STEP_NORMAL
-        );
-
-        y = addToggleButton(
-                centerX,
-                y,
-                BetterUCConfig.INSTANCE.showFpsHud,
-                "\u00A7aFPS-HUD: AN",
-                "\u00A77FPS-HUD: AUS",
-                () -> BetterUCConfig.INSTANCE.showFpsHud = !BetterUCConfig.INSTANCE.showFpsHud,
-                true,
-                BUTTON_STEP_SMALL
-        );
-
-        y = addToggleButton(
-                centerX,
-                y,
-                BetterUCConfig.INSTANCE.showPaydayHud,
-                "\u00A7aPayday-HUD: AN",
-                "\u00A77Payday-HUD: AUS",
-                () -> BetterUCConfig.INSTANCE.showPaydayHud = !BetterUCConfig.INSTANCE.showPaydayHud,
-                true,
-                BUTTON_STEP_SMALL
-        );
-
-        y = addToggleButton(
-                centerX,
-                y,
-                BetterUCConfig.INSTANCE.showAmmoHud,
-                "\u00A7aAmmo-HUD: AN",
-                "\u00A77Ammo-HUD: AUS",
-                () -> BetterUCConfig.INSTANCE.showAmmoHud = !BetterUCConfig.INSTANCE.showAmmoHud,
-                true,
-                BUTTON_STEP_SMALL
-        );
-
-        y = addToggleButton(
-                centerX,
-                y,
-                BetterUCConfig.INSTANCE.showBankHud,
-                "\u00A7aBank-HUD: AN",
-                "\u00A77Bank-HUD: AUS",
-                () -> BetterUCConfig.INSTANCE.showBankHud = !BetterUCConfig.INSTANCE.showBankHud,
-                true,
-                BUTTON_STEP_SMALL
-        );
-
-        y = addToggleButton(
-                centerX,
-                y,
-                BetterUCConfig.INSTANCE.toggleSprintEnabled,
-                "\u00A7aToggleSprint: AN",
-                "\u00A77ToggleSprint: AUS",
-                () -> BetterUCConfig.INSTANCE.toggleSprintEnabled = !BetterUCConfig.INSTANCE.toggleSprintEnabled,
-                true,
-                BUTTON_STEP_NORMAL
-        );
-
-        y = addToggleButton(
-                centerX,
-                y,
-                BetterUCConfig.INSTANCE.zoomEnabled,
-                "\u00A7aZoom: AN",
-                "\u00A77Zoom: AUS",
-                () -> BetterUCConfig.INSTANCE.zoomEnabled = !BetterUCConfig.INSTANCE.zoomEnabled,
-                true,
-                BUTTON_STEP_SMALL
-        );
-
-        y = addButton(centerX, y, zoomKeyLabel(), b -> {
-            capturingZoomKey = true;
-            refreshWidgets();
-        }, BUTTON_STEP_SMALL);
-
-        return y + SECTION_GAP;
-    }
-
-    private int addPositionSliders(int centerX, int y, int maxScreenX, int maxScreenY) {
-        int leftCenterX = centerX - BUTTON_W / 2 - PAGE_ONE_COLUMN_GAP / 2;
-        int rightCenterX = centerX + BUTTON_W / 2 + PAGE_ONE_COLUMN_GAP / 2;
-
-        int timerY = y;
-        timerY = addPlantTimerXSlider(leftCenterX, timerY, maxScreenX);
-        timerY = addPlantTimerYSlider(leftCenterX, timerY, maxScreenY);
-        timerY = addHackTimerXSlider(leftCenterX, timerY, maxScreenX);
-        timerY = addHackTimerYSlider(leftCenterX, timerY, maxScreenY);
-
-        int hudY = y;
-        hudY = addHealthHudXSlider(rightCenterX, hudY, maxScreenX);
-        hudY = addHealthHudYSlider(rightCenterX, hudY, maxScreenY);
-        hudY = addSprintHudXSlider(rightCenterX, hudY, maxScreenX);
-        hudY = addSprintHudYSlider(rightCenterX, hudY, maxScreenY);
-        hudY = addFpsHudXSlider(rightCenterX, hudY, maxScreenX);
-        hudY = addFpsHudYSlider(rightCenterX, hudY, maxScreenY);
-        hudY = addPaydayHudXSlider(rightCenterX, hudY, maxScreenX);
-        hudY = addPaydayHudYSlider(rightCenterX, hudY, maxScreenY);
-        hudY = addAmmoHudXSlider(rightCenterX, hudY, maxScreenX);
-        hudY = addAmmoHudYSlider(rightCenterX, hudY, maxScreenY);
-        hudY = addBankHudXSlider(rightCenterX, hudY, maxScreenX);
-        hudY = addBankHudYSlider(rightCenterX, hudY, maxScreenY);
-        hudY = addPotionHudXSlider(rightCenterX, hudY, maxScreenX);
-        hudY = addPotionHudYSlider(rightCenterX, hudY, maxScreenY);
-
-        return Math.max(timerY, hudY);
-    }
-
-    private int addHudColorButtons(int centerX, int y) {
-        y = addButton(centerX, y, "\u00A7bFPS HUD Farbe", b -> openScreen(new ColorPickerScreen(
+        return addButton(x, y, width, label + " #" + hex(color), b -> openScreen(new ColorPickerScreen(
                 this,
-                "FPS HUD Farbe",
-                "\u00A7bFPS HUD Farbe waehlen",
-                BetterUCConfig.INSTANCE.fpsHudColor,
-                c -> BetterUCConfig.INSTANCE.fpsHudColor = c
-        )), BUTTON_STEP_SMALL);
-
-        y = addButton(centerX, y, "\u00A7ePayday HUD Farbe", b -> openScreen(new ColorPickerScreen(
-                this,
-                "Payday HUD Farbe",
-                "\u00A7ePayday HUD Farbe waehlen",
-                BetterUCConfig.INSTANCE.paydayHudColor,
-                c -> BetterUCConfig.INSTANCE.paydayHudColor = c
-        )), BUTTON_STEP_SMALL);
-
-        y = addButton(centerX, y, "\u00A7bBank HUD Farbe", b -> openScreen(new ColorPickerScreen(
-                this,
-                "Bank HUD Farbe",
-                "\u00A7bBank HUD Farbe waehlen",
-                BetterUCConfig.INSTANCE.bankHudColor,
-                c -> BetterUCConfig.INSTANCE.bankHudColor = c
-        )), BUTTON_STEP_SMALL);
-
-        y = addButton(centerX, y, "\u00A7cHealth Herz Farbe", b -> openScreen(new ColorPickerScreen(
-                this,
-                "Health Herz Farbe",
-                "\u00A7cHealth Herz Farbe waehlen",
-                BetterUCConfig.INSTANCE.healthHudHeartColor,
-                c -> BetterUCConfig.INSTANCE.healthHudHeartColor = c
-        )), BUTTON_STEP_SMALL);
-
-        y = addButton(centerX, y, "\u00A7cHealth Zahl Farbe", b -> openScreen(new ColorPickerScreen(
-                this,
-                "Health Zahl Farbe",
-                "\u00A7cHealth Zahl Farbe waehlen",
-                BetterUCConfig.INSTANCE.healthHudTextColor,
-                c -> BetterUCConfig.INSTANCE.healthHudTextColor = c
-        )), BUTTON_STEP_SMALL);
-
-        y = addButton(centerX, y, "\u00A7aToggleSprint HUD Farbe", b -> openScreen(new ColorPickerScreen(
-                this,
-                "ToggleSprint HUD Farbe",
-                "\u00A7aToggleSprint HUD Farbe waehlen",
-                BetterUCConfig.INSTANCE.toggleSprintHudColor,
-                c -> BetterUCConfig.INSTANCE.toggleSprintHudColor = c
-        )), BUTTON_STEP_SMALL);
-
-        return y + SECTION_GAP;
+                label,
+                label + " waehlen",
+                color,
+                target
+        )));
     }
 
-    private int addHealthHudXSlider(int centerX, int y, int maxScreenX) {
-        int currentX = resolveHealthHudPreviewX();
+    private int addIntSlider(int x, int y, int width, String label, int current, int max, IntConsumer setter) {
+        int safeMax = Math.max(1, max);
+        int safeCurrent = clamp(current, 0, safeMax);
         addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Health HUD X: " + currentX),
-                Math.max(0.0, Math.min(1.0, currentX / (double) maxScreenX))
+                x,
+                y,
+                width,
+                BUTTON_H,
+                Text.literal(label + ": " + safeCurrent),
+                safeCurrent / (double) safeMax
         ) {
             @Override
             protected void updateMessage() {
-                setMessage(Text.literal("Health HUD X: " + (int) (value * maxScreenX)));
+                setMessage(Text.literal(label + ": " + sliderIntValue(value, safeMax)));
             }
 
             @Override
             protected void applyValue() {
-                BetterUCConfig.INSTANCE.healthHudX = (int) (value * maxScreenX);
+                setter.accept(sliderIntValue(value, safeMax));
             }
         });
-        return y + BUTTON_STEP_SMALL;
+        return y + 24;
     }
 
-    private int addHealthHudYSlider(int centerX, int y, int maxScreenY) {
-        int currentY = resolveHealthHudPreviewY();
+    private int addDoubleSlider(
+            int x,
+            int y,
+            int width,
+            String label,
+            double current,
+            double min,
+            double max,
+            DoubleConsumer setter
+    ) {
+        double normalized = clamp01((current - min) / Math.max(0.0001, max - min));
         addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Health HUD Y: " + currentY),
-                Math.max(0.0, Math.min(1.0, currentY / (double) maxScreenY))
+                x,
+                y,
+                width,
+                BUTTON_H,
+                Text.literal(label + ": " + percent(current)),
+                normalized
         ) {
             @Override
             protected void updateMessage() {
-                setMessage(Text.literal("Health HUD Y: " + (int) (value * maxScreenY)));
+                setMessage(Text.literal(label + ": " + percent(sliderDoubleValue(value, min, max))));
             }
 
             @Override
             protected void applyValue() {
-                BetterUCConfig.INSTANCE.healthHudY = (int) (value * maxScreenY);
+                setter.accept(sliderDoubleValue(value, min, max));
             }
         });
-        return y + BUTTON_STEP_NORMAL;
+        return y + 24;
     }
 
-    private int addPlantTimerXSlider(int centerX, int y, int maxScreenX) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Plant-Timer X: " + BetterUCConfig.INSTANCE.plantTimerX),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.plantTimerX / (double) maxScreenX))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("Plant-Timer X: " + (int) (value * maxScreenX)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.plantTimerX = (int) (value * maxScreenX);
-            }
-        });
-        return y + BUTTON_STEP_SMALL;
-    }
-
-    private int addPlantTimerYSlider(int centerX, int y, int maxScreenY) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Plant-Timer Y: " + BetterUCConfig.INSTANCE.plantTimerY),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.plantTimerY / (double) maxScreenY))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("Plant-Timer Y: " + (int) (value * maxScreenY)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.plantTimerY = (int) (value * maxScreenY);
-            }
-        });
-        return y + BUTTON_STEP_NORMAL;
-    }
-
-    private int addHackTimerXSlider(int centerX, int y, int maxScreenX) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Hack-Timer X: " + BetterUCConfig.INSTANCE.hackTimerX),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.hackTimerX / (double) maxScreenX))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("Hack-Timer X: " + (int) (value * maxScreenX)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.hackTimerX = (int) (value * maxScreenX);
-            }
-        });
-        return y + BUTTON_STEP_SMALL;
-    }
-
-    private int addHackTimerYSlider(int centerX, int y, int maxScreenY) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Hack-Timer Y: " + BetterUCConfig.INSTANCE.hackTimerY),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.hackTimerY / (double) maxScreenY))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("Hack-Timer Y: " + (int) (value * maxScreenY)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.hackTimerY = (int) (value * maxScreenY);
-            }
-        });
-        return y + BUTTON_STEP_NORMAL;
-    }
-
-    private int addSprintHudXSlider(int centerX, int y, int maxScreenX) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Sprint HUD X: " + BetterUCConfig.INSTANCE.toggleSprintHudX),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.toggleSprintHudX / (double) maxScreenX))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("Sprint HUD X: " + (int) (value * maxScreenX)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.toggleSprintHudX = (int) (value * maxScreenX);
-            }
-        });
-        return y + BUTTON_STEP_SMALL;
-    }
-
-    private int addSprintHudYSlider(int centerX, int y, int maxScreenY) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Sprint HUD Y: " + BetterUCConfig.INSTANCE.toggleSprintHudY),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.toggleSprintHudY / (double) maxScreenY))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("Sprint HUD Y: " + (int) (value * maxScreenY)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.toggleSprintHudY = (int) (value * maxScreenY);
-            }
-        });
-        return y + BUTTON_STEP_NORMAL;
-    }
-
-    private int addFpsHudXSlider(int centerX, int y, int maxScreenX) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("FPS HUD X: " + BetterUCConfig.INSTANCE.fpsHudX),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.fpsHudX / (double) maxScreenX))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("FPS HUD X: " + (int) (value * maxScreenX)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.fpsHudX = (int) (value * maxScreenX);
-            }
-        });
-        return y + BUTTON_STEP_SMALL;
-    }
-
-    private int addFpsHudYSlider(int centerX, int y, int maxScreenY) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("FPS HUD Y: " + BetterUCConfig.INSTANCE.fpsHudY),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.fpsHudY / (double) maxScreenY))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("FPS HUD Y: " + (int) (value * maxScreenY)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.fpsHudY = (int) (value * maxScreenY);
-            }
-        });
-        return y + BUTTON_STEP_NORMAL;
-    }
-
-    private int addPaydayHudXSlider(int centerX, int y, int maxScreenX) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Payday HUD X: " + BetterUCConfig.INSTANCE.paydayHudX),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.paydayHudX / (double) maxScreenX))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("Payday HUD X: " + (int) (value * maxScreenX)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.paydayHudX = (int) (value * maxScreenX);
-            }
-        });
-        return y + BUTTON_STEP_SMALL;
-    }
-
-    private int addPaydayHudYSlider(int centerX, int y, int maxScreenY) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Payday HUD Y: " + BetterUCConfig.INSTANCE.paydayHudY),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.paydayHudY / (double) maxScreenY))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("Payday HUD Y: " + (int) (value * maxScreenY)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.paydayHudY = (int) (value * maxScreenY);
-            }
-        });
-        return y + BUTTON_STEP_NORMAL;
-    }
-
-    private int addAmmoHudXSlider(int centerX, int y, int maxScreenX) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Ammo HUD X: " + BetterUCConfig.INSTANCE.ammoHudX),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.ammoHudX / (double) maxScreenX))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("Ammo HUD X: " + (int) (value * maxScreenX)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.ammoHudX = (int) (value * maxScreenX);
-            }
-        });
-        return y + BUTTON_STEP_SMALL;
-    }
-
-    private int addAmmoHudYSlider(int centerX, int y, int maxScreenY) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Ammo HUD Y: " + BetterUCConfig.INSTANCE.ammoHudY),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.ammoHudY / (double) maxScreenY))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("Ammo HUD Y: " + (int) (value * maxScreenY)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.ammoHudY = (int) (value * maxScreenY);
-            }
-        });
-        return y + BUTTON_STEP_NORMAL;
-    }
-
-    private int addBankHudXSlider(int centerX, int y, int maxScreenX) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Bank HUD X: " + BetterUCConfig.INSTANCE.bankHudX),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.bankHudX / (double) maxScreenX))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("Bank HUD X: " + (int) (value * maxScreenX)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.bankHudX = (int) (value * maxScreenX);
-            }
-        });
-        return y + BUTTON_STEP_SMALL;
-    }
-
-    private int addBankHudYSlider(int centerX, int y, int maxScreenY) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Bank HUD Y: " + BetterUCConfig.INSTANCE.bankHudY),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.bankHudY / (double) maxScreenY))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("Bank HUD Y: " + (int) (value * maxScreenY)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.bankHudY = (int) (value * maxScreenY);
-            }
-        });
-        return y + BUTTON_STEP_NORMAL;
-    }
-
-    private int addPotionHudXSlider(int centerX, int y, int maxScreenX) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Potion HUD X: " + BetterUCConfig.INSTANCE.potionHudX),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.potionHudX / (double) maxScreenX))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("Potion HUD X: " + (int) (value * maxScreenX)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.potionHudX = (int) (value * maxScreenX);
-            }
-        });
-        return y + BUTTON_STEP_SMALL;
-    }
-
-    private int addPotionHudYSlider(int centerX, int y, int maxScreenY) {
-        addDrawableChild(new SliderWidget(
-                centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H,
-                Text.literal("Potion HUD Y: " + BetterUCConfig.INSTANCE.potionHudY),
-                Math.max(0.0, Math.min(1.0, BetterUCConfig.INSTANCE.potionHudY / (double) maxScreenY))
-        ) {
-            @Override
-            protected void updateMessage() {
-                setMessage(Text.literal("Potion HUD Y: " + (int) (value * maxScreenY)));
-            }
-
-            @Override
-            protected void applyValue() {
-                BetterUCConfig.INSTANCE.potionHudY = (int) (value * maxScreenY);
-            }
-        });
-        return y + BUTTON_STEP_NORMAL;
-    }
-
-    private void addTimestampField(int centerX, int y) {
+    private void addTimestampField(int x, int y, int width) {
         TextFieldWidget timestampField = new TextFieldWidget(
                 textRenderer,
-                centerX - BUTTON_W / 2,
+                x,
                 y,
-                BUTTON_W,
+                width,
                 BUTTON_H,
                 Text.literal("Timestamp Format")
         );
@@ -684,311 +274,225 @@ public class BetterUCScreen extends Screen {
         addDrawableChild(timestampField);
     }
 
-    private void addSaveAndCloseButton(int centerX) {
-        addDrawableChild(ButtonWidget.builder(Text.literal("\u2714 Speichern & Schliessen"), b -> {
-            BetterUCConfig.save();
-            close();
-        }).dimensions(centerX - BUTTON_W / 2, height - 28, BUTTON_W, BUTTON_H).build());
-    }
-
-    private int addButton(int centerX, int y, String label, ButtonWidget.PressAction action, int stepAfter) {
-        addDrawableChild(ButtonWidget.builder(Text.literal(label), action)
-                .dimensions(centerX - BUTTON_W / 2, y, BUTTON_W, BUTTON_H)
-                .build());
-        return y + stepAfter;
-    }
-
-    private int addToggleButton(
-            int centerX,
-            int y,
-            boolean state,
-            String onLabel,
-            String offLabel,
-            Runnable toggleAction,
-            boolean saveImmediately,
-            int stepAfter
-    ) {
-        return addButton(centerX, y, state ? onLabel : offLabel, b -> {
-            toggleAction.run();
-            if (saveImmediately) {
-                BetterUCConfig.save();
-            }
-            refreshWidgets();
-        }, stepAfter);
-    }
-
-    private void openScreen(Screen screen) {
-        if (client != null) {
-            client.setScreen(screen);
-        }
-    }
-
-    private void refreshWidgets() {
-        clearChildren();
-        init();
-    }
-
-    private void clampCurrentPage() {
-        if (currentPage < 0) currentPage = 0;
-        if (currentPage >= SETTINGS_PAGES) currentPage = SETTINGS_PAGES - 1;
-    }
-
-    private String zoomKeyLabel() {
-        if (capturingZoomKey) return "Zoom Taste: ...";
-        int code = BetterUCConfig.INSTANCE.zoomKeyCode;
-        if (code <= 0) return "Zoom Taste: none";
-        try {
-            return "Zoom Taste: " + InputUtil.Type.KEYSYM.createFromCode(code).getLocalizedText().getString();
-        } catch (Exception ignored) {
-            return "Zoom Taste: " + code;
-        }
-    }
-
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        renderBackground(context, mouseX, mouseY, delta);
+        renderFrame(context, mouseX, mouseY);
         super.render(context, mouseX, mouseY, delta);
-
-        context.drawCenteredTextWithShadow(
-                textRenderer,
-                Text.literal("\u00A7l\u2699 betterUC Einstellungen"),
-                width / 2,
-                15,
-                0xFFFFFF
-        );
-
-        context.drawCenteredTextWithShadow(
-                textRenderer,
-                Text.literal("\u00A77Seite " + (currentPage + 1) + "/" + SETTINGS_PAGES),
-                width / 2,
-                38,
-                0xBBBBBB
-        );
-
-        renderInfoPanel(context);
-        if (currentPage == 1) {
-            renderPositionColumnLabels(context);
-            renderTimerPreview(context);
-            renderHealthPreview(context);
-            renderSprintPreview(context);
-            renderFpsPreview(context);
-            renderPaydayPreview(context);
-            renderAmmoPreview(context);
-            renderBankPreview(context);
-            renderPotionPreview(context);
-        } else if (currentPage == 2) {
-            renderHudColorPreview(context);
-        }
         renderZoomCaptureHint(context);
-
-        context.drawCenteredTextWithShadow(
-                textRenderer,
-                Text.literal("\u00A78N = Settings | M = Command Menu"),
-                width / 2,
-                27,
-                0x999999
-        );
     }
 
-    private void renderInfoPanel(DrawContext context) {
-        int infoY = height - 82;
-        context.drawTextWithShadow(
-                textRenderer,
-                Text.literal("\u00A77Blacklist: \u00A7c" + BetterUCConfig.INSTANCE.chatBlacklistPlayers.size()
-                        + "\u00A77 | \u00A7f" + syncAge(BetterUCConfig.INSTANCE.lastBlacklistSyncMs)),
-                width / 2 - 150,
-                infoY + (currentPage == 1 ? -12 : 0),
-                0xAAAAAA
-        );
+    private void renderFrame(DrawContext context, int mouseX, int mouseY) {
+        int x = mainX();
+        int y = mainY();
+        int w = mainW();
+        int h = mainH();
+
+        drawSoftRect(context, x, y, w, h, PANEL_BG);
+        drawSoftRect(context, x + 1, y + 1, w - 2, h - 2, PANEL_INNER);
+        drawBorder(context, x, y, w, h, PANEL_BORDER);
+        context.fill(x + 2, y + 2, x + w - 2, y + 3, 0x24FFFFFF);
+
+        context.drawTextWithShadow(textRenderer, Text.literal("betterUC ClickGUI"), x + 14, y + 11, TEXT_PRIMARY);
+        context.drawTextWithShadow(textRenderer, Text.literal("N = Settings | M = Command Menu"), x + 14, y + 24, TEXT_MUTED);
+
+        renderCategoryTabs(context, mouseX, mouseY);
+        renderModuleList(context, mouseX, mouseY);
+        renderDetailPanel(context, mouseX, mouseY);
+        renderFooter(context);
     }
 
-    private String syncAge(long timestampMs) {
-        if (timestampMs <= 0L) return "noch nicht geladen";
-        long ageSeconds = Math.max(0L, (System.currentTimeMillis() - timestampMs) / 1000L);
-        if (ageSeconds < 60L) return "vor " + ageSeconds + "s";
-        long ageMinutes = ageSeconds / 60L;
-        if (ageMinutes < 60L) return "vor " + ageMinutes + "m";
-        return "vor " + (ageMinutes / 60L) + "h";
-    }
+    private void renderCategoryTabs(DrawContext context, int mouseX, int mouseY) {
+        int x = mainX() + 10;
+        int y = mainY() + 42;
+        int tabW = Math.max(38, (sidebarW() - 20) / Category.values().length);
 
-    private void renderPositionColumnLabels(DrawContext context) {
-        int leftCenterX = width / 2 - BUTTON_W / 2 - PAGE_ONE_COLUMN_GAP / 2;
-        int rightCenterX = width / 2 + BUTTON_W / 2 + PAGE_ONE_COLUMN_GAP / 2;
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("\u00A7eTimer"), leftCenterX, 49, 0xFFFFFF);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("\u00A7bHUDs"), rightCenterX, 49, 0xFFFFFF);
-    }
-
-    private void renderTimerPreview(DrawContext context) {
-        int hx = BetterUCConfig.INSTANCE.hackTimerX;
-        int hy = BetterUCConfig.INSTANCE.hackTimerY;
-        String hackPreview = HackTimerHud.secondsRemaining > 0
-                ? String.format("Hack: %02d:%02d", HackTimerHud.secondsRemaining / 60, HackTimerHud.secondsRemaining % 60)
-                : "Hack: 02:39 (Vorschau)";
-        renderTimerPreviewLine(context, hackPreview, hx, hy, 0xFFFFFFFF);
-
-        int px = BetterUCConfig.INSTANCE.plantTimerX;
-        int py = BetterUCConfig.INSTANCE.plantTimerY;
-        renderTimerPreviewLine(context, "Plant: 1:30:00 | Wasser: 20:00 | Duenger: 25:00", px, py, 0xFFFFD866);
-
-        context.drawTextWithShadow(
-                textRenderer,
-                Text.literal("\u00A77Timer: \u00A7fHack " + hx + "," + hy
-                        + " | Plant " + px + "," + py),
-                width / 2 - 150,
-                height - 58,
-                0xAAAAAA
-        );
-    }
-
-    private void renderTimerPreviewLine(DrawContext context, String text, int x, int y, int color) {
-        int textWidth = textRenderer.getWidth(text);
-        context.fill(x - 4, y - 4, x + textWidth + 4, y + 14, 0xAA000000);
-        context.drawTextWithShadow(textRenderer, Text.literal(text), x, y, color);
-    }
-
-    private void renderSprintPreview(DrawContext context) {
-        int sx = BetterUCConfig.INSTANCE.toggleSprintHudX;
-        int sy = BetterUCConfig.INSTANCE.toggleSprintHudY;
-        String sprintPreview = "ToggleSprint: ON";
-        context.drawTextWithShadow(textRenderer, Text.literal(sprintPreview), sx, sy, BetterUCConfig.INSTANCE.toggleSprintHudColor);
-
-        context.drawTextWithShadow(
-                textRenderer,
-                Text.literal("\u00A77SprintHUD-Position: \u00A7f" + sx + ", " + sy),
-                width / 2 - 150,
-                height - 46,
-                0xAAAAAA
-        );
-    }
-
-    private void renderFpsPreview(DrawContext context) {
-        int fx = BetterUCConfig.INSTANCE.fpsHudX;
-        int fy = BetterUCConfig.INSTANCE.fpsHudY;
-        String fpsPreview = "FPS: 144";
-        context.drawTextWithShadow(textRenderer, Text.literal(fpsPreview), fx, fy, BetterUCConfig.INSTANCE.fpsHudColor);
-
-        context.drawTextWithShadow(
-                textRenderer,
-                Text.literal("\u00A77FPS-HUD-Position: \u00A7f" + fx + ", " + fy),
-                width / 2 - 150,
-                height - 34,
-                0xAAAAAA
-        );
-    }
-
-    private void renderPaydayPreview(DrawContext context) {
-        int px = BetterUCConfig.INSTANCE.paydayHudX;
-        int py = BetterUCConfig.INSTANCE.paydayHudY;
-        String paydayPreview = "Payday: 25/60 Minuten";
-        context.drawTextWithShadow(textRenderer, Text.literal(paydayPreview), px, py, BetterUCConfig.INSTANCE.paydayHudColor);
-
-        context.drawTextWithShadow(
-                textRenderer,
-                Text.literal("\u00A77Payday-HUD-Position: \u00A7f" + px + ", " + py),
-                width / 2 - 150,
-                height - 22,
-                0xAAAAAA
-        );
-    }
-
-    private void renderAmmoPreview(DrawContext context) {
-        int ax = BetterUCConfig.INSTANCE.ammoHudX;
-        int ay = BetterUCConfig.INSTANCE.ammoHudY;
-        context.drawTextWithShadow(textRenderer, Text.literal("20/96"), ax, ay, 0xFFFFAA33);
-        context.drawTextWithShadow(textRenderer, Text.literal("TS19"), ax, ay + 10, 0xFF55FF55);
-    }
-
-    private void renderBankPreview(DrawContext context) {
-        int bx = BetterUCConfig.INSTANCE.bankHudX;
-        int by = BetterUCConfig.INSTANCE.bankHudY;
-        int live = BankBalanceHud.getCurrentBankBalance();
-        String preview = live >= 0
-                ? "Bank: " + BankBalanceHud.formatMoney(live) + "$"
-                : "Bank: " + BankBalanceHud.formatMoney(88375) + "$";
-        context.drawTextWithShadow(textRenderer, Text.literal(preview), bx, by, BetterUCConfig.INSTANCE.bankHudColor);
-    }
-
-    private void renderPotionPreview(DrawContext context) {
-        int px = BetterUCConfig.INSTANCE.potionHudX;
-        int py = BetterUCConfig.INSTANCE.potionHudY;
-        context.drawTextWithShadow(textRenderer, Text.literal("Staerke II 1:26"), px, py, 0xFF9328FF);
-        context.drawTextWithShadow(textRenderer, Text.literal("Schnelligkeit 0:49"), px, py + textRenderer.fontHeight + 1, 0xFF7CAFC6);
-    }
-
-    private void renderHealthPreview(DrawContext context) {
-        int x = resolveHealthHudPreviewX();
-        int y = resolveHealthHudPreviewY();
-        String healthText = "10";
-        int heartColor = BetterUCConfig.INSTANCE.healthHudHeartColor;
-        int textColor = BetterUCConfig.INSTANCE.healthHudTextColor;
-        context.drawGuiTexture(
-                net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED,
-                net.minecraft.util.Identifier.ofVanilla("hud/heart/full"),
-                x,
-                y,
-                9,
-                9,
-                heartColor
-        );
-        context.drawText(textRenderer, Text.literal(healthText), x + 11, y, textColor, true);
-    }
-
-    private int resolveHealthHudPreviewX() {
-        if (BetterUCConfig.INSTANCE.healthHudX >= 0) {
-            return BetterUCConfig.INSTANCE.healthHudX;
+        for (Category category : Category.values()) {
+            boolean selected = category == selectedCategory;
+            boolean hovered = inBounds(mouseX, mouseY, x, y, tabW, 18);
+            int color = selected ? withAlpha(category.accent, 0xCC) : hovered ? 0x80404A59 : 0x50333C49;
+            drawSoftRect(context, x, y, tabW - 3, 18, color);
+            drawBorder(context, x, y, tabW - 3, 18, selected ? withAlpha(category.accent, 0xFF) : 0x50333C49);
+            context.drawCenteredTextWithShadow(textRenderer, Text.literal(category.label), x + (tabW - 3) / 2, y + 5,
+                    selected ? TEXT_PRIMARY : TEXT_SOFT);
+            x += tabW;
         }
-        String healthText = "10";
-        int totalWidth = 9 + 2 + textRenderer.getWidth(healthText);
-        return width / 2 - totalWidth / 2;
     }
 
-    private int resolveHealthHudPreviewY() {
-        if (BetterUCConfig.INSTANCE.healthHudY >= 0) {
-            return BetterUCConfig.INSTANCE.healthHudY;
+    private void renderModuleList(DrawContext context, int mouseX, int mouseY) {
+        int x = mainX() + 10;
+        int y = moduleListY();
+        int w = sidebarW() - 20;
+
+        for (ModuleOption module : ModuleOption.values()) {
+            if (module.category != selectedCategory) continue;
+            boolean selected = module == selectedModule;
+            boolean hovered = inBounds(mouseX, mouseY, x, y, w, MODULE_H);
+            int bg = selected ? 0xB82A3442 : hovered ? 0x80313A47 : 0x4D1F2631;
+            drawSoftRect(context, x, y, w, MODULE_H, bg);
+            context.fill(x + 2, y + 2, x + 4, y + MODULE_H - 2,
+                    selected ? withAlpha(module.accent, 0xFF) : withAlpha(module.accent, 0x99));
+            context.drawTextWithShadow(textRenderer, Text.literal(module.label), x + 8, y + 4,
+                    selected ? TEXT_PRIMARY : TEXT_SOFT);
+
+            String state = module.hasToggle() ? (isEnabled(module) ? "ON" : "OFF") : "SET";
+            int stateColor = module.hasToggle() && !isEnabled(module) ? TEXT_MUTED : withAlpha(module.accent, 0xFF);
+            context.drawTextWithShadow(textRenderer, Text.literal(state), x + w - textRenderer.getWidth(state) - 6, y + 4, stateColor);
+            y += MODULE_H + MODULE_GAP;
         }
-        return height / 2 + 15;
     }
 
-    private void renderHudColorPreview(DrawContext context) {
-        int cx = width / 2;
-        int y = height - 118;
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("\u00A77HUD Farb-Vorschau"), cx, y, 0xBBBBBB);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("FPS: 144"), cx, y + 14, BetterUCConfig.INSTANCE.fpsHudColor);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("Bank: 88.375$"), cx, y + 26, BetterUCConfig.INSTANCE.bankHudColor);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("Payday: 25/60 Minuten"), cx, y + 38, BetterUCConfig.INSTANCE.paydayHudColor);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("Health Herz"), cx, y + 50, BetterUCConfig.INSTANCE.healthHudHeartColor);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("Health Zahl: 10"), cx, y + 62, BetterUCConfig.INSTANCE.healthHudTextColor);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("ToggleSprint: ON"), cx, y + 74, BetterUCConfig.INSTANCE.toggleSprintHudColor);
+    private void renderDetailPanel(DrawContext context, int mouseX, int mouseY) {
+        int x = detailX();
+        int y = detailY();
+        int w = detailW();
+        int h = detailH();
+        drawSoftRect(context, x, y, w, h, PANEL_ALT);
+        drawBorder(context, x, y, w, h, 0x70333C49);
+        context.fill(x + 2, y + 2, x + 4, y + h - 2, withAlpha(selectedModule.accent, 0xEE));
+
+        context.drawTextWithShadow(textRenderer, Text.literal(selectedModule.label), x + 14, y + 12, TEXT_PRIMARY);
+        context.drawTextWithShadow(textRenderer, Text.literal(selectedModule.description), x + 14, y + 25, TEXT_MUTED);
+        renderSelectedStatus(context, x + 14, y + 39);
+        renderPreview(context, x + Math.max(224, w - 172), y + 58);
+    }
+
+    private void renderSelectedStatus(DrawContext context, int x, int y) {
+        if (selectedModule == ModuleOption.BLACKLIST) {
+            context.drawTextWithShadow(
+                    textRenderer,
+                    Text.literal("Eintraege: " + BetterUCConfig.INSTANCE.chatBlacklistPlayers.size()
+                            + " | Sync " + syncAge(BetterUCConfig.INSTANCE.lastBlacklistSyncMs)),
+                    x,
+                    y,
+                    TEXT_SOFT
+            );
+            return;
+        }
+
+        if (selectedModule.hasToggle()) {
+            context.drawTextWithShadow(
+                    textRenderer,
+                    Text.literal(isEnabled(selectedModule) ? "Status: aktiv" : "Status: aus"),
+                    x,
+                    y,
+                    isEnabled(selectedModule) ? 0xFF86EFAC : TEXT_MUTED
+            );
+        } else {
+            context.drawTextWithShadow(textRenderer, Text.literal("Modul-Einstellungen"), x, y, TEXT_SOFT);
+        }
+    }
+
+    private void renderPreview(DrawContext context, int x, int y) {
+        MinecraftClient minecraft = MinecraftClient.getInstance();
+        int previewX = Math.min(x, detailX() + detailW() - 150);
+        int previewY = y;
+
+        context.drawTextWithShadow(textRenderer, Text.literal("Preview"), previewX, previewY - 14, TEXT_MUTED);
+        switch (selectedModule) {
+            case HEALTH -> {
+                context.drawGuiTexture(
+                        net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED,
+                        net.minecraft.util.Identifier.ofVanilla("hud/heart/full"),
+                        previewX,
+                        previewY,
+                        9,
+                        9,
+                        BetterUCConfig.INSTANCE.healthHudHeartColor
+                );
+                context.drawText(textRenderer, Text.literal("10"), previewX + 11, previewY,
+                        BetterUCConfig.INSTANCE.healthHudTextColor, true);
+            }
+            case FPS -> ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, "FPS", "144",
+                    BetterUCConfig.INSTANCE.fpsHudColor);
+            case PAYDAY -> ModernHudRenderer.drawProgressModule(context, minecraft, previewX, previewY, "PAYDAY",
+                    "25/60 min", 25.0F / 60.0F, BetterUCConfig.INSTANCE.paydayHudColor);
+            case AMMO -> ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY, "AMMO", "20/96",
+                    "TS19", 0xFFFFAA33, 0xFF7CFF8A);
+            case BANK -> ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, "BANK",
+                    previewBankValue(), BetterUCConfig.INSTANCE.bankHudColor);
+            case POTION -> {
+                ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY, "EFFECT", "Staerke II",
+                        "1:26", 0xFF9328FF);
+                ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY + 33, "EFFECT", "Speed",
+                        "0:49", 0xFF7CAFC6);
+            }
+            case SPRINT -> ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, "SPRINT", "ON",
+                    BetterUCConfig.INSTANCE.toggleSprintHudColor);
+            case HACK_TIMER -> ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, "HACK",
+                    HackTimerHud.secondsRemaining > 0
+                            ? String.format(Locale.ROOT, "%02d:%02d", HackTimerHud.secondsRemaining / 60, HackTimerHud.secondsRemaining % 60)
+                            : "02:39",
+                    0xFF60A5FA);
+            case PLANT_TIMER -> ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY, "PLANT",
+                    "Plantage Pulver 7/10", "Reif: 1:30:00 | Wasser: 20:00", 0xFF6CF27D, 0xFFFFD866);
+            case ZOOM -> drawMiniInfo(context, previewX, previewY, "Zoom", zoomKeyLabel(), BetterUCConfig.INSTANCE.zoomEnabled);
+            case AUTO_STATS -> drawMiniInfo(context, previewX, previewY, "Auto-Stats", "Join /stats", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
+            case CHAT -> drawMiniInfo(context, previewX, previewY, "Chat", BetterUCConfig.INSTANCE.chatTimestampFormat, true);
+            case BLACKLIST -> drawMiniInfo(context, previewX, previewY, "Blacklist",
+                    BetterUCConfig.INSTANCE.chatBlacklistPlayers.size() + " Spieler", true);
+            case HOTKEYS -> drawMiniInfo(context, previewX, previewY, "Hotkeys",
+                    BetterUCConfig.INSTANCE.hotkeyCommands.size() + " Commands", true);
+            case COMMANDS -> drawMiniInfo(context, previewX, previewY, "Tools", "Command Menu", true);
+        }
+    }
+
+    private void drawMiniInfo(DrawContext context, int x, int y, String label, String value, boolean active) {
+        int w = Math.max(110, Math.max(textRenderer.getWidth(label), textRenderer.getWidth(value)) + 22);
+        ModernHudRenderer.drawPanel(context, x, y, w, 38, active ? selectedModule.accent : 0xFF64748B);
+        context.drawTextWithShadow(textRenderer, Text.literal(label), x + 10, y + 8, withAlpha(selectedModule.accent, 0xFF));
+        context.drawTextWithShadow(textRenderer, Text.literal(value), x + 10, y + 20, TEXT_PRIMARY);
+    }
+
+    private void renderFooter(DrawContext context) {
+        int x = mainX() + 12;
+        int y = mainY() + mainH() - 23;
+        context.drawTextWithShadow(textRenderer, Text.literal("Links Modul waehlen, rechts direkt konfigurieren."),
+                x, y, TEXT_MUTED);
     }
 
     private void renderZoomCaptureHint(DrawContext context) {
         if (!capturingZoomKey) return;
-        context.drawCenteredTextWithShadow(
-                textRenderer,
-                Text.literal("\u00A7eDruecke eine Taste fuer Zoom (ESC = Abbrechen)"),
-                width / 2,
-                height - 44,
-                0xFFFFFF
-        );
+        int w = Math.min(320, width - 28);
+        int h = 58;
+        int x = width / 2 - w / 2;
+        int y = height / 2 - h / 2;
+        drawSoftRect(context, x, y, w, h, 0xF0101318);
+        drawBorder(context, x, y, w, h, withAlpha(ModuleOption.ZOOM.accent, 0xFF));
+        context.drawCenteredTextWithShadow(textRenderer, Text.literal("Druecke eine Taste fuer Zoom"), width / 2, y + 17, TEXT_PRIMARY);
+        context.drawCenteredTextWithShadow(textRenderer, Text.literal("ESC = Abbrechen"), width / 2, y + 33, TEXT_MUTED);
+    }
+
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (super.mouseClicked(event, doubleClick)) return true;
+        if (event.button() != 0) return false;
+
+        double mouseX = event.x();
+        double mouseY = event.y();
+
+        Category category = categoryAt(mouseX, mouseY);
+        if (category != null) {
+            selectedCategory = category;
+            selectedModule = firstModuleFor(category);
+            refreshWidgets();
+            return true;
+        }
+
+        ModuleOption module = moduleAt(mouseX, mouseY);
+        if (module != null) {
+            selectedCategory = module.category;
+            selectedModule = module;
+            refreshWidgets();
+            return true;
+        }
+        return false;
     }
 
     @Override
     public boolean keyPressed(KeyInput input) {
         int keyCode = input.getKeycode();
         if (!capturingZoomKey) {
-            if (keyCode == GLFW.GLFW_KEY_PAGE_UP) {
-                if (currentPage > 0) {
-                    currentPage--;
-                    refreshWidgets();
-                    return true;
-                }
-            }
-            if (keyCode == GLFW.GLFW_KEY_PAGE_DOWN) {
-                if (currentPage < SETTINGS_PAGES - 1) {
-                    currentPage++;
-                    refreshWidgets();
-                    return true;
-                }
-            }
             return super.keyPressed(input);
         }
 
@@ -1006,7 +510,244 @@ public class BetterUCScreen extends Screen {
     }
 
     @Override
+    public void removed() {
+        BetterUCConfig.save();
+        super.removed();
+    }
+
+    @Override
     public boolean shouldPause() {
         return false;
+    }
+
+    private Category categoryAt(double mouseX, double mouseY) {
+        int x = mainX() + 10;
+        int y = mainY() + 42;
+        int tabW = Math.max(38, (sidebarW() - 20) / Category.values().length);
+        for (Category category : Category.values()) {
+            if (inBounds(mouseX, mouseY, x, y, tabW - 3, 18)) return category;
+            x += tabW;
+        }
+        return null;
+    }
+
+    private ModuleOption moduleAt(double mouseX, double mouseY) {
+        int x = mainX() + 10;
+        int y = moduleListY();
+        int w = sidebarW() - 20;
+        for (ModuleOption module : ModuleOption.values()) {
+            if (module.category != selectedCategory) continue;
+            if (inBounds(mouseX, mouseY, x, y, w, MODULE_H)) return module;
+            y += MODULE_H + MODULE_GAP;
+        }
+        return null;
+    }
+
+    private ModuleOption firstModuleFor(Category category) {
+        for (ModuleOption module : ModuleOption.values()) {
+            if (module.category == category) return module;
+        }
+        return ModuleOption.FPS;
+    }
+
+    private boolean isEnabled(ModuleOption module) {
+        return switch (module) {
+            case HEALTH -> BetterUCConfig.INSTANCE.showHealthHud;
+            case FPS -> BetterUCConfig.INSTANCE.showFpsHud;
+            case PAYDAY -> BetterUCConfig.INSTANCE.showPaydayHud;
+            case AMMO -> BetterUCConfig.INSTANCE.showAmmoHud;
+            case BANK -> BetterUCConfig.INSTANCE.showBankHud;
+            case POTION -> BetterUCConfig.INSTANCE.showPotionEffectsHud;
+            case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintEnabled;
+            case ZOOM -> BetterUCConfig.INSTANCE.zoomEnabled;
+            case AUTO_STATS -> BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled;
+            default -> true;
+        };
+    }
+
+    private String previewBankValue() {
+        int live = BankBalanceHud.getCurrentBankBalance();
+        return live >= 0 ? BankBalanceHud.formatMoney(live) + "$" : BankBalanceHud.formatMoney(88375) + "$";
+    }
+
+    private int resolveHealthHudPreviewX() {
+        if (BetterUCConfig.INSTANCE.healthHudX >= 0) return BetterUCConfig.INSTANCE.healthHudX;
+        String healthText = "10";
+        int totalWidth = 9 + 2 + textRenderer.getWidth(healthText);
+        return width / 2 - totalWidth / 2;
+    }
+
+    private int resolveHealthHudPreviewY() {
+        if (BetterUCConfig.INSTANCE.healthHudY >= 0) return BetterUCConfig.INSTANCE.healthHudY;
+        return height / 2 + 15;
+    }
+
+    private String zoomKeyLabel() {
+        if (capturingZoomKey) return "Zoom Taste: ...";
+        int code = BetterUCConfig.INSTANCE.zoomKeyCode;
+        if (code <= 0) return "Zoom Taste: none";
+        try {
+            return "Zoom Taste: " + InputUtil.Type.KEYSYM.createFromCode(code).getLocalizedText().getString();
+        } catch (Exception ignored) {
+            return "Zoom Taste: " + code;
+        }
+    }
+
+    private String syncAge(long timestampMs) {
+        if (timestampMs <= 0L) return "nie";
+        long ageSeconds = Math.max(0L, (System.currentTimeMillis() - timestampMs) / 1000L);
+        if (ageSeconds < 60L) return "vor " + ageSeconds + "s";
+        long ageMinutes = ageSeconds / 60L;
+        if (ageMinutes < 60L) return "vor " + ageMinutes + "m";
+        return "vor " + (ageMinutes / 60L) + "h";
+    }
+
+    private void openScreen(Screen screen) {
+        if (client != null) {
+            client.setScreen(screen);
+        }
+    }
+
+    private void refreshWidgets() {
+        clearChildren();
+        init();
+    }
+
+    private int mainW() {
+        return Math.max(360, Math.min(width - 20, 760));
+    }
+
+    private int mainH() {
+        return Math.max(220, Math.min(height - 20, 430));
+    }
+
+    private int mainX() {
+        return width / 2 - mainW() / 2;
+    }
+
+    private int mainY() {
+        return height / 2 - mainH() / 2;
+    }
+
+    private int sidebarW() {
+        return Math.max(128, Math.min(150, mainW() / 4));
+    }
+
+    private int detailX() {
+        return mainX() + sidebarW() + 10;
+    }
+
+    private int detailY() {
+        return mainY() + 42;
+    }
+
+    private int detailW() {
+        return mainW() - sidebarW() - 22;
+    }
+
+    private int detailH() {
+        return mainH() - 78;
+    }
+
+    private int moduleListY() {
+        return mainY() + 66;
+    }
+
+    private void drawSoftRect(DrawContext context, int x, int y, int width, int height, int color) {
+        context.fill(x + 1, y, x + width - 1, y + height, color);
+        context.fill(x, y + 1, x + width, y + height - 1, color);
+    }
+
+    private void drawBorder(DrawContext context, int x, int y, int width, int height, int color) {
+        context.fill(x + 1, y, x + width - 1, y + 1, color);
+        context.fill(x + 1, y + height - 1, x + width - 1, y + height, color);
+        context.fill(x, y + 1, x + 1, y + height - 1, color);
+        context.fill(x + width - 1, y + 1, x + width, y + height - 1, color);
+    }
+
+    private boolean inBounds(double mouseX, double mouseY, int x, int y, int width, int height) {
+        return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
+    }
+
+    private int withAlpha(int color, int alpha) {
+        return ((alpha & 0xFF) << 24) | (color & 0x00FFFFFF);
+    }
+
+    private int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private double clamp01(double value) {
+        if (value < 0.0) return 0.0;
+        if (value > 1.0) return 1.0;
+        return value;
+    }
+
+    private int sliderIntValue(double value, int max) {
+        return clamp((int) (value * max), 0, max);
+    }
+
+    private double sliderDoubleValue(double value, double min, double max) {
+        return min + clamp01(value) * (max - min);
+    }
+
+    private String percent(double value) {
+        return Math.round(value * 100.0) + "%";
+    }
+
+    private String hex(int color) {
+        return String.format(Locale.ROOT, "%06X", color & 0x00FFFFFF);
+    }
+
+    private enum Category {
+        HUD("HUD", 0xFF38BDF8),
+        GAMEPLAY("Client", 0xFFA78BFA),
+        TOOLS("Tools", 0xFFFBBF24);
+
+        private final String label;
+        private final int accent;
+
+        Category(String label, int accent) {
+            this.label = label;
+            this.accent = accent;
+        }
+    }
+
+    private enum ModuleOption {
+        HEALTH(Category.HUD, "Health", "Transparentes Herz-HUD", 0xFFFF5555, true),
+        FPS(Category.HUD, "FPS", "Performance-Modul", BetterUCConfig.DEFAULT_FPS_HUD_COLOR, true),
+        PAYDAY(Category.HUD, "Payday", "Payday-Fortschritt", BetterUCConfig.DEFAULT_PAYDAY_HUD_COLOR, true),
+        AMMO(Category.HUD, "Ammo", "Munition und Waffe", 0xFFFFAA33, true),
+        BANK(Category.HUD, "Bank", "Kontostand im HUD", BetterUCConfig.DEFAULT_BANK_HUD_COLOR, true),
+        POTION(Category.HUD, "Potion", "Aktive Effekte", 0xFF9328FF, true),
+        SPRINT(Category.HUD, "Sprint", "ToggleSprint Anzeige", BetterUCConfig.DEFAULT_TOGGLE_SPRINT_HUD_COLOR, true),
+        HACK_TIMER(Category.HUD, "Hack Timer", "Timer-Position", 0xFF60A5FA, false),
+        PLANT_TIMER(Category.HUD, "Plant Timer", "Plantage-Timer", 0xFF6CF27D, false),
+
+        ZOOM(Category.GAMEPLAY, "Zoom", "Taste und FOV", 0xFFA78BFA, true),
+        AUTO_STATS(Category.GAMEPLAY, "Auto Stats", "Automatisches /stats", 0xFF34D399, true),
+        CHAT(Category.GAMEPLAY, "Chat", "Zeitstempel", 0xFF38BDF8, false),
+
+        BLACKLIST(Category.TOOLS, "Blacklist", "Gruende und Sync", 0xFFF97316, false),
+        HOTKEYS(Category.TOOLS, "Hotkeys", "Commands auf Tasten", 0xFFFBBF24, false),
+        COMMANDS(Category.TOOLS, "Commands", "Menues und Changelog", 0xFF22C55E, false);
+
+        private final Category category;
+        private final String label;
+        private final String description;
+        private final int accent;
+        private final boolean toggle;
+
+        ModuleOption(Category category, String label, String description, int accent, boolean toggle) {
+            this.category = category;
+            this.label = label;
+            this.description = description;
+            this.accent = accent;
+            this.toggle = toggle;
+        }
+
+        private boolean hasToggle() {
+            return toggle;
+        }
     }
 }

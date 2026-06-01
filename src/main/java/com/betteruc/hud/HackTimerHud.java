@@ -42,9 +42,16 @@ public class HackTimerHud {
         int y = BetterUCConfig.INSTANCE.hackTimerY;
 
         Text text = getDisplayText();
-        int textWidth = client.textRenderer.getWidth(cachedTextString);
-        context.fill(x - 4, y - 4, x + textWidth + 4, y + 14, 0xAA000000);
-        context.drawTextWithShadow(client.textRenderer, text, x, y, 0xFFFFFFFF);
+        int accentColor = secondsRemaining <= 15 ? 0xFFFF4D6D : 0xFF60A5FA;
+        ModernHudRenderer.drawModule(
+                context,
+                client,
+                x,
+                y,
+                "HACK",
+                text.getString().replace("Hack: ", ""),
+                accentColor
+        );
     }
 
     private static Text getDisplayText() {

@@ -13,7 +13,6 @@ import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
 import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
@@ -21,14 +20,11 @@ import java.util.List;
 
 public class PotionEffectsHud {
 
-    private static final Identifier EFFECT_BACKGROUND_LARGE_TEXTURE =
-            Identifier.ofVanilla("container/inventory/effect_background_large");
     private static final int EFFECT_WIDTH = 120;
     private static final int EFFECT_HEIGHT = 32;
     private static final int EFFECT_ICON_SIZE = 18;
     private static final int EFFECT_BASE_SPACING = 33;
     private static final int EFFECT_MAX_SPAN = 132;
-    private static final int DURATION_COLOR = -8421505;
     private static final List<StatusEffectInstance> ACTIVE_EFFECTS = new ArrayList<>();
 
     public static void register() {
@@ -57,15 +53,16 @@ public class PotionEffectsHud {
         for (StatusEffectInstance effect : ACTIVE_EFFECTS) {
             RegistryEntry<StatusEffect> entry = effect.getEffectType();
             Identifier effectIcon = InGameHud.getEffectTexture(entry);
+            int accentColor = 0xFF000000 | entry.value().getColor();
 
-            context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, EFFECT_BACKGROUND_LARGE_TEXTURE, x, y, EFFECT_WIDTH, EFFECT_HEIGHT);
+            ModernHudRenderer.drawPanel(context, x, y, EFFECT_WIDTH, EFFECT_HEIGHT, accentColor);
             context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, effectIcon, x + 6, y + 7, EFFECT_ICON_SIZE, EFFECT_ICON_SIZE);
 
             Text effectName = buildEffectName(effect);
-            context.drawTextWithShadow(client.textRenderer, effectName, x + 28, y + 6, Colors.WHITE);
+            context.drawTextWithShadow(client.textRenderer, effectName, x + 28, y + 6, ModernHudRenderer.TEXT_PRIMARY);
 
             Text durationText = StatusEffectUtil.getDurationText(effect, 1.0F, tickRate);
-            context.drawTextWithShadow(client.textRenderer, durationText, x + 28, y + 16, DURATION_COLOR);
+            context.drawTextWithShadow(client.textRenderer, durationText, x + 28, y + 16, ModernHudRenderer.TEXT_DIM);
 
             y += spacing;
         }

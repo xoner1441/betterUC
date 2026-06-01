@@ -4,15 +4,12 @@ import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
 
 public class FpsHud {
 
     private static long sampleWindowStartMs = 0L;
     private static int framesInWindow = 0;
     private static int currentFps = 0;
-    private static int cachedFps = -1;
-    private static Text cachedText = Text.literal("FPS: 0");
 
     public static void register() {
         HudRenderCallback.EVENT.register((drawContext, tickCounter) -> render(drawContext));
@@ -24,10 +21,17 @@ public class FpsHud {
         if (!BetterUCConfig.INSTANCE.showFpsHud) return;
 
         updateFpsSample();
-        Text text = getDisplayText();
         int x = BetterUCConfig.INSTANCE.fpsHudX;
         int y = BetterUCConfig.INSTANCE.fpsHudY;
-        context.drawTextWithShadow(client.textRenderer, text, x, y, BetterUCConfig.INSTANCE.fpsHudColor);
+        ModernHudRenderer.drawModule(
+                context,
+                client,
+                x,
+                y,
+                "FPS",
+                String.valueOf(Math.max(0, currentFps)),
+                BetterUCConfig.INSTANCE.fpsHudColor
+        );
     }
 
     private static void updateFpsSample() {
@@ -45,12 +49,4 @@ public class FpsHud {
         }
     }
 
-    private static Text getDisplayText() {
-        int fps = Math.max(0, currentFps);
-        if (fps != cachedFps) {
-            cachedFps = fps;
-            cachedText = Text.literal("FPS: " + fps);
-        }
-        return cachedText;
-    }
 }

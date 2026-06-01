@@ -4,7 +4,6 @@ import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
 
 public class PaydayHud {
 
@@ -12,11 +11,6 @@ public class PaydayHud {
     private static int totalMinutes = -1;
     private static long lastMinuteUpdateMs = 0L;
     private static boolean pausedByAfk = false;
-    private static int cachedCurrentMinutes = Integer.MIN_VALUE;
-    private static int cachedTotalMinutes = Integer.MIN_VALUE;
-    private static boolean cachedPausedByAfk = false;
-    private static Text cachedText = Text.literal("");
-
     public static void register() {
         HudRenderCallback.EVENT.register((drawContext, tickCounter) -> render(drawContext));
     }
@@ -68,7 +62,17 @@ public class PaydayHud {
 
         int x = BetterUCConfig.INSTANCE.paydayHudX;
         int y = BetterUCConfig.INSTANCE.paydayHudY;
-        context.drawTextWithShadow(client.textRenderer, getDisplayText(), x, y, BetterUCConfig.INSTANCE.paydayHudColor);
+        float progress = totalMinutes <= 0 ? 0.0F : currentMinutes / (float) totalMinutes;
+        ModernHudRenderer.drawProgressModule(
+                context,
+                client,
+                x,
+                y,
+                pausedByAfk ? "PAYDAY AFK" : "PAYDAY",
+                currentMinutes + "/" + totalMinutes + " min",
+                progress,
+                BetterUCConfig.INSTANCE.paydayHudColor
+        );
     }
 
     private static void tickMinuteProgress() {
@@ -91,19 +95,4 @@ public class PaydayHud {
         lastMinuteUpdateMs += addMinutes * 60_000L;
     }
 
-    private static Text getDisplayText() {
-        if (currentMinutes != cachedCurrentMinutes
-                || totalMinutes != cachedTotalMinutes
-                || pausedByAfk != cachedPausedByAfk) {
-            cachedCurrentMinutes = currentMinutes;
-            cachedTotalMinutes = totalMinutes;
-            cachedPausedByAfk = pausedByAfk;
-            String text = "Payday: " + currentMinutes + "/" + totalMinutes + " Minuten";
-            if (pausedByAfk) {
-                text += " (AFK)";
-            }
-            cachedText = Text.literal(text);
-        }
-        return cachedText;
-    }
 }
