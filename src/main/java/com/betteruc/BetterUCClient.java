@@ -25,13 +25,17 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.InputUtil;
 import net.minecraft.command.CommandSource;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -54,8 +58,20 @@ public class BetterUCClient implements ClientModInitializer {
     private static final int AUTO_STATS_ON_JOIN_DELAY_TICKS = 240;
     private static final long BLINFO_CACHE_MAX_AGE_MS = 20_000L;
     private static final long BLINFO_TIMEOUT_MS = 5000L;
-    private boolean keyWasDown = false;
-    private boolean keyWasDown2 = false;
+    private static final KeyBinding.Category BETTERUC_KEY_CATEGORY =
+            KeyBinding.Category.create(Identifier.of("betteruc", "controls"));
+    private static final KeyBinding SETTINGS_KEY = new KeyBinding(
+            "key.betteruc.settings",
+            InputUtil.Type.KEYSYM,
+            GLFW.GLFW_KEY_N,
+            BETTERUC_KEY_CATEGORY
+    );
+    private static final KeyBinding COMMANDS_KEY = new KeyBinding(
+            "key.betteruc.commands",
+            InputUtil.Type.KEYSYM,
+            GLFW.GLFW_KEY_M,
+            BETTERUC_KEY_CATEGORY
+    );
     private int statsOnJoinDelay = -1;
     private final Map<Integer, Boolean> hotkeyPressedState = new HashMap<>();
     private final Set<Integer> activeHotkeyKeys = new HashSet<>();
@@ -109,11 +125,17 @@ public class BetterUCClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         BetterUCConfig.load();
+        registerKeyBindings();
         registerHudElements();
         registerConnectionEvents();
         registerClientCommands();
         registerMessageEvents();
         registerTickEvents();
+    }
+
+    private void registerKeyBindings() {
+        KeyBindingHelper.registerKeyBinding(SETTINGS_KEY);
+        KeyBindingHelper.registerKeyBinding(COMMANDS_KEY);
     }
 
     private void registerMessageEvents() {
@@ -904,17 +926,17 @@ public class BetterUCClient implements ClientModInitializer {
     }
 
     private void handleScreenHotkeys(MinecraftClient client) {
-        boolean nDown = GLFW.glfwGetKey(client.getWindow().getHandle(), GLFW.GLFW_KEY_N) == GLFW.GLFW_PRESS;
-        if (nDown && !keyWasDown && client.currentScreen == null) {
-            client.setScreen(new BetterUCScreen());
+        while (SETTINGS_KEY.wasPressed()) {
+            if (client.currentScreen == null) {
+                client.setScreen(new BetterUCScreen());
+            }
         }
-        keyWasDown = nDown;
 
-        boolean mDown = GLFW.glfwGetKey(client.getWindow().getHandle(), GLFW.GLFW_KEY_M) == GLFW.GLFW_PRESS;
-        if (mDown && !keyWasDown2 && client.currentScreen == null) {
-            client.setScreen(new CommandGui());
+        while (COMMANDS_KEY.wasPressed()) {
+            if (client.currentScreen == null) {
+                client.setScreen(new CommandGui());
+            }
         }
-        keyWasDown2 = mDown;
     }
 
     private void handleConfiguredHotkeys(MinecraftClient client) {
