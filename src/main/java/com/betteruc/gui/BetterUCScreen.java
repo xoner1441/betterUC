@@ -6,13 +6,13 @@ import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.ModernHudRenderer;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.SliderWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.input.KeyInput;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
@@ -276,7 +276,7 @@ public class BetterUCScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        renderBackground(context, mouseX, mouseY, delta);
+        context.fill(0, 0, width, height, 0x66000000);
         renderFrame(context, mouseX, mouseY);
         super.render(context, mouseX, mouseY, delta);
         renderZoomCaptureHint(context);
@@ -464,7 +464,7 @@ public class BetterUCScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+    public boolean mouseClicked(Click event, boolean doubleClick) {
         if (super.mouseClicked(event, doubleClick)) return true;
         if (event.button() != 0) return false;
 
