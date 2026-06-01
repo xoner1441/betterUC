@@ -65,11 +65,16 @@ public class PaydayHud {
         int y = BetterUCConfig.INSTANCE.paydayHudY;
         float progress = totalMinutes <= 0 ? 0.0F : currentMinutes / (float) totalMinutes;
         String value = currentMinutes + "/" + totalMinutes + " min";
-        if (!BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.paydayHudStyle)) {
-            String text = "Payday: " + currentMinutes + "/" + totalMinutes + " Minuten";
-            if (pausedByAfk) {
-                text += " (AFK)";
-            }
+        String style = BetterUCConfig.INSTANCE.paydayHudStyle;
+        String text = "Payday: " + currentMinutes + "/" + totalMinutes + " Minuten";
+        if (pausedByAfk) {
+            text += " (AFK)";
+        }
+        if (BetterUCConfig.isCartoonHudStyle(style)) {
+            ModernHudRenderer.drawCartoonText(context, client, text, x, y, BetterUCConfig.INSTANCE.paydayHudColor);
+            return;
+        }
+        if (!BetterUCConfig.isModernHudStyle(style)) {
             context.drawTextWithShadow(client.textRenderer, Text.literal(text), x, y, BetterUCConfig.INSTANCE.paydayHudColor);
             return;
         }

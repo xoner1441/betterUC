@@ -288,7 +288,15 @@ public class PlantageHud {
                     + " | Wasser: " + formatCare(state.nextWaterAtMs - now)
                     + " | D\u00FCnger: " + formatCare(state.nextFertilizeAtMs - now);
 
-            if (!BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.plantTimerHudStyle)) {
+            String style = BetterUCConfig.INSTANCE.plantTimerHudStyle;
+            if (BetterUCConfig.isCartoonHudStyle(style)) {
+                ModernHudRenderer.drawCartoonText(context, client, title, x, y, state.type.color);
+                ModernHudRenderer.drawCartoonText(context, client, timers, x, y + 11, 0xFFFFD866);
+                y += 25;
+                continue;
+            }
+
+            if (!BetterUCConfig.isModernHudStyle(style)) {
                 context.drawTextWithShadow(client.textRenderer, Text.literal(title), x, y, state.type.color);
                 context.drawTextWithShadow(client.textRenderer, Text.literal(timers), x, y + 10, 0xFFFFD866);
                 y += 24;

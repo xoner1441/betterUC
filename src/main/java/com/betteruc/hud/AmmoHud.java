@@ -93,7 +93,16 @@ public class AmmoHud {
         int x = BetterUCConfig.INSTANCE.ammoHudX;
         int y = BetterUCConfig.INSTANCE.ammoHudY;
 
-        if (!BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.ammoHudStyle)) {
+        String style = BetterUCConfig.INSTANCE.ammoHudStyle;
+        if (BetterUCConfig.isCartoonHudStyle(style)) {
+            ModernHudRenderer.drawCartoonText(context, client.textRenderer, ammoText, x, y, 0xFFFFAA33);
+            if (!weaponName.isBlank()) {
+                ModernHudRenderer.drawCartoonText(context, client.textRenderer, weaponText, x, y + 11, 0xFF55FF55);
+            }
+            return;
+        }
+
+        if (!BetterUCConfig.isModernHudStyle(style)) {
             context.drawTextWithShadow(client.textRenderer, ammoText, x, y, 0xFFFFAA33);
             if (!weaponName.isBlank()) {
                 context.drawTextWithShadow(client.textRenderer, weaponText, x, y + 10, 0xFF55FF55);

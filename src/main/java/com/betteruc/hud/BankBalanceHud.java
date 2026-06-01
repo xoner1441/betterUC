@@ -73,7 +73,12 @@ public class BankBalanceHud {
         int x = BetterUCConfig.INSTANCE.bankHudX;
         int y = BetterUCConfig.INSTANCE.bankHudY;
         String value = formatMoney(currentBankBalance) + "$";
-        if (!BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.bankHudStyle)) {
+        String style = BetterUCConfig.INSTANCE.bankHudStyle;
+        if (BetterUCConfig.isCartoonHudStyle(style)) {
+            ModernHudRenderer.drawCartoonText(context, client, "Bank: " + value, x, y, BetterUCConfig.INSTANCE.bankHudColor);
+            return;
+        }
+        if (!BetterUCConfig.isModernHudStyle(style)) {
             context.drawTextWithShadow(client.textRenderer, Text.literal("Bank: " + value), x, y, BetterUCConfig.INSTANCE.bankHudColor);
             return;
         }

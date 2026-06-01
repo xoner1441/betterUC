@@ -30,9 +30,11 @@ public class HealthHud {
         int centerX = client.getWindow().getScaledWidth() / 2;
         int centerY = client.getWindow().getScaledHeight() / 2;
 
-        boolean modernStyle = BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.healthHudStyle);
+        String style = BetterUCConfig.INSTANCE.healthHudStyle;
+        boolean modernStyle = BetterUCConfig.isModernHudStyle(style);
+        boolean cartoonStyle = BetterUCConfig.isCartoonHudStyle(style);
         int textWidth = client.textRenderer.getWidth(cachedHealthString);
-        int totalWidth = modernStyle ? Math.max(34, textWidth + 27) : 9 + 2 + textWidth;
+        int totalWidth = modernStyle ? Math.max(34, textWidth + 27) : 9 + 4 + textWidth;
 
         int startX = BetterUCConfig.INSTANCE.healthHudX >= 0
                 ? BetterUCConfig.INSTANCE.healthHudX
@@ -61,6 +63,11 @@ public class HealthHud {
                 startX, y, 9, 9,
                 heartColor
         );
+
+        if (cartoonStyle) {
+            ModernHudRenderer.drawCartoonText(context, client.textRenderer, healthText, startX + 12, y, textColor);
+            return;
+        }
 
         context.drawText(client.textRenderer, healthText, startX + 11, y, textColor, true);
     }

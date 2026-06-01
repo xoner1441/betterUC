@@ -140,6 +140,43 @@ public final class ModernHudRenderer {
         }
     }
 
+    public static void drawCartoonText(
+            DrawContext context,
+            MinecraftClient client,
+            String text,
+            int x,
+            int y,
+            int color
+    ) {
+        drawCartoonText(context, client.textRenderer, Text.literal(safe(text)), x, y, color);
+    }
+
+    public static void drawCartoonText(
+            DrawContext context,
+            TextRenderer renderer,
+            Text text,
+            int x,
+            int y,
+            int color
+    ) {
+        Text safeText = text == null ? Text.literal("") : text;
+        int solidColor = withAlpha(color, 0xFF);
+        int outline = 0xFF24132E;
+        int shadow = 0x99000000;
+
+        context.drawText(renderer, safeText, x + 2, y + 2, shadow, false);
+        context.drawText(renderer, safeText, x - 1, y, outline, false);
+        context.drawText(renderer, safeText, x + 1, y, outline, false);
+        context.drawText(renderer, safeText, x, y - 1, outline, false);
+        context.drawText(renderer, safeText, x, y + 1, outline, false);
+        context.drawText(renderer, safeText, x - 1, y - 1, outline, false);
+        context.drawText(renderer, safeText, x + 1, y - 1, outline, false);
+        context.drawText(renderer, safeText, x - 1, y + 1, outline, false);
+        context.drawText(renderer, safeText, x + 1, y + 1, outline, false);
+        context.drawText(renderer, safeText, x, y - 1, brighten(solidColor), false);
+        context.drawText(renderer, safeText, x, y, solidColor, false);
+    }
+
     public static void drawPanel(DrawContext context, int x, int y, int width, int height, int accentColor) {
         int safeWidth = Math.max(8, width);
         int safeHeight = Math.max(8, height);
@@ -167,6 +204,14 @@ public final class ModernHudRenderer {
 
     private static int withAlpha(int color, int alpha) {
         return ((alpha & 0xFF) << 24) | (color & 0x00FFFFFF);
+    }
+
+    private static int brighten(int color) {
+        int alpha = color & 0xFF000000;
+        int red = Math.min(255, ((color >> 16) & 0xFF) + 56);
+        int green = Math.min(255, ((color >> 8) & 0xFF) + 56);
+        int blue = Math.min(255, (color & 0xFF) + 56);
+        return alpha | (red << 16) | (green << 8) | blue;
     }
 
     private static float clamp01(float value) {

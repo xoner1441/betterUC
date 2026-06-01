@@ -48,6 +48,7 @@ public class PotionEffectsHud {
         if (ACTIVE_EFFECTS.size() > 5) {
             spacing = Math.max(1, EFFECT_MAX_SPAN / (ACTIVE_EFFECTS.size() - 1));
         }
+        String style = BetterUCConfig.INSTANCE.potionHudStyle;
         float tickRate = client.world == null ? 20.0F : client.world.getTickManager().getTickRate();
 
         for (StatusEffectInstance effect : ACTIVE_EFFECTS) {
@@ -57,7 +58,14 @@ public class PotionEffectsHud {
             Text effectName = buildEffectName(effect);
             Text durationText = StatusEffectUtil.getDurationText(effect, 1.0F, tickRate);
 
-            if (!BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.potionHudStyle)) {
+            if (BetterUCConfig.isCartoonHudStyle(style)) {
+                ModernHudRenderer.drawCartoonText(context, client.textRenderer, effectName, x, y, accentColor);
+                ModernHudRenderer.drawCartoonText(context, client.textRenderer, durationText, x, y + 11, ModernHudRenderer.TEXT_DIM);
+                y += Math.max(23, spacing - 9);
+                continue;
+            }
+
+            if (!BetterUCConfig.isModernHudStyle(style)) {
                 context.drawTextWithShadow(client.textRenderer, effectName, x, y, accentColor);
                 context.drawTextWithShadow(client.textRenderer, durationText, x, y + 10, ModernHudRenderer.TEXT_DIM);
                 y += Math.max(21, spacing - 11);

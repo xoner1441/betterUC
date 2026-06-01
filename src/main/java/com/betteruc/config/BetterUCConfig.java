@@ -62,6 +62,7 @@ public class BetterUCConfig {
     public static final int DEFAULT_HEALTH_HUD_TEXT_COLOR = DEFAULT_HEALTH_HUD_COLOR;
     public static final String HUD_STYLE_MODERN = "modern";
     public static final String HUD_STYLE_TRANSPARENT = "transparent";
+    public static final String HUD_STYLE_CARTOON = "cartoon";
     public static BetterUCConfig INSTANCE = new BetterUCConfig();
     private static final List<TrackableFaction> TRACKABLE_FACTIONS = List.of(
             new TrackableFaction("Polizei", "polizei"),
@@ -188,17 +189,33 @@ public class BetterUCConfig {
         return HUD_STYLE_MODERN.equals(normalizeHudStyle(style, HUD_STYLE_MODERN));
     }
 
+    public static boolean isCartoonHudStyle(String style) {
+        return HUD_STYLE_CARTOON.equals(normalizeHudStyle(style, HUD_STYLE_MODERN));
+    }
+
     public static String toggleHudStyle(String style) {
-        return isModernHudStyle(style) ? HUD_STYLE_TRANSPARENT : HUD_STYLE_MODERN;
+        String normalized = normalizeHudStyle(style, HUD_STYLE_MODERN);
+        return switch (normalized) {
+            case HUD_STYLE_MODERN -> HUD_STYLE_TRANSPARENT;
+            case HUD_STYLE_TRANSPARENT -> HUD_STYLE_CARTOON;
+            default -> HUD_STYLE_MODERN;
+        };
     }
 
     public static String hudStyleLabel(String style) {
-        return isModernHudStyle(style) ? "Modern" : "Transparent";
+        String normalized = normalizeHudStyle(style, HUD_STYLE_MODERN);
+        return switch (normalized) {
+            case HUD_STYLE_TRANSPARENT -> "Transparent";
+            case HUD_STYLE_CARTOON -> "Cartoon";
+            default -> "Modern";
+        };
     }
 
     private static String normalizeHudStyle(String style, String fallback) {
         String normalized = style == null ? "" : style.trim().toLowerCase(Locale.ROOT);
-        if (HUD_STYLE_MODERN.equals(normalized) || HUD_STYLE_TRANSPARENT.equals(normalized)) {
+        if (HUD_STYLE_MODERN.equals(normalized)
+                || HUD_STYLE_TRANSPARENT.equals(normalized)
+                || HUD_STYLE_CARTOON.equals(normalized)) {
             return normalized;
         }
         return fallback;

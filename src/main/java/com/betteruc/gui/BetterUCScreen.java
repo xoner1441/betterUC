@@ -400,9 +400,12 @@ public class BetterUCScreen extends Screen {
         int previewY = y;
 
         context.drawTextWithShadow(textRenderer, Text.literal("Preview"), previewX, previewY - 14, TEXT_MUTED);
+        String style = getHudStyle(selectedModule);
+        boolean modernStyle = BetterUCConfig.isModernHudStyle(style);
+        boolean cartoonStyle = BetterUCConfig.isCartoonHudStyle(style);
         switch (selectedModule) {
             case HEALTH -> {
-                if (BetterUCConfig.isModernHudStyle(getHudStyle(selectedModule))) {
+                if (modernStyle) {
                     ModernHudRenderer.drawPanel(context, previewX, previewY, 38, 17, BetterUCConfig.INSTANCE.healthHudHeartColor);
                     context.drawGuiTexture(
                             net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED,
@@ -426,12 +429,20 @@ public class BetterUCScreen extends Screen {
                         9,
                         BetterUCConfig.INSTANCE.healthHudHeartColor
                 );
+                if (cartoonStyle) {
+                    ModernHudRenderer.drawCartoonText(context, textRenderer, Text.literal("10"), previewX + 12, previewY,
+                            BetterUCConfig.INSTANCE.healthHudTextColor);
+                    return;
+                }
                 context.drawText(textRenderer, Text.literal("10"), previewX + 11, previewY,
                         BetterUCConfig.INSTANCE.healthHudTextColor, true);
             }
             case FPS -> {
-                if (BetterUCConfig.isModernHudStyle(getHudStyle(selectedModule))) {
+                if (modernStyle) {
                     ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, "FPS", "144",
+                            BetterUCConfig.INSTANCE.fpsHudColor);
+                } else if (cartoonStyle) {
+                    ModernHudRenderer.drawCartoonText(context, minecraft, "FPS: 144", previewX, previewY,
                             BetterUCConfig.INSTANCE.fpsHudColor);
                 } else {
                     context.drawTextWithShadow(textRenderer, Text.literal("FPS: 144"), previewX, previewY,
@@ -439,38 +450,52 @@ public class BetterUCScreen extends Screen {
                 }
             }
             case PAYDAY -> {
-                if (BetterUCConfig.isModernHudStyle(getHudStyle(selectedModule))) {
+                if (modernStyle) {
                     ModernHudRenderer.drawProgressModule(context, minecraft, previewX, previewY, "PAYDAY",
                             "25/60 min", 25.0F / 60.0F, BetterUCConfig.INSTANCE.paydayHudColor);
+                } else if (cartoonStyle) {
+                    ModernHudRenderer.drawCartoonText(context, minecraft, "Payday: 25/60 Minuten", previewX, previewY,
+                            BetterUCConfig.INSTANCE.paydayHudColor);
                 } else {
                     context.drawTextWithShadow(textRenderer, Text.literal("Payday: 25/60 Minuten"), previewX, previewY,
                             BetterUCConfig.INSTANCE.paydayHudColor);
                 }
             }
             case AMMO -> {
-                if (BetterUCConfig.isModernHudStyle(getHudStyle(selectedModule))) {
+                if (modernStyle) {
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY, "AMMO", "20/96",
                             "TS19", 0xFFFFAA33, 0xFF7CFF8A);
+                } else if (cartoonStyle) {
+                    ModernHudRenderer.drawCartoonText(context, minecraft, "20/96", previewX, previewY, 0xFFFFAA33);
+                    ModernHudRenderer.drawCartoonText(context, minecraft, "TS19", previewX, previewY + 11, 0xFF55FF55);
                 } else {
                     context.drawTextWithShadow(textRenderer, Text.literal("20/96"), previewX, previewY, 0xFFFFAA33);
                     context.drawTextWithShadow(textRenderer, Text.literal("TS19"), previewX, previewY + 10, 0xFF55FF55);
                 }
             }
             case BANK -> {
-                if (BetterUCConfig.isModernHudStyle(getHudStyle(selectedModule))) {
+                if (modernStyle) {
                     ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, "BANK",
                             previewBankValue(), BetterUCConfig.INSTANCE.bankHudColor);
+                } else if (cartoonStyle) {
+                    ModernHudRenderer.drawCartoonText(context, minecraft, "Bank: " + previewBankValue(), previewX, previewY,
+                            BetterUCConfig.INSTANCE.bankHudColor);
                 } else {
                     context.drawTextWithShadow(textRenderer, Text.literal("Bank: " + previewBankValue()), previewX, previewY,
                             BetterUCConfig.INSTANCE.bankHudColor);
                 }
             }
             case POTION -> {
-                if (BetterUCConfig.isModernHudStyle(getHudStyle(selectedModule))) {
+                if (modernStyle) {
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY, "EFFECT", "Staerke II",
                             "1:26", 0xFF9328FF);
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY + 33, "EFFECT", "Speed",
                             "0:49", 0xFF7CAFC6);
+                } else if (cartoonStyle) {
+                    ModernHudRenderer.drawCartoonText(context, minecraft, "Staerke II", previewX, previewY, 0xFF9328FF);
+                    ModernHudRenderer.drawCartoonText(context, minecraft, "1:26", previewX, previewY + 11, TEXT_MUTED);
+                    ModernHudRenderer.drawCartoonText(context, minecraft, "Speed", previewX, previewY + 25, 0xFF7CAFC6);
+                    ModernHudRenderer.drawCartoonText(context, minecraft, "0:49", previewX, previewY + 36, TEXT_MUTED);
                 } else {
                     context.drawTextWithShadow(textRenderer, Text.literal("Staerke II"), previewX, previewY, 0xFF9328FF);
                     context.drawTextWithShadow(textRenderer, Text.literal("1:26"), previewX, previewY + 10, TEXT_MUTED);
@@ -479,8 +504,11 @@ public class BetterUCScreen extends Screen {
                 }
             }
             case SPRINT -> {
-                if (BetterUCConfig.isModernHudStyle(getHudStyle(selectedModule))) {
+                if (modernStyle) {
                     ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, "SPRINT", "ON",
+                            BetterUCConfig.INSTANCE.toggleSprintHudColor);
+                } else if (cartoonStyle) {
+                    ModernHudRenderer.drawCartoonText(context, minecraft, "ToggleSprint: ON", previewX, previewY,
                             BetterUCConfig.INSTANCE.toggleSprintHudColor);
                 } else {
                     context.drawTextWithShadow(textRenderer, Text.literal("ToggleSprint: ON"), previewX, previewY,
@@ -491,16 +519,21 @@ public class BetterUCScreen extends Screen {
                 String time = HackTimerHud.secondsRemaining > 0
                         ? String.format(Locale.ROOT, "%02d:%02d", HackTimerHud.secondsRemaining / 60, HackTimerHud.secondsRemaining % 60)
                         : "02:39";
-                if (BetterUCConfig.isModernHudStyle(getHudStyle(selectedModule))) {
+                if (modernStyle) {
                     ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, "HACK", time, 0xFF60A5FA);
+                } else if (cartoonStyle) {
+                    ModernHudRenderer.drawCartoonText(context, minecraft, "Hack: " + time, previewX, previewY, 0xFF60A5FA);
                 } else {
                     context.drawTextWithShadow(textRenderer, Text.literal("Hack: " + time), previewX, previewY, 0xFF60A5FA);
                 }
             }
             case PLANT_TIMER -> {
-                if (BetterUCConfig.isModernHudStyle(getHudStyle(selectedModule))) {
+                if (modernStyle) {
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY, "PLANT",
                             "Plantage Pulver 7/10", "Reif: 1:30:00 | Wasser: 20:00", 0xFF6CF27D, 0xFFFFD866);
+                } else if (cartoonStyle) {
+                    ModernHudRenderer.drawCartoonText(context, minecraft, "Plantage Pulver 7/10", previewX, previewY, 0xFF6CF27D);
+                    ModernHudRenderer.drawCartoonText(context, minecraft, "Reif: 1:30:00 | Wasser: 20:00", previewX, previewY + 11, 0xFFFFD866);
                 } else {
                     context.drawTextWithShadow(textRenderer, Text.literal("Plantage Pulver 7/10"), previewX, previewY, 0xFF6CF27D);
                     context.drawTextWithShadow(textRenderer, Text.literal("Reif: 1:30:00 | Wasser: 20:00"), previewX, previewY + 10, 0xFFFFD866);

@@ -23,10 +23,16 @@ public class ToggleSprintHud {
 
         int x = BetterUCConfig.INSTANCE.toggleSprintHudX;
         int y = BetterUCConfig.INSTANCE.toggleSprintHudY;
-        if (!BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.toggleSprintHudStyle)) {
+        String style = BetterUCConfig.INSTANCE.toggleSprintHudStyle;
+        String text = "ToggleSprint: " + (isOn ? "ON" : "OFF");
+        if (BetterUCConfig.isCartoonHudStyle(style)) {
+            ModernHudRenderer.drawCartoonText(context, client, text, x, y, color);
+            return;
+        }
+        if (!BetterUCConfig.isModernHudStyle(style)) {
             context.drawTextWithShadow(
                     client.textRenderer,
-                    Text.literal("ToggleSprint: " + (isOn ? "ON" : "OFF")),
+                    Text.literal(text),
                     x,
                     y,
                     color
