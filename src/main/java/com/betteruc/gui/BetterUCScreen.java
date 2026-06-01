@@ -66,7 +66,7 @@ public class BetterUCScreen extends Screen {
         if (selectedModule.hasHudStyle()) {
             y = addHudStyleButton(x, y, controlW, selectedModule);
             if (BetterUCConfig.isCustomHudStyle(getHudStyle(selectedModule))) {
-                y = addCustomFontControls(x, y, controlW);
+                y = addCustomFontControls(x, y, controlW, selectedModule);
             }
         }
 
@@ -195,9 +195,9 @@ public class BetterUCScreen extends Screen {
         });
     }
 
-    private int addCustomFontControls(int x, int y, int width) {
-        y = addButton(x, y, width, "Font: " + BetterUCFontManager.selectedFontLabel(), b -> {
-            BetterUCConfig.INSTANCE.customHudFont = BetterUCFontManager.nextFontId(BetterUCConfig.INSTANCE.customHudFont);
+    private int addCustomFontControls(int x, int y, int width, ModuleOption module) {
+        y = addButton(x, y, width, "Font: " + BetterUCFontManager.selectedFontLabel(getHudFont(module)), b -> {
+            setHudFont(module, BetterUCFontManager.nextCustomFontId(getHudFont(module)));
             BetterUCConfig.save();
             BetterUCFontManager.rebuildAndReload(client);
             refreshWidgets();
@@ -419,6 +419,7 @@ public class BetterUCScreen extends Screen {
 
         context.drawTextWithShadow(textRenderer, Text.literal("Preview"), previewX, previewY - 14, TEXT_MUTED);
         String style = getHudStyle(selectedModule);
+        String font = getHudFont(selectedModule);
         boolean modernStyle = BetterUCConfig.isModernHudStyle(style);
         boolean stylizedStyle = BetterUCConfig.isStylizedHudStyle(style);
         switch (selectedModule) {
@@ -448,7 +449,7 @@ public class BetterUCScreen extends Screen {
                         BetterUCConfig.INSTANCE.healthHudHeartColor
                 );
                 if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, textRenderer, style, Text.literal("10"), previewX + 12, previewY,
+                    ModernHudRenderer.drawStyledText(context, textRenderer, style, font, Text.literal("10"), previewX + 12, previewY,
                             BetterUCConfig.INSTANCE.healthHudTextColor);
                     return;
                 }
@@ -460,7 +461,7 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, "FPS", "144",
                             BetterUCConfig.INSTANCE.fpsHudColor);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, "FPS: 144", previewX, previewY,
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "FPS: 144", previewX, previewY,
                             BetterUCConfig.INSTANCE.fpsHudColor);
                 } else {
                     context.drawTextWithShadow(textRenderer, Text.literal("FPS: 144"), previewX, previewY,
@@ -472,7 +473,7 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawProgressModule(context, minecraft, previewX, previewY, "PAYDAY",
                             "25/60 min", 25.0F / 60.0F, BetterUCConfig.INSTANCE.paydayHudColor);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, "Payday: 25/60 Minuten", previewX, previewY,
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Payday: 25/60 Minuten", previewX, previewY,
                             BetterUCConfig.INSTANCE.paydayHudColor);
                 } else {
                     context.drawTextWithShadow(textRenderer, Text.literal("Payday: 25/60 Minuten"), previewX, previewY,
@@ -484,8 +485,8 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY, "AMMO", "20/96",
                             "TS19", 0xFFFFAA33, 0xFF7CFF8A);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, "20/96", previewX, previewY, 0xFFFFAA33);
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, "TS19", previewX, previewY + 11, 0xFF55FF55);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "20/96", previewX, previewY, 0xFFFFAA33);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "TS19", previewX, previewY + 11, 0xFF55FF55);
                 } else {
                     context.drawTextWithShadow(textRenderer, Text.literal("20/96"), previewX, previewY, 0xFFFFAA33);
                     context.drawTextWithShadow(textRenderer, Text.literal("TS19"), previewX, previewY + 10, 0xFF55FF55);
@@ -496,7 +497,7 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, "BANK",
                             previewBankValue(), BetterUCConfig.INSTANCE.bankHudColor);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, "Bank: " + previewBankValue(), previewX, previewY,
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Bank: " + previewBankValue(), previewX, previewY,
                             BetterUCConfig.INSTANCE.bankHudColor);
                 } else {
                     context.drawTextWithShadow(textRenderer, Text.literal("Bank: " + previewBankValue()), previewX, previewY,
@@ -510,10 +511,10 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY + 33, "EFFECT", "Speed",
                             "0:49", 0xFF7CAFC6);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, "Staerke II", previewX, previewY, 0xFF9328FF);
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, "1:26", previewX, previewY + 11, TEXT_MUTED);
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, "Speed", previewX, previewY + 25, 0xFF7CAFC6);
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, "0:49", previewX, previewY + 36, TEXT_MUTED);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Staerke II", previewX, previewY, 0xFF9328FF);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "1:26", previewX, previewY + 11, TEXT_MUTED);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Speed", previewX, previewY + 25, 0xFF7CAFC6);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "0:49", previewX, previewY + 36, TEXT_MUTED);
                 } else {
                     context.drawTextWithShadow(textRenderer, Text.literal("Staerke II"), previewX, previewY, 0xFF9328FF);
                     context.drawTextWithShadow(textRenderer, Text.literal("1:26"), previewX, previewY + 10, TEXT_MUTED);
@@ -526,7 +527,7 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, "SPRINT", "ON",
                             BetterUCConfig.INSTANCE.toggleSprintHudColor);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, "ToggleSprint: ON", previewX, previewY,
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "ToggleSprint: ON", previewX, previewY,
                             BetterUCConfig.INSTANCE.toggleSprintHudColor);
                 } else {
                     context.drawTextWithShadow(textRenderer, Text.literal("ToggleSprint: ON"), previewX, previewY,
@@ -540,7 +541,7 @@ public class BetterUCScreen extends Screen {
                 if (modernStyle) {
                     ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, "HACK", time, 0xFF60A5FA);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, "Hack: " + time, previewX, previewY, 0xFF60A5FA);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Hack: " + time, previewX, previewY, 0xFF60A5FA);
                 } else {
                     context.drawTextWithShadow(textRenderer, Text.literal("Hack: " + time), previewX, previewY, 0xFF60A5FA);
                 }
@@ -550,8 +551,8 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY, "PLANT",
                             "Plantage Pulver 7/10", "Reif: 1:30:00 | Wasser: 20:00", 0xFF6CF27D, 0xFFFFD866);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, "Plantage Pulver 7/10", previewX, previewY, 0xFF6CF27D);
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, "Reif: 1:30:00 | Wasser: 20:00", previewX, previewY + 11, 0xFFFFD866);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Plantage Pulver 7/10", previewX, previewY, 0xFF6CF27D);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Reif: 1:30:00 | Wasser: 20:00", previewX, previewY + 11, 0xFFFFD866);
                 } else {
                     context.drawTextWithShadow(textRenderer, Text.literal("Plantage Pulver 7/10"), previewX, previewY, 0xFF6CF27D);
                     context.drawTextWithShadow(textRenderer, Text.literal("Reif: 1:30:00 | Wasser: 20:00"), previewX, previewY + 10, 0xFFFFD866);
@@ -724,6 +725,36 @@ public class BetterUCScreen extends Screen {
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudStyle = style;
             default -> {
             }
+        }
+    }
+
+    private String getHudFont(ModuleOption module) {
+        return switch (module) {
+            case HEALTH -> BetterUCConfig.INSTANCE.healthHudCustomFont;
+            case FPS -> BetterUCConfig.INSTANCE.fpsHudCustomFont;
+            case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudCustomFont;
+            case AMMO -> BetterUCConfig.INSTANCE.ammoHudCustomFont;
+            case BANK -> BetterUCConfig.INSTANCE.bankHudCustomFont;
+            case POTION -> BetterUCConfig.INSTANCE.potionHudCustomFont;
+            case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudCustomFont;
+            case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudCustomFont;
+            case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudCustomFont;
+            default -> BetterUCConfig.INSTANCE.customHudFont;
+        };
+    }
+
+    private void setHudFont(ModuleOption module, String fontId) {
+        switch (module) {
+            case HEALTH -> BetterUCConfig.INSTANCE.healthHudCustomFont = fontId;
+            case FPS -> BetterUCConfig.INSTANCE.fpsHudCustomFont = fontId;
+            case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudCustomFont = fontId;
+            case AMMO -> BetterUCConfig.INSTANCE.ammoHudCustomFont = fontId;
+            case BANK -> BetterUCConfig.INSTANCE.bankHudCustomFont = fontId;
+            case POTION -> BetterUCConfig.INSTANCE.potionHudCustomFont = fontId;
+            case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudCustomFont = fontId;
+            case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudCustomFont = fontId;
+            case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudCustomFont = fontId;
+            default -> BetterUCConfig.INSTANCE.customHudFont = fontId;
         }
     }
 

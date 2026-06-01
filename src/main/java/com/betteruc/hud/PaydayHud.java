@@ -71,7 +71,7 @@ public class PaydayHud {
             text += " (AFK)";
         }
         if (BetterUCConfig.isStylizedHudStyle(style)) {
-            ModernHudRenderer.drawStyledText(context, client, style, text, x, y, BetterUCConfig.INSTANCE.paydayHudColor);
+            ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.paydayHudCustomFont, text, x, y, BetterUCConfig.INSTANCE.paydayHudColor);
             return;
         }
         if (!BetterUCConfig.isModernHudStyle(style)) {

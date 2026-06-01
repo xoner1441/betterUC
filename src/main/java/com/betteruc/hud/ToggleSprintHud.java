@@ -26,7 +26,7 @@ public class ToggleSprintHud {
         String style = BetterUCConfig.INSTANCE.toggleSprintHudStyle;
         String text = "ToggleSprint: " + (isOn ? "ON" : "OFF");
         if (BetterUCConfig.isStylizedHudStyle(style)) {
-            ModernHudRenderer.drawStyledText(context, client, style, text, x, y, color);
+            ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.toggleSprintHudCustomFont, text, x, y, color);
             return;
         }
         if (!BetterUCConfig.isModernHudStyle(style)) {

@@ -95,9 +95,9 @@ public class AmmoHud {
 
         String style = BetterUCConfig.INSTANCE.ammoHudStyle;
         if (BetterUCConfig.isStylizedHudStyle(style)) {
-            ModernHudRenderer.drawStyledText(context, client.textRenderer, style, ammoText, x, y, 0xFFFFAA33);
+            ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.ammoHudCustomFont, ammoText, x, y, 0xFFFFAA33);
             if (!weaponName.isBlank()) {
-                ModernHudRenderer.drawStyledText(context, client.textRenderer, style, weaponText, x, y + 11, 0xFF55FF55);
+                ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.ammoHudCustomFont, weaponText, x, y + 11, 0xFF55FF55);
             }
             return;
         }

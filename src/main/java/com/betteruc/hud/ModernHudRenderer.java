@@ -151,7 +151,20 @@ public final class ModernHudRenderer {
             int y,
             int color
     ) {
-        drawStyledText(context, client.textRenderer, hudStyle, Text.literal(safe(text)), x, y, color);
+        drawStyledText(context, client.textRenderer, hudStyle, BetterUCConfig.INSTANCE.customHudFont, Text.literal(safe(text)), x, y, color);
+    }
+
+    public static void drawStyledText(
+            DrawContext context,
+            MinecraftClient client,
+            String hudStyle,
+            String fontId,
+            String text,
+            int x,
+            int y,
+            int color
+    ) {
+        drawStyledText(context, client.textRenderer, hudStyle, fontId, Text.literal(safe(text)), x, y, color);
     }
 
     public static void drawStyledText(
@@ -163,8 +176,21 @@ public final class ModernHudRenderer {
             int y,
             int color
     ) {
+        drawStyledText(context, renderer, hudStyle, BetterUCConfig.INSTANCE.customHudFont, text, x, y, color);
+    }
+
+    public static void drawStyledText(
+            DrawContext context,
+            TextRenderer renderer,
+            String hudStyle,
+            String fontId,
+            Text text,
+            int x,
+            int y,
+            int color
+    ) {
         if (BetterUCConfig.isCustomHudStyle(hudStyle)) {
-            drawCustomText(context, renderer, text, x, y, color);
+            drawCustomText(context, renderer, fontId, text, x, y, color);
             return;
         }
         drawCartoonText(context, renderer, text, x, y, color);
@@ -196,12 +222,13 @@ public final class ModernHudRenderer {
     private static void drawCustomText(
             DrawContext context,
             TextRenderer renderer,
+            String fontId,
             Text text,
             int x,
             int y,
             int color
     ) {
-        Text safeText = BetterUCFontManager.applyCustomHudFont(text == null ? Text.literal("") : text);
+        Text safeText = BetterUCFontManager.applyCustomHudFont(text == null ? Text.literal("") : text, fontId);
         drawOutlinedText(context, renderer, safeText, x, y, color);
     }
 

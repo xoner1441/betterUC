@@ -290,8 +290,8 @@ public class PlantageHud {
 
             String style = BetterUCConfig.INSTANCE.plantTimerHudStyle;
             if (BetterUCConfig.isStylizedHudStyle(style)) {
-                ModernHudRenderer.drawStyledText(context, client, style, title, x, y, state.type.color);
-                ModernHudRenderer.drawStyledText(context, client, style, timers, x, y + 11, 0xFFFFD866);
+                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.plantTimerHudCustomFont, title, x, y, state.type.color);
+                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.plantTimerHudCustomFont, timers, x, y + 11, 0xFFFFD866);
                 y += 25;
                 continue;
             }

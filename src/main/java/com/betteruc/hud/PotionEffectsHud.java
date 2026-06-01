@@ -59,8 +59,8 @@ public class PotionEffectsHud {
             Text durationText = StatusEffectUtil.getDurationText(effect, 1.0F, tickRate);
 
             if (BetterUCConfig.isStylizedHudStyle(style)) {
-                ModernHudRenderer.drawStyledText(context, client.textRenderer, style, effectName, x, y, accentColor);
-                ModernHudRenderer.drawStyledText(context, client.textRenderer, style, durationText, x, y + 11, ModernHudRenderer.TEXT_DIM);
+                ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.potionHudCustomFont, effectName, x, y, accentColor);
+                ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.potionHudCustomFont, durationText, x, y + 11, ModernHudRenderer.TEXT_DIM);
                 y += Math.max(23, spacing - 9);
                 continue;
             }

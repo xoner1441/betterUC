@@ -152,6 +152,15 @@ public class BetterUCConfig {
     public String potionHudStyle = HUD_STYLE_MODERN;
     public String hackTimerHudStyle = HUD_STYLE_MODERN;
     public String plantTimerHudStyle = HUD_STYLE_MODERN;
+    public String healthHudCustomFont = "";
+    public String toggleSprintHudCustomFont = "";
+    public String fpsHudCustomFont = "";
+    public String paydayHudCustomFont = "";
+    public String ammoHudCustomFont = "";
+    public String bankHudCustomFont = "";
+    public String potionHudCustomFont = "";
+    public String hackTimerHudCustomFont = "";
+    public String plantTimerHudCustomFont = "";
     public String customHudFont = "";
     public String cartoonHudFont = "";
     public boolean showHealthHud = true;

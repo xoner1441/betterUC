@@ -74,21 +74,30 @@ public final class BetterUCFontManager {
     }
 
     public static boolean hasCustomFonts() {
-        return getFontOptions().size() > 1;
+        return !customFontOptions().isEmpty();
     }
 
     public static String selectedFontLabel() {
-        String selected = normalizedFontId(BetterUCConfig.INSTANCE.customHudFont);
-        for (FontOption option : getFontOptions()) {
+        return selectedFontLabel(BetterUCConfig.INSTANCE.customHudFont);
+    }
+
+    public static String selectedFontLabel(String fontId) {
+        List<FontOption> customFonts = customFontOptions();
+        if (customFonts.isEmpty()) {
+            return "Keine Fonts";
+        }
+
+        String selected = normalizedFontId(fontId);
+        for (FontOption option : customFonts) {
             if (option.id.equals(selected)) {
                 return option.label;
             }
         }
-        return FontOption.DEFAULT.label;
+        return "Auswaehlen";
     }
 
-    public static String nextFontId(String current) {
-        List<FontOption> options = getFontOptions();
+    public static String nextCustomFontId(String current) {
+        List<FontOption> options = customFontOptions();
         if (options.isEmpty()) return DEFAULT_FONT_ID;
 
         String selected = normalizedFontId(current);
@@ -101,12 +110,20 @@ public final class BetterUCFontManager {
     }
 
     public static Text applyCustomHudFont(Text text) {
-        Identifier fontId = selectedFontIdentifier();
-        if (fontId == null) {
+        return applyCustomHudFont(text, BetterUCConfig.INSTANCE.customHudFont);
+    }
+
+    public static Text applyCustomHudFont(Text text, String fontId) {
+        Identifier identifier = selectedFontIdentifier(fontId);
+        if (identifier == null) {
             return text;
         }
         return Text.literal(text == null ? "" : text.getString())
-                .setStyle(Style.EMPTY.withFont(new StyleSpriteSource.Font(fontId)));
+                .setStyle(Style.EMPTY.withFont(new StyleSpriteSource.Font(identifier)));
+    }
+
+    public static String sanitizeFontId(String fontId) {
+        return sanitizeFontChoice(fontId, DEFAULT_FONT_ID);
     }
 
     public static void rebuildAndReload(MinecraftClient client) {
@@ -130,8 +147,8 @@ public final class BetterUCFontManager {
         }
     }
 
-    private static Identifier selectedFontIdentifier() {
-        String selected = normalizedFontId(BetterUCConfig.INSTANCE.customHudFont);
+    private static Identifier selectedFontIdentifier(String fontId) {
+        String selected = normalizedFontId(fontId);
         if (selected.isEmpty()) return null;
 
         for (FontOption option : getFontOptions()) {
@@ -168,7 +185,7 @@ public final class BetterUCFontManager {
             }
 
             refreshFontOptions(sources);
-            sanitizeSelectedFont();
+            sanitizeSelectedFonts();
             BetterUCConfig.save();
         } catch (IOException e) {
             BetterUCMod.LOGGER.error("Failed to rebuild betterUC font resource pack", e);
@@ -212,7 +229,13 @@ public final class BetterUCFontManager {
             ));
         }
         fontOptions = List.copyOf(options);
-        sanitizeSelectedFont();
+        sanitizeSelectedFonts();
+    }
+
+    private static List<FontOption> customFontOptions() {
+        List<FontOption> options = getFontOptions();
+        if (options.size() <= 1) return List.of();
+        return options.subList(1, options.size());
     }
 
     private static List<FontSource> discoverFontSources() {
@@ -239,26 +262,50 @@ public final class BetterUCFontManager {
         return sources;
     }
 
-    private static void sanitizeSelectedFont() {
-        if ((BetterUCConfig.INSTANCE.customHudFont == null || BetterUCConfig.INSTANCE.customHudFont.isBlank())
+    private static void sanitizeSelectedFonts() {
+        String legacy = normalizedFontId(BetterUCConfig.INSTANCE.customHudFont);
+        if (legacy.isEmpty()
                 && BetterUCConfig.INSTANCE.cartoonHudFont != null
                 && !BetterUCConfig.INSTANCE.cartoonHudFont.isBlank()) {
-            BetterUCConfig.INSTANCE.customHudFont = BetterUCConfig.INSTANCE.cartoonHudFont;
+            legacy = normalizedFontId(BetterUCConfig.INSTANCE.cartoonHudFont);
         }
 
-        String selected = normalizedFontId(BetterUCConfig.INSTANCE.customHudFont);
+        legacy = sanitizeFontChoice(legacy, DEFAULT_FONT_ID);
+        BetterUCConfig.INSTANCE.customHudFont = legacy;
+        BetterUCConfig.INSTANCE.healthHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.healthHudCustomFont, legacy);
+        BetterUCConfig.INSTANCE.toggleSprintHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.toggleSprintHudCustomFont, legacy);
+        BetterUCConfig.INSTANCE.fpsHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.fpsHudCustomFont, legacy);
+        BetterUCConfig.INSTANCE.paydayHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.paydayHudCustomFont, legacy);
+        BetterUCConfig.INSTANCE.ammoHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.ammoHudCustomFont, legacy);
+        BetterUCConfig.INSTANCE.bankHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.bankHudCustomFont, legacy);
+        BetterUCConfig.INSTANCE.potionHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.potionHudCustomFont, legacy);
+        BetterUCConfig.INSTANCE.hackTimerHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.hackTimerHudCustomFont, legacy);
+        BetterUCConfig.INSTANCE.plantTimerHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.plantTimerHudCustomFont, legacy);
+    }
+
+    private static String sanitizeModuleFont(String value, String fallback) {
+        String selected = normalizedFontId(value);
         if (selected.isEmpty()) {
-            BetterUCConfig.INSTANCE.customHudFont = DEFAULT_FONT_ID;
-            return;
+            selected = normalizedFontId(fallback);
+        }
+        return sanitizeFontChoice(selected, DEFAULT_FONT_ID);
+    }
+
+    private static String sanitizeFontChoice(String value, String fallback) {
+        String selected = normalizedFontId(value);
+        if (selected.isEmpty()) {
+            selected = normalizedFontId(fallback);
+        }
+        if (selected.isEmpty()) {
+            return DEFAULT_FONT_ID;
         }
 
         for (FontOption option : fontOptions) {
             if (option.id.equals(selected)) {
-                BetterUCConfig.INSTANCE.customHudFont = selected;
-                return;
+                return selected;
             }
         }
-        BetterUCConfig.INSTANCE.customHudFont = DEFAULT_FONT_ID;
+        return DEFAULT_FONT_ID;
     }
 
     private static String normalizedFontId(String value) {

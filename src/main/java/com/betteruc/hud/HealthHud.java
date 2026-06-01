@@ -65,7 +65,7 @@ public class HealthHud {
         );
 
         if (stylizedStyle) {
-            ModernHudRenderer.drawStyledText(context, client.textRenderer, style, healthText, startX + 12, y, textColor);
+            ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.healthHudCustomFont, healthText, startX + 12, y, textColor);
             return;
         }
 
