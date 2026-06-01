@@ -13,7 +13,7 @@ public class ChangelogScreen extends Screen {
     private static final Page[] PAGES = new Page[]{
             new Page(
                     "Highlights",
-                    "betterUC 1.0.8",
+                    "betterUC 1.1.0",
                     new String[]{
                             "Potion-HUD im Inventar-Stil mit Icon, Name und Dauer",
                             "CookDrug-Timer entfernt, weil der Server nun einen eigenen Timer hat",
