@@ -32,7 +32,7 @@ public class HealthHud {
 
         String style = BetterUCConfig.INSTANCE.healthHudStyle;
         boolean modernStyle = BetterUCConfig.isModernHudStyle(style);
-        boolean cartoonStyle = BetterUCConfig.isCartoonHudStyle(style);
+        boolean stylizedStyle = BetterUCConfig.isStylizedHudStyle(style);
         int textWidth = client.textRenderer.getWidth(cachedHealthString);
         int totalWidth = modernStyle ? Math.max(34, textWidth + 27) : 9 + 4 + textWidth;
 
@@ -64,8 +64,8 @@ public class HealthHud {
                 heartColor
         );
 
-        if (cartoonStyle) {
-            ModernHudRenderer.drawCartoonText(context, client.textRenderer, healthText, startX + 12, y, textColor);
+        if (stylizedStyle) {
+            ModernHudRenderer.drawStyledText(context, client.textRenderer, style, healthText, startX + 12, y, textColor);
             return;
         }
 

@@ -1,5 +1,7 @@
 package com.betteruc.hud;
 
+import com.betteruc.client.BetterUCFontManager;
+import com.betteruc.config.BetterUCConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -140,6 +142,34 @@ public final class ModernHudRenderer {
         }
     }
 
+    public static void drawStyledText(
+            DrawContext context,
+            MinecraftClient client,
+            String hudStyle,
+            String text,
+            int x,
+            int y,
+            int color
+    ) {
+        drawStyledText(context, client.textRenderer, hudStyle, Text.literal(safe(text)), x, y, color);
+    }
+
+    public static void drawStyledText(
+            DrawContext context,
+            TextRenderer renderer,
+            String hudStyle,
+            Text text,
+            int x,
+            int y,
+            int color
+    ) {
+        if (BetterUCConfig.isCustomHudStyle(hudStyle)) {
+            drawCustomText(context, renderer, text, x, y, color);
+            return;
+        }
+        drawCartoonText(context, renderer, text, x, y, color);
+    }
+
     public static void drawCartoonText(
             DrawContext context,
             MinecraftClient client,
@@ -152,6 +182,30 @@ public final class ModernHudRenderer {
     }
 
     public static void drawCartoonText(
+            DrawContext context,
+            TextRenderer renderer,
+            Text text,
+            int x,
+            int y,
+            int color
+    ) {
+        Text safeText = text == null ? Text.literal("") : text;
+        drawOutlinedText(context, renderer, safeText, x, y, color);
+    }
+
+    private static void drawCustomText(
+            DrawContext context,
+            TextRenderer renderer,
+            Text text,
+            int x,
+            int y,
+            int color
+    ) {
+        Text safeText = BetterUCFontManager.applyCustomHudFont(text == null ? Text.literal("") : text);
+        drawOutlinedText(context, renderer, safeText, x, y, color);
+    }
+
+    private static void drawOutlinedText(
             DrawContext context,
             TextRenderer renderer,
             Text text,

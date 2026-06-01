@@ -70,8 +70,8 @@ public class PaydayHud {
         if (pausedByAfk) {
             text += " (AFK)";
         }
-        if (BetterUCConfig.isCartoonHudStyle(style)) {
-            ModernHudRenderer.drawCartoonText(context, client, text, x, y, BetterUCConfig.INSTANCE.paydayHudColor);
+        if (BetterUCConfig.isStylizedHudStyle(style)) {
+            ModernHudRenderer.drawStyledText(context, client, style, text, x, y, BetterUCConfig.INSTANCE.paydayHudColor);
             return;
         }
         if (!BetterUCConfig.isModernHudStyle(style)) {

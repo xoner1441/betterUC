@@ -63,6 +63,7 @@ public class BetterUCConfig {
     public static final String HUD_STYLE_MODERN = "modern";
     public static final String HUD_STYLE_TRANSPARENT = "transparent";
     public static final String HUD_STYLE_CARTOON = "cartoon";
+    public static final String HUD_STYLE_CUSTOM = "custom";
     public static BetterUCConfig INSTANCE = new BetterUCConfig();
     private static final List<TrackableFaction> TRACKABLE_FACTIONS = List.of(
             new TrackableFaction("Polizei", "polizei"),
@@ -151,6 +152,8 @@ public class BetterUCConfig {
     public String potionHudStyle = HUD_STYLE_MODERN;
     public String hackTimerHudStyle = HUD_STYLE_MODERN;
     public String plantTimerHudStyle = HUD_STYLE_MODERN;
+    public String customHudFont = "";
+    public String cartoonHudFont = "";
     public boolean showHealthHud = true;
     public boolean showFpsHud = true;
     public boolean showPaydayHud = true;
@@ -193,11 +196,21 @@ public class BetterUCConfig {
         return HUD_STYLE_CARTOON.equals(normalizeHudStyle(style, HUD_STYLE_MODERN));
     }
 
+    public static boolean isCustomHudStyle(String style) {
+        return HUD_STYLE_CUSTOM.equals(normalizeHudStyle(style, HUD_STYLE_MODERN));
+    }
+
+    public static boolean isStylizedHudStyle(String style) {
+        String normalized = normalizeHudStyle(style, HUD_STYLE_MODERN);
+        return HUD_STYLE_CARTOON.equals(normalized) || HUD_STYLE_CUSTOM.equals(normalized);
+    }
+
     public static String toggleHudStyle(String style) {
         String normalized = normalizeHudStyle(style, HUD_STYLE_MODERN);
         return switch (normalized) {
             case HUD_STYLE_MODERN -> HUD_STYLE_TRANSPARENT;
             case HUD_STYLE_TRANSPARENT -> HUD_STYLE_CARTOON;
+            case HUD_STYLE_CARTOON -> HUD_STYLE_CUSTOM;
             default -> HUD_STYLE_MODERN;
         };
     }
@@ -207,6 +220,7 @@ public class BetterUCConfig {
         return switch (normalized) {
             case HUD_STYLE_TRANSPARENT -> "Transparent";
             case HUD_STYLE_CARTOON -> "Cartoon";
+            case HUD_STYLE_CUSTOM -> "Custom";
             default -> "Modern";
         };
     }
@@ -215,7 +229,8 @@ public class BetterUCConfig {
         String normalized = style == null ? "" : style.trim().toLowerCase(Locale.ROOT);
         if (HUD_STYLE_MODERN.equals(normalized)
                 || HUD_STYLE_TRANSPARENT.equals(normalized)
-                || HUD_STYLE_CARTOON.equals(normalized)) {
+                || HUD_STYLE_CARTOON.equals(normalized)
+                || HUD_STYLE_CUSTOM.equals(normalized)) {
             return normalized;
         }
         return fallback;

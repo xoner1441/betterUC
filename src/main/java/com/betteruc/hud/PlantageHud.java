@@ -289,9 +289,9 @@ public class PlantageHud {
                     + " | D\u00FCnger: " + formatCare(state.nextFertilizeAtMs - now);
 
             String style = BetterUCConfig.INSTANCE.plantTimerHudStyle;
-            if (BetterUCConfig.isCartoonHudStyle(style)) {
-                ModernHudRenderer.drawCartoonText(context, client, title, x, y, state.type.color);
-                ModernHudRenderer.drawCartoonText(context, client, timers, x, y + 11, 0xFFFFD866);
+            if (BetterUCConfig.isStylizedHudStyle(style)) {
+                ModernHudRenderer.drawStyledText(context, client, style, title, x, y, state.type.color);
+                ModernHudRenderer.drawStyledText(context, client, style, timers, x, y + 11, 0xFFFFD866);
                 y += 25;
                 continue;
             }

@@ -6,6 +6,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ClientScheduler;
+import com.betteruc.client.BetterUCFontManager;
 import com.betteruc.client.MovementController;
 import com.betteruc.client.ServerCommandUtil;
 import com.betteruc.config.BetterUCConfig;
@@ -125,6 +126,7 @@ public class BetterUCClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         BetterUCConfig.load();
+        BetterUCFontManager.initialize();
         registerKeyBindings();
         registerHudElements();
         registerConnectionEvents();
@@ -897,6 +899,7 @@ public class BetterUCClient implements ClientModInitializer {
 
     private void registerTickEvents() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            BetterUCFontManager.tick(client);
             if (client.player == null) return;
 
             HackTimerHud.tick();

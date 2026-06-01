@@ -25,8 +25,8 @@ public class ToggleSprintHud {
         int y = BetterUCConfig.INSTANCE.toggleSprintHudY;
         String style = BetterUCConfig.INSTANCE.toggleSprintHudStyle;
         String text = "ToggleSprint: " + (isOn ? "ON" : "OFF");
-        if (BetterUCConfig.isCartoonHudStyle(style)) {
-            ModernHudRenderer.drawCartoonText(context, client, text, x, y, color);
+        if (BetterUCConfig.isStylizedHudStyle(style)) {
+            ModernHudRenderer.drawStyledText(context, client, style, text, x, y, color);
             return;
         }
         if (!BetterUCConfig.isModernHudStyle(style)) {

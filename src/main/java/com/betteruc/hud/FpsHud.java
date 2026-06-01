@@ -26,8 +26,8 @@ public class FpsHud {
         int y = BetterUCConfig.INSTANCE.fpsHudY;
         int fps = Math.max(0, currentFps);
         String style = BetterUCConfig.INSTANCE.fpsHudStyle;
-        if (BetterUCConfig.isCartoonHudStyle(style)) {
-            ModernHudRenderer.drawCartoonText(context, client, "FPS: " + fps, x, y, BetterUCConfig.INSTANCE.fpsHudColor);
+        if (BetterUCConfig.isStylizedHudStyle(style)) {
+            ModernHudRenderer.drawStyledText(context, client, style, "FPS: " + fps, x, y, BetterUCConfig.INSTANCE.fpsHudColor);
             return;
         }
         if (!BetterUCConfig.isModernHudStyle(style)) {

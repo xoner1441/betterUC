@@ -74,8 +74,8 @@ public class BankBalanceHud {
         int y = BetterUCConfig.INSTANCE.bankHudY;
         String value = formatMoney(currentBankBalance) + "$";
         String style = BetterUCConfig.INSTANCE.bankHudStyle;
-        if (BetterUCConfig.isCartoonHudStyle(style)) {
-            ModernHudRenderer.drawCartoonText(context, client, "Bank: " + value, x, y, BetterUCConfig.INSTANCE.bankHudColor);
+        if (BetterUCConfig.isStylizedHudStyle(style)) {
+            ModernHudRenderer.drawStyledText(context, client, style, "Bank: " + value, x, y, BetterUCConfig.INSTANCE.bankHudColor);
             return;
         }
         if (!BetterUCConfig.isModernHudStyle(style)) {
