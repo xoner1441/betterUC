@@ -60,6 +60,8 @@ public class BetterUCConfig {
     public static final int DEFAULT_HEALTH_HUD_COLOR = 0xFFFF5555;
     public static final int DEFAULT_HEALTH_HUD_HEART_COLOR = DEFAULT_HEALTH_HUD_COLOR;
     public static final int DEFAULT_HEALTH_HUD_TEXT_COLOR = DEFAULT_HEALTH_HUD_COLOR;
+    public static final String HUD_STYLE_MODERN = "modern";
+    public static final String HUD_STYLE_TRANSPARENT = "transparent";
     public static BetterUCConfig INSTANCE = new BetterUCConfig();
     private static final List<TrackableFaction> TRACKABLE_FACTIONS = List.of(
             new TrackableFaction("Polizei", "polizei"),
@@ -139,6 +141,15 @@ public class BetterUCConfig {
     public int healthHudHeartColor = 0;
     public int healthHudTextColor = 0;
     public int healthHudColor = DEFAULT_HEALTH_HUD_COLOR;
+    public String healthHudStyle = HUD_STYLE_TRANSPARENT;
+    public String toggleSprintHudStyle = HUD_STYLE_MODERN;
+    public String fpsHudStyle = HUD_STYLE_MODERN;
+    public String paydayHudStyle = HUD_STYLE_MODERN;
+    public String ammoHudStyle = HUD_STYLE_MODERN;
+    public String bankHudStyle = HUD_STYLE_MODERN;
+    public String potionHudStyle = HUD_STYLE_MODERN;
+    public String hackTimerHudStyle = HUD_STYLE_MODERN;
+    public String plantTimerHudStyle = HUD_STYLE_MODERN;
     public boolean showHealthHud = true;
     public boolean showFpsHud = true;
     public boolean showPaydayHud = true;
@@ -171,6 +182,38 @@ public class BetterUCConfig {
         if (color == 0) return fallback;
         if ((color & 0xFF000000) == 0) return 0xFF000000 | color;
         return color;
+    }
+
+    public static boolean isModernHudStyle(String style) {
+        return HUD_STYLE_MODERN.equals(normalizeHudStyle(style, HUD_STYLE_MODERN));
+    }
+
+    public static String toggleHudStyle(String style) {
+        return isModernHudStyle(style) ? HUD_STYLE_TRANSPARENT : HUD_STYLE_MODERN;
+    }
+
+    public static String hudStyleLabel(String style) {
+        return isModernHudStyle(style) ? "Modern" : "Transparent";
+    }
+
+    private static String normalizeHudStyle(String style, String fallback) {
+        String normalized = style == null ? "" : style.trim().toLowerCase(Locale.ROOT);
+        if (HUD_STYLE_MODERN.equals(normalized) || HUD_STYLE_TRANSPARENT.equals(normalized)) {
+            return normalized;
+        }
+        return fallback;
+    }
+
+    private static void sanitizeHudStyles() {
+        INSTANCE.healthHudStyle = normalizeHudStyle(INSTANCE.healthHudStyle, HUD_STYLE_TRANSPARENT);
+        INSTANCE.toggleSprintHudStyle = normalizeHudStyle(INSTANCE.toggleSprintHudStyle, HUD_STYLE_MODERN);
+        INSTANCE.fpsHudStyle = normalizeHudStyle(INSTANCE.fpsHudStyle, HUD_STYLE_MODERN);
+        INSTANCE.paydayHudStyle = normalizeHudStyle(INSTANCE.paydayHudStyle, HUD_STYLE_MODERN);
+        INSTANCE.ammoHudStyle = normalizeHudStyle(INSTANCE.ammoHudStyle, HUD_STYLE_MODERN);
+        INSTANCE.bankHudStyle = normalizeHudStyle(INSTANCE.bankHudStyle, HUD_STYLE_MODERN);
+        INSTANCE.potionHudStyle = normalizeHudStyle(INSTANCE.potionHudStyle, HUD_STYLE_MODERN);
+        INSTANCE.hackTimerHudStyle = normalizeHudStyle(INSTANCE.hackTimerHudStyle, HUD_STYLE_MODERN);
+        INSTANCE.plantTimerHudStyle = normalizeHudStyle(INSTANCE.plantTimerHudStyle, HUD_STYLE_MODERN);
     }
 
     private static Map<String, BlacklistReason> defaultBlacklistReasons() {
@@ -595,6 +638,7 @@ public class BetterUCConfig {
             );
         }
         ensureRuntimeCollections();
+        sanitizeHudStyles();
         sanitizeTrackedFactions();
         rebuildRemoteFactionUnion();
         refreshRuntimeNameCaches();
@@ -644,6 +688,7 @@ public class BetterUCConfig {
             INSTANCE.healthHudColor = sanitizeHudColor(INSTANCE.healthHudColor, DEFAULT_HEALTH_HUD_COLOR);
             INSTANCE.healthHudHeartColor = sanitizeHudColor(INSTANCE.healthHudHeartColor, INSTANCE.healthHudColor);
             INSTANCE.healthHudTextColor = sanitizeHudColor(INSTANCE.healthHudTextColor, INSTANCE.healthHudColor);
+            sanitizeHudStyles();
             if (INSTANCE.blReasons == null || INSTANCE.blReasons.isEmpty()) {
                 INSTANCE.blReasons = defaultBlacklistReasons();
             }

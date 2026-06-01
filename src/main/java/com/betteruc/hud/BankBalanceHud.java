@@ -4,6 +4,7 @@ import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.text.Text;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -71,13 +72,18 @@ public class BankBalanceHud {
 
         int x = BetterUCConfig.INSTANCE.bankHudX;
         int y = BetterUCConfig.INSTANCE.bankHudY;
+        String value = formatMoney(currentBankBalance) + "$";
+        if (!BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.bankHudStyle)) {
+            context.drawTextWithShadow(client.textRenderer, Text.literal("Bank: " + value), x, y, BetterUCConfig.INSTANCE.bankHudColor);
+            return;
+        }
         ModernHudRenderer.drawModule(
                 context,
                 client,
                 x,
                 y,
                 "BANK",
-                formatMoney(currentBankBalance) + "$",
+                value,
                 BetterUCConfig.INSTANCE.bankHudColor
         );
     }

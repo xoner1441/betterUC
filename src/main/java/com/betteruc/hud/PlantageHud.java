@@ -5,6 +5,7 @@ import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.text.Text;
 
 import java.text.Normalizer;
 import java.util.LinkedHashMap;
@@ -286,6 +287,13 @@ public class PlantageHud {
             String timers = "Reif: " + formatRemaining(state.plantedAtMs + GROW_DURATION_MS - now)
                     + " | Wasser: " + formatCare(state.nextWaterAtMs - now)
                     + " | D\u00FCnger: " + formatCare(state.nextFertilizeAtMs - now);
+
+            if (!BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.plantTimerHudStyle)) {
+                context.drawTextWithShadow(client.textRenderer, Text.literal(title), x, y, state.type.color);
+                context.drawTextWithShadow(client.textRenderer, Text.literal(timers), x, y + 10, 0xFFFFD866);
+                y += 24;
+                continue;
+            }
 
             ModernHudRenderer.drawTwoLineModule(
                     context,

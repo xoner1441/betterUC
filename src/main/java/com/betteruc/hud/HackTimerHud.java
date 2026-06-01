@@ -43,6 +43,10 @@ public class HackTimerHud {
 
         Text text = getDisplayText();
         int accentColor = secondsRemaining <= 15 ? 0xFFFF4D6D : 0xFF60A5FA;
+        if (!BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.hackTimerHudStyle)) {
+            context.drawTextWithShadow(client.textRenderer, text, x, y, accentColor);
+            return;
+        }
         ModernHudRenderer.drawModule(
                 context,
                 client,

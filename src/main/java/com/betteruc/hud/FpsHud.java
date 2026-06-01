@@ -4,6 +4,7 @@ import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.text.Text;
 
 public class FpsHud {
 
@@ -23,13 +24,18 @@ public class FpsHud {
         updateFpsSample();
         int x = BetterUCConfig.INSTANCE.fpsHudX;
         int y = BetterUCConfig.INSTANCE.fpsHudY;
+        int fps = Math.max(0, currentFps);
+        if (!BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.fpsHudStyle)) {
+            context.drawTextWithShadow(client.textRenderer, Text.literal("FPS: " + fps), x, y, BetterUCConfig.INSTANCE.fpsHudColor);
+            return;
+        }
         ModernHudRenderer.drawModule(
                 context,
                 client,
                 x,
                 y,
                 "FPS",
-                String.valueOf(Math.max(0, currentFps)),
+                String.valueOf(fps),
                 BetterUCConfig.INSTANCE.fpsHudColor
         );
     }

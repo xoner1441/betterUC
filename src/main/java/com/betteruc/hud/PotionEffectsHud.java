@@ -54,14 +54,21 @@ public class PotionEffectsHud {
             RegistryEntry<StatusEffect> entry = effect.getEffectType();
             Identifier effectIcon = InGameHud.getEffectTexture(entry);
             int accentColor = 0xFF000000 | entry.value().getColor();
+            Text effectName = buildEffectName(effect);
+            Text durationText = StatusEffectUtil.getDurationText(effect, 1.0F, tickRate);
+
+            if (!BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.potionHudStyle)) {
+                context.drawTextWithShadow(client.textRenderer, effectName, x, y, accentColor);
+                context.drawTextWithShadow(client.textRenderer, durationText, x, y + 10, ModernHudRenderer.TEXT_DIM);
+                y += Math.max(21, spacing - 11);
+                continue;
+            }
 
             ModernHudRenderer.drawPanel(context, x, y, EFFECT_WIDTH, EFFECT_HEIGHT, accentColor);
             context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, effectIcon, x + 6, y + 7, EFFECT_ICON_SIZE, EFFECT_ICON_SIZE);
 
-            Text effectName = buildEffectName(effect);
             context.drawTextWithShadow(client.textRenderer, effectName, x + 28, y + 6, ModernHudRenderer.TEXT_PRIMARY);
 
-            Text durationText = StatusEffectUtil.getDurationText(effect, 1.0F, tickRate);
             context.drawTextWithShadow(client.textRenderer, durationText, x + 28, y + 16, ModernHudRenderer.TEXT_DIM);
 
             y += spacing;

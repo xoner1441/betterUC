@@ -5,6 +5,7 @@ import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.text.Text;
 
 public class ToggleSprintHud {
 
@@ -22,6 +23,16 @@ public class ToggleSprintHud {
 
         int x = BetterUCConfig.INSTANCE.toggleSprintHudX;
         int y = BetterUCConfig.INSTANCE.toggleSprintHudY;
+        if (!BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.toggleSprintHudStyle)) {
+            context.drawTextWithShadow(
+                    client.textRenderer,
+                    Text.literal("ToggleSprint: " + (isOn ? "ON" : "OFF")),
+                    x,
+                    y,
+                    color
+            );
+            return;
+        }
         ModernHudRenderer.drawModule(
                 context,
                 client,

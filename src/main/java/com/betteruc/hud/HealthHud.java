@@ -30,8 +30,9 @@ public class HealthHud {
         int centerX = client.getWindow().getScaledWidth() / 2;
         int centerY = client.getWindow().getScaledHeight() / 2;
 
+        boolean modernStyle = BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.healthHudStyle);
         int textWidth = client.textRenderer.getWidth(cachedHealthString);
-        int totalWidth = 9 + 2 + textWidth;
+        int totalWidth = modernStyle ? Math.max(34, textWidth + 27) : 9 + 2 + textWidth;
 
         int startX = BetterUCConfig.INSTANCE.healthHudX >= 0
                 ? BetterUCConfig.INSTANCE.healthHudX
@@ -41,6 +42,18 @@ public class HealthHud {
                 : centerY + 15;
         int heartColor = BetterUCConfig.INSTANCE.healthHudHeartColor;
         int textColor = BetterUCConfig.INSTANCE.healthHudTextColor;
+
+        if (modernStyle) {
+            ModernHudRenderer.drawPanel(context, startX, y, totalWidth, 17, heartColor);
+            context.drawGuiTexture(
+                    net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED,
+                    net.minecraft.util.Identifier.ofVanilla("hud/heart/full"),
+                    startX + 7, y + 4, 9, 9,
+                    heartColor
+            );
+            context.drawText(client.textRenderer, healthText, startX + 19, y + 4, textColor, true);
+            return;
+        }
 
         context.drawGuiTexture(
                 net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED,

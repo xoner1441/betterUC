@@ -4,6 +4,7 @@ import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.text.Text;
 
 public class PaydayHud {
 
@@ -63,13 +64,22 @@ public class PaydayHud {
         int x = BetterUCConfig.INSTANCE.paydayHudX;
         int y = BetterUCConfig.INSTANCE.paydayHudY;
         float progress = totalMinutes <= 0 ? 0.0F : currentMinutes / (float) totalMinutes;
+        String value = currentMinutes + "/" + totalMinutes + " min";
+        if (!BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.paydayHudStyle)) {
+            String text = "Payday: " + currentMinutes + "/" + totalMinutes + " Minuten";
+            if (pausedByAfk) {
+                text += " (AFK)";
+            }
+            context.drawTextWithShadow(client.textRenderer, Text.literal(text), x, y, BetterUCConfig.INSTANCE.paydayHudColor);
+            return;
+        }
         ModernHudRenderer.drawProgressModule(
                 context,
                 client,
                 x,
                 y,
                 pausedByAfk ? "PAYDAY AFK" : "PAYDAY",
-                currentMinutes + "/" + totalMinutes + " min",
+                value,
                 progress,
                 BetterUCConfig.INSTANCE.paydayHudColor
         );
