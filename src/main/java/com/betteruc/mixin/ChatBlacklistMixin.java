@@ -8,6 +8,7 @@ import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.ServerCommandUtil;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.BankBalanceHud;
+import com.betteruc.hud.CashHud;
 import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.PaydayHud;
 import com.betteruc.hud.PlantageHud;
@@ -189,6 +190,7 @@ public class ChatBlacklistMixin {
 
     private void updateMoney(String raw) {
         BankBalanceHud.updateFromChatLine(raw);
+        CashHud.updateFromStatsLine(raw);
 
         Matcher blackMoneyMatcher = BLACK_MONEY_PATTERN.matcher(raw);
         if (blackMoneyMatcher.find()) {

@@ -13,16 +13,17 @@ public class ChangelogScreen extends Screen {
     private static final Page[] PAGES = new Page[]{
             new Page(
                     "Highlights",
-                    "betterUC 1.1.1",
+                    "betterUC 1.1.3",
                     new String[]{
                             "Potion-HUD im Inventar-Stil mit Icon, Name und Dauer",
                             "CookDrug-Timer entfernt, weil der Server nun einen eigenen Timer hat",
                             "Plant-Timer für eigene Plantagen mit Wasser- und Düngerzeiten",
-                            "Payday-, Bank-, Ammo-, FPS-, Herz- und ToggleSprint-HUDs",
-                            "HUD-Positionen können im Settings-Menü angepasst werden",
+                            "Payday-, Bank-, Bargeld-, Ammo-, FPS-, Herz- und ToggleSprint-HUDs",
+                            "HUD-Positionen und Größen können in der HUD Vorschau angepasst werden",
                             "Zoom und Auto-Stats Join direkt im Settings-HUD schaltbar",
                             "Build kopiert die Mod-JAR automatisch in den Minecraft-Mods-Ordner",
-                            "Update Notify zeigt neue GitHub-Versionen direkt im Chat"
+                            "Update Notify zeigt neue GitHub-Versionen direkt im Chat",
+                            "Ping Relay sendet private Markierungen an andere betterUC-Nutzer"
                     }
             ),
             new Page(
@@ -32,11 +33,12 @@ public class ChangelogScreen extends Screen {
                             "FPS-HUD für schnelle Performance-Übersicht",
                             "Payday-HUD mit AFK-Erkennung",
                             "Bank-HUD erkennt neue Kontostände aus dem Chat",
+                            "Bargeld-HUD liest /stats, Bargeldbestände, Auszahlungen, Einzahlungen und +/- Beträge",
                             "Ammo-HUD für Waffenanzeige",
                             "Potion-HUD zeigt aktive Effekte wie im Inventar",
                             "Health-HUD für kompakte Lebensanzeige",
                             "ToggleSprint-HUD und integrierter ToggleSprint",
-                            "Frei verschiebbare HUD-Elemente per X/Y-Slider",
+                            "Frei verschiebbare HUD-Elemente per Drag & Drop",
                             "Farbwahl für mehrere HUD-Anzeigen"
                     }
             ),
@@ -48,7 +50,8 @@ public class ChangelogScreen extends Screen {
                             "Hotkey Commands: eigene Befehle auf Tasten legen",
                             "Zoom-Taste frei wählbar, Zoom reagiert sofort",
                             "/car find Koordinaten werden automatisch ins Navi übernommen",
-                            "Chat-Zeitstempel und größere Chat-Historie"
+                            "Chat-Zeitstempel und größere Chat-Historie",
+                            "Ping-Taste ist in den Minecraft-Keybinds frei einstellbar"
                     }
             ),
             new Page(

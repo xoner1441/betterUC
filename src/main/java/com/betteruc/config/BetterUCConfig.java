@@ -57,6 +57,7 @@ public class BetterUCConfig {
     public static final int DEFAULT_FPS_HUD_COLOR = 0xFF55FFFF;
     public static final int DEFAULT_PAYDAY_HUD_COLOR = 0xFFFFD866;
     public static final int DEFAULT_BANK_HUD_COLOR = 0xFF55FFFF;
+    public static final int DEFAULT_CASH_HUD_COLOR = 0xFF86EFAC;
     public static final int DEFAULT_HEALTH_HUD_COLOR = 0xFFFF5555;
     public static final int DEFAULT_HEALTH_HUD_HEART_COLOR = DEFAULT_HEALTH_HUD_COLOR;
     public static final int DEFAULT_HEALTH_HUD_TEXT_COLOR = DEFAULT_HEALTH_HUD_COLOR;
@@ -67,6 +68,7 @@ public class BetterUCConfig {
     public static final String HUD_STYLE_TRANSPARENT = "transparent";
     public static final String HUD_STYLE_CARTOON = "cartoon";
     public static final String HUD_STYLE_CUSTOM = "custom";
+    public static final String DEFAULT_PING_RELAY_URL = "ws://65.109.175.203:3000/ws";
     public static BetterUCConfig INSTANCE = new BetterUCConfig();
     private static final List<TrackableFaction> TRACKABLE_FACTIONS = List.of(
             new TrackableFaction("Polizei", "polizei"),
@@ -136,6 +138,8 @@ public class BetterUCConfig {
     public int ammoHudY = 82;
     public int bankHudX = 10;
     public int bankHudY = 100;
+    public int cashHudX = 10;
+    public int cashHudY = 184;
     public int potionHudX = 10;
     public int potionHudY = 118;
     public float healthHudScale = DEFAULT_HUD_SCALE;
@@ -144,6 +148,7 @@ public class BetterUCConfig {
     public float paydayHudScale = DEFAULT_HUD_SCALE;
     public float ammoHudScale = DEFAULT_HUD_SCALE;
     public float bankHudScale = DEFAULT_HUD_SCALE;
+    public float cashHudScale = DEFAULT_HUD_SCALE;
     public float potionHudScale = DEFAULT_HUD_SCALE;
     public float hackTimerHudScale = DEFAULT_HUD_SCALE;
     public float plantTimerHudScale = DEFAULT_HUD_SCALE;
@@ -152,6 +157,7 @@ public class BetterUCConfig {
     public int fpsHudColor = DEFAULT_FPS_HUD_COLOR;
     public int paydayHudColor = DEFAULT_PAYDAY_HUD_COLOR;
     public int bankHudColor = DEFAULT_BANK_HUD_COLOR;
+    public int cashHudColor = DEFAULT_CASH_HUD_COLOR;
     public int healthHudHeartColor = 0;
     public int healthHudTextColor = 0;
     public int healthHudColor = DEFAULT_HEALTH_HUD_COLOR;
@@ -161,6 +167,7 @@ public class BetterUCConfig {
     public String paydayHudStyle = HUD_STYLE_MODERN;
     public String ammoHudStyle = HUD_STYLE_MODERN;
     public String bankHudStyle = HUD_STYLE_MODERN;
+    public String cashHudStyle = HUD_STYLE_MODERN;
     public String potionHudStyle = HUD_STYLE_MODERN;
     public String hackTimerHudStyle = HUD_STYLE_MODERN;
     public String plantTimerHudStyle = HUD_STYLE_MODERN;
@@ -170,6 +177,7 @@ public class BetterUCConfig {
     public String paydayHudCustomFont = "";
     public String ammoHudCustomFont = "";
     public String bankHudCustomFont = "";
+    public String cashHudCustomFont = "";
     public String potionHudCustomFont = "";
     public String hackTimerHudCustomFont = "";
     public String plantTimerHudCustomFont = "";
@@ -180,6 +188,7 @@ public class BetterUCConfig {
     public boolean showPaydayHud = true;
     public boolean showAmmoHud = true;
     public boolean showBankHud = true;
+    public boolean showCashHud = true;
     public boolean showPotionEffectsHud = true;
     public boolean toggleSprintEnabled = false;
     public boolean zoomEnabled = true;
@@ -192,6 +201,18 @@ public class BetterUCConfig {
     public int reloadIntervalMinutes = 5;
     public String chatTimestampFormat = "[HH:mm:ss]";
     public int maxChatHistory = 2000;
+    public int lastKnownCash = -1;
+    public boolean pingRelayEnabled = true;
+    public boolean showPingHud = true;
+    public float pingHudScale = DEFAULT_HUD_SCALE;
+    public String pingHudStyle = HUD_STYLE_MODERN;
+    public String pingHudCustomFont = "";
+    public String pingRelayUrl = DEFAULT_PING_RELAY_URL;
+    public String pingRelayToken = "";
+    public String pingRelayChannel = "global";
+    public int pingRelayTtlSeconds = 15;
+    public int pingRelayMaxDistance = 3000;
+    public String pingRelayColor = "#38BDF8";
 
     public static class BlacklistReason {
         public int kills;
@@ -271,9 +292,11 @@ public class BetterUCConfig {
         INSTANCE.paydayHudStyle = normalizeHudStyle(INSTANCE.paydayHudStyle, HUD_STYLE_MODERN);
         INSTANCE.ammoHudStyle = normalizeHudStyle(INSTANCE.ammoHudStyle, HUD_STYLE_MODERN);
         INSTANCE.bankHudStyle = normalizeHudStyle(INSTANCE.bankHudStyle, HUD_STYLE_MODERN);
+        INSTANCE.cashHudStyle = normalizeHudStyle(INSTANCE.cashHudStyle, HUD_STYLE_MODERN);
         INSTANCE.potionHudStyle = normalizeHudStyle(INSTANCE.potionHudStyle, HUD_STYLE_MODERN);
         INSTANCE.hackTimerHudStyle = normalizeHudStyle(INSTANCE.hackTimerHudStyle, HUD_STYLE_MODERN);
         INSTANCE.plantTimerHudStyle = normalizeHudStyle(INSTANCE.plantTimerHudStyle, HUD_STYLE_MODERN);
+        INSTANCE.pingHudStyle = normalizeHudStyle(INSTANCE.pingHudStyle, HUD_STYLE_MODERN);
     }
 
     private static void sanitizeHudScales() {
@@ -283,9 +306,36 @@ public class BetterUCConfig {
         INSTANCE.paydayHudScale = normalizeHudScale(INSTANCE.paydayHudScale);
         INSTANCE.ammoHudScale = normalizeHudScale(INSTANCE.ammoHudScale);
         INSTANCE.bankHudScale = normalizeHudScale(INSTANCE.bankHudScale);
+        INSTANCE.cashHudScale = normalizeHudScale(INSTANCE.cashHudScale);
         INSTANCE.potionHudScale = normalizeHudScale(INSTANCE.potionHudScale);
         INSTANCE.hackTimerHudScale = normalizeHudScale(INSTANCE.hackTimerHudScale);
         INSTANCE.plantTimerHudScale = normalizeHudScale(INSTANCE.plantTimerHudScale);
+        INSTANCE.pingHudScale = normalizeHudScale(INSTANCE.pingHudScale);
+    }
+
+    private static void sanitizePingRelay() {
+        if (INSTANCE.pingRelayUrl == null || INSTANCE.pingRelayUrl.isBlank()) {
+            INSTANCE.pingRelayUrl = DEFAULT_PING_RELAY_URL;
+        }
+        if (INSTANCE.pingRelayToken == null) {
+            INSTANCE.pingRelayToken = "";
+        }
+        if (INSTANCE.pingRelayChannel == null || INSTANCE.pingRelayChannel.isBlank()) {
+            INSTANCE.pingRelayChannel = "global";
+        } else {
+            String cleaned = INSTANCE.pingRelayChannel
+                    .trim()
+                    .replaceAll("[^A-Za-z0-9_-]", "")
+                    .toLowerCase(Locale.ROOT);
+            INSTANCE.pingRelayChannel = cleaned.isEmpty() ? "global" : cleaned;
+        }
+        INSTANCE.pingRelayTtlSeconds = Math.max(5, Math.min(60, INSTANCE.pingRelayTtlSeconds));
+        INSTANCE.pingRelayMaxDistance = Math.max(50, Math.min(10000, INSTANCE.pingRelayMaxDistance));
+        if (INSTANCE.pingRelayColor == null || !INSTANCE.pingRelayColor.matches("#?[0-9A-Fa-f]{6}")) {
+            INSTANCE.pingRelayColor = "#38BDF8";
+        } else if (!INSTANCE.pingRelayColor.startsWith("#")) {
+            INSTANCE.pingRelayColor = "#" + INSTANCE.pingRelayColor;
+        }
     }
 
     private static Map<String, BlacklistReason> defaultBlacklistReasons() {
@@ -712,6 +762,7 @@ public class BetterUCConfig {
         ensureRuntimeCollections();
         sanitizeHudStyles();
         sanitizeHudScales();
+        sanitizePingRelay();
         sanitizeTrackedFactions();
         rebuildRemoteFactionUnion();
         refreshRuntimeNameCaches();
@@ -745,6 +796,11 @@ public class BetterUCConfig {
                 INSTANCE.bankHudY = 100;
                 INSTANCE.showBankHud = true;
             }
+            if (INSTANCE.cashHudX == 0 && INSTANCE.cashHudY == 0) {
+                INSTANCE.cashHudX = 10;
+                INSTANCE.cashHudY = 184;
+                INSTANCE.showCashHud = true;
+            }
             if (INSTANCE.potionHudX == 0 && INSTANCE.potionHudY == 0) {
                 INSTANCE.potionHudX = 10;
                 INSTANCE.potionHudY = 118;
@@ -753,16 +809,21 @@ public class BetterUCConfig {
             if (INSTANCE.lastKnownBankBalance < -1) {
                 INSTANCE.lastKnownBankBalance = -1;
             }
+            if (INSTANCE.lastKnownCash < -1) {
+                INSTANCE.lastKnownCash = -1;
+            }
             migrateSplitTimerPositions();
             INSTANCE.toggleSprintHudColor = sanitizeHudColor(INSTANCE.toggleSprintHudColor, DEFAULT_TOGGLE_SPRINT_HUD_COLOR);
             INSTANCE.fpsHudColor = sanitizeHudColor(INSTANCE.fpsHudColor, DEFAULT_FPS_HUD_COLOR);
             INSTANCE.paydayHudColor = sanitizeHudColor(INSTANCE.paydayHudColor, DEFAULT_PAYDAY_HUD_COLOR);
             INSTANCE.bankHudColor = sanitizeHudColor(INSTANCE.bankHudColor, DEFAULT_BANK_HUD_COLOR);
+            INSTANCE.cashHudColor = sanitizeHudColor(INSTANCE.cashHudColor, DEFAULT_CASH_HUD_COLOR);
             INSTANCE.healthHudColor = sanitizeHudColor(INSTANCE.healthHudColor, DEFAULT_HEALTH_HUD_COLOR);
             INSTANCE.healthHudHeartColor = sanitizeHudColor(INSTANCE.healthHudHeartColor, INSTANCE.healthHudColor);
             INSTANCE.healthHudTextColor = sanitizeHudColor(INSTANCE.healthHudTextColor, INSTANCE.healthHudColor);
             sanitizeHudStyles();
             sanitizeHudScales();
+            sanitizePingRelay();
             if (INSTANCE.blReasons == null || INSTANCE.blReasons.isEmpty()) {
                 INSTANCE.blReasons = defaultBlacklistReasons();
             }

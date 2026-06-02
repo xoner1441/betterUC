@@ -1,6 +1,7 @@
 package com.betteruc.gui;
 
 import com.betteruc.config.BetterUCConfig;
+import com.betteruc.hud.CashHud;
 import com.betteruc.hud.ModernHudRenderer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -184,6 +185,7 @@ public class HudLayoutScreen extends Screen {
             case PAYDAY -> BetterUCConfig.INSTANCE.showPaydayHud;
             case AMMO -> BetterUCConfig.INSTANCE.showAmmoHud;
             case BANK -> BetterUCConfig.INSTANCE.showBankHud;
+            case CASH -> BetterUCConfig.INSTANCE.showCashHud;
             case POTION -> BetterUCConfig.INSTANCE.showPotionEffectsHud;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintEnabled;
             case HACK_TIMER, PLANT_TIMER -> true;
@@ -205,6 +207,7 @@ public class HudLayoutScreen extends Screen {
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudX;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudX;
             case BANK -> BetterUCConfig.INSTANCE.bankHudX;
+            case CASH -> BetterUCConfig.INSTANCE.cashHudX;
             case POTION -> BetterUCConfig.INSTANCE.potionHudX;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudX;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerX;
@@ -219,6 +222,7 @@ public class HudLayoutScreen extends Screen {
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudY;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudY;
             case BANK -> BetterUCConfig.INSTANCE.bankHudY;
+            case CASH -> BetterUCConfig.INSTANCE.cashHudY;
             case POTION -> BetterUCConfig.INSTANCE.potionHudY;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudY;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerY;
@@ -248,6 +252,10 @@ public class HudLayoutScreen extends Screen {
                 BetterUCConfig.INSTANCE.bankHudX = x;
                 BetterUCConfig.INSTANCE.bankHudY = y;
             }
+            case CASH -> {
+                BetterUCConfig.INSTANCE.cashHudX = x;
+                BetterUCConfig.INSTANCE.cashHudY = y;
+            }
             case POTION -> {
                 BetterUCConfig.INSTANCE.potionHudX = x;
                 BetterUCConfig.INSTANCE.potionHudY = y;
@@ -274,6 +282,7 @@ public class HudLayoutScreen extends Screen {
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudScale;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudScale;
             case BANK -> BetterUCConfig.INSTANCE.bankHudScale;
+            case CASH -> BetterUCConfig.INSTANCE.cashHudScale;
             case POTION -> BetterUCConfig.INSTANCE.potionHudScale;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudScale;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudScale;
@@ -289,6 +298,7 @@ public class HudLayoutScreen extends Screen {
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudScale = safeScale;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudScale = safeScale;
             case BANK -> BetterUCConfig.INSTANCE.bankHudScale = safeScale;
+            case CASH -> BetterUCConfig.INSTANCE.cashHudScale = safeScale;
             case POTION -> BetterUCConfig.INSTANCE.potionHudScale = safeScale;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudScale = safeScale;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudScale = safeScale;
@@ -310,6 +320,7 @@ public class HudLayoutScreen extends Screen {
                     : renderer.getWidth("Payday: 25/60 Minuten") + 4;
             case AMMO -> twoLineWidth("AMMO", "20/96", "TS19", BetterUCConfig.INSTANCE.ammoHudStyle);
             case BANK -> singleLineWidth("BANK", "88.375$", "Bank: 88.375$", BetterUCConfig.INSTANCE.bankHudStyle);
+            case CASH -> singleLineWidth("BARGELD", previewCashValue(), "Bargeld: " + previewCashValue(), BetterUCConfig.INSTANCE.cashHudStyle);
             case POTION -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.potionHudStyle)
                     ? 120
                     : Math.max(renderer.getWidth("Staerke II"), renderer.getWidth("Speed")) + 4;
@@ -386,6 +397,7 @@ public class HudLayoutScreen extends Screen {
             }
             case AMMO -> renderTwoLine(context, minecraft, style, font, x, y, "AMMO", "20/96", "TS19", 0xFFFFAA33, 0xFF55FF55);
             case BANK -> renderSingleLine(context, minecraft, style, font, x, y, "BANK", "88.375$", "Bank: 88.375$", BetterUCConfig.INSTANCE.bankHudColor);
+            case CASH -> renderSingleLine(context, minecraft, style, font, x, y, "BARGELD", previewCashValue(), "Bargeld: " + previewCashValue(), BetterUCConfig.INSTANCE.cashHudColor);
             case POTION -> {
                 if (modernStyle) {
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, x, y, "EFFECT", "Staerke II", "1:26", 0xFF9328FF);
@@ -461,6 +473,7 @@ public class HudLayoutScreen extends Screen {
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudStyle;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudStyle;
             case BANK -> BetterUCConfig.INSTANCE.bankHudStyle;
+            case CASH -> BetterUCConfig.INSTANCE.cashHudStyle;
             case POTION -> BetterUCConfig.INSTANCE.potionHudStyle;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudStyle;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudStyle;
@@ -475,11 +488,17 @@ public class HudLayoutScreen extends Screen {
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudCustomFont;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudCustomFont;
             case BANK -> BetterUCConfig.INSTANCE.bankHudCustomFont;
+            case CASH -> BetterUCConfig.INSTANCE.cashHudCustomFont;
             case POTION -> BetterUCConfig.INSTANCE.potionHudCustomFont;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudCustomFont;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudCustomFont;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudCustomFont;
         };
+    }
+
+    private String previewCashValue() {
+        int live = CashHud.getCurrentCash();
+        return live >= 0 ? CashHud.formatMoney(live) + "$" : CashHud.formatMoney(1278) + "$";
     }
 
     private void resizeSelectedModule(double mouseX, double mouseY) {
@@ -615,6 +634,7 @@ public class HudLayoutScreen extends Screen {
         PAYDAY("Payday", BetterUCConfig.DEFAULT_PAYDAY_HUD_COLOR),
         AMMO("Ammo", 0xFFFFAA33),
         BANK("Bank", BetterUCConfig.DEFAULT_BANK_HUD_COLOR),
+        CASH("Bargeld", BetterUCConfig.DEFAULT_CASH_HUD_COLOR),
         POTION("Potion", 0xFF9328FF),
         SPRINT("Sprint", BetterUCConfig.DEFAULT_TOGGLE_SPRINT_HUD_COLOR),
         HACK_TIMER("Hack Timer", 0xFF60A5FA),

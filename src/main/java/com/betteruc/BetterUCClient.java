@@ -8,6 +8,7 @@ import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.BetterUCFontManager;
 import com.betteruc.client.MovementController;
+import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.ServerCommandUtil;
 import com.betteruc.client.VersionChecker;
 import com.betteruc.config.BetterUCConfig;
@@ -15,10 +16,12 @@ import com.betteruc.gui.CommandGui;
 import com.betteruc.gui.BetterUCScreen;
 import com.betteruc.hud.AmmoHud;
 import com.betteruc.hud.BankBalanceHud;
+import com.betteruc.hud.CashHud;
 import com.betteruc.hud.FpsHud;
 import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.HealthHud;
 import com.betteruc.hud.PaydayHud;
+import com.betteruc.hud.PingHud;
 import com.betteruc.hud.PlantageHud;
 import com.betteruc.hud.PotionEffectsHud;
 import com.betteruc.hud.ToggleSprintHud;
@@ -72,6 +75,12 @@ public class BetterUCClient implements ClientModInitializer {
             "key.betteruc.commands",
             InputUtil.Type.KEYSYM,
             GLFW.GLFW_KEY_M,
+            BETTERUC_KEY_CATEGORY
+    );
+    private static final KeyBinding PING_KEY = new KeyBinding(
+            "key.betteruc.ping",
+            InputUtil.Type.MOUSE,
+            GLFW.GLFW_MOUSE_BUTTON_3,
             BETTERUC_KEY_CATEGORY
     );
     private int statsOnJoinDelay = -1;
@@ -139,6 +148,7 @@ public class BetterUCClient implements ClientModInitializer {
     private void registerKeyBindings() {
         KeyBindingHelper.registerKeyBinding(SETTINGS_KEY);
         KeyBindingHelper.registerKeyBinding(COMMANDS_KEY);
+        KeyBindingHelper.registerKeyBinding(PING_KEY);
     }
 
     private void registerMessageEvents() {
@@ -149,12 +159,14 @@ public class BetterUCClient implements ClientModInitializer {
         HackTimerHud.register();
         AmmoHud.register();
         BankBalanceHud.register();
+        CashHud.register();
         HealthHud.register();
         ToggleSprintHud.register();
         FpsHud.register();
         PaydayHud.register();
         PlantageHud.register();
         PotionEffectsHud.register();
+        PingHud.register();
     }
 
     private void registerConnectionEvents() {
@@ -164,6 +176,8 @@ public class BetterUCClient implements ClientModInitializer {
             PaydayHud.clear();
             AmmoHud.clear();
             BankBalanceHud.clear();
+            CashHud.clear();
+            PingRelayClient.onJoin(client);
             statsOnJoinDelay = BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled
                     ? AUTO_STATS_ON_JOIN_DELAY_TICKS
                     : -1;
@@ -172,6 +186,7 @@ public class BetterUCClient implements ClientModInitializer {
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             ServerCommandUtil.markDisconnected();
+            PingRelayClient.onDisconnect();
             resetRuntimeState(client);
         });
     }
@@ -907,9 +922,11 @@ public class BetterUCClient implements ClientModInitializer {
             HackTimerHud.tick();
             PlantageHud.tick();
             AmmoHud.tickReloadKey(client);
+            PingRelayClient.tick(client);
             tickStatsOnJoin(client);
             handleConfiguredHotkeys(client);
             MovementController.tick(client);
+            handlePingHotkey(client);
             handleScreenHotkeys(client);
         });
     }
@@ -940,6 +957,14 @@ public class BetterUCClient implements ClientModInitializer {
         while (COMMANDS_KEY.wasPressed()) {
             if (client.currentScreen == null) {
                 client.setScreen(new CommandGui());
+            }
+        }
+    }
+
+    private void handlePingHotkey(MinecraftClient client) {
+        while (PING_KEY.wasPressed()) {
+            if (client.currentScreen == null) {
+                PingRelayClient.sendPingAtCrosshair(client);
             }
         }
     }
@@ -986,6 +1011,7 @@ public class BetterUCClient implements ClientModInitializer {
         PaydayHud.clear();
         AmmoHud.clear();
         BankBalanceHud.clear();
+        CashHud.clear();
 
         BetterUCSuppressFlags.suppressModBlOutput = false;
         BetterUCSuppressFlags.modBlCallback = null;

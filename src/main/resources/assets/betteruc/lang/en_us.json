@@ -1,5 +1,6 @@
 {
   "key.category.betteruc.controls": "betterUC",
   "key.betteruc.settings": "Open Settings ClickGUI",
-  "key.betteruc.commands": "Open Command GUI"
+  "key.betteruc.commands": "Open Command GUI",
+  "key.betteruc.ping": "Place Ping"
 }

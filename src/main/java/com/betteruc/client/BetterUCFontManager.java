@@ -12,8 +12,8 @@ import net.minecraft.text.Style;
 import net.minecraft.text.StyleSpriteSource;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Util;
 
-import java.awt.Desktop;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
@@ -134,10 +134,8 @@ public final class BetterUCFontManager {
     public static void openFontsFolder(MinecraftClient client) {
         Path dir = getFontsDir();
         try {
-            if (Desktop.isDesktopSupported()) {
-                Desktop.getDesktop().open(dir.toFile());
-                return;
-            }
+            Util.getOperatingSystem().open(dir);
+            return;
         } catch (Exception e) {
             BetterUCMod.LOGGER.warn("Could not open betterUC font folder {}", dir, e);
         }
@@ -278,9 +276,11 @@ public final class BetterUCFontManager {
         BetterUCConfig.INSTANCE.paydayHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.paydayHudCustomFont, legacy);
         BetterUCConfig.INSTANCE.ammoHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.ammoHudCustomFont, legacy);
         BetterUCConfig.INSTANCE.bankHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.bankHudCustomFont, legacy);
+        BetterUCConfig.INSTANCE.cashHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.cashHudCustomFont, legacy);
         BetterUCConfig.INSTANCE.potionHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.potionHudCustomFont, legacy);
         BetterUCConfig.INSTANCE.hackTimerHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.hackTimerHudCustomFont, legacy);
         BetterUCConfig.INSTANCE.plantTimerHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.plantTimerHudCustomFont, legacy);
+        BetterUCConfig.INSTANCE.pingHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.pingHudCustomFont, legacy);
     }
 
     private static String sanitizeModuleFont(String value, String fallback) {
