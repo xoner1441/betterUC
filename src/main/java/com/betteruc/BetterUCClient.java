@@ -9,6 +9,7 @@ import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.BetterUCFontManager;
 import com.betteruc.client.MovementController;
 import com.betteruc.client.ServerCommandUtil;
+import com.betteruc.client.VersionChecker;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.gui.CommandGui;
 import com.betteruc.gui.BetterUCScreen;
@@ -166,6 +167,7 @@ public class BetterUCClient implements ClientModInitializer {
             statsOnJoinDelay = BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled
                     ? AUTO_STATS_ON_JOIN_DELAY_TICKS
                     : -1;
+            VersionChecker.checkOnJoin(client);
         });
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {

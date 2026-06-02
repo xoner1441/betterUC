@@ -60,6 +60,9 @@ public class BetterUCConfig {
     public static final int DEFAULT_HEALTH_HUD_COLOR = 0xFFFF5555;
     public static final int DEFAULT_HEALTH_HUD_HEART_COLOR = DEFAULT_HEALTH_HUD_COLOR;
     public static final int DEFAULT_HEALTH_HUD_TEXT_COLOR = DEFAULT_HEALTH_HUD_COLOR;
+    public static final float MIN_HUD_SCALE = 0.5F;
+    public static final float MAX_HUD_SCALE = 3.0F;
+    public static final float DEFAULT_HUD_SCALE = 1.0F;
     public static final String HUD_STYLE_MODERN = "modern";
     public static final String HUD_STYLE_TRANSPARENT = "transparent";
     public static final String HUD_STYLE_CARTOON = "cartoon";
@@ -135,6 +138,15 @@ public class BetterUCConfig {
     public int bankHudY = 100;
     public int potionHudX = 10;
     public int potionHudY = 118;
+    public float healthHudScale = DEFAULT_HUD_SCALE;
+    public float toggleSprintHudScale = DEFAULT_HUD_SCALE;
+    public float fpsHudScale = DEFAULT_HUD_SCALE;
+    public float paydayHudScale = DEFAULT_HUD_SCALE;
+    public float ammoHudScale = DEFAULT_HUD_SCALE;
+    public float bankHudScale = DEFAULT_HUD_SCALE;
+    public float potionHudScale = DEFAULT_HUD_SCALE;
+    public float hackTimerHudScale = DEFAULT_HUD_SCALE;
+    public float plantTimerHudScale = DEFAULT_HUD_SCALE;
     public int lastKnownBankBalance = -1;
     public int toggleSprintHudColor = DEFAULT_TOGGLE_SPRINT_HUD_COLOR;
     public int fpsHudColor = DEFAULT_FPS_HUD_COLOR;
@@ -234,6 +246,13 @@ public class BetterUCConfig {
         };
     }
 
+    public static float normalizeHudScale(float scale) {
+        if (Float.isNaN(scale) || Float.isInfinite(scale) || scale <= 0.0F) {
+            return DEFAULT_HUD_SCALE;
+        }
+        return Math.max(MIN_HUD_SCALE, Math.min(MAX_HUD_SCALE, scale));
+    }
+
     private static String normalizeHudStyle(String style, String fallback) {
         String normalized = style == null ? "" : style.trim().toLowerCase(Locale.ROOT);
         if (HUD_STYLE_MODERN.equals(normalized)
@@ -255,6 +274,18 @@ public class BetterUCConfig {
         INSTANCE.potionHudStyle = normalizeHudStyle(INSTANCE.potionHudStyle, HUD_STYLE_MODERN);
         INSTANCE.hackTimerHudStyle = normalizeHudStyle(INSTANCE.hackTimerHudStyle, HUD_STYLE_MODERN);
         INSTANCE.plantTimerHudStyle = normalizeHudStyle(INSTANCE.plantTimerHudStyle, HUD_STYLE_MODERN);
+    }
+
+    private static void sanitizeHudScales() {
+        INSTANCE.healthHudScale = normalizeHudScale(INSTANCE.healthHudScale);
+        INSTANCE.toggleSprintHudScale = normalizeHudScale(INSTANCE.toggleSprintHudScale);
+        INSTANCE.fpsHudScale = normalizeHudScale(INSTANCE.fpsHudScale);
+        INSTANCE.paydayHudScale = normalizeHudScale(INSTANCE.paydayHudScale);
+        INSTANCE.ammoHudScale = normalizeHudScale(INSTANCE.ammoHudScale);
+        INSTANCE.bankHudScale = normalizeHudScale(INSTANCE.bankHudScale);
+        INSTANCE.potionHudScale = normalizeHudScale(INSTANCE.potionHudScale);
+        INSTANCE.hackTimerHudScale = normalizeHudScale(INSTANCE.hackTimerHudScale);
+        INSTANCE.plantTimerHudScale = normalizeHudScale(INSTANCE.plantTimerHudScale);
     }
 
     private static Map<String, BlacklistReason> defaultBlacklistReasons() {
@@ -680,6 +711,7 @@ public class BetterUCConfig {
         }
         ensureRuntimeCollections();
         sanitizeHudStyles();
+        sanitizeHudScales();
         sanitizeTrackedFactions();
         rebuildRemoteFactionUnion();
         refreshRuntimeNameCaches();
@@ -730,6 +762,7 @@ public class BetterUCConfig {
             INSTANCE.healthHudHeartColor = sanitizeHudColor(INSTANCE.healthHudHeartColor, INSTANCE.healthHudColor);
             INSTANCE.healthHudTextColor = sanitizeHudColor(INSTANCE.healthHudTextColor, INSTANCE.healthHudColor);
             sanitizeHudStyles();
+            sanitizeHudScales();
             if (INSTANCE.blReasons == null || INSTANCE.blReasons.isEmpty()) {
                 INSTANCE.blReasons = defaultBlacklistReasons();
             }

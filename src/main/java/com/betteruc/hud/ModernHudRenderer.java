@@ -22,6 +22,51 @@ public final class ModernHudRenderer {
     private ModernHudRenderer() {
     }
 
+    public static void drawScaled(
+            DrawContext context,
+            int x,
+            int y,
+            float scale,
+            Runnable drawAction
+    ) {
+        if (drawAction == null) return;
+
+        float safeScale = BetterUCConfig.normalizeHudScale(scale);
+        context.getMatrices().pushMatrix();
+        try {
+            context.getMatrices().translate(x, y);
+            context.getMatrices().scale(safeScale, safeScale);
+            drawAction.run();
+        } finally {
+            context.getMatrices().popMatrix();
+        }
+    }
+
+    public static void drawScaledAround(
+            DrawContext context,
+            int x,
+            int y,
+            float scale,
+            Runnable drawAction
+    ) {
+        if (drawAction == null) return;
+
+        float safeScale = BetterUCConfig.normalizeHudScale(scale);
+        context.getMatrices().pushMatrix();
+        try {
+            context.getMatrices().translate(x, y);
+            context.getMatrices().scale(safeScale, safeScale);
+            context.getMatrices().translate(-x, -y);
+            drawAction.run();
+        } finally {
+            context.getMatrices().popMatrix();
+        }
+    }
+
+    public static int scaledSize(int baseSize, float scale) {
+        return Math.max(1, (int) Math.ceil(baseSize * BetterUCConfig.normalizeHudScale(scale)));
+    }
+
     public static void drawModule(
             DrawContext context,
             MinecraftClient client,

@@ -50,37 +50,41 @@ public class PotionEffectsHud {
         }
         String style = BetterUCConfig.INSTANCE.potionHudStyle;
         float tickRate = client.world == null ? 20.0F : client.world.getTickManager().getTickRate();
+        int effectSpacing = spacing;
 
-        for (StatusEffectInstance effect : ACTIVE_EFFECTS) {
-            RegistryEntry<StatusEffect> entry = effect.getEffectType();
-            Identifier effectIcon = InGameHud.getEffectTexture(entry);
-            int accentColor = 0xFF000000 | entry.value().getColor();
-            Text effectName = buildEffectName(effect);
-            Text durationText = StatusEffectUtil.getDurationText(effect, 1.0F, tickRate);
+        ModernHudRenderer.drawScaled(context, x, y, BetterUCConfig.INSTANCE.potionHudScale, () -> {
+            int currentY = 0;
+            for (StatusEffectInstance effect : ACTIVE_EFFECTS) {
+                RegistryEntry<StatusEffect> entry = effect.getEffectType();
+                Identifier effectIcon = InGameHud.getEffectTexture(entry);
+                int accentColor = 0xFF000000 | entry.value().getColor();
+                Text effectName = buildEffectName(effect);
+                Text durationText = StatusEffectUtil.getDurationText(effect, 1.0F, tickRate);
 
-            if (BetterUCConfig.isStylizedHudStyle(style)) {
-                ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.potionHudCustomFont, effectName, x, y, accentColor);
-                ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.potionHudCustomFont, durationText, x, y + 11, ModernHudRenderer.TEXT_DIM);
-                y += Math.max(23, spacing - 9);
-                continue;
+                if (BetterUCConfig.isStylizedHudStyle(style)) {
+                    ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.potionHudCustomFont, effectName, 0, currentY, accentColor);
+                    ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.potionHudCustomFont, durationText, 0, currentY + 11, ModernHudRenderer.TEXT_DIM);
+                    currentY += Math.max(23, effectSpacing - 9);
+                    continue;
+                }
+
+                if (!BetterUCConfig.isModernHudStyle(style)) {
+                    context.drawTextWithShadow(client.textRenderer, effectName, 0, currentY, accentColor);
+                    context.drawTextWithShadow(client.textRenderer, durationText, 0, currentY + 10, ModernHudRenderer.TEXT_DIM);
+                    currentY += Math.max(21, effectSpacing - 11);
+                    continue;
+                }
+
+                ModernHudRenderer.drawPanel(context, 0, currentY, EFFECT_WIDTH, EFFECT_HEIGHT, accentColor);
+                context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, effectIcon, 6, currentY + 7, EFFECT_ICON_SIZE, EFFECT_ICON_SIZE);
+
+                context.drawTextWithShadow(client.textRenderer, effectName, 28, currentY + 6, ModernHudRenderer.TEXT_PRIMARY);
+
+                context.drawTextWithShadow(client.textRenderer, durationText, 28, currentY + 16, ModernHudRenderer.TEXT_DIM);
+
+                currentY += effectSpacing;
             }
-
-            if (!BetterUCConfig.isModernHudStyle(style)) {
-                context.drawTextWithShadow(client.textRenderer, effectName, x, y, accentColor);
-                context.drawTextWithShadow(client.textRenderer, durationText, x, y + 10, ModernHudRenderer.TEXT_DIM);
-                y += Math.max(21, spacing - 11);
-                continue;
-            }
-
-            ModernHudRenderer.drawPanel(context, x, y, EFFECT_WIDTH, EFFECT_HEIGHT, accentColor);
-            context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, effectIcon, x + 6, y + 7, EFFECT_ICON_SIZE, EFFECT_ICON_SIZE);
-
-            context.drawTextWithShadow(client.textRenderer, effectName, x + 28, y + 6, ModernHudRenderer.TEXT_PRIMARY);
-
-            context.drawTextWithShadow(client.textRenderer, durationText, x + 28, y + 16, ModernHudRenderer.TEXT_DIM);
-
-            y += spacing;
-        }
+        });
     }
 
     private static Text buildEffectName(StatusEffectInstance effect) {

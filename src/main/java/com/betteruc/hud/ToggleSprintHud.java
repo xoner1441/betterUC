@@ -25,29 +25,29 @@ public class ToggleSprintHud {
         int y = BetterUCConfig.INSTANCE.toggleSprintHudY;
         String style = BetterUCConfig.INSTANCE.toggleSprintHudStyle;
         String text = "ToggleSprint: " + (isOn ? "ON" : "OFF");
-        if (BetterUCConfig.isStylizedHudStyle(style)) {
-            ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.toggleSprintHudCustomFont, text, x, y, color);
-            return;
-        }
-        if (!BetterUCConfig.isModernHudStyle(style)) {
-            context.drawTextWithShadow(
-                    client.textRenderer,
-                    Text.literal(text),
-                    x,
-                    y,
-                    color
-            );
-            return;
-        }
-        ModernHudRenderer.drawModule(
-                context,
-                client,
-                x,
-                y,
-                "SPRINT",
-                isOn ? "ON" : "OFF",
-                color,
-                isOn ? ModernHudRenderer.TEXT_PRIMARY : ModernHudRenderer.TEXT_DIM
-        );
+        ModernHudRenderer.drawScaled(context, x, y, BetterUCConfig.INSTANCE.toggleSprintHudScale, () -> {
+            if (BetterUCConfig.isStylizedHudStyle(style)) {
+                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.toggleSprintHudCustomFont, text, 0, 0, color);
+            } else if (!BetterUCConfig.isModernHudStyle(style)) {
+                context.drawTextWithShadow(
+                        client.textRenderer,
+                        Text.literal(text),
+                        0,
+                        0,
+                        color
+                );
+            } else {
+                ModernHudRenderer.drawModule(
+                        context,
+                        client,
+                        0,
+                        0,
+                        "SPRINT",
+                        isOn ? "ON" : "OFF",
+                        color,
+                        isOn ? ModernHudRenderer.TEXT_PRIMARY : ModernHudRenderer.TEXT_DIM
+                );
+            }
+        });
     }
 }

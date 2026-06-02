@@ -24,7 +24,7 @@ public class BlacklistConfigScreen extends Screen {
     private final List<String> reasonKeys = new ArrayList<>();
 
     public BlacklistConfigScreen(Screen parent) {
-        super(Text.literal("Blacklist Gruende"));
+        super(Text.literal("Blacklist Gründe"));
         this.parent = parent;
     }
 
@@ -89,7 +89,7 @@ public class BlacklistConfigScreen extends Screen {
         hPreis.active = false;
         addDrawableChild(hPreis);
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("\u2714 Speichern & Zurueck"), b -> {
+        addDrawableChild(ButtonWidget.builder(Text.literal("\u2714 Speichern & Zurück"), b -> {
             saveValues();
             BetterUCConfig.save();
             if (client != null) client.setScreen(parent);
@@ -117,7 +117,7 @@ public class BlacklistConfigScreen extends Screen {
         super.render(context, mouseX, mouseY, delta);
         context.drawCenteredTextWithShadow(
                 textRenderer,
-                Text.literal("\u00A7l\u2694 Blacklist Gruende"),
+                Text.literal("\u00A7l\u2694 Blacklist Gründe"),
                 width / 2,
                 10,
                 0xFFFFFF

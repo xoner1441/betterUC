@@ -279,43 +279,46 @@ public class PlantageHud {
         int x = BetterUCConfig.INSTANCE.plantTimerX;
         int y = BetterUCConfig.INSTANCE.plantTimerY;
 
-        for (PlantageState state : STATES.values()) {
-            if (!state.isActive(now)) continue;
+        ModernHudRenderer.drawScaled(context, x, y, BetterUCConfig.INSTANCE.plantTimerHudScale, () -> {
+            int currentY = 0;
+            for (PlantageState state : STATES.values()) {
+                if (!state.isActive(now)) continue;
 
-            int blockHeight = 35;
-            String title = "Plantage " + state.type.label + (state.count > 0 ? " " + state.count + "/10" : "");
-            String timers = "Reif: " + formatRemaining(state.plantedAtMs + GROW_DURATION_MS - now)
-                    + " | Wasser: " + formatCare(state.nextWaterAtMs - now)
-                    + " | D\u00FCnger: " + formatCare(state.nextFertilizeAtMs - now);
+                int blockHeight = 35;
+                String title = "Plantage " + state.type.label + (state.count > 0 ? " " + state.count + "/10" : "");
+                String timers = "Reif: " + formatRemaining(state.plantedAtMs + GROW_DURATION_MS - now)
+                        + " | Wasser: " + formatCare(state.nextWaterAtMs - now)
+                        + " | D\u00FCnger: " + formatCare(state.nextFertilizeAtMs - now);
 
-            String style = BetterUCConfig.INSTANCE.plantTimerHudStyle;
-            if (BetterUCConfig.isStylizedHudStyle(style)) {
-                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.plantTimerHudCustomFont, title, x, y, state.type.color);
-                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.plantTimerHudCustomFont, timers, x, y + 11, 0xFFFFD866);
-                y += 25;
-                continue;
+                String style = BetterUCConfig.INSTANCE.plantTimerHudStyle;
+                if (BetterUCConfig.isStylizedHudStyle(style)) {
+                    ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.plantTimerHudCustomFont, title, 0, currentY, state.type.color);
+                    ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.plantTimerHudCustomFont, timers, 0, currentY + 11, 0xFFFFD866);
+                    currentY += 25;
+                    continue;
+                }
+
+                if (!BetterUCConfig.isModernHudStyle(style)) {
+                    context.drawTextWithShadow(client.textRenderer, Text.literal(title), 0, currentY, state.type.color);
+                    context.drawTextWithShadow(client.textRenderer, Text.literal(timers), 0, currentY + 10, 0xFFFFD866);
+                    currentY += 24;
+                    continue;
+                }
+
+                ModernHudRenderer.drawTwoLineModule(
+                        context,
+                        client,
+                        0,
+                        currentY,
+                        "PLANT",
+                        title,
+                        timers,
+                        state.type.color,
+                        0xFFFFD866
+                );
+                currentY += blockHeight;
             }
-
-            if (!BetterUCConfig.isModernHudStyle(style)) {
-                context.drawTextWithShadow(client.textRenderer, Text.literal(title), x, y, state.type.color);
-                context.drawTextWithShadow(client.textRenderer, Text.literal(timers), x, y + 10, 0xFFFFD866);
-                y += 24;
-                continue;
-            }
-
-            ModernHudRenderer.drawTwoLineModule(
-                    context,
-                    client,
-                    x,
-                    y,
-                    "PLANT",
-                    title,
-                    timers,
-                    state.type.color,
-                    0xFFFFD866
-            );
-            y += blockHeight;
-        }
+        });
     }
 
     private static String formatRemaining(long ms) {

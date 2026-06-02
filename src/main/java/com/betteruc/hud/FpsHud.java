@@ -26,23 +26,23 @@ public class FpsHud {
         int y = BetterUCConfig.INSTANCE.fpsHudY;
         int fps = Math.max(0, currentFps);
         String style = BetterUCConfig.INSTANCE.fpsHudStyle;
-        if (BetterUCConfig.isStylizedHudStyle(style)) {
-            ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.fpsHudCustomFont, "FPS: " + fps, x, y, BetterUCConfig.INSTANCE.fpsHudColor);
-            return;
-        }
-        if (!BetterUCConfig.isModernHudStyle(style)) {
-            context.drawTextWithShadow(client.textRenderer, Text.literal("FPS: " + fps), x, y, BetterUCConfig.INSTANCE.fpsHudColor);
-            return;
-        }
-        ModernHudRenderer.drawModule(
-                context,
-                client,
-                x,
-                y,
-                "FPS",
-                String.valueOf(fps),
-                BetterUCConfig.INSTANCE.fpsHudColor
-        );
+        ModernHudRenderer.drawScaled(context, x, y, BetterUCConfig.INSTANCE.fpsHudScale, () -> {
+            if (BetterUCConfig.isStylizedHudStyle(style)) {
+                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.fpsHudCustomFont, "FPS: " + fps, 0, 0, BetterUCConfig.INSTANCE.fpsHudColor);
+            } else if (!BetterUCConfig.isModernHudStyle(style)) {
+                context.drawTextWithShadow(client.textRenderer, Text.literal("FPS: " + fps), 0, 0, BetterUCConfig.INSTANCE.fpsHudColor);
+            } else {
+                ModernHudRenderer.drawModule(
+                        context,
+                        client,
+                        0,
+                        0,
+                        "FPS",
+                        String.valueOf(fps),
+                        BetterUCConfig.INSTANCE.fpsHudColor
+                );
+            }
+        });
     }
 
     private static void updateFpsSample() {

@@ -94,33 +94,31 @@ public class AmmoHud {
         int y = BetterUCConfig.INSTANCE.ammoHudY;
 
         String style = BetterUCConfig.INSTANCE.ammoHudStyle;
-        if (BetterUCConfig.isStylizedHudStyle(style)) {
-            ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.ammoHudCustomFont, ammoText, x, y, 0xFFFFAA33);
-            if (!weaponName.isBlank()) {
-                ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.ammoHudCustomFont, weaponText, x, y + 11, 0xFF55FF55);
+        ModernHudRenderer.drawScaled(context, x, y, BetterUCConfig.INSTANCE.ammoHudScale, () -> {
+            if (BetterUCConfig.isStylizedHudStyle(style)) {
+                ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.ammoHudCustomFont, ammoText, 0, 0, 0xFFFFAA33);
+                if (!weaponName.isBlank()) {
+                    ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.ammoHudCustomFont, weaponText, 0, 11, 0xFF55FF55);
+                }
+            } else if (!BetterUCConfig.isModernHudStyle(style)) {
+                context.drawTextWithShadow(client.textRenderer, ammoText, 0, 0, 0xFFFFAA33);
+                if (!weaponName.isBlank()) {
+                    context.drawTextWithShadow(client.textRenderer, weaponText, 0, 10, 0xFF55FF55);
+                }
+            } else {
+                ModernHudRenderer.drawTwoLineModule(
+                        context,
+                        client,
+                        0,
+                        0,
+                        "AMMO",
+                        ammoText.getString(),
+                        weaponText.getString(),
+                        0xFFFFAA33,
+                        0xFF7CFF8A
+                );
             }
-            return;
-        }
-
-        if (!BetterUCConfig.isModernHudStyle(style)) {
-            context.drawTextWithShadow(client.textRenderer, ammoText, x, y, 0xFFFFAA33);
-            if (!weaponName.isBlank()) {
-                context.drawTextWithShadow(client.textRenderer, weaponText, x, y + 10, 0xFF55FF55);
-            }
-            return;
-        }
-
-        ModernHudRenderer.drawTwoLineModule(
-                context,
-                client,
-                x,
-                y,
-                "AMMO",
-                ammoText.getString(),
-                weaponText.getString(),
-                0xFFFFAA33,
-                0xFF7CFF8A
-        );
+        });
     }
 
     private static String extractWeaponName(String raw) {

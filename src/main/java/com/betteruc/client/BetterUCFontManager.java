@@ -93,7 +93,7 @@ public final class BetterUCFontManager {
                 return option.label;
             }
         }
-        return "Auswaehlen";
+        return "Auswählen";
     }
 
     public static String nextCustomFontId(String current) {

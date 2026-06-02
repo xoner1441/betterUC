@@ -13,30 +13,31 @@ public class ChangelogScreen extends Screen {
     private static final Page[] PAGES = new Page[]{
             new Page(
                     "Highlights",
-                    "betterUC 1.1.0",
+                    "betterUC 1.1.1",
                     new String[]{
                             "Potion-HUD im Inventar-Stil mit Icon, Name und Dauer",
                             "CookDrug-Timer entfernt, weil der Server nun einen eigenen Timer hat",
-                            "Plant-Timer fuer eigene Plantagen mit Wasser- und Duengerzeiten",
+                            "Plant-Timer für eigene Plantagen mit Wasser- und Düngerzeiten",
                             "Payday-, Bank-, Ammo-, FPS-, Herz- und ToggleSprint-HUDs",
-                            "HUD-Positionen koennen im Settings-Menue angepasst werden",
+                            "HUD-Positionen können im Settings-Menü angepasst werden",
                             "Zoom und Auto-Stats Join direkt im Settings-HUD schaltbar",
-                            "Build kopiert die Mod-JAR automatisch in den Minecraft-Mods-Ordner"
+                            "Build kopiert die Mod-JAR automatisch in den Minecraft-Mods-Ordner",
+                            "Update Notify zeigt neue GitHub-Versionen direkt im Chat"
                     }
             ),
             new Page(
                     "HUDs & Komfort",
                     "Spieler-Features",
                     new String[]{
-                            "FPS-HUD fuer schnelle Performance-Uebersicht",
+                            "FPS-HUD für schnelle Performance-Übersicht",
                             "Payday-HUD mit AFK-Erkennung",
-                            "Bank-HUD erkennt neue Kontostaende aus dem Chat",
-                            "Ammo-HUD fuer Waffenanzeige",
+                            "Bank-HUD erkennt neue Kontostände aus dem Chat",
+                            "Ammo-HUD für Waffenanzeige",
                             "Potion-HUD zeigt aktive Effekte wie im Inventar",
-                            "Health-HUD fuer kompakte Lebensanzeige",
+                            "Health-HUD für kompakte Lebensanzeige",
                             "ToggleSprint-HUD und integrierter ToggleSprint",
                             "Frei verschiebbare HUD-Elemente per X/Y-Slider",
-                            "Farbwahl fuer mehrere HUD-Anzeigen"
+                            "Farbwahl für mehrere HUD-Anzeigen"
                     }
             ),
             new Page(
@@ -45,20 +46,20 @@ public class ChangelogScreen extends Screen {
                     new String[]{
                             "/seinzahlen zahlt Schwarzgeld automatisch in die S-Kasse ein",
                             "Hotkey Commands: eigene Befehle auf Tasten legen",
-                            "Zoom-Taste frei waehlbar, Zoom reagiert sofort",
-                            "/car find Koordinaten werden automatisch ins Navi uebernommen",
-                            "Chat-Zeitstempel und groessere Chat-Historie"
+                            "Zoom-Taste frei wählbar, Zoom reagiert sofort",
+                            "/car find Koordinaten werden automatisch ins Navi übernommen",
+                            "Chat-Zeitstempel und größere Chat-Historie"
                     }
             ),
             new Page(
                     "Fraktions-Tools",
-                    "Optional fuer Orga-Spieler",
+                    "Optional für Orga-Spieler",
                     new String[]{
-                            "Blacklist-Gruende koennen im Menue gepflegt werden",
-                            "/blset und /setbl setzen Blacklist-Eintraege mit Vorlagen",
-                            "/modbl erweitert bestehende Blacklist-Eintraege",
+                            "Blacklist-Gründe können im Menü gepflegt werden",
+                            "/blset und /setbl setzen Blacklist-Einträge mit Vorlagen",
+                            "/modbl erweitert bestehende Blacklist-Einträge",
                             "/blinfo zeigt gespeicherte Infos zu einem Blacklist-Spieler",
-                            "/setrp setzt RP-Stufen fuer Blacklist-Eintraege",
+                            "/setrp setzt RP-Stufen für Blacklist-Einträge",
                             "/scall sendet einen schnellen Callout an einen Spieler",
                             "Normale /blacklist-Ausgabe bleibt serverseitig sichtbar"
                     }
@@ -92,7 +93,7 @@ public class ChangelogScreen extends Screen {
             }
         }).dimensions(centerX + BUTTON_W / 2 + 4, navY, 24, BUTTON_H).build()).active = pageIndex < PAGES.length - 1;
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Zurueck"), b -> {
+        addDrawableChild(ButtonWidget.builder(Text.literal("Zurück"), b -> {
             if (client != null) {
                 client.setScreen(parent);
             }

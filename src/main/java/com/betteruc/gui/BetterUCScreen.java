@@ -34,13 +34,37 @@ public class BetterUCScreen extends Screen {
     private static final int BUTTON_H = 20;
     private static final int MODULE_H = 16;
     private static final int MODULE_GAP = 3;
+    private static final UpdateSection[] UPDATE_SECTIONS = new UpdateSection[]{
+            new UpdateSection("Neu in 1.1.1", new String[]{
+                    "ClickGUI für die wichtigsten Einstellungen direkt im Spiel",
+                    "Eigene Minecraft-Keybinds für ClickGUI und Command Menu",
+                    "HUD Vorschau zum Verschieben aktiver HUDs per Drag & Drop",
+                    "HUD-Titel auf betterUC aufgeräumt"
+            }),
+            new UpdateSection("HUD & Design", new String[]{
+                    "HUD-Module können zwischen Modern, Transparent, Cartoon und Custom wechseln",
+                    "Health-, FPS-, Payday-, Ammo-, Bank-, Potion-, Sprint-, Hack- und Plant-HUD sind einzeln einstellbar",
+                    "Farben und Positionen lassen sich direkt im ClickGUI anpassen"
+            }),
+            new UpdateSection("Custom Fonts", new String[]{
+                    "Eigene TTF/OTF-Fonts können in den Font-Ordner gelegt werden",
+                    "Der Custom-Stil kann pro HUD-Modul eine andere Schrift nutzen",
+                    "Fonts können im Modul per Font-Button durchgeschaltet und neu geladen werden"
+            }),
+            new UpdateSection("Tools & Komfort", new String[]{
+                    "Command Menu und Hotkey Commands sind über die Tools erreichbar",
+                    "Blacklist-, Stats- und Chat-Optionen sind übersichtlicher sortiert",
+                    "Die Mod-JAR wird beim Build automatisch in den richtigen Minecraft-Mods-Ordner kopiert",
+                    "Update Notify prüft GitHub und meldet neue Versionen direkt im Chat"
+            })
+    };
 
     private Category selectedCategory = Category.HUD;
     private ModuleOption selectedModule = ModuleOption.FPS;
     private boolean capturingZoomKey = false;
 
     public BetterUCScreen() {
-        super(Text.literal("betterUC ClickGUI"));
+        super(Text.literal("betterUC"));
     }
 
     @Override
@@ -50,7 +74,10 @@ public class BetterUCScreen extends Screen {
         }
 
         addDetailControls();
-        addDrawableChild(ButtonWidget.builder(Text.literal("Speichern & Schliessen"), b -> {
+        addDrawableChild(ButtonWidget.builder(Text.literal("HUD Vorschau"), b -> openScreen(new HudLayoutScreen(this)))
+                .dimensions(mainX() + 12, mainY() + mainH() - 28, 118, BUTTON_H)
+                .build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("Speichern & Schließen"), b -> {
             BetterUCConfig.save();
             close();
         }).dimensions(mainX() + mainW() - 150, mainY() + mainH() - 28, 138, BUTTON_H).build());
@@ -168,13 +195,12 @@ public class BetterUCScreen extends Screen {
             }
             case CHAT -> addTimestampField(x, y, controlW);
             case BLACKLIST -> {
-                y = addButton(x, y, controlW, "Blacklist Gruende", b -> openScreen(new BlacklistConfigScreen(this)));
+                y = addButton(x, y, controlW, "Blacklist Gründe", b -> openScreen(new BlacklistConfigScreen(this)));
                 addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(client, true));
             }
             case HOTKEYS -> addButton(x, y, controlW, "Hotkey Commands", b -> openScreen(new HotkeyCommandsScreen(this)));
-            case COMMANDS -> {
-                y = addButton(x, y, controlW, "Command Menu", b -> openScreen(new CommandGui()));
-                addButton(x, y, controlW, "Changelog", b -> openScreen(new ChangelogScreen(this)));
+            case COMMANDS -> addButton(x, y, controlW, "Command Menu", b -> openScreen(new CommandGui()));
+            case UPDATES -> {
             }
         }
     }
@@ -227,7 +253,7 @@ public class BetterUCScreen extends Screen {
         return addButton(x, y, width, label + " #" + hex(color), b -> openScreen(new ColorPickerScreen(
                 this,
                 label,
-                label + " waehlen",
+                label + " wählen",
                 color,
                 target
         )));
@@ -323,12 +349,11 @@ public class BetterUCScreen extends Screen {
         drawBorder(context, x, y, w, h, PANEL_BORDER);
         context.fill(x + 2, y + 2, x + w - 2, y + 3, 0x24FFFFFF);
 
-        context.drawTextWithShadow(textRenderer, Text.literal("betterUC ClickGUI"), x + 14, y + 11, TEXT_PRIMARY);
+        context.drawTextWithShadow(textRenderer, Text.literal("betterUC"), x + 14, y + 11, TEXT_PRIMARY);
 
         renderCategoryTabs(context, mouseX, mouseY);
         renderModuleList(context, mouseX, mouseY);
         renderDetailPanel(context, mouseX, mouseY);
-        renderFooter(context);
     }
 
     private void renderCategoryTabs(DrawContext context, int mouseX, int mouseY) {
@@ -383,14 +408,23 @@ public class BetterUCScreen extends Screen {
         context.drawTextWithShadow(textRenderer, Text.literal(selectedModule.label), x + 14, y + 12, TEXT_PRIMARY);
         context.drawTextWithShadow(textRenderer, Text.literal(selectedModule.description), x + 14, y + 25, TEXT_MUTED);
         renderSelectedStatus(context, x + 14, y + 39);
+        if (selectedModule == ModuleOption.UPDATES) {
+            renderUpdates(context, x + 14, y + 58, w - 28, h - 72);
+            return;
+        }
         renderPreview(context, x + Math.max(224, w - 172), y + 58);
     }
 
     private void renderSelectedStatus(DrawContext context, int x, int y) {
+        if (selectedModule == ModuleOption.UPDATES) {
+            context.drawTextWithShadow(textRenderer, Text.literal("Version 1.1.1"), x, y, 0xFF86EFAC);
+            return;
+        }
+
         if (selectedModule == ModuleOption.BLACKLIST) {
             context.drawTextWithShadow(
                     textRenderer,
-                    Text.literal("Eintraege: " + BetterUCConfig.INSTANCE.chatBlacklistPlayers.size()
+                    Text.literal("Einträge: " + BetterUCConfig.INSTANCE.chatBlacklistPlayers.size()
                             + " | Sync " + syncAge(BetterUCConfig.INSTANCE.lastBlacklistSyncMs)),
                     x,
                     y,
@@ -566,7 +600,64 @@ public class BetterUCScreen extends Screen {
             case HOTKEYS -> drawMiniInfo(context, previewX, previewY, "Hotkeys",
                     BetterUCConfig.INSTANCE.hotkeyCommands.size() + " Commands", true);
             case COMMANDS -> drawMiniInfo(context, previewX, previewY, "Tools", "Command Menu", true);
+            case UPDATES -> {
+            }
         }
+    }
+
+    private void renderUpdates(DrawContext context, int x, int y, int width, int height) {
+        int maxY = y + height;
+        if (width < 420) {
+            int currentY = y;
+            for (UpdateSection section : UPDATE_SECTIONS) {
+                if (currentY + 16 > maxY) break;
+                context.drawTextWithShadow(textRenderer, Text.literal(section.title), x, currentY, withAlpha(selectedModule.accent, 0xFF));
+                currentY += 15;
+                for (String line : section.lines) {
+                    if (currentY + 10 > maxY) break;
+                    currentY = drawWrappedUpdateLine(context, line, x, currentY, width);
+                }
+                currentY += 5;
+            }
+            return;
+        }
+
+        int columnGap = 20;
+        int columnWidth = Math.max(160, (width - columnGap) / 2);
+
+        for (int i = 0; i < UPDATE_SECTIONS.length; i++) {
+            int column = i % 2;
+            int row = i / 2;
+            int sectionX = x + column * (columnWidth + columnGap);
+            int sectionY = y + row * 92;
+            if (sectionY + 16 > maxY) break;
+
+            UpdateSection section = UPDATE_SECTIONS[i];
+            context.drawTextWithShadow(textRenderer, Text.literal(section.title), sectionX, sectionY, withAlpha(selectedModule.accent, 0xFF));
+
+            int lineY = sectionY + 15;
+            for (String line : section.lines) {
+                if (lineY + 10 > maxY) break;
+                lineY = drawWrappedUpdateLine(context, line, sectionX, lineY, columnWidth);
+            }
+        }
+    }
+
+    private int drawWrappedUpdateLine(DrawContext context, String line, int x, int y, int maxWidth) {
+        String prefix = "- ";
+        String remaining = line;
+        boolean firstLine = true;
+        int currentY = y;
+        while (!remaining.isEmpty()) {
+            String usedPrefix = firstLine ? prefix : "  ";
+            int availableWidth = Math.max(20, maxWidth - textRenderer.getWidth(usedPrefix));
+            String part = takeFittingText(remaining, availableWidth);
+            context.drawTextWithShadow(textRenderer, Text.literal(usedPrefix + part), x, currentY, firstLine ? TEXT_SOFT : TEXT_MUTED);
+            remaining = remaining.substring(part.length()).trim();
+            currentY += 11;
+            firstLine = false;
+        }
+        return currentY + 1;
     }
 
     private void drawMiniInfo(DrawContext context, int x, int y, String label, String value, boolean active) {
@@ -574,13 +665,6 @@ public class BetterUCScreen extends Screen {
         ModernHudRenderer.drawPanel(context, x, y, w, 38, active ? selectedModule.accent : 0xFF64748B);
         context.drawTextWithShadow(textRenderer, Text.literal(label), x + 10, y + 8, withAlpha(selectedModule.accent, 0xFF));
         context.drawTextWithShadow(textRenderer, Text.literal(value), x + 10, y + 20, TEXT_PRIMARY);
-    }
-
-    private void renderFooter(DrawContext context) {
-        int x = mainX() + 12;
-        int y = mainY() + mainH() - 23;
-        context.drawTextWithShadow(textRenderer, Text.literal("Links Modul waehlen, rechts direkt konfigurieren."),
-                x, y, TEXT_MUTED);
     }
 
     private void renderZoomCaptureHint(DrawContext context) {
@@ -591,7 +675,7 @@ public class BetterUCScreen extends Screen {
         int y = height / 2 - h / 2;
         drawSoftRect(context, x, y, w, h, 0xF0101318);
         drawBorder(context, x, y, w, h, withAlpha(ModuleOption.ZOOM.accent, 0xFF));
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("Druecke eine Taste fuer Zoom"), width / 2, y + 17, TEXT_PRIMARY);
+        context.drawCenteredTextWithShadow(textRenderer, Text.literal("Drücke eine Taste für Zoom"), width / 2, y + 17, TEXT_PRIMARY);
         context.drawCenteredTextWithShadow(textRenderer, Text.literal("ESC = Abbrechen"), width / 2, y + 33, TEXT_MUTED);
     }
 
@@ -786,6 +870,26 @@ public class BetterUCScreen extends Screen {
         }
     }
 
+    private String takeFittingText(String text, int maxWidth) {
+        if (textRenderer.getWidth(text) <= maxWidth) return text;
+
+        int lastSpace = -1;
+        for (int i = 1; i <= text.length(); i++) {
+            char c = text.charAt(i - 1);
+            if (Character.isWhitespace(c)) {
+                lastSpace = i - 1;
+            }
+            String candidate = text.substring(0, i).trim();
+            if (textRenderer.getWidth(candidate) > maxWidth) {
+                if (lastSpace > 0) {
+                    return text.substring(0, lastSpace).trim();
+                }
+                return text.substring(0, Math.max(1, i - 1)).trim();
+            }
+        }
+        return text;
+    }
+
     private String syncAge(long timestampMs) {
         if (timestampMs <= 0L) return "nie";
         long ageSeconds = Math.max(0L, (System.currentTimeMillis() - timestampMs) / 1000L);
@@ -921,9 +1025,10 @@ public class BetterUCScreen extends Screen {
         AUTO_STATS(Category.GAMEPLAY, "Auto Stats", "Automatisches /stats", 0xFF34D399, true),
         CHAT(Category.GAMEPLAY, "Chat", "Zeitstempel", 0xFF38BDF8, false),
 
-        BLACKLIST(Category.TOOLS, "Blacklist", "Gruende und Sync", 0xFFF97316, false),
+        BLACKLIST(Category.TOOLS, "Blacklist", "Gründe und Sync", 0xFFF97316, false),
         HOTKEYS(Category.TOOLS, "Hotkeys", "Commands auf Tasten", 0xFFFBBF24, false),
-        COMMANDS(Category.TOOLS, "Commands", "Menues und Changelog", 0xFF22C55E, false);
+        COMMANDS(Category.TOOLS, "Commands", "Command Menu", 0xFF22C55E, false),
+        UPDATES(Category.TOOLS, "Updates", "Changelog und neue Features", 0xFF38BDF8, false);
 
         private final Category category;
         private final String label;
@@ -946,5 +1051,8 @@ public class BetterUCScreen extends Screen {
         private boolean hasHudStyle() {
             return category == Category.HUD;
         }
+    }
+
+    private record UpdateSection(String title, String[] lines) {
     }
 }

@@ -74,23 +74,23 @@ public class BankBalanceHud {
         int y = BetterUCConfig.INSTANCE.bankHudY;
         String value = formatMoney(currentBankBalance) + "$";
         String style = BetterUCConfig.INSTANCE.bankHudStyle;
-        if (BetterUCConfig.isStylizedHudStyle(style)) {
-            ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.bankHudCustomFont, "Bank: " + value, x, y, BetterUCConfig.INSTANCE.bankHudColor);
-            return;
-        }
-        if (!BetterUCConfig.isModernHudStyle(style)) {
-            context.drawTextWithShadow(client.textRenderer, Text.literal("Bank: " + value), x, y, BetterUCConfig.INSTANCE.bankHudColor);
-            return;
-        }
-        ModernHudRenderer.drawModule(
-                context,
-                client,
-                x,
-                y,
-                "BANK",
-                value,
-                BetterUCConfig.INSTANCE.bankHudColor
-        );
+        ModernHudRenderer.drawScaled(context, x, y, BetterUCConfig.INSTANCE.bankHudScale, () -> {
+            if (BetterUCConfig.isStylizedHudStyle(style)) {
+                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.bankHudCustomFont, "Bank: " + value, 0, 0, BetterUCConfig.INSTANCE.bankHudColor);
+            } else if (!BetterUCConfig.isModernHudStyle(style)) {
+                context.drawTextWithShadow(client.textRenderer, Text.literal("Bank: " + value), 0, 0, BetterUCConfig.INSTANCE.bankHudColor);
+            } else {
+                ModernHudRenderer.drawModule(
+                        context,
+                        client,
+                        0,
+                        0,
+                        "BANK",
+                        value,
+                        BetterUCConfig.INSTANCE.bankHudColor
+                );
+            }
+        });
     }
 
     private static Integer parseMoneyValue(String raw) {

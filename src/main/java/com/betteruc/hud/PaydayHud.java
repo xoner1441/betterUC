@@ -70,24 +70,25 @@ public class PaydayHud {
         if (pausedByAfk) {
             text += " (AFK)";
         }
-        if (BetterUCConfig.isStylizedHudStyle(style)) {
-            ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.paydayHudCustomFont, text, x, y, BetterUCConfig.INSTANCE.paydayHudColor);
-            return;
-        }
-        if (!BetterUCConfig.isModernHudStyle(style)) {
-            context.drawTextWithShadow(client.textRenderer, Text.literal(text), x, y, BetterUCConfig.INSTANCE.paydayHudColor);
-            return;
-        }
-        ModernHudRenderer.drawProgressModule(
-                context,
-                client,
-                x,
-                y,
-                pausedByAfk ? "PAYDAY AFK" : "PAYDAY",
-                value,
-                progress,
-                BetterUCConfig.INSTANCE.paydayHudColor
-        );
+        String displayText = text;
+        ModernHudRenderer.drawScaled(context, x, y, BetterUCConfig.INSTANCE.paydayHudScale, () -> {
+            if (BetterUCConfig.isStylizedHudStyle(style)) {
+                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.paydayHudCustomFont, displayText, 0, 0, BetterUCConfig.INSTANCE.paydayHudColor);
+            } else if (!BetterUCConfig.isModernHudStyle(style)) {
+                context.drawTextWithShadow(client.textRenderer, Text.literal(displayText), 0, 0, BetterUCConfig.INSTANCE.paydayHudColor);
+            } else {
+                ModernHudRenderer.drawProgressModule(
+                        context,
+                        client,
+                        0,
+                        0,
+                        pausedByAfk ? "PAYDAY AFK" : "PAYDAY",
+                        value,
+                        progress,
+                        BetterUCConfig.INSTANCE.paydayHudColor
+                );
+            }
+        });
     }
 
     private static void tickMinuteProgress() {

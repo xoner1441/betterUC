@@ -35,41 +35,43 @@ public class HealthHud {
         boolean stylizedStyle = BetterUCConfig.isStylizedHudStyle(style);
         int textWidth = client.textRenderer.getWidth(cachedHealthString);
         int totalWidth = modernStyle ? Math.max(34, textWidth + 27) : 9 + 4 + textWidth;
+        float scale = BetterUCConfig.INSTANCE.healthHudScale;
 
         int startX = BetterUCConfig.INSTANCE.healthHudX >= 0
                 ? BetterUCConfig.INSTANCE.healthHudX
-                : centerX - totalWidth / 2;
+                : centerX - ModernHudRenderer.scaledSize(totalWidth, scale) / 2;
         int y = BetterUCConfig.INSTANCE.healthHudY >= 0
                 ? BetterUCConfig.INSTANCE.healthHudY
                 : centerY + 15;
         int heartColor = BetterUCConfig.INSTANCE.healthHudHeartColor;
         int textColor = BetterUCConfig.INSTANCE.healthHudTextColor;
 
-        if (modernStyle) {
-            ModernHudRenderer.drawPanel(context, startX, y, totalWidth, 17, heartColor);
+        ModernHudRenderer.drawScaled(context, startX, y, scale, () -> {
+            if (modernStyle) {
+                ModernHudRenderer.drawPanel(context, 0, 0, totalWidth, 17, heartColor);
+                context.drawGuiTexture(
+                        net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED,
+                        net.minecraft.util.Identifier.ofVanilla("hud/heart/full"),
+                        7, 4, 9, 9,
+                        heartColor
+                );
+                context.drawText(client.textRenderer, healthText, 19, 4, textColor, true);
+                return;
+            }
+
             context.drawGuiTexture(
                     net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED,
                     net.minecraft.util.Identifier.ofVanilla("hud/heart/full"),
-                    startX + 7, y + 4, 9, 9,
+                    0, 0, 9, 9,
                     heartColor
             );
-            context.drawText(client.textRenderer, healthText, startX + 19, y + 4, textColor, true);
-            return;
-        }
 
-        context.drawGuiTexture(
-                net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED,
-                net.minecraft.util.Identifier.ofVanilla("hud/heart/full"),
-                startX, y, 9, 9,
-                heartColor
-        );
-
-        if (stylizedStyle) {
-            ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.healthHudCustomFont, healthText, startX + 12, y, textColor);
-            return;
-        }
-
-        context.drawText(client.textRenderer, healthText, startX + 11, y, textColor, true);
+            if (stylizedStyle) {
+                ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.healthHudCustomFont, healthText, 12, 0, textColor);
+            } else {
+                context.drawText(client.textRenderer, healthText, 11, 0, textColor, true);
+            }
+        });
     }
 
     private static Text getHealthText(int fullHearts) {
