@@ -15,13 +15,18 @@ import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.SliderWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
+import net.minecraft.util.Util;
 import org.lwjgl.glfw.GLFW;
 
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
@@ -71,8 +76,10 @@ public class BetterUCScreen extends Screen {
 
     private Category selectedCategory = Category.HUD;
     private ModuleOption selectedModule = ModuleOption.FPS;
+    private final List<ScrollableControl> detailControls = new ArrayList<>();
     private boolean capturingZoomKey = false;
-    private boolean showPingAdvancedSettings = false;
+    private int detailScrollOffset = 0;
+    private int detailContentHeight = 0;
 
     public BetterUCScreen() {
         super(Text.literal("betterUC"));
@@ -82,8 +89,11 @@ public class BetterUCScreen extends Screen {
     protected void init() {
         if (selectedModule.category != selectedCategory) {
             selectedModule = firstModuleFor(selectedCategory);
+            detailScrollOffset = 0;
         }
 
+        detailControls.clear();
+        detailContentHeight = 0;
         addDetailControls();
         addDrawableChild(ButtonWidget.builder(Text.literal("HUD Vorschau"), b -> openScreen(new HudLayoutScreen(this)))
                 .dimensions(mainX() + 12, mainY() + mainH() - 28, 118, BUTTON_H)
@@ -96,7 +106,8 @@ public class BetterUCScreen extends Screen {
 
     private void addDetailControls() {
         int x = detailX() + 14;
-        int y = detailY() + 58;
+        int startY = detailControlsTop();
+        int y = startY;
         int controlW = Math.max(120, Math.min(194, detailW() - 28));
 
         if (selectedModule.hasHudStyle()) {
@@ -128,7 +139,7 @@ public class BetterUCScreen extends Screen {
                         color -> BetterUCConfig.INSTANCE.paydayHudColor = color);
             }
             case AMMO -> {
-                addToggle(x, y, controlW, "Ammo HUD", BetterUCConfig.INSTANCE.showAmmoHud,
+                y = addToggle(x, y, controlW, "Ammo HUD", BetterUCConfig.INSTANCE.showAmmoHud,
                         () -> BetterUCConfig.INSTANCE.showAmmoHud = !BetterUCConfig.INSTANCE.showAmmoHud);
             }
             case BANK -> {
@@ -144,7 +155,7 @@ public class BetterUCScreen extends Screen {
                         color -> BetterUCConfig.INSTANCE.cashHudColor = color);
             }
             case POTION -> {
-                addToggle(x, y, controlW, "Potion HUD", BetterUCConfig.INSTANCE.showPotionEffectsHud,
+                y = addToggle(x, y, controlW, "Potion HUD", BetterUCConfig.INSTANCE.showPotionEffectsHud,
                         () -> BetterUCConfig.INSTANCE.showPotionEffectsHud = !BetterUCConfig.INSTANCE.showPotionEffectsHud);
             }
             case SPRINT -> {
@@ -162,27 +173,31 @@ public class BetterUCScreen extends Screen {
                     capturingZoomKey = true;
                     refreshWidgets();
                 });
-                addDoubleSlider(x, y, controlW, "Zoom FOV", BetterUCConfig.INSTANCE.zoomFovMultiplier, 0.05, 0.80,
+                y = addDoubleSlider(x, y, controlW, "Zoom FOV", BetterUCConfig.INSTANCE.zoomFovMultiplier, 0.05, 0.80,
                         value -> BetterUCConfig.INSTANCE.zoomFovMultiplier = (float) value);
             }
             case AUTO_STATS -> {
                 y = addToggle(x, y, controlW, "Auto-Stats Join", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled,
                         () -> BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled = !BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
-                addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(client, true));
+                y = addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(client, true));
             }
-            case CHAT -> addTimestampField(x, y, controlW);
+            case CHAT -> y = addTimestampField(x, y, controlW);
+            case CONNECTION -> y = addConnectionControls(x, y, controlW);
             case BLACKLIST -> {
                 y = addButton(x, y, controlW, "Blacklist Gründe", b -> openScreen(new BlacklistConfigScreen(this)));
-                addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(client, true));
+                y = addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(client, true));
             }
             case PING -> {
-                addPingControls(x, y, controlW);
+                y = addPingControls(x, y, controlW);
             }
-            case HOTKEYS -> addButton(x, y, controlW, "Hotkey Commands", b -> openScreen(new HotkeyCommandsScreen(this)));
-            case COMMANDS -> addButton(x, y, controlW, "Command Menu", b -> openScreen(new CommandGui()));
+            case HOTKEYS -> y = addButton(x, y, controlW, "Hotkey Commands", b -> openScreen(new HotkeyCommandsScreen(this)));
+            case COMMANDS -> y = addButton(x, y, controlW, "Command Menu", b -> openScreen(new CommandGui()));
             case UPDATES -> {
             }
         }
+
+        detailContentHeight = Math.max(0, y - startY);
+        applyDetailScrollPositions();
     }
 
     private int addToggle(int x, int y, int width, String label, boolean active, Runnable toggleAction) {
@@ -220,6 +235,13 @@ public class BetterUCScreen extends Screen {
                 () -> BetterUCConfig.INSTANCE.pingRelayEnabled = !BetterUCConfig.INSTANCE.pingRelayEnabled);
         y = addToggle(x, y, width, "Ping Anzeige", BetterUCConfig.INSTANCE.showPingHud,
                 () -> BetterUCConfig.INSTANCE.showPingHud = !BetterUCConfig.INSTANCE.showPingHud);
+        y = addButton(x, y, width, pingScopeLabel(), b -> {
+            BetterUCConfig.INSTANCE.pingRelayScope = "faction".equals(BetterUCConfig.INSTANCE.pingRelayScope)
+                    ? "global"
+                    : "faction";
+            BetterUCConfig.save();
+            refreshWidgets();
+        });
         y = addDoubleSlider(x, y, width, "Ping Größe", BetterUCConfig.INSTANCE.pingHudScale,
                 BetterUCConfig.MIN_HUD_SCALE, BetterUCConfig.MAX_HUD_SCALE,
                 value -> BetterUCConfig.INSTANCE.pingHudScale = (float) value);
@@ -227,46 +249,32 @@ public class BetterUCScreen extends Screen {
                 value -> BetterUCConfig.INSTANCE.pingRelayMaxDistance = Math.max(50, value));
         y = addColorButton(x, y, width, "Ping Farbe", parsePingColor(),
                 color -> BetterUCConfig.INSTANCE.pingRelayColor = "#" + hex(color));
+        return addButton(x, y, width, "Ping testen", b -> PingRelayClient.sendPingAtCrosshair(client));
+    }
 
-        if (pingAccessCodeMissing()) {
-            y = addTextField(x, y, width, "Zugangscode", BetterUCConfig.INSTANCE.pingRelayToken, 160,
-                    value -> BetterUCConfig.INSTANCE.pingRelayToken = value.trim());
-        } else {
-            y = addButton(x, y, width, "Zugangscode: Gesetzt", b -> {
-                showPingAdvancedSettings = true;
-                refreshWidgets();
-            });
-        }
-
-        y = addButton(x, y, width, "Ping testen", b -> PingRelayClient.sendPingAtCrosshair(client));
-        y = addButton(x, y, width, "Erweiterte Verbindung: " + (showPingAdvancedSettings ? "AN" : "AUS"), b -> {
-            showPingAdvancedSettings = !showPingAdvancedSettings;
-            refreshWidgets();
-        });
-
-        if (!showPingAdvancedSettings) {
-            return y;
-        }
-
-        y = addTextField(x, y, width, "Server Adresse", BetterUCConfig.INSTANCE.pingRelayUrl, 160,
-                value -> BetterUCConfig.INSTANCE.pingRelayUrl = value);
+    private int addConnectionControls(int x, int y, int width) {
+        y = addTextField(x, y, width, "Access Code", BetterUCConfig.INSTANCE.pingRelayToken, 160,
+                value -> BetterUCConfig.INSTANCE.pingRelayToken = value.trim());
+        y = addButton(x, y, width, "Access Code holen", b -> Util.getOperatingSystem().open(URI.create("https://betteruc.de/access")));
         y = addTextField(x, y, width, "Gruppe", BetterUCConfig.INSTANCE.pingRelayChannel, 32,
                 value -> BetterUCConfig.INSTANCE.pingRelayChannel = value);
-        y = addTextField(x, y, width, "Zugangscode", BetterUCConfig.INSTANCE.pingRelayToken, 160,
-                value -> BetterUCConfig.INSTANCE.pingRelayToken = value.trim());
-        return addButton(x, y, width, "Standardserver nutzen", b -> {
+        y = addTextField(x, y, width, "Server Adresse", BetterUCConfig.INSTANCE.pingRelayUrl, 160,
+                value -> BetterUCConfig.INSTANCE.pingRelayUrl = value);
+        y = addButton(x, y, width, "Standardserver nutzen", b -> {
             BetterUCConfig.INSTANCE.pingRelayUrl = BetterUCConfig.DEFAULT_PING_RELAY_URL;
             BetterUCConfig.save();
             refreshWidgets();
         });
-    }
-
-    private boolean pingAccessCodeMissing() {
-        return BetterUCConfig.INSTANCE.pingRelayToken == null || BetterUCConfig.INSTANCE.pingRelayToken.isBlank();
+        return addButton(x, y, width, "Neu verbinden", b -> {
+            BetterUCConfig.save();
+            PingRelayClient.onDisconnect();
+            PingRelayClient.tick(client);
+            refreshWidgets();
+        });
     }
 
     private int addButton(int x, int y, int width, String label, ButtonWidget.PressAction action) {
-        addDrawableChild(ButtonWidget.builder(Text.literal(label), action)
+        addScrollableControl(ButtonWidget.builder(Text.literal(label), action)
                 .dimensions(x, y, width, BUTTON_H)
                 .build());
         return y + 24;
@@ -292,7 +300,7 @@ public class BetterUCScreen extends Screen {
     private int addIntSlider(int x, int y, int width, String label, int current, int max, IntConsumer setter) {
         int safeMax = Math.max(1, max);
         int safeCurrent = clamp(current, 0, safeMax);
-        addDrawableChild(new SliderWidget(
+        addScrollableControl(new SliderWidget(
                 x,
                 y,
                 width,
@@ -324,7 +332,7 @@ public class BetterUCScreen extends Screen {
             DoubleConsumer setter
     ) {
         double normalized = clamp01((current - min) / Math.max(0.0001, max - min));
-        addDrawableChild(new SliderWidget(
+        addScrollableControl(new SliderWidget(
                 x,
                 y,
                 width,
@@ -345,7 +353,7 @@ public class BetterUCScreen extends Screen {
         return y + 24;
     }
 
-    private void addTimestampField(int x, int y, int width) {
+    private int addTimestampField(int x, int y, int width) {
         TextFieldWidget timestampField = new TextFieldWidget(
                 textRenderer,
                 x,
@@ -357,7 +365,8 @@ public class BetterUCScreen extends Screen {
         timestampField.setMaxLength(32);
         timestampField.setText(BetterUCConfig.INSTANCE.chatTimestampFormat);
         timestampField.setChangedListener(text -> BetterUCConfig.INSTANCE.chatTimestampFormat = text);
-        addDrawableChild(timestampField);
+        addScrollableControl(timestampField);
+        return y + 24;
     }
 
     private int addTextField(int x, int y, int width, String label, String current, int maxLength, Consumer<String> setter) {
@@ -373,8 +382,14 @@ public class BetterUCScreen extends Screen {
         field.setPlaceholder(Text.literal(label));
         field.setText(current == null ? "" : current);
         field.setChangedListener(setter::accept);
-        addDrawableChild(field);
+        addScrollableControl(field);
         return y + 24;
+    }
+
+    private <T extends ClickableWidget> T addScrollableControl(T widget) {
+        addDrawableChild(widget);
+        detailControls.add(new ScrollableControl(widget, widget.getY()));
+        return widget;
     }
 
     @Override
@@ -465,6 +480,24 @@ public class BetterUCScreen extends Screen {
             return;
         }
         renderPreview(context, x + Math.max(224, w - 172), y + 58);
+        renderDetailScrollbar(context);
+    }
+
+    private void renderDetailScrollbar(DrawContext context) {
+        int maxScroll = maxDetailScroll();
+        if (maxScroll <= 0) return;
+
+        int top = detailControlsTop();
+        int height = detailControlsHeight();
+        int trackX = detailX() + detailW() - 8;
+        int trackY = top;
+        int trackH = Math.max(1, height);
+        int thumbH = Math.max(22, (int) (trackH * (trackH / (double) Math.max(trackH, detailContentHeight))));
+        int travel = Math.max(1, trackH - thumbH);
+        int thumbY = trackY + (int) Math.round(travel * (detailScrollOffset / (double) maxScroll));
+
+        context.fill(trackX, trackY, trackX + 3, trackY + trackH, 0x55333C49);
+        context.fill(trackX, thumbY, trackX + 3, thumbY + thumbH, withAlpha(selectedModule.accent, 0xDD));
     }
 
     private void renderSelectedStatus(DrawContext context, int x, int y) {
@@ -485,7 +518,7 @@ public class BetterUCScreen extends Screen {
             return;
         }
 
-        if (selectedModule == ModuleOption.PING) {
+        if (selectedModule == ModuleOption.CONNECTION) {
             context.drawTextWithShadow(
                     textRenderer,
                     Text.literal("Verbindung: " + PingRelayClient.statusLabel()),
@@ -670,9 +703,12 @@ public class BetterUCScreen extends Screen {
             case ZOOM -> drawMiniInfo(context, previewX, previewY, "Zoom", zoomKeyLabel(), BetterUCConfig.INSTANCE.zoomEnabled);
             case AUTO_STATS -> drawMiniInfo(context, previewX, previewY, "Auto-Stats", "Join /stats", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
             case CHAT -> drawMiniInfo(context, previewX, previewY, "Chat", BetterUCConfig.INSTANCE.chatTimestampFormat, true);
+            case CONNECTION -> drawMiniInfo(context, previewX, previewY, "Verbindung", PingRelayClient.statusLabel(),
+                    PingRelayClient.isConnected());
             case BLACKLIST -> drawMiniInfo(context, previewX, previewY, "Blacklist",
                     BetterUCConfig.INSTANCE.chatBlacklistPlayers.size() + " Spieler", true);
-            case PING -> drawMiniInfo(context, previewX, previewY, "Ping System", PingRelayClient.statusLabel(),
+            case PING -> drawMiniInfo(context, previewX, previewY, "Ping System",
+                    BetterUCConfig.INSTANCE.pingRelayEnabled ? "Aktiv" : "Aus",
                     BetterUCConfig.INSTANCE.pingRelayEnabled);
             case HOTKEYS -> drawMiniInfo(context, previewX, previewY, "Hotkeys",
                     BetterUCConfig.INSTANCE.hotkeyCommands.size() + " Commands", true);
@@ -755,6 +791,18 @@ public class BetterUCScreen extends Screen {
     }
 
     @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (selectedModule != ModuleOption.UPDATES
+                && maxDetailScroll() > 0
+                && inBounds(mouseX, mouseY, detailX(), detailControlsTop(), detailW(), detailControlsHeight())) {
+            int nextOffset = detailScrollOffset - (int) Math.round(verticalAmount * 28.0D);
+            setDetailScrollOffset(nextOffset);
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+    }
+
+    @Override
     public boolean mouseClicked(Click event, boolean doubleClick) {
         if (super.mouseClicked(event, doubleClick)) return true;
         if (event.button() != 0) return false;
@@ -766,6 +814,7 @@ public class BetterUCScreen extends Screen {
         if (category != null) {
             selectedCategory = category;
             selectedModule = firstModuleFor(category);
+            detailScrollOffset = 0;
             refreshWidgets();
             return true;
         }
@@ -774,6 +823,7 @@ public class BetterUCScreen extends Screen {
         if (module != null) {
             selectedCategory = module.category;
             selectedModule = module;
+            detailScrollOffset = 0;
             refreshWidgets();
             return true;
         }
@@ -948,6 +998,10 @@ public class BetterUCScreen extends Screen {
         }
     }
 
+    private String pingScopeLabel() {
+        return "Ping Ziel: " + ("faction".equals(BetterUCConfig.INSTANCE.pingRelayScope) ? "Fraktion" : "Global");
+    }
+
     private String takeFittingText(String text, int maxWidth) {
         if (textRenderer.getWidth(text) <= maxWidth) return text;
 
@@ -981,6 +1035,33 @@ public class BetterUCScreen extends Screen {
         if (client != null) {
             client.setScreen(screen);
         }
+    }
+
+    private void setDetailScrollOffset(int scrollOffset) {
+        detailScrollOffset = clamp(scrollOffset, 0, maxDetailScroll());
+        applyDetailScrollPositions();
+    }
+
+    private void applyDetailScrollPositions() {
+        detailScrollOffset = clamp(detailScrollOffset, 0, maxDetailScroll());
+        int top = detailControlsTop();
+        int bottom = detailControlsBottom();
+
+        for (ScrollableControl control : detailControls) {
+            ClickableWidget widget = control.widget();
+            int y = control.baseY() - detailScrollOffset;
+            widget.setY(y);
+
+            boolean visible = y >= top && y + widget.getHeight() <= bottom;
+            widget.visible = visible;
+            if (!visible && widget.isFocused()) {
+                widget.setFocused(false);
+            }
+        }
+    }
+
+    private int maxDetailScroll() {
+        return Math.max(0, detailContentHeight - detailControlsHeight());
     }
 
     private void refreshWidgets() {
@@ -1022,6 +1103,18 @@ public class BetterUCScreen extends Screen {
 
     private int detailH() {
         return mainH() - 78;
+    }
+
+    private int detailControlsTop() {
+        return detailY() + 58;
+    }
+
+    private int detailControlsBottom() {
+        return detailY() + detailH() - 10;
+    }
+
+    private int detailControlsHeight() {
+        return Math.max(1, detailControlsBottom() - detailControlsTop());
     }
 
     private int moduleListY() {
@@ -1115,6 +1208,7 @@ public class BetterUCScreen extends Screen {
         ZOOM(Category.GAMEPLAY, "Zoom", "Taste und FOV", 0xFFA78BFA, true),
         AUTO_STATS(Category.GAMEPLAY, "Auto Stats", "Automatisches /stats", 0xFF34D399, true),
         CHAT(Category.GAMEPLAY, "Chat", "Zeitstempel", 0xFF38BDF8, false),
+        CONNECTION(Category.GAMEPLAY, "Verbindung", "Access & Relay", 0xFF38BDF8, false),
 
         BLACKLIST(Category.TOOLS, "Blacklist", "Gründe und Sync", 0xFFF97316, false),
         PING(Category.TOOLS, "Ping", "Private Mod-Pings", 0xFF38BDF8, true),
@@ -1143,6 +1237,9 @@ public class BetterUCScreen extends Screen {
         private boolean hasHudStyle() {
             return category == Category.HUD || this == PING;
         }
+    }
+
+    private record ScrollableControl(ClickableWidget widget, int baseY) {
     }
 
     private record UpdateSection(String title, String[] lines) {

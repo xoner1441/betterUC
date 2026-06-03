@@ -1,0 +1,13 @@
+{
+  "name": "betteruc-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "betterUC website, access-code API and ping relay",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

@@ -14,7 +14,10 @@ public class BetterUCSuppressFlags {
     public static int pendingSilentStatsRequests = 0;
     public static boolean activeSilentStatsCapture = false;
     public static long lastSilentStatsRequestMs = 0L;
-    public static final long SILENT_STATS_TIMEOUT_MS = 5000L;
+    public static long forceHideStatsOutputUntilMs = 0L;
+    public static long forceHideDashStatsOutputUntilMs = 0L;
+    public static final long SILENT_STATS_TIMEOUT_MS = 18000L;
+    public static final long SILENT_STATS_DASH_TAIL_TIMEOUT_MS = 22000L;
     // For /modbl: suppress output and call callback once loading is complete.
     public static boolean suppressModBlOutput = false;
     public static Runnable modBlCallback = null;
@@ -33,9 +36,12 @@ public class BetterUCSuppressFlags {
     }
 
     public static void markSilentStatsRequest() {
+        long now = System.currentTimeMillis();
         pendingSilentStatsRequests++;
         suppressStatsOutput = true;
-        lastSilentStatsRequestMs = System.currentTimeMillis();
+        lastSilentStatsRequestMs = now;
+        forceHideStatsOutputUntilMs = Math.max(forceHideStatsOutputUntilMs, now + SILENT_STATS_TIMEOUT_MS);
+        forceHideDashStatsOutputUntilMs = Math.max(forceHideDashStatsOutputUntilMs, now + SILENT_STATS_DASH_TAIL_TIMEOUT_MS);
     }
 
     public static void beginBlacklistInfoLookup(String playerName) {
@@ -121,6 +127,8 @@ public class BetterUCSuppressFlags {
         activeSilentStatsCapture = false;
         suppressStatsOutput = false;
         lastSilentStatsRequestMs = 0L;
+        forceHideStatsOutputUntilMs = 0L;
+        forceHideDashStatsOutputUntilMs = 0L;
         clearBlacklistInfoLookup();
         bypassNextBlacklistInfoLocalMessage = false;
         pendingModBlReaddUntil.clear();

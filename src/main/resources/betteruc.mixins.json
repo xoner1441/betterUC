@@ -5,7 +5,8 @@
   "mixins": [
     "ChatBlacklistMixin",
     "GameRendererZoomMixin",
-    "InGameHudAmmoMixin"
+    "InGameHudAmmoMixin",
+    "PlayerListHudMixin"
   ],
   "client": [],
   "injectors": {

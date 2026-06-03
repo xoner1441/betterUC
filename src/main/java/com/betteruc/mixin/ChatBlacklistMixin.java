@@ -5,7 +5,9 @@ import com.betteruc.BetterUCSuppressFlags;
 import com.betteruc.ServerGate;
 import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ClientScheduler;
+import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.ServerCommandUtil;
+import com.betteruc.client.UserStatsClient;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.CashHud;
@@ -22,6 +24,7 @@ import net.minecraft.client.gui.hud.MessageIndicator;
 import net.minecraft.network.message.MessageSignatureData;
 import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -37,9 +40,20 @@ import java.util.regex.Pattern;
 @Mixin(ChatHud.class)
 public class ChatBlacklistMixin {
 
+    @Shadow
+    private List<ChatHudLine> messages;
+
+    @Shadow
+    private void refresh() {
+    }
+
     private static final Pattern BLACK_MONEY_PATTERN = Pattern.compile("-\\s*Schwarzgeld:\\s*([0-9.]+)\\$", Pattern.CASE_INSENSITIVE);
     private static final Pattern PAYDAY_PATTERN = Pattern.compile(
             "Zeit seit PayDay:\\s*(\\d+)\\s*/\\s*(\\d+)\\s*Minuten",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern FACTION_STATS_PATTERN = Pattern.compile(
+            "^\\s*[-\\u2010-\\u2015\\u2212]?\\s*Fraktion\\s*:\\s*(.+)$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern PAYDAY_HEADER_PATTERN = Pattern.compile(
@@ -71,6 +85,8 @@ public class ChatBlacklistMixin {
     private static final long FORCE_HIDE_DASH_STATS_WINDOW_MS = 12000L;
     private static long forceHideAfkExitTailUntilMs = 0L;
     private static final long FORCE_HIDE_AFK_EXIT_TAIL_WINDOW_MS = 15000L;
+    private static long lastSuppressedStatsLineMs = 0L;
+    private static final long LINGERING_STATS_CLEANUP_WINDOW_MS = 15000L;
 
     private static final List<String> tempBlacklist = new ArrayList<>();
     private static final List<String> tempVogelfrei = new ArrayList<>();
@@ -122,7 +138,18 @@ public class ChatBlacklistMixin {
         handlePaydayReset(raw);
         updateMoney(raw);
 
-        if (shouldForceHideStatsLine(raw)) {
+        if (isSilentStatsBlankLine(raw)) {
+            ci.cancel();
+            return;
+        }
+
+        if (StatsLineClassifier.isStandaloneKdStatsLine(raw)) {
+            ci.cancel();
+            return;
+        }
+
+        if (shouldForceHideStatsMessage(message)) {
+            markStatsLineSuppressed();
             ci.cancel();
             return;
         }
@@ -191,6 +218,7 @@ public class ChatBlacklistMixin {
     private void updateMoney(String raw) {
         BankBalanceHud.updateFromChatLine(raw);
         CashHud.updateFromStatsLine(raw);
+        updateCurrentFaction(raw);
 
         Matcher blackMoneyMatcher = BLACK_MONEY_PATTERN.matcher(raw);
         if (blackMoneyMatcher.find()) {
@@ -202,6 +230,17 @@ public class ChatBlacklistMixin {
             int current = Integer.parseInt(paydayMatcher.group(1));
             int total = Integer.parseInt(paydayMatcher.group(2));
             PaydayHud.updateFromStats(current, total);
+        }
+
+        UserStatsClient.handleChatLine(MinecraftClient.getInstance(), raw);
+    }
+
+    private void updateCurrentFaction(String raw) {
+        if (raw == null || raw.isBlank()) return;
+        Matcher factionMatcher = FACTION_STATS_PATTERN.matcher(raw.trim());
+        if (!factionMatcher.find()) return;
+        if (BetterUCConfig.updateCurrentPlayerFactionFromStats(factionMatcher.group(1))) {
+            PingRelayClient.refreshIdentity(MinecraftClient.getInstance());
         }
     }
 
@@ -299,13 +338,55 @@ public class ChatBlacklistMixin {
     }
 
     private boolean shouldForceHideStatsLine(String raw) {
+        long mainWindowUntilMs = Math.max(
+                forceHideStatsLinesUntilMs,
+                BetterUCSuppressFlags.forceHideStatsOutputUntilMs
+        );
+        long dashWindowUntilMs = Math.max(
+                forceHideDashStatsLinesUntilMs,
+                BetterUCSuppressFlags.forceHideDashStatsOutputUntilMs
+        );
         return StatsLineClassifier.shouldForceHideLine(
                 raw,
                 System.currentTimeMillis(),
                 forceHideAfkExitTailUntilMs,
-                forceHideStatsLinesUntilMs,
-                forceHideDashStatsLinesUntilMs
+                mainWindowUntilMs,
+                dashWindowUntilMs
         );
+    }
+
+    private boolean shouldForceHideStatsMessage(Text text) {
+        if (text == null) return false;
+        if (shouldForceHideStatsLine(text.getString())) return true;
+        if (isSilentStatsBlankLine(text.getString())) return true;
+
+        long now = System.currentTimeMillis();
+        boolean inStatsWindow = now <= Math.max(forceHideStatsLinesUntilMs, BetterUCSuppressFlags.forceHideStatsOutputUntilMs)
+                || now <= Math.max(forceHideDashStatsLinesUntilMs, BetterUCSuppressFlags.forceHideDashStatsOutputUntilMs)
+                || now <= forceHideAfkExitTailUntilMs;
+        return inStatsWindow && StatsLineClassifier.containsHoverSignal(text);
+    }
+
+    private boolean isSilentStatsBlankLine(String raw) {
+        if (raw == null || !raw.trim().isEmpty()) return false;
+        return capturingStats
+                || activeStatsCaptureIsSilent
+                || BetterUCSuppressFlags.suppressStatsOutput
+                || BetterUCSuppressFlags.pendingSilentStatsRequests > 0
+                || BetterUCSuppressFlags.isSilentStatsCaptureActive()
+                || isStatsHideWindowActive();
+    }
+
+    private boolean isStatsHideWindowActive() {
+        long now = System.currentTimeMillis();
+        return now <= Math.max(forceHideStatsLinesUntilMs, BetterUCSuppressFlags.forceHideStatsOutputUntilMs)
+                || now <= Math.max(forceHideDashStatsLinesUntilMs, BetterUCSuppressFlags.forceHideDashStatsOutputUntilMs)
+                || now <= forceHideAfkExitTailUntilMs
+                || now - lastSuppressedStatsLineMs <= LINGERING_STATS_CLEANUP_WINDOW_MS;
+    }
+
+    private static void markStatsLineSuppressed() {
+        lastSuppressedStatsLineMs = System.currentTimeMillis();
     }
 
     private void finishStatsCapture() {
@@ -657,22 +738,34 @@ public class ChatBlacklistMixin {
 
     @Inject(method = "addMessage(Lnet/minecraft/client/gui/hud/ChatHudLine;)V", at = @At("TAIL"), require = 0)
     private void extendMessageHistory(net.minecraft.client.gui.hud.ChatHudLine message, CallbackInfo ci) {
-        try {
-            java.lang.reflect.Field f = ChatHud.class.getDeclaredField("messages");
-            f.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            java.util.List<Object> messages = (java.util.List<Object>) f.get(this);
-            while (messages.size() > BetterUCConfig.INSTANCE.maxChatHistory) {
-                messages.remove(messages.size() - 1);
-            }
-        } catch (Exception ignored) {
+        if (messages == null) return;
+
+        boolean removedStatsLine = messages.removeIf(this::isLingeringSilentStatsLine);
+        if (removedStatsLine) {
+            markStatsLineSuppressed();
+            refresh();
         }
+        while (messages.size() > BetterUCConfig.INSTANCE.maxChatHistory) {
+            messages.remove(messages.size() - 1);
+        }
+    }
+
+    private boolean isLingeringSilentStatsLine(ChatHudLine line) {
+        if (line == null) return false;
+        Text content = line.content();
+        if (content == null) return false;
+        if (shouldSuppressSilentStatsLine(content)) return true;
+        return isStatsHideWindowActive() && StatsLineClassifier.isKdStatsLine(content.getString());
     }
 
     private boolean shouldSuppressSilentStatsLine(Text text) {
         if (text == null) return false;
         String raw = text.getString();
-        if (shouldForceHideStatsLine(raw)) return true;
+        if (shouldForceHideStatsMessage(text)) {
+            markStatsLineSuppressed();
+            return true;
+        }
+        if (StatsLineClassifier.isStandaloneKdStatsLine(raw)) return true;
 
         boolean silentStatsExpected = capturingStats
                 || activeStatsCaptureIsSilent

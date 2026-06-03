@@ -1,11 +1,16 @@
 package com.betteruc.client;
 
 import com.betteruc.BetterUCMod;
+import com.betteruc.PlayerNameUtil;
 import com.betteruc.config.BetterUCConfig;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.client.network.ServerInfo;
 import net.minecraft.entity.Entity;
 import net.minecraft.text.Text;
@@ -18,6 +23,7 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
+import java.net.http.WebSocketHandshakeException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -34,13 +40,16 @@ public final class PingRelayClient {
             .build();
     private static final Object LOCK = new Object();
     private static final List<PingMarker> ACTIVE_PINGS = new ArrayList<>();
+    private static final List<RelayPlayer> ONLINE_PLAYERS = new ArrayList<>();
     private static final long RECONNECT_DELAY_MS = 5000L;
     private static final double PING_RAYCAST_DISTANCE = 128.0D;
+    private static final String FALLBACK_RELAY_URL = "ws://65.109.175.203:3000/ws";
 
     private static WebSocket webSocket;
     private static boolean connecting = false;
     private static boolean connected = false;
     private static String status = "Nicht verbunden";
+    private static String role = "user";
     private static long nextReconnectAtMs = 0L;
 
     private PingRelayClient() {
@@ -60,7 +69,7 @@ public final class PingRelayClient {
             return;
         }
 
-        if (BetterUCConfig.INSTANCE.pingRelayToken == null || BetterUCConfig.INSTANCE.pingRelayToken.isBlank()) {
+        if (!hasRelayCredential()) {
             disconnect();
             status = "Zugangscode fehlt";
             return;
@@ -79,6 +88,7 @@ public final class PingRelayClient {
     public static void onJoin(MinecraftClient client) {
         synchronized (LOCK) {
             ACTIVE_PINGS.clear();
+            ONLINE_PLAYERS.clear();
         }
         nextReconnectAtMs = 0L;
         tick(client);
@@ -88,6 +98,7 @@ public final class PingRelayClient {
         disconnect();
         synchronized (LOCK) {
             ACTIVE_PINGS.clear();
+            ONLINE_PLAYERS.clear();
         }
     }
 
@@ -97,6 +108,11 @@ public final class PingRelayClient {
             sendLocalMessage(client, "Ping System ist nicht verbunden (" + status + ").");
             return false;
         }
+        String scope = pingScope();
+        if ("faction".equals(scope) && currentFaction().isBlank()) {
+            sendLocalMessage(client, "Fraktion noch nicht erkannt. Bitte /stats aktualisieren.");
+            return false;
+        }
 
         PingTarget target = targetFromCrosshair(client);
         JsonObject payload = new JsonObject();
@@ -104,6 +120,7 @@ public final class PingRelayClient {
         payload.addProperty("sender", playerName(client));
         payload.addProperty("server", currentServerId(client));
         payload.addProperty("channel", channel());
+        payload.addProperty("scope", scope);
         payload.addProperty("dimension", currentDimension(client));
         payload.addProperty("x", target.pos.x);
         payload.addProperty("y", target.pos.y);
@@ -130,11 +147,38 @@ public final class PingRelayClient {
         return status;
     }
 
+    public static boolean isAdminSession() {
+        return connected && "admin".equals(role);
+    }
+
+    public static String roleLabel() {
+        return "admin".equals(role) ? "Admin" : "Spieler";
+    }
+
+    public static void refreshIdentity(MinecraftClient client) {
+        WebSocket socket = webSocket;
+        if (!connected || socket == null || client == null || client.player == null) return;
+        try {
+            sendHello(socket, client);
+        } catch (Exception e) {
+            BetterUCMod.LOGGER.debug("Could not refresh betterUC ping relay identity", e);
+        }
+    }
+
     public static List<PingMarker> activePings() {
         cleanupExpired();
         synchronized (LOCK) {
             return new ArrayList<>(ACTIVE_PINGS);
         }
+    }
+
+    public static boolean hasBetterUCBadge(PlayerListEntry entry) {
+        return findRelayPlayer(entry) != null;
+    }
+
+    public static boolean hasAdminBadge(PlayerListEntry entry) {
+        RelayPlayer player = findRelayPlayer(entry);
+        return player != null && player.admin();
     }
 
     public static String currentServerId(MinecraftClient client) {
@@ -153,7 +197,11 @@ public final class PingRelayClient {
     }
 
     private static void connect(MinecraftClient client) {
-        URI uri = relayUri(client);
+        connect(client, false);
+    }
+
+    private static void connect(MinecraftClient client, boolean fallbackAttempt) {
+        URI uri = relayUri(client, fallbackAttempt);
         if (uri == null) {
             status = "Server ungültig";
             nextReconnectAtMs = System.currentTimeMillis() + RECONNECT_DELAY_MS;
@@ -162,12 +210,31 @@ public final class PingRelayClient {
 
         connecting = true;
         status = "Verbinde...";
-        HTTP_CLIENT.newWebSocketBuilder()
-                .connectTimeout(Duration.ofSeconds(6))
-                .header("X-BetterUC-Token", BetterUCConfig.INSTANCE.pingRelayToken.trim())
-                .buildAsync(uri, new RelayListener(client))
+        WebSocket.Builder builder = HTTP_CLIENT.newWebSocketBuilder()
+                .connectTimeout(Duration.ofSeconds(6));
+        String token = accessToken();
+        if (!token.isBlank()) {
+            builder.header("X-BetterUC-Token", token);
+        }
+        builder.buildAsync(uri, new RelayListener(client))
                 .whenComplete((socket, error) -> {
                     if (error != null) {
+                        String connectionStatus = statusFromConnectionError(error);
+                        if (connectionStatus != null) {
+                            markDisconnected(connectionStatus);
+                            BetterUCMod.LOGGER.debug("betterUC ping relay connection failed", error);
+                            return;
+                        }
+
+                        if (!fallbackAttempt && shouldTryFallbackRelay()) {
+                            webSocket = null;
+                            connected = false;
+                            connecting = false;
+                            BetterUCMod.LOGGER.debug("betterUC ping relay domain connection failed, trying temporary fallback", error);
+                            connect(client, true);
+                            return;
+                        }
+
                         markDisconnected("Offline");
                         BetterUCMod.LOGGER.debug("betterUC ping relay connection failed", error);
                         return;
@@ -177,9 +244,9 @@ public final class PingRelayClient {
                 });
     }
 
-    private static URI relayUri(MinecraftClient client) {
+    private static URI relayUri(MinecraftClient client, boolean fallbackAttempt) {
         try {
-            String raw = BetterUCConfig.INSTANCE.pingRelayUrl.trim();
+            String raw = fallbackAttempt ? FALLBACK_RELAY_URL : BetterUCConfig.INSTANCE.pingRelayUrl.trim();
             if (raw.startsWith("http://")) raw = "ws://" + raw.substring("http://".length());
             if (raw.startsWith("https://")) raw = "wss://" + raw.substring("https://".length());
             if (!raw.startsWith("ws://") && !raw.startsWith("wss://")) raw = "ws://" + raw;
@@ -190,8 +257,11 @@ public final class PingRelayClient {
             String separator = raw.contains("?") ? "&" : "?";
             String url = raw + separator
                     + "name=" + encode(playerName(client))
+                    + "&uuid=" + encode(playerUuid(client))
                     + "&server=" + encode(currentServerId(client))
-                    + "&channel=" + encode(channel());
+                    + "&channel=" + encode(channel())
+                    + "&faction=" + encode(currentFaction())
+                    + "&version=" + encode(modVersion());
             return URI.create(url);
         } catch (Exception e) {
             BetterUCMod.LOGGER.warn("Invalid betterUC ping relay URL", e);
@@ -199,13 +269,29 @@ public final class PingRelayClient {
         }
     }
 
+    private static boolean shouldTryFallbackRelay() {
+        String raw = BetterUCConfig.INSTANCE.pingRelayUrl == null
+                ? ""
+                : BetterUCConfig.INSTANCE.pingRelayUrl.trim().toLowerCase(Locale.ROOT);
+        return raw.equals(BetterUCConfig.DEFAULT_PING_RELAY_URL)
+                || raw.equals("ping.betteruc.de")
+                || raw.equals("ping.betteruc.de/ws")
+                || raw.equals("https://ping.betteruc.de")
+                || raw.equals("https://ping.betteruc.de/ws")
+                || raw.equals("wss://ping.betteruc.de")
+                || raw.equals("wss://ping.betteruc.de/ws");
+    }
+
     private static void sendHello(WebSocket socket, MinecraftClient client) {
         if (socket == null || client == null || client.player == null) return;
         JsonObject hello = new JsonObject();
         hello.addProperty("type", "hello");
         hello.addProperty("name", playerName(client));
+        hello.addProperty("uuid", playerUuid(client));
         hello.addProperty("server", currentServerId(client));
         hello.addProperty("channel", channel());
+        hello.addProperty("faction", currentFaction());
+        hello.addProperty("version", modVersion());
         socket.sendText(GSON.toJson(hello), true);
     }
 
@@ -215,7 +301,13 @@ public final class PingRelayClient {
             String type = stringValue(json, "type", "");
             if ("welcome".equals(type) || "hello_ack".equals(type)) {
                 connected = true;
-                status = "Verbunden";
+                role = stringValue(json, "role", role).trim().toLowerCase(Locale.ROOT);
+                status = "admin".equals(role) ? "Admin verbunden" : "Verbunden";
+                return;
+            }
+
+            if ("presence".equals(type)) {
+                updatePresence(json);
                 return;
             }
 
@@ -279,6 +371,10 @@ public final class PingRelayClient {
         webSocket = null;
         connecting = false;
         connected = false;
+        role = "user";
+        synchronized (LOCK) {
+            ONLINE_PLAYERS.clear();
+        }
         if (socket != null) {
             try {
                 socket.sendClose(WebSocket.NORMAL_CLOSURE, "bye");
@@ -291,8 +387,53 @@ public final class PingRelayClient {
         webSocket = null;
         connected = false;
         connecting = false;
+        role = "user";
+        synchronized (LOCK) {
+            ONLINE_PLAYERS.clear();
+        }
         status = newStatus;
         nextReconnectAtMs = System.currentTimeMillis() + RECONNECT_DELAY_MS;
+    }
+
+    private static String statusFromConnectionError(Throwable error) {
+        for (Throwable current = error; current != null; current = current.getCause()) {
+            if (current instanceof WebSocketHandshakeException handshakeException) {
+                int code = handshakeException.getResponse().statusCode();
+                if (code == 401 || code == 403) {
+                    return "Access Code ungueltig";
+                }
+                if (code == 404) {
+                    return "Relay-Route fehlt";
+                }
+                if (code >= 500) {
+                    return "Relay-Fehler";
+                }
+            }
+        }
+        return null;
+    }
+
+    private static void updatePresence(JsonObject json) {
+        JsonArray players = json.has("players") && json.get("players").isJsonArray()
+                ? json.getAsJsonArray("players")
+                : new JsonArray();
+        List<RelayPlayer> nextPlayers = new ArrayList<>();
+        for (JsonElement element : players) {
+            if (!element.isJsonObject()) continue;
+            JsonObject player = element.getAsJsonObject();
+            String name = stringValue(player, "name", "");
+            if (name.isBlank()) continue;
+            nextPlayers.add(new RelayPlayer(
+                    name.toLowerCase(Locale.ROOT),
+                    stringValue(player, "uuid", ""),
+                    "admin".equals(stringValue(player, "role", "user")),
+                    longValue(player, "priority", 50L)
+            ));
+        }
+        synchronized (LOCK) {
+            ONLINE_PLAYERS.clear();
+            ONLINE_PLAYERS.addAll(nextPlayers);
+        }
     }
 
     private static String channel() {
@@ -300,10 +441,60 @@ public final class PingRelayClient {
         return raw.isEmpty() ? "global" : raw.replaceAll("[^A-Za-z0-9_-]", "").toLowerCase(Locale.ROOT);
     }
 
+    private static String pingScope() {
+        String raw = BetterUCConfig.INSTANCE.pingRelayScope == null ? "" : BetterUCConfig.INSTANCE.pingRelayScope.trim();
+        return "faction".equalsIgnoreCase(raw) ? "faction" : "global";
+    }
+
+    private static boolean hasRelayCredential() {
+        return !accessToken().isBlank();
+    }
+
+    private static String accessToken() {
+        return BetterUCConfig.INSTANCE.pingRelayToken == null ? "" : BetterUCConfig.INSTANCE.pingRelayToken.trim();
+    }
+
+    private static RelayPlayer findRelayPlayer(PlayerListEntry entry) {
+        if (entry == null) return null;
+        String name = PlayerNameUtil.resolveProfileName(entry.getProfile());
+        if (name == null || name.isBlank()) return null;
+        String normalizedName = name.toLowerCase(Locale.ROOT);
+        synchronized (LOCK) {
+            for (RelayPlayer player : ONLINE_PLAYERS) {
+                if (player.nameLower().equals(normalizedName)) {
+                    return player;
+                }
+            }
+        }
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (connected && client != null && client.player != null
+                && normalizedName.equals(playerName(client).toLowerCase(Locale.ROOT))) {
+            return new RelayPlayer(normalizedName, playerUuid(client), isAdminSession(), isAdminSession() ? 100L : 50L);
+        }
+        return null;
+    }
+
+    private static String currentFaction() {
+        String raw = BetterUCConfig.INSTANCE.currentPlayerFaction == null ? "" : BetterUCConfig.INSTANCE.currentPlayerFaction.trim();
+        return raw.replaceAll("[^A-Za-z0-9_-]", "").toLowerCase(Locale.ROOT);
+    }
+
     private static String playerName(MinecraftClient client) {
         if (client == null || client.player == null) return "unknown";
         String name = client.player.getName().getString();
         return name == null || name.isBlank() ? "unknown" : name;
+    }
+
+    private static String playerUuid(MinecraftClient client) {
+        if (client == null || client.player == null || client.player.getUuid() == null) return "";
+        return client.player.getUuid().toString();
+    }
+
+    private static String modVersion() {
+        return FabricLoader.getInstance()
+                .getModContainer("betteruc")
+                .map(container -> container.getMetadata().getVersion().getFriendlyString())
+                .orElse("unknown");
     }
 
     private static String encode(String value) {
@@ -351,6 +542,9 @@ public final class PingRelayClient {
     }
 
     private record PingTarget(Vec3d pos, String label) {
+    }
+
+    private record RelayPlayer(String nameLower, String uuid, boolean admin, long priority) {
     }
 
     private static final class RelayListener implements WebSocket.Listener {

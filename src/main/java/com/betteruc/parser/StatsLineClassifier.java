@@ -11,7 +11,7 @@ public final class StatsLineClassifier {
     private static final Pattern HEADER_PATTERN = Pattern.compile("statistiken", Pattern.CASE_INSENSITIVE);
     private static final Pattern TIMED_LINE_PATTERN = Pattern.compile("^\\d{1,2}:\\d{2}:\\d{2}\\s+-\\s+.*");
     private static final Pattern KEYWORD_PATTERN = Pattern.compile(
-            "\\b(status|level|inventar|wanted\\s+punkte|geld|schwarzgeld|verwarnungen|zeit\\s+seit\\s+payday|experience|fraktion|haus|immobilien|beruf|votepoints|treuebonus|spielzeit|K/D)\\b",
+            "\\b(status|level|inventar|wanted\\s+punkte|geld|schwarzgeld|verwarnungen|zeit\\s+seit\\s+payday|experience|fraktion|haus|immobilien|beruf|votepoints|treuebonus|spielzeit)\\b",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern HOVER_KEYWORD_PATTERN = Pattern.compile(
@@ -19,7 +19,11 @@ public final class StatsLineClassifier {
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern KD_LINE_PATTERN = Pattern.compile(
-            "^\\s*-\\sK/D:\\s[\\d.]+$",
+            "\\bk\\s*[/\\\\|._-]?\\s*d\\s*:?\\s*[0-9]+(?:[.,][0-9]+)?\\b",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern STANDALONE_KD_STATS_LINE_PATTERN = Pattern.compile(
+            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s+)?-\\s*.*k\\s*[/\\\\|._-]?\\s*d\\s*:?\\s*[0-9]+(?:[.,][0-9]+)?.*$",
             Pattern.CASE_INSENSITIVE
     );
 
@@ -34,7 +38,7 @@ public final class StatsLineClassifier {
         String trimmed = normalize(raw);
         if (trimmed.isEmpty()) return false;
         if (isHeader(trimmed)) return true;
-        if (KD_LINE_PATTERN.matcher(trimmed).matches()) return true;
+        if (isKdLine(trimmed)) return true;
         if (startsWithListDash(trimmed) || trimmed.startsWith("=")) return true;
         if (KEYWORD_PATTERN.matcher(trimmed).find() && trimmed.contains(":")) return true;
         return TIMED_LINE_PATTERN.matcher(trimmed).matches();
@@ -48,8 +52,22 @@ public final class StatsLineClassifier {
         boolean dashPrefixed = startsWithListDash(trimmed);
         boolean hasKeyword = KEYWORD_PATTERN.matcher(trimmed).find();
 
+        if (isKdLine(trimmed)) return true;
         if (timed && hasKeyword) return true;
         return dashPrefixed && hasKeyword;
+    }
+
+    public static boolean isKdStatsLine(String raw) {
+        return isKdLine(normalize(raw));
+    }
+
+    public static boolean isStandaloneKdStatsLine(String raw) {
+        String normalized = normalize(raw);
+        if (normalized.isBlank()) return false;
+        normalized = normalized.replaceAll("(?i)\\u00A7[0-9A-FK-OR]", "");
+        normalized = stripTimestampPrefix(normalized);
+        return STANDALONE_KD_STATS_LINE_PATTERN.matcher(normalized).matches()
+                || STANDALONE_KD_STATS_LINE_PATTERN.matcher(raw == null ? "" : raw.replaceAll("(?i)\\u00A7[0-9A-FK-OR]", "")).matches();
     }
 
     public static boolean shouldForceHideLine(
@@ -128,9 +146,15 @@ public final class StatsLineClassifier {
 
         String work = stripTimestampPrefix(normalized);
         if (!work.startsWith("-")) return false;
-        if (KD_LINE_PATTERN.matcher(work).matches()) return true;
+        if (isKdLine(work)) return true;
+        if (KEYWORD_PATTERN.matcher(work).find() && work.contains(":")) return true;
 
         return work.matches("^-\\s*[A-Za-z\\u00C4\\u00D6\\u00DC\\u00E4\\u00F6\\u00FC\\u00DF/._| -]{1,40}\\s*:?\\s*[0-9].*$");
+    }
+
+    private static boolean isKdLine(String normalized) {
+        String work = stripTimestampPrefix(normalized == null ? "" : normalized.trim());
+        return startsWithListDash(work) && KD_LINE_PATTERN.matcher(work).find();
     }
 
     private static boolean isAfkExitTailLine(String normalized) {
@@ -140,8 +164,7 @@ public final class StatsLineClassifier {
         String lower = work.toLowerCase(Locale.ROOT);
         if (!lower.startsWith("-")) return false;
 
-        if (lower.contains("immobilien")) return true;
-        return lower.matches("^-\\s*k\\s*[/\\\\|._-]?\\s*d(\\s*:?\\s*.*)?$");
+        return isDashStatTailLine(work);
     }
 
     private static String stripTimestampPrefix(String normalized) {
@@ -149,7 +172,7 @@ public final class StatsLineClassifier {
         if (work.matches("^\\d{1,2}:\\d{2}:\\d{2}\\s+.*$")) {
             work = work.replaceFirst("^\\d{1,2}:\\d{2}:\\d{2}\\s+", "");
         }
-        return work;
+        return work.trim();
     }
 
     private static String normalize(String input) {

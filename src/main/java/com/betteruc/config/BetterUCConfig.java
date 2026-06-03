@@ -2,6 +2,7 @@ package com.betteruc.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.betteruc.parser.FactionStatsParser;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.File;
@@ -68,9 +69,11 @@ public class BetterUCConfig {
     public static final String HUD_STYLE_TRANSPARENT = "transparent";
     public static final String HUD_STYLE_CARTOON = "cartoon";
     public static final String HUD_STYLE_CUSTOM = "custom";
-    public static final String DEFAULT_PING_RELAY_URL = "ws://65.109.175.203:3000/ws";
+    public static final String DEFAULT_PING_RELAY_URL = "wss://ping.betteruc.de/ws";
+    private static final String LEGACY_PING_RELAY_URL = "ws://65.109.175.203:3000/ws";
     public static BetterUCConfig INSTANCE = new BetterUCConfig();
     private static final List<TrackableFaction> TRACKABLE_FACTIONS = List.of(
+            new TrackableFaction("Zivilist", "zivilist"),
             new TrackableFaction("Polizei", "polizei"),
             new TrackableFaction("FBI", "fbi"),
             new TrackableFaction("Rettungsdienst", "medic"),
@@ -79,7 +82,9 @@ public class BetterUCConfig {
             new TrackableFaction("Calderon Kartell", "kartell"),
             new TrackableFaction("Kerzakov Familie", "kerzakov"),
             new TrackableFaction("Yakuza", "yakuza"),
-            new TrackableFaction("S\u00F6ldner", "soeldner")
+            new TrackableFaction("S\u00F6ldner", "soeldner"),
+            new TrackableFaction("News", "news"),
+            new TrackableFaction("Ordo Absolutus", "ordo")
     );
 
     public static final class TrackableFaction {
@@ -202,6 +207,8 @@ public class BetterUCConfig {
     public String chatTimestampFormat = "[HH:mm:ss]";
     public int maxChatHistory = 2000;
     public int lastKnownCash = -1;
+    public String currentPlayerFaction = "";
+    public String currentPlayerFactionLabel = "";
     public boolean pingRelayEnabled = true;
     public boolean showPingHud = true;
     public float pingHudScale = DEFAULT_HUD_SCALE;
@@ -210,6 +217,7 @@ public class BetterUCConfig {
     public String pingRelayUrl = DEFAULT_PING_RELAY_URL;
     public String pingRelayToken = "";
     public String pingRelayChannel = "global";
+    public String pingRelayScope = "global";
     public int pingRelayTtlSeconds = 15;
     public int pingRelayMaxDistance = 3000;
     public String pingRelayColor = "#38BDF8";
@@ -316,6 +324,8 @@ public class BetterUCConfig {
     private static void sanitizePingRelay() {
         if (INSTANCE.pingRelayUrl == null || INSTANCE.pingRelayUrl.isBlank()) {
             INSTANCE.pingRelayUrl = DEFAULT_PING_RELAY_URL;
+        } else if (isLegacyPingRelayUrl(INSTANCE.pingRelayUrl)) {
+            INSTANCE.pingRelayUrl = DEFAULT_PING_RELAY_URL;
         }
         if (INSTANCE.pingRelayToken == null) {
             INSTANCE.pingRelayToken = "";
@@ -329,6 +339,13 @@ public class BetterUCConfig {
                     .toLowerCase(Locale.ROOT);
             INSTANCE.pingRelayChannel = cleaned.isEmpty() ? "global" : cleaned;
         }
+        if (INSTANCE.pingRelayScope == null
+                || (!INSTANCE.pingRelayScope.equalsIgnoreCase("global")
+                && !INSTANCE.pingRelayScope.equalsIgnoreCase("faction"))) {
+            INSTANCE.pingRelayScope = "global";
+        } else {
+            INSTANCE.pingRelayScope = INSTANCE.pingRelayScope.equalsIgnoreCase("faction") ? "faction" : "global";
+        }
         INSTANCE.pingRelayTtlSeconds = Math.max(5, Math.min(60, INSTANCE.pingRelayTtlSeconds));
         INSTANCE.pingRelayMaxDistance = Math.max(50, Math.min(10000, INSTANCE.pingRelayMaxDistance));
         if (INSTANCE.pingRelayColor == null || !INSTANCE.pingRelayColor.matches("#?[0-9A-Fa-f]{6}")) {
@@ -336,6 +353,16 @@ public class BetterUCConfig {
         } else if (!INSTANCE.pingRelayColor.startsWith("#")) {
             INSTANCE.pingRelayColor = "#" + INSTANCE.pingRelayColor;
         }
+    }
+
+    private static boolean isLegacyPingRelayUrl(String url) {
+        String normalized = url == null ? "" : url.trim().toLowerCase(Locale.ROOT);
+        return normalized.equals(LEGACY_PING_RELAY_URL)
+                || normalized.equals("65.109.175.203:3000")
+                || normalized.equals("65.109.175.203:3000/ws")
+                || normalized.equals("http://65.109.175.203:3000")
+                || normalized.equals("http://65.109.175.203:3000/ws")
+                || normalized.equals("ws://65.109.175.203:3000");
     }
 
     private static Map<String, BlacklistReason> defaultBlacklistReasons() {
@@ -376,15 +403,46 @@ public class BetterUCConfig {
         if (folded.isEmpty()) return "";
 
         if (folded.equals("calderon kartell") || folded.equals("kartell")) return "kartell";
+        if (folded.equals("zivilist") || folded.equals("zivi") || folded.equals("ziv")) return "zivilist";
         if (folded.equals("rettungsdienst") || folded.equals("retungsdienst") || folded.equals("medic")) return "medic";
         if (folded.equals("la cosa nostra") || folded.equals("lcn")) return "lcn";
         if (folded.equals("westside ballas") || folded.equals("ballas")) return "ballas";
         if (folded.equals("soldner") || folded.equals("soeldner")) return "soeldner";
+        if (folded.equals("ordo absolutus") || folded.equals("ordo")) return "ordo";
         if (folded.equals("kf") || folded.equals("k f")
                 || folded.equals("kerzakov") || folded.equals("kerzakov familie")
                 || folded.equals("kerzakov family")) return "kerzakov";
         if (folded.equals("f b i")) return "fbi";
         return folded;
+    }
+
+    public static String factionQueryFromStatsValue(String raw) {
+        return FactionStatsParser.queryFromStatsValue(raw);
+    }
+
+    public static boolean updateCurrentPlayerFactionFromStats(String rawFactionValue) {
+        String query = factionQueryFromStatsValue(rawFactionValue);
+        if (query.isEmpty()) return false;
+
+        String label = factionLabelForQuery(query);
+        boolean changed = !query.equals(INSTANCE.currentPlayerFaction)
+                || !label.equals(INSTANCE.currentPlayerFactionLabel);
+        INSTANCE.currentPlayerFaction = query;
+        INSTANCE.currentPlayerFactionLabel = label;
+        if (changed) {
+            save();
+        }
+        return changed;
+    }
+
+    public static void clearCurrentPlayerFaction() {
+        if ((INSTANCE.currentPlayerFaction == null || INSTANCE.currentPlayerFaction.isBlank())
+                && (INSTANCE.currentPlayerFactionLabel == null || INSTANCE.currentPlayerFactionLabel.isBlank())) {
+            return;
+        }
+        INSTANCE.currentPlayerFaction = "";
+        INSTANCE.currentPlayerFactionLabel = "";
+        save();
     }
 
     public static String memberInfoCommandQueryFor(String raw) {

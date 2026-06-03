@@ -31,7 +31,7 @@ public final class PingHud {
         if (client.player == null || client.world == null) return;
 
         List<PingRelayClient.PingMarker> markers = PingRelayClient.activePings().stream()
-                .filter(marker -> PingRelayClient.currentDimension(client).equals(marker.dimension()))
+                .filter(marker -> sameDimension(PingRelayClient.currentDimension(client), marker.dimension()))
                 .filter(marker -> distanceToPlayer(client, marker) <= BetterUCConfig.INSTANCE.pingRelayMaxDistance)
                 .sorted(Comparator.comparingLong(PingRelayClient.PingMarker::createdAt).reversed())
                 .limit(5)
@@ -45,8 +45,10 @@ public final class PingHud {
     }
 
     private static void renderWorldMarker(DrawContext context, MinecraftClient client, PingRelayClient.PingMarker marker) {
-        ScreenPoint target = projectToScreen(client, marker);
-        if (target == null) return;
+        long target = projectToScreen(client, marker);
+        if (target == Long.MIN_VALUE) return;
+        int targetX = unpackScreenX(target);
+        int targetY = unpackScreenY(target);
 
         int screenW = client.getWindow().getScaledWidth();
         int screenH = client.getWindow().getScaledHeight();
@@ -62,8 +64,8 @@ public final class PingHud {
         int scaledWidth = ModernHudRenderer.scaledSize(width, scale);
         int scaledHeight = ModernHudRenderer.scaledSize(height, scale);
         int markerGap = ModernHudRenderer.scaledSize(17, scale);
-        int x = MathHelper.clamp(target.x() - scaledWidth / 2, 8, Math.max(8, screenW - scaledWidth - 8));
-        int y = MathHelper.clamp(target.y() - scaledHeight - markerGap, 8, Math.max(8, screenH - scaledHeight - 8));
+        int x = MathHelper.clamp(targetX - scaledWidth / 2, 8, Math.max(8, screenW - scaledWidth - 8));
+        int y = MathHelper.clamp(targetY - scaledHeight - markerGap, 8, Math.max(8, screenH - scaledHeight - 8));
         int accent = color(marker);
 
         ModernHudRenderer.drawScaled(context, x, y, scale, () ->
@@ -72,12 +74,12 @@ public final class PingHud {
 
         int cross = Math.max(4, ModernHudRenderer.scaledSize(5, scale));
         int thickness = Math.max(1, ModernHudRenderer.scaledSize(1, scale));
-        context.fill(target.x() - cross, target.y(), target.x() + cross + 1, target.y() + thickness, accent);
-        context.fill(target.x(), target.y() - cross, target.x() + thickness, target.y() + cross + 1, accent);
-        int lineEndY = target.y() - 6;
+        context.fill(targetX - cross, targetY, targetX + cross + 1, targetY + thickness, accent);
+        context.fill(targetX, targetY - cross, targetX + thickness, targetY + cross + 1, accent);
+        int lineEndY = targetY - 6;
         int lineStartY = y + scaledHeight;
         if (lineEndY > lineStartY) {
-            context.fill(target.x() - thickness / 2, lineStartY, target.x() + thickness, lineEndY, accent);
+            context.fill(targetX - thickness / 2, lineStartY, targetX + thickness, lineEndY, accent);
         }
     }
 
@@ -118,19 +120,24 @@ public final class PingHud {
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
-    private static ScreenPoint projectToScreen(MinecraftClient client, PingRelayClient.PingMarker marker) {
+    private static long projectToScreen(MinecraftClient client, PingRelayClient.PingMarker marker) {
         Vec3d target = new Vec3d(marker.x(), marker.y(), marker.z());
         Vec3d cameraPos = client.gameRenderer.getCamera().getPos();
         Vec3d toTarget = target.subtract(cameraPos);
-        if (toTarget.lengthSquared() < 0.0001D) return null;
+        if (toTarget.lengthSquared() < 0.0001D) return Long.MIN_VALUE;
+
+        Vec3d cameraLook = Vec3d.fromPolar(client.gameRenderer.getCamera().getPitch(), client.gameRenderer.getCamera().getYaw());
+        if (toTarget.normalize().dotProduct(cameraLook.normalize()) <= 0.05D) {
+            return Long.MIN_VALUE;
+        }
 
         Vec3d look = client.player.getRotationVec(1.0F);
         if (toTarget.normalize().dotProduct(look.normalize()) <= 0.05D) {
-            return null;
+            return Long.MIN_VALUE;
         }
 
         Vec3d projected = client.gameRenderer.project(target);
-        if (!Double.isFinite(projected.x) || !Double.isFinite(projected.y)) return null;
+        if (!Double.isFinite(projected.x) || !Double.isFinite(projected.y)) return Long.MIN_VALUE;
 
         int screenW = client.getWindow().getScaledWidth();
         int screenH = client.getWindow().getScaledHeight();
@@ -138,9 +145,21 @@ public final class PingHud {
         int y = (int) Math.round((1.0D - projected.y) * 0.5D * screenH);
 
         if (x < -32 || x > screenW + 32 || y < -32 || y > screenH + 32) {
-            return null;
+            return Long.MIN_VALUE;
         }
-        return new ScreenPoint(MathHelper.clamp(x, 0, screenW), MathHelper.clamp(y, 0, screenH));
+        return packScreenPoint(MathHelper.clamp(x, 0, screenW), MathHelper.clamp(y, 0, screenH));
+    }
+
+    private static long packScreenPoint(int x, int y) {
+        return ((long) x << 32) | (y & 0xFFFFFFFFL);
+    }
+
+    private static int unpackScreenX(long point) {
+        return (int) (point >> 32);
+    }
+
+    private static int unpackScreenY(long point) {
+        return (int) point;
     }
 
     private static int color(PingRelayClient.PingMarker marker) {
@@ -166,6 +185,14 @@ public final class PingHud {
         return value == null || value.isBlank() ? "Ping" : value.trim();
     }
 
-    private record ScreenPoint(int x, int y) {
+    private static boolean sameDimension(String current, String marker) {
+        String currentNormalized = normalizeDimension(current);
+        String markerNormalized = normalizeDimension(marker);
+        return !currentNormalized.isEmpty() && currentNormalized.equals(markerNormalized);
+    }
+
+    private static String normalizeDimension(String value) {
+        if (value == null) return "";
+        return value.trim().toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]", "");
     }
 }

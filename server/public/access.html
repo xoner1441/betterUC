@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>betterUC Access</title>
+  <meta name="description" content="betterUC Access Code für die Minecraft Mod erstellen.">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="betterUC Startseite">
+      <span class="brand-mark">bU</span>
+      <span>betterUC</span>
+    </a>
+    <nav class="nav">
+      <a href="/#download">Download</a>
+      <a href="/#updates">Updates</a>
+      <a href="/access">Access</a>
+      <a href="/panel">Userpanel</a>
+      <a href="https://github.com/xoner1441/betterUC/releases" rel="noreferrer">GitHub</a>
+    </nav>
+  </header>
+
+  <main class="panel-main">
+    <section class="section access-layout">
+      <div>
+        <p class="section-label">Access</p>
+        <h1 class="panel-title">Eigenen Access Code erstellen</h1>
+        <p class="lead">Dieser Code verifiziert deine Mod-Instanz und verbindet sie mit deinem betterUC Account.</p>
+        <p>Er wird für Tablisten-Icons, Mod-User-Erkennung, private Pings und künftige fraktionsbasierte Funktionen genutzt.</p>
+        <p class="quiet">Der Code wird nur einmal angezeigt. Im Server wird nur ein Hash gespeichert.</p>
+      </div>
+
+      <form id="accessForm" class="tool-panel">
+        <label>
+          Minecraft Name
+          <input id="minecraftName" name="minecraftName" maxlength="16" placeholder="FABI1441" autocomplete="off">
+        </label>
+        <label>
+          Fraktion optional
+          <input id="faction" name="faction" maxlength="48" placeholder="Calderon Kartell" autocomplete="off">
+        </label>
+        <button class="button primary full" type="submit">Access Code generieren</button>
+        <p id="accessMessage" class="form-message" role="status"></p>
+        <div id="tokenBox" class="token-box" hidden>
+          <span>Dein Access Code</span>
+          <code id="generatedToken"></code>
+          <button id="copyToken" class="button secondary full" type="button">Code kopieren</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>betterUC</span>
+    <span id="onlineInfo">Relay wird geprüft</span>
+  </footer>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>

@@ -68,5 +68,19 @@ class ParserSmokeTest {
         assertTrue(StatsLineClassifier.isHeader("=== Statistiken ==="));
         assertTrue(StatsLineClassifier.isDetailLine("- Geld: 197925$"));
         assertTrue(StatsLineClassifier.isImplicitDetailLine("12:34:56 - K/D: 1.45"));
+        assertTrue(StatsLineClassifier.isDetailLine(" - K / D : 1,48 "));
+        assertTrue(StatsLineClassifier.isDetailLine("06:53:37    - K/D: 1.48"));
+        assertTrue(StatsLineClassifier.isStandaloneKdStatsLine("14:04:31    - K/D: 1.48"));
+        assertTrue(StatsLineClassifier.isStandaloneKdStatsLine("\u00A7714:04:31 \u00A78- \u00A7eK/D: \u00A7c1.48"));
+    }
+
+    @Test
+    void statsFactionValueMapsKnownFactionsAndRanks() {
+        assertEquals("zivilist", FactionStatsParser.queryFromStatsValue("Zivilist"));
+        assertEquals("zivilist", FactionStatsParser.queryFromStatsValue("Zivilist Rang 0"));
+        assertEquals("kartell", FactionStatsParser.queryFromStatsValue("Calder\u00F3n Kartell Leader"));
+        assertEquals("news", FactionStatsParser.queryFromStatsValue("News"));
+        assertEquals("ordo", FactionStatsParser.queryFromStatsValue("Ordo Absolutus"));
+        assertEquals("soeldner", FactionStatsParser.queryFromStatsValue("S\u00F6ldner"));
     }
 }

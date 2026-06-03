@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>betterUC Userpanel</title>
+  <meta name="description" content="betterUC Userpanel für getrackte UnicaCity-Daten.">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="betterUC Startseite">
+      <span class="brand-mark">bU</span>
+      <span>betterUC</span>
+    </a>
+    <nav class="nav">
+      <a href="/#download">Download</a>
+      <a href="/#updates">Updates</a>
+      <a href="/access">Access</a>
+      <a href="/panel">Userpanel</a>
+      <a href="https://github.com/xoner1441/betterUC/releases" rel="noreferrer">GitHub</a>
+    </nav>
+  </header>
+
+  <main class="panel-main">
+    <section class="section panel-layout">
+      <div>
+        <p class="section-label">Userpanel</p>
+        <h1 class="panel-title">Deine Daten</h1>
+        <p class="lead">Hier findest du deine von betterUC erkannten Werte aus dem Spiel.</p>
+        <p>Logge dich mit deinem Minecraft-Namen und dem Passwort ein, das du ingame mit <code>/register &lt;passwort&gt;</code> gesetzt hast.</p>
+        <p class="quiet">Bank, Bargeld, Häuser, Treuebonus, Spielzeit, Votepoints und Warns werden automatisch aktualisiert, sobald die Mod neue Statistikdaten erkennt.</p>
+      </div>
+
+      <div class="panel-stack">
+        <form id="panelLoginForm" class="tool-panel">
+          <label>
+            Minecraft Name
+            <input id="panelMinecraftName" name="minecraftName" maxlength="16" placeholder="FABI1441" autocomplete="username">
+          </label>
+          <label>
+            Passwort
+            <input id="panelPassword" name="password" type="password" minlength="6" maxlength="72" autocomplete="current-password">
+          </label>
+          <button class="button primary full" type="submit">Einloggen</button>
+          <p id="panelMessage" class="form-message" role="status"></p>
+        </form>
+
+        <div id="panelDashboard" class="tool-panel panel-dashboard" hidden>
+          <div class="panel-profile">
+            <div>
+              <span>Angemeldet als</span>
+              <strong id="panelUsername">-</strong>
+            </div>
+            <div class="panel-profile-actions">
+              <button id="panelAdmin" class="button secondary" type="button" hidden>Adminpanel</button>
+              <button id="panelLogout" class="button secondary" type="button">Ausloggen</button>
+            </div>
+          </div>
+          <div id="panelStats" class="panel-stat-grid"></div>
+          <div class="panel-refresh-row">
+            <span id="panelUpdated">Noch keine Stats empfangen</span>
+            <button id="panelRefresh" class="button secondary" type="button">Aktualisieren</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>betterUC</span>
+    <span id="onlineInfo">Relay wird geprüft</span>
+  </footer>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>

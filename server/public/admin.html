@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>betterUC Admin</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">
+      <span class="brand-mark">bU</span>
+      <span>betterUC Admin</span>
+    </a>
+    <nav class="nav">
+      <a href="/">Website</a>
+      <a href="/access">Access</a>
+      <a href="https://github.com/xoner1441/betterUC/releases" rel="noreferrer">GitHub</a>
+    </nav>
+  </header>
+
+  <main class="admin-main">
+    <section id="loginPanel" class="section admin-login">
+      <div>
+        <p class="section-label">Controlpanel</p>
+        <h1>Access Codes verwalten</h1>
+        <p class="lead">Admin-Accounts aus dem Userpanel werden automatisch erkannt. Der Admin-Key bleibt nur als Fallback, falls keine Admin-Session aktiv ist.</p>
+      </div>
+      <form id="adminLogin" class="tool-panel">
+        <label>
+          Admin-Key
+          <input id="adminKey" type="password" autocomplete="current-password" placeholder="ADMIN_KEY">
+        </label>
+        <button class="button primary full" type="submit">Einloggen</button>
+        <p id="loginMessage" class="form-message"></p>
+      </form>
+    </section>
+
+    <section id="adminPanel" class="section" hidden>
+      <div class="admin-header">
+        <div>
+          <p class="section-label">Accounts</p>
+          <h2>betterUC Nutzer</h2>
+        </div>
+        <div class="admin-actions">
+          <button id="refreshAccounts" class="button secondary" type="button">Aktualisieren</button>
+          <button id="logoutAdmin" class="button secondary" type="button">Abmelden</button>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div><span>Accounts</span><strong id="totalAccounts">0</strong></div>
+        <div><span>Aktiv</span><strong id="activeAccounts">0</strong></div>
+        <div><span>Gesperrt</span><strong id="revokedAccounts">0</strong></div>
+        <div><span>Online</span><strong id="onlineAccounts">0</strong></div>
+      </div>
+
+      <div class="admin-grid">
+        <form id="createAccount" class="tool-panel">
+          <h3>Code erstellen</h3>
+          <label>
+            Minecraft Name
+            <input id="newMinecraftName" maxlength="16" placeholder="Spielername" autocomplete="off">
+          </label>
+          <label>
+            Fraktion optional
+            <input id="newFaction" maxlength="48" placeholder="Fraktion" autocomplete="off">
+          </label>
+          <label>
+            Rolle
+            <select id="newRole">
+              <option value="user">Spieler</option>
+              <option value="admin">Admin</option>
+            </select>
+          </label>
+          <button class="button primary full" type="submit">Access Code erstellen</button>
+          <p id="createMessage" class="form-message"></p>
+          <div id="adminTokenBox" class="token-box" hidden>
+            <span>Neuer Access Code</span>
+            <code id="adminGeneratedToken"></code>
+            <button id="copyAdminToken" class="button secondary full" type="button">Code kopieren</button>
+          </div>
+        </form>
+
+        <div class="tool-panel">
+          <h3>Filter</h3>
+          <label>
+            Suche
+            <input id="accountSearch" placeholder="Name, Fraktion, Prefix" autocomplete="off">
+          </label>
+          <p class="quiet">Vorhandene Codes können aus Sicherheitsgründen nicht angezeigt werden. Nutze Code neu, wenn jemand seinen Code verloren hat.</p>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Spieler</th>
+              <th>Fraktion</th>
+              <th>Rolle</th>
+              <th>Status</th>
+              <th>Code</th>
+              <th>Letzter Kontakt</th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody id="accountsTable">
+            <tr><td colspan="7">Noch keine Daten geladen.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="/admin.js" defer></script>
+</body>
+</html>

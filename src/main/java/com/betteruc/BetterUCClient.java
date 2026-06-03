@@ -10,6 +10,8 @@ import com.betteruc.client.BetterUCFontManager;
 import com.betteruc.client.MovementController;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.ServerCommandUtil;
+import com.betteruc.client.UserPanelClient;
+import com.betteruc.client.UserStatsClient;
 import com.betteruc.client.VersionChecker;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.gui.CommandGui;
@@ -173,6 +175,8 @@ public class BetterUCClient implements ClientModInitializer {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             ServerCommandUtil.markJoined(client);
             BetterUCConfig.clearChatBlacklistRuntime();
+            BetterUCConfig.clearCurrentPlayerFaction();
+            UserStatsClient.clear();
             PaydayHud.clear();
             AmmoHud.clear();
             BankBalanceHud.clear();
@@ -213,6 +217,7 @@ public class BetterUCClient implements ClientModInitializer {
             registerBlacklistInfoCommand(dispatcher, playerSuggestions);
             registerModBlCommand(dispatcher, playerSuggestions, modBlReasonSuggestions);
             registerSetRpCommand(dispatcher, playerSuggestions);
+            registerUserPanelCommand(dispatcher);
         });
     }
 
@@ -260,6 +265,18 @@ public class BetterUCClient implements ClientModInitializer {
             });
             return 1;
         }));
+    }
+
+    private void registerUserPanelCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
+        dispatcher.register(ClientCommandManager.literal("register")
+                .then(ClientCommandManager.argument("passwort", StringArgumentType.greedyString())
+                        .executes(context -> {
+                            UserPanelClient.registerPassword(
+                                    MinecraftClient.getInstance(),
+                                    StringArgumentType.getString(context, "passwort")
+                            );
+                            return 1;
+                        })));
     }
 
     private void registerScallCommand(
