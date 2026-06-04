@@ -25,13 +25,17 @@ jobs:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
           set -euo pipefail
-          test -n "$DEPLOY_HOST"
-          test -n "$DEPLOY_SSH_KEY"
+          HOST="${DEPLOY_HOST:-65.109.175.203}"
+          PORT="${DEPLOY_PORT:-22}"
+          if [ -z "$DEPLOY_SSH_KEY" ]; then
+            echo "::error::Missing repository secret DEPLOY_SSH_KEY. Add the complete private OpenSSH key in GitHub Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
 
           mkdir -p ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/betteruc_deploy_key
           chmod 600 ~/.ssh/betteruc_deploy_key
-          ssh-keyscan -p "${DEPLOY_PORT:-22}" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+          ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts
 
       - name: Upload server files
         env:
@@ -44,12 +48,13 @@ jobs:
           USER_NAME="${DEPLOY_USER:-root}"
           TARGET_PATH="${DEPLOY_PATH:-/opt/betteruc-relay}"
           PORT="${DEPLOY_PORT:-22}"
+          HOST="${DEPLOY_HOST:-65.109.175.203}"
 
           rsync -az --delete \
             --exclude "data/" \
             --exclude "node_modules/" \
             -e "ssh -i ~/.ssh/betteruc_deploy_key -p $PORT" \
-            server/ "$USER_NAME@$DEPLOY_HOST:$TARGET_PATH/"
+            server/ "$USER_NAME@$HOST:$TARGET_PATH/"
 
       - name: Install and restart relay
         env:
@@ -62,6 +67,7 @@ jobs:
           USER_NAME="${DEPLOY_USER:-root}"
           TARGET_PATH="${DEPLOY_PATH:-/opt/betteruc-relay}"
           PORT="${DEPLOY_PORT:-22}"
+          HOST="${DEPLOY_HOST:-65.109.175.203}"
 
-          ssh -i ~/.ssh/betteruc_deploy_key -p "$PORT" "$USER_NAME@$DEPLOY_HOST" \
+          ssh -i ~/.ssh/betteruc_deploy_key -p "$PORT" "$USER_NAME@$HOST" \
             "cd '$TARGET_PATH' && npm install --omit=dev && systemctl restart betteruc-relay && systemctl status betteruc-relay --no-pager"
