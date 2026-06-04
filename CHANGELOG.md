@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.1.6] - 2026-06-05
+
+### Neu
+- **Helper-Rolle** mit gelbem Hologramm und gelbem `bUC`-Tablist-Badge.
+- Helper ist unter Admin einsortiert, hat aber keine zusätzlichen Website-Rechte.
+- Website-Startseite und ClickGUI-Changelog wurden auf die aktuelle Version angepasst.
+
+### Geaendert
+- Die Feature- und Commandlisten zeigen nur noch Funktionen, die aktuell aktiv sind.
+- Pingrad, Ping-Cooldown, Soundauswahl und Reichweitenlimit bleiben als aktuelle Ping-Features hervorgehoben.
+
+### Entfernt
+- Veraltete Client-Commands **`/seinzahlen`** und **`/scall`** entfernt.
+- Alte Website-Karten und Changelog-Einträge zu entfernten Commands entfernt.
+
+### Versionierung
+- Mod-Version auf **`1.1.6`** gesetzt.
+
 ## [1.0.2] - 2026-05-03
 
 ### Neu

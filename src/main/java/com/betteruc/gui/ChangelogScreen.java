@@ -13,9 +13,12 @@ public class ChangelogScreen extends Screen {
     private static final Page[] PAGES = new Page[]{
             new Page(
                     "Highlights",
-                    "betterUC 1.1.5",
+                    "betterUC 1.1.6",
                     new String[]{
                             "Helper-Rolle mit gelbem Hologramm und bUC-Tablist-Badge",
+                            "Helper ist unter Admin einsortiert, hat aber keine Website-Zusatzrechte",
+                            "Veraltete /seinzahlen- und /scall-Commands entfernt",
+                            "Website, ClickGUI und Changelog zeigen nur noch aktive Features",
                             "VIP-Rolle mit dunkellila Hologramm und bUC-Tablist-Badge",
                             "Userpanel zeigt Rolle, Status und getrackte Account-Daten",
                             "Adminpanel kann Accounts nach Rolle, Status, Online-Zustand und Fraktion filtern",

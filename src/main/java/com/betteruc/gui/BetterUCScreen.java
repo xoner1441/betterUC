@@ -51,12 +51,12 @@ public class BetterUCScreen extends Screen {
             .map(container -> container.getMetadata().getVersion().getFriendlyString())
             .orElse("dev");
     private static final UpdateSection[] UPDATE_SECTIONS = new UpdateSection[]{
-            new UpdateSection("Neu in 1.1.5", new String[]{
-                    "Pingrad mit Normal-, Gefahr- und Sammeln-Pings",
-                    "Ping-Cooldown als kleines Slide-in-HUD",
-                    "Pings werden nur innerhalb deiner Sichtweite erkannt",
+            new UpdateSection("Neu in 1.1.6", new String[]{
                     "Helper-Rolle mit gelbem Hologramm und Tablist-Badge",
-                    "VIP-Rolle mit eigenem Hologramm und Tablist-Badge"
+                    "Helper steht unter Admin, bekommt aber keine Admin-Rechte",
+                    "Veraltete Commands /seinzahlen und /scall entfernt",
+                    "Website und ClickGUI zeigen nur noch aktive Features",
+                    "Pingrad, Cooldown und Reichweitenlimit bleiben enthalten"
             }),
             new UpdateSection("Kurzstart", new String[]{
                     "Standard: N öffnet das betterUC ClickGUI",
