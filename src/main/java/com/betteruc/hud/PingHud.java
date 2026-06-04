@@ -16,6 +16,11 @@ public final class PingHud {
 
     private static final int ACCENT = 0xFF38BDF8;
     private static final int TEXT_PRIMARY = 0xFFF8FAFC;
+    private static final int TEXT_MUTED = 0xFF94A3B8;
+    private static final int COOLDOWN_BG = 0xE80D1117;
+    private static final int COOLDOWN_BORDER = 0xAA334155;
+    private static final int COOLDOWN_TRACK = 0xFF1E293B;
+    private static final double MAX_VISIBLE_PING_DISTANCE = 128.0D;
 
     private PingHud() {
     }
@@ -25,14 +30,15 @@ public final class PingHud {
     }
 
     private static void render(DrawContext context) {
-        if (!BetterUCConfig.INSTANCE.showPingHud) return;
-
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || client.world == null) return;
 
+        renderCooldown(context, client);
+        if (!BetterUCConfig.INSTANCE.showPingHud) return;
+
         List<PingRelayClient.PingMarker> markers = PingRelayClient.activePings().stream()
                 .filter(marker -> sameDimension(PingRelayClient.currentDimension(client), marker.dimension()))
-                .filter(marker -> distanceToPlayer(client, marker) <= BetterUCConfig.INSTANCE.pingRelayMaxDistance)
+                .filter(marker -> distanceToPlayer(client, marker) <= effectiveMaxDistance())
                 .sorted(Comparator.comparingLong(PingRelayClient.PingMarker::createdAt).reversed())
                 .limit(5)
                 .toList();
@@ -42,6 +48,46 @@ public final class PingHud {
         for (int i = markers.size() - 1; i >= 0; i--) {
             renderWorldMarker(context, client, markers.get(i));
         }
+    }
+
+    private static void renderCooldown(DrawContext context, MinecraftClient client) {
+        long remainingMs = PingRelayClient.pingCooldownRemainingMs();
+        int durationMs = PingRelayClient.pingCooldownDurationMs();
+        if (remainingMs <= 0L || durationMs <= 0) return;
+
+        int panelWidth = 128;
+        int panelHeight = 34;
+        int screenW = client.getWindow().getScaledWidth();
+        int screenH = client.getWindow().getScaledHeight();
+        double elapsedMs = Math.max(0.0D, durationMs - remainingMs);
+        double slideIn = clamp01(elapsedMs / 170.0D);
+        double slideOut = clamp01(remainingMs / 170.0D);
+        double visible = Math.min(slideIn, slideOut);
+        int x = screenW - 10 - panelWidth + (int) Math.round((1.0D - visible) * (panelWidth + 14));
+        int y = Math.max(10, screenH - 64);
+
+        context.fill(x, y, x + panelWidth, y + panelHeight, COOLDOWN_BG);
+        context.fill(x, y, x + 4, y + panelHeight, ACCENT);
+        context.fill(x, y, x + panelWidth, y + 1, COOLDOWN_BORDER);
+        context.fill(x, y + panelHeight - 1, x + panelWidth, y + panelHeight, COOLDOWN_BORDER);
+        context.fill(x, y, x + 1, y + panelHeight, COOLDOWN_BORDER);
+        context.fill(x + panelWidth - 1, y, x + panelWidth, y + panelHeight, COOLDOWN_BORDER);
+
+        String label = "Ping Cooldown";
+        String time = String.format(java.util.Locale.ROOT, "%.1fs", remainingMs / 1000.0D);
+        context.drawTextWithShadow(client.textRenderer, Text.literal(label), x + 10, y + 6, TEXT_PRIMARY);
+        context.drawTextWithShadow(client.textRenderer, Text.literal(time), x + panelWidth - 10 - client.textRenderer.getWidth(time), y + 6, TEXT_MUTED);
+
+        int barX = x + 10;
+        int barY = y + 24;
+        int barWidth = panelWidth - 20;
+        context.fill(barX, barY, barX + barWidth, barY + 3, COOLDOWN_TRACK);
+        int filledWidth = (int) Math.round(barWidth * clamp01(remainingMs / (double) durationMs));
+        context.fill(barX, barY, barX + filledWidth, barY + 3, ACCENT);
+    }
+
+    private static double effectiveMaxDistance() {
+        return Math.min(MAX_VISIBLE_PING_DISTANCE, Math.max(0, BetterUCConfig.INSTANCE.pingRelayMaxDistance));
     }
 
     private static void renderWorldMarker(DrawContext context, MinecraftClient client, PingRelayClient.PingMarker marker) {
@@ -212,6 +258,10 @@ public final class PingHud {
 
     private static String safe(String value) {
         return value == null || value.isBlank() ? "Ping" : value.trim();
+    }
+
+    private static double clamp01(double value) {
+        return Math.max(0.0D, Math.min(1.0D, value));
     }
 
     private static boolean sameDimension(String current, String marker) {

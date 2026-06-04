@@ -1,0 +1,13 @@
+{
+  "providers": [
+    {
+      "type": "bitmap",
+      "file": "betteruc:font/buc_badges.png",
+      "height": 9,
+      "ascent": 8,
+      "chars": [
+        "\uE100\uE101\uE102\uE103"
+      ]
+    }
+  ]
+}

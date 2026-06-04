@@ -16,6 +16,7 @@
     <nav class="nav">
       <a href="#download">Download</a>
       <a href="#updates">Updates</a>
+      <a href="#features">Features</a>
       <a href="/access">Access</a>
       <a href="/panel">Userpanel</a>
       <a href="https://github.com/xoner1441/betterUC/releases" rel="noreferrer">GitHub</a>
@@ -62,38 +63,161 @@
       </div>
     </section>
 
-    <section id="download" class="section two-column">
-      <div>
+    <section id="download" class="section download-section">
+      <div class="download-copy">
         <p class="section-label">Download</p>
-        <h2>Aktuelle Version laden</h2>
-        <p>Die Mod-Datei und alle Releases liegen auf GitHub. Die Website leitet dich direkt zur Release-Seite weiter.</p>
+        <h2>betterUC v1.1.5 laden</h2>
+        <p>Die aktuelle Mod-Datei liegt auf GitHub. Dort findest du den neuesten Download, ältere Versionen und die Release-Notizen.</p>
+        <div class="release-actions">
+          <a class="button primary" href="https://github.com/xoner1441/betterUC/releases/latest" rel="noreferrer">Neueste Version öffnen</a>
+          <a class="button secondary" href="https://github.com/xoner1441/betterUC/releases" rel="noreferrer">Alle Releases</a>
+        </div>
       </div>
-      <div class="tool-panel">
-        <p class="panel-kicker">Release</p>
-        <h3>betterUC Releases</h3>
-        <p>Download, Changelog und alte Versionen findest du gesammelt auf GitHub.</p>
-        <a class="button primary full" href="https://github.com/xoner1441/betterUC/releases" rel="noreferrer">Zu GitHub Releases</a>
+      <div class="release-panel">
+        <div class="release-head">
+          <p class="panel-kicker">Aktueller Release</p>
+          <strong>v1.1.5</strong>
+        </div>
+        <div class="release-meta">
+          <span>Minecraft</span><b>Fabric 1.21.10</b>
+          <span>Status</span><b>Aktuell</b>
+          <span>Quelle</span><b>GitHub Releases</b>
+        </div>
+        <a class="button primary full" href="https://github.com/xoner1441/betterUC/releases/latest" rel="noreferrer">Download auf GitHub</a>
       </div>
     </section>
 
-    <section id="updates" class="section">
+    <section id="updates" class="section updates-section">
       <p class="section-label">Updates</p>
-      <h2>Was gerade drin ist</h2>
-      <div class="feature-grid">
+      <h2>Neu in 1.1.5</h2>
+      <div class="update-list">
         <article>
           <span class="feature-icon cyan"></span>
-          <h3>ClickGUI</h3>
-          <p>Module, HUD-Stile, Custom Fonts und Scrollbereiche direkt im Spiel einstellbar.</p>
+          <div>
+            <h3>Pingrad verfeinert</h3>
+            <p>Normale, Gefahr- und Sammel-Pings sind im Rad klarer erkennbar und lassen sich sauber per Gedrückthalten auswählen.</p>
+          </div>
         </article>
         <article>
           <span class="feature-icon green"></span>
-          <h3>HUD Editor</h3>
-          <p>Aktive HUDs können verschoben und skaliert werden, inklusive Bargeld, Bank und Ping.</p>
+          <div>
+            <h3>Ping-Cooldown sichtbar</h3>
+            <p>Nach einem Ping zeigt ein kleines Slide-in-HUD an, wann der nächste Ping wieder möglich ist.</p>
+          </div>
         </article>
         <article>
           <span class="feature-icon amber"></span>
-          <h3>Ping System</h3>
-          <p>Private Markierungen für Mod-Nutzer, mit Access-Code als Grundlage für künftige Team-Features.</p>
+          <div>
+            <h3>Ping-Reichweite begrenzt</h3>
+            <p>Pings von anderen Spielern werden nur noch innerhalb der eingestellten Reichweite erkannt und abgespielt.</p>
+          </div>
+        </article>
+        <article>
+          <span class="feature-icon purple"></span>
+          <div>
+            <h3>Website & Deploy</h3>
+            <p>Die Website wird beim GitHub-Push automatisch aktualisiert und bietet getrennte Bereiche für Download, Access und Userpanel.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="features" class="section feature-overview">
+      <p class="section-label">Möglichkeiten</p>
+      <h2>Was betterUC kann</h2>
+      <div class="feature-overview-grid">
+        <article>
+          <h3>HUDs & Design</h3>
+          <p>Health, FPS, Payday, Ammo, Bank, Bargeld, Potion, Sprint, Hack und Plant lassen sich einzeln aktivieren, stylen, verschieben und skalieren.</p>
+        </article>
+        <article>
+          <h3>Ping-System</h3>
+          <p>Setze normale, Gefahr- oder Sammel-Pings. Du kannst zwischen globalen Pings und Fraktionspings wechseln, Farben anpassen und Sounds auswählen.</p>
+        </article>
+        <article>
+          <h3>Userpanel</h3>
+          <p>Bank, Bargeld, Häuser, Treuebonus, Spielzeit, Votepoints, Warns und Fraktion werden aus deinen erkannten Statistiken gespeichert.</p>
+        </article>
+        <article>
+          <h3>Rollen & Badges</h3>
+          <p>Mod-User können in der Tablist und über dem Namen erkannt werden. Admin, Helper, VIP und User haben eigene Farben und Anzeigen.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section command-section">
+      <p class="section-label">Commands & Bedienung</p>
+      <h2>Schneller Überblick</h2>
+      <div class="command-grid">
+        <article>
+          <code>Standard: N</code>
+          <div>
+            <h3>ClickGUI öffnen</h3>
+            <p>Alle Module, HUDs, Ping-Optionen und Tools direkt im Spiel einstellen. Der Keybind ist in Minecraft änderbar.</p>
+          </div>
+        </article>
+        <article>
+          <code>Standard: M</code>
+          <div>
+            <h3>Command Menu</h3>
+            <p>Schnelle Navi-Befehle über ein kleines Menü ausführen. Der Keybind ist in Minecraft änderbar.</p>
+          </div>
+        </article>
+        <article>
+          <code>Ping-Keybind</code>
+          <div>
+            <h3>Ping setzen</h3>
+            <p>Kurz drücken für Normal-Ping, halten für das Pingrad mit Normal, Gefahr und Sammeln.</p>
+          </div>
+        </article>
+        <article>
+          <code>/register &lt;passwort&gt;</code>
+          <div>
+            <h3>Userpanel Login</h3>
+            <p>Setzt dein Passwort für das Web-Userpanel.</p>
+          </div>
+        </article>
+        <article>
+          <code>/seinzahlen</code>
+          <div>
+            <h3>S-Kasse</h3>
+            <p>Zahlt erkanntes Schwarzgeld automatisch in die S-Kasse ein.</p>
+          </div>
+        </article>
+        <article>
+          <code>/scall &lt;spieler&gt;</code>
+          <div>
+            <h3>Schneller Call</h3>
+            <p>Sendet einen vorbereiteten Call an den angegebenen Spieler.</p>
+          </div>
+        </article>
+        <article>
+          <code>/blset</code>
+          <div>
+            <h3>Blacklist setzen</h3>
+            <p>Setzt einen Blacklist-Eintrag mit gespeichertem Grund, Kills und Preis.</p>
+          </div>
+        </article>
+        <article>
+          <code>/modbl</code>
+          <div>
+            <h3>Blacklist erweitern</h3>
+            <p>Erweitert bestehende Blacklist-Einträge, ohne die bisherigen Daten neu zusammensuchen zu müssen.</p>
+          </div>
+        </article>
+        <article>
+          <code>/blinfo</code>
+          <div>
+            <h3>Blacklist prüfen</h3>
+            <p>Zeigt gespeicherte Infos zu einem Spieler aus der Blacklist.</p>
+          </div>
+        </article>
+        <article>
+          <code>/setrp</code>
+          <div>
+            <h3>RP-Stufe setzen</h3>
+            <p>Setzt die RP-Stufe eines gespeicherten Blacklist-Eintrags.</p>
+          </div>
         </article>
       </div>
     </section>

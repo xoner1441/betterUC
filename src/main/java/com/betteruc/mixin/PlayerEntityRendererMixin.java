@@ -49,9 +49,10 @@ public class PlayerEntityRendererMixin {
         if (label.isBlank()) return;
 
         boolean admin = PingRelayClient.isAdminPlayer(name, uuid);
+        boolean helper = PingRelayClient.isHelperPlayer(name, uuid);
         boolean vip = PingRelayClient.isVipPlayer(name, uuid);
         Text text = Text.literal("betterUC ").formatted(Formatting.GRAY)
-                .append(Text.literal(label).formatted(roleColor(admin, vip), Formatting.BOLD));
+                .append(Text.literal(label).formatted(roleColor(admin, helper, vip), Formatting.BOLD));
 
         TextRenderer textRenderer = client.textRenderer;
         Vec3d pos = state.nameLabelPos;
@@ -78,8 +79,9 @@ public class PlayerEntityRendererMixin {
         matrices.pop();
     }
 
-    private static Formatting roleColor(boolean admin, boolean vip) {
+    private static Formatting roleColor(boolean admin, boolean helper, boolean vip) {
         if (admin) return Formatting.RED;
+        if (helper) return Formatting.YELLOW;
         if (vip) return Formatting.DARK_PURPLE;
         return Formatting.GREEN;
     }

@@ -110,7 +110,7 @@ public class PingWheelScreen extends Screen {
         drawFilledCircle(context, x, y, radius, hovered ? PANEL_HOVER : PANEL);
         drawFilledCircle(context, x, y - 10, 13, withAlpha(accent, hovered ? 0xAA : 0x66));
 
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal(icon(type)), x, y - 14, accent);
+        drawOptionIcon(context, x, y - 10, type, accent);
         context.drawCenteredTextWithShadow(textRenderer, Text.literal(type.label()), x, y + 1, TEXT);
         context.drawCenteredTextWithShadow(textRenderer, Text.literal(shortDescription(type)), x, y + 13, MUTED);
     }
@@ -163,14 +163,6 @@ public class PingWheelScreen extends Screen {
         };
     }
 
-    private String icon(PingRelayClient.PingType type) {
-        return switch (type) {
-            case DANGER -> "!";
-            case GATHER -> "v";
-            default -> "+";
-        };
-    }
-
     private String shortDescription(PingRelayClient.PingType type) {
         return switch (type) {
             case DANGER -> "Achtung";
@@ -215,6 +207,25 @@ public class PingWheelScreen extends Screen {
         drawFilledCircle(context, cx, cy, radius, color);
         drawFilledCircle(context, cx, cy, Math.max(1, radius - 2), HUB);
         drawFilledCircle(context, cx, cy, Math.max(1, radius - 9), HUB_INNER);
+    }
+
+    private void drawOptionIcon(DrawContext context, int x, int y, PingRelayClient.PingType type, int accent) {
+        switch (type) {
+            case DANGER -> {
+                context.fill(x - 1, y - 8, x + 2, y + 3, accent);
+                context.fill(x - 1, y + 6, x + 2, y + 9, accent);
+            }
+            case GATHER -> {
+                drawLine(context, x, y - 9, x, y + 6, 1, accent);
+                drawLine(context, x, y + 6, x - 7, y - 1, 1, accent);
+                drawLine(context, x, y + 6, x + 7, y - 1, 1, accent);
+                context.fill(x - 8, y + 9, x + 9, y + 11, accent);
+            }
+            default -> {
+                context.fill(x - 9, y - 1, x + 10, y + 2, accent);
+                context.fill(x - 1, y - 9, x + 2, y + 10, accent);
+            }
+        }
     }
 
     private void drawLine(DrawContext context, int x1, int y1, int x2, int y2, int thickness, int color) {

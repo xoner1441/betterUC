@@ -45,6 +45,7 @@ public final class PingRelayClient {
     private static final List<RelayPlayer> ONLINE_PLAYERS = new ArrayList<>();
     private static final long RECONNECT_DELAY_MS = 5000L;
     private static final double PING_RAYCAST_DISTANCE = 128.0D;
+    private static final double MAX_RECEIVE_PING_DISTANCE = 128.0D;
     private static final String FALLBACK_RELAY_URL = "ws://65.109.175.203:3000/ws";
 
     private static WebSocket webSocket;
@@ -151,6 +152,7 @@ public final class PingRelayClient {
         try {
             webSocket.sendText(GSON.toJson(payload), true);
             lastPingSentMs = now;
+            playPingSelectionSound(client, safeType);
             return true;
         } catch (Exception e) {
             markDisconnected("Senden fehlgeschlagen");
@@ -175,6 +177,7 @@ public final class PingRelayClient {
     public static String roleLabel() {
         return switch (role) {
             case "admin" -> "Admin";
+            case "helper" -> "Helper";
             case "vip" -> "VIP";
             default -> "Spieler";
         };
@@ -189,6 +192,16 @@ public final class PingRelayClient {
         PingSound current = PingSound.fromId(id);
         int next = (current.ordinal() + 1) % sounds.length;
         return sounds[next].id();
+    }
+
+    public static int pingCooldownDurationMs() {
+        return Math.max(0, Math.min(10000, BetterUCConfig.INSTANCE.pingCooldownMs));
+    }
+
+    public static long pingCooldownRemainingMs() {
+        int cooldownMs = pingCooldownDurationMs();
+        if (cooldownMs <= 0) return 0L;
+        return Math.max(0L, lastPingSentMs + cooldownMs - System.currentTimeMillis());
     }
 
     public static void refreshIdentity(MinecraftClient client) {
@@ -222,11 +235,17 @@ public final class PingRelayClient {
         return player != null && "vip".equals(player.role());
     }
 
+    public static boolean hasHelperBadge(PlayerListEntry entry) {
+        RelayPlayer player = findRelayPlayer(entry);
+        return player != null && "helper".equals(player.role());
+    }
+
     public static String roleNameTagForPlayer(String name, String uuid) {
         RelayPlayer player = findRelayPlayer(name, uuid);
         if (player == null) return "";
         return switch (player.role()) {
             case "admin" -> "Admin";
+            case "helper" -> "Helper";
             case "vip" -> "VIP";
             default -> "User";
         };
@@ -240,6 +259,11 @@ public final class PingRelayClient {
     public static boolean isVipPlayer(String name, String uuid) {
         RelayPlayer player = findRelayPlayer(name, uuid);
         return player != null && "vip".equals(player.role());
+    }
+
+    public static boolean isHelperPlayer(String name, String uuid) {
+        RelayPlayer player = findRelayPlayer(name, uuid);
+        return player != null && "helper".equals(player.role());
     }
 
     public static String currentServerId(MinecraftClient client) {
@@ -365,6 +389,7 @@ public final class PingRelayClient {
                 role = stringValue(json, "role", role).trim().toLowerCase(Locale.ROOT);
                 status = switch (role) {
                     case "admin" -> "Admin verbunden";
+                    case "helper" -> "Helper verbunden";
                     case "vip" -> "VIP verbunden";
                     default -> "Verbunden";
                 };
@@ -392,6 +417,10 @@ public final class PingRelayClient {
                     longValue(json, "expiresAt", System.currentTimeMillis() + BetterUCConfig.INSTANCE.pingRelayTtlSeconds * 1000L)
             );
 
+            if (!shouldAcceptMarker(client, marker)) {
+                return;
+            }
+
             synchronized (LOCK) {
                 ACTIVE_PINGS.removeIf(existing -> !existing.id().isEmpty() && existing.id().equals(marker.id()));
                 ACTIVE_PINGS.add(marker);
@@ -399,7 +428,9 @@ public final class PingRelayClient {
                     ACTIVE_PINGS.remove(0);
                 }
             }
-            playPingSound(client, PingType.fromId(marker.pingType()));
+            if (!isOwnMarker(client, marker)) {
+                playPingSound(client, PingType.fromId(marker.pingType()));
+            }
         } catch (Exception e) {
             BetterUCMod.LOGGER.debug("Ignored invalid betterUC relay message: {}", raw);
         }
@@ -419,6 +450,41 @@ public final class PingRelayClient {
 
         Vec3d fallback = client.player.getEyePos().add(client.player.getRotationVec(1.0F).multiply(PING_RAYCAST_DISTANCE));
         return new PingTarget(fallback, "Position");
+    }
+
+    private static boolean shouldAcceptMarker(MinecraftClient client, PingMarker marker) {
+        if (client == null || client.player == null || client.world == null || marker == null) return false;
+        if (!sameDimension(currentDimension(client), marker.dimension())) return false;
+        return distanceToPlayer(client, marker) <= effectiveReceiveDistance();
+    }
+
+    private static double effectiveReceiveDistance() {
+        return Math.min(MAX_RECEIVE_PING_DISTANCE, Math.max(0, BetterUCConfig.INSTANCE.pingRelayMaxDistance));
+    }
+
+    private static double distanceToPlayer(MinecraftClient client, PingMarker marker) {
+        double dx = marker.x() - client.player.getX();
+        double dy = marker.y() - client.player.getY();
+        double dz = marker.z() - client.player.getZ();
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    private static boolean isOwnMarker(MinecraftClient client, PingMarker marker) {
+        return client != null
+                && client.player != null
+                && marker != null
+                && marker.sender().equalsIgnoreCase(playerName(client));
+    }
+
+    private static boolean sameDimension(String current, String marker) {
+        String currentNormalized = normalizeDimension(current);
+        String markerNormalized = normalizeDimension(marker);
+        return !currentNormalized.isEmpty() && currentNormalized.equals(markerNormalized);
+    }
+
+    private static String normalizeDimension(String value) {
+        if (value == null) return "";
+        return value.trim().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
     }
 
     private static void cleanupExpired() {
@@ -545,15 +611,24 @@ public final class PingRelayClient {
         MinecraftClient client = MinecraftClient.getInstance();
         if (connected && client != null && client.player != null
                 && normalizedName.equals(playerName(client).toLowerCase(Locale.ROOT))) {
-            return new RelayPlayer(normalizedName, playerUuid(client), cleanRole(role), isAdminSession() ? 100L : 50L);
+            return new RelayPlayer(normalizedName, playerUuid(client), cleanRole(role), priorityForRole(role));
         }
         return null;
     }
 
     private static String cleanRole(String value) {
         String cleaned = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
-        if ("admin".equals(cleaned) || "vip".equals(cleaned)) return cleaned;
+        if ("admin".equals(cleaned) || "helper".equals(cleaned) || "vip".equals(cleaned)) return cleaned;
         return "user";
+    }
+
+    private static long priorityForRole(String value) {
+        return switch (cleanRole(value)) {
+            case "admin" -> 100L;
+            case "helper" -> 85L;
+            case "vip" -> 75L;
+            default -> 50L;
+        };
     }
 
     private static String currentFaction() {
@@ -602,6 +677,16 @@ public final class PingRelayClient {
             default -> 1.0F;
         };
         client.player.playSound(PingSound.fromId(BetterUCConfig.INSTANCE.pingSoundId).sound(), 0.45F, pitch);
+    }
+
+    private static void playPingSelectionSound(MinecraftClient client, PingType type) {
+        if (!BetterUCConfig.INSTANCE.pingSoundEnabled || client == null || client.player == null) return;
+        float pitch = switch (type == null ? PingType.NORMAL : type) {
+            case DANGER -> 0.95F;
+            case GATHER -> 1.55F;
+            default -> 1.2F;
+        };
+        client.player.playSound(PingSound.fromId(BetterUCConfig.INSTANCE.pingSoundId).sound(), 0.22F, pitch);
     }
 
     private static String encode(String value) {

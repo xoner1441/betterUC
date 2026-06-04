@@ -219,7 +219,7 @@ public class BetterUCConfig {
     public String pingRelayChannel = "global";
     public String pingRelayScope = "global";
     public int pingRelayTtlSeconds = 15;
-    public int pingRelayMaxDistance = 3000;
+    public int pingRelayMaxDistance = 128;
     public String pingRelayColor = "#38BDF8";
     public String pingNormalColor = "#38BDF8";
     public String pingDangerColor = "#FF5555";
@@ -353,7 +353,7 @@ public class BetterUCConfig {
             INSTANCE.pingRelayScope = INSTANCE.pingRelayScope.equalsIgnoreCase("faction") ? "faction" : "global";
         }
         INSTANCE.pingRelayTtlSeconds = Math.max(5, Math.min(60, INSTANCE.pingRelayTtlSeconds));
-        INSTANCE.pingRelayMaxDistance = Math.max(50, Math.min(10000, INSTANCE.pingRelayMaxDistance));
+        INSTANCE.pingRelayMaxDistance = Math.max(0, Math.min(128, INSTANCE.pingRelayMaxDistance));
         INSTANCE.pingRelayColor = sanitizeHexColor(INSTANCE.pingRelayColor, "#38BDF8");
         INSTANCE.pingNormalColor = sanitizeHexColor(INSTANCE.pingNormalColor, INSTANCE.pingRelayColor);
         INSTANCE.pingDangerColor = sanitizeHexColor(INSTANCE.pingDangerColor, "#FF5555");

@@ -52,36 +52,50 @@ public class BetterUCScreen extends Screen {
             .orElse("dev");
     private static final UpdateSection[] UPDATE_SECTIONS = new UpdateSection[]{
             new UpdateSection("Neu in 1.1.5", new String[]{
-                    "VIP-Rolle mit eigenem Hologramm und Tablist-Badge",
-                    "Userpanel zeigt Rolle, Status und aktuelle Tracking-Daten",
-                    "Adminpanel hat Filter für Rolle, Status, Online-Zustand und Fraktion",
-                    "Verbindungsseite im ClickGUI ist übersichtlicher sortiert",
-                    "Website ist in Startseite, Access, Userpanel und Adminpanel getrennt",
                     "Pingrad mit Normal-, Gefahr- und Sammeln-Pings",
-                    "Eigene Pingfarben, Ping-Soundauswahl und Cooldown gegen Spam"
+                    "Ping-Cooldown als kleines Slide-in-HUD",
+                    "Pings werden nur innerhalb deiner Sichtweite erkannt",
+                    "Helper-Rolle mit gelbem Hologramm und Tablist-Badge",
+                    "VIP-Rolle mit eigenem Hologramm und Tablist-Badge"
             }),
-            new UpdateSection("Neu in 1.1.3", new String[]{
-                    "ClickGUI für die wichtigsten Einstellungen direkt im Spiel",
-                    "Eigene Minecraft-Keybinds für ClickGUI und Command Menu",
-                    "HUD Vorschau zum Verschieben aktiver HUDs per Drag & Drop",
-                    "betterUC Ping System für private Mod-User-Markierungen",
-                    "HUD-Titel auf betterUC aufgeräumt"
+            new UpdateSection("Kurzstart", new String[]{
+                    "Standard: N öffnet das betterUC ClickGUI",
+                    "Standard: M öffnet das Command Menu",
+                    "Keybinds sind in den Minecraft-Steuerungen änderbar",
+                    "Ping-Key tippen: Normal-Ping setzen",
+                    "Ping-Key halten: Pingrad öffnen und Typ wählen"
             }),
             new UpdateSection("HUD & Design", new String[]{
-                    "HUD-Module können zwischen Modern, Transparent, Cartoon und Custom wechseln",
-                    "Health-, FPS-, Payday-, Ammo-, Bank-, Bargeld-, Potion-, Sprint-, Hack- und Plant-HUD sind einzeln einstellbar",
-                    "Farben und Positionen lassen sich direkt im ClickGUI anpassen"
+                    "Health, FPS, Payday, Ammo, Bank, Bargeld, Potion, Sprint, Hack und Plant einzeln einstellbar",
+                    "HUD Vorschau verschiebt und skaliert aktive HUDs per Maus",
+                    "Stile: Modern, Transparent, Cartoon und Custom",
+                    "Custom Fonts pro HUD-Modul auswählbar"
             }),
-            new UpdateSection("Custom Fonts", new String[]{
-                    "Eigene TTF/OTF-Fonts können in den Font-Ordner gelegt werden",
-                    "Der Custom-Stil kann pro HUD-Modul eine andere Schrift nutzen",
-                    "Fonts können im Modul per Font-Button durchgeschaltet und neu geladen werden"
+            new UpdateSection("Ping-System", new String[]{
+                    "Global: alle verbundenen Mod-User sehen den Ping",
+                    "Fraktion: nur Spieler deiner getrackten Fraktion sehen den Ping",
+                    "Normale, Gefahr- und Sammel-Pings haben eigene Farben",
+                    "Ping-Ton und Ping-Anzeige können ein- und ausgeschaltet werden"
             }),
-            new UpdateSection("Tools & Komfort", new String[]{
-                    "Command Menu und Hotkey Commands sind über die Tools erreichbar",
-                    "Blacklist-, Stats- und Chat-Optionen sind übersichtlicher sortiert",
-                    "Die Mod-JAR wird beim Build automatisch in den richtigen Minecraft-Mods-Ordner kopiert",
-                    "Update Notify prüft GitHub und meldet neue Versionen direkt im Chat"
+            new UpdateSection("Accounts & Website", new String[]{
+                    "Access Code verbindet die Mod mit dem betterUC Relay",
+                    "/register <passwort> legt dein Userpanel-Passwort fest",
+                    "Userpanel zeigt Bank, Bargeld, Häuser, Spielzeit, Warns und Fraktion",
+                    "Adminpanel verwaltet Codes, Rollen und Spielerdaten"
+            }),
+            new UpdateSection("Commandliste", new String[]{
+                    "/seinzahlen zahlt erkanntes Schwarzgeld in die S-Kasse ein",
+                    "/scall <spieler> sendet einen schnellen Call",
+                    "/blset <spieler> <grund> oder /setbl setzt einen Blacklist-Eintrag",
+                    "/modbl <spieler> <grund> erweitert einen bestehenden Blacklist-Eintrag",
+                    "/blinfo <spieler> zeigt gespeicherte Blacklist-Infos",
+                    "/setrp <spieler> <1-3> setzt die RP-Stufe"
+            }),
+            new UpdateSection("Komfort", new String[]{
+                    "Auto-Stats aktualisiert HUD- und Userpanel-Daten nach Join und AFK",
+                    "Stats-Ausgaben werden im Chat möglichst sauber unterdrückt",
+                    "Update Notify prüft GitHub und meldet neue Versionen direkt im Chat",
+                    "Hotkey Commands können im Tools-Bereich frei angelegt werden"
             })
     };
 
@@ -256,8 +270,8 @@ public class BetterUCScreen extends Screen {
         y = addDoubleSlider(x, y, width, "Ping Größe", BetterUCConfig.INSTANCE.pingHudScale,
                 BetterUCConfig.MIN_HUD_SCALE, BetterUCConfig.MAX_HUD_SCALE,
                 value -> BetterUCConfig.INSTANCE.pingHudScale = (float) value);
-        y = addIntSlider(x, y, width, "Sichtweite", BetterUCConfig.INSTANCE.pingRelayMaxDistance, 10000,
-                value -> BetterUCConfig.INSTANCE.pingRelayMaxDistance = Math.max(50, value));
+        y = addRangeIntSlider(x, y, width, "Sichtweite", BetterUCConfig.INSTANCE.pingRelayMaxDistance, 0, 128,
+                value -> BetterUCConfig.INSTANCE.pingRelayMaxDistance = Math.max(0, value));
         y = addToggle(x, y, width, "Ping Ton", BetterUCConfig.INSTANCE.pingSoundEnabled,
                 () -> BetterUCConfig.INSTANCE.pingSoundEnabled = !BetterUCConfig.INSTANCE.pingSoundEnabled);
         y = addButton(x, y, width, "Sound: " + PingRelayClient.pingSoundLabel(BetterUCConfig.INSTANCE.pingSoundId), b -> {

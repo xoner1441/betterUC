@@ -15,6 +15,7 @@ public class ChangelogScreen extends Screen {
                     "Highlights",
                     "betterUC 1.1.5",
                     new String[]{
+                            "Helper-Rolle mit gelbem Hologramm und bUC-Tablist-Badge",
                             "VIP-Rolle mit dunkellila Hologramm und bUC-Tablist-Badge",
                             "Userpanel zeigt Rolle, Status und getrackte Account-Daten",
                             "Adminpanel kann Accounts nach Rolle, Status, Online-Zustand und Fraktion filtern",
