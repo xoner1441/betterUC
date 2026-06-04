@@ -181,11 +181,16 @@ function cleanStatus(value) {
 }
 
 function cleanRole(value) {
-  return value === "admin" ? "admin" : "user";
+  const role = String(value || "").trim().toLowerCase();
+  if (role === "admin" || role === "vip") return role;
+  return "user";
 }
 
 function rolePriority(role) {
-  return cleanRole(role) === "admin" ? 100 : 50;
+  const cleaned = cleanRole(role);
+  if (cleaned === "admin") return 100;
+  if (cleaned === "vip") return 75;
+  return 50;
 }
 
 function publicStats(account) {

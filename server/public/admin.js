@@ -106,7 +106,8 @@ function renderAccounts() {
       </td>
       <td>
         <select class="row-input role-input">
-          <option value="user" ${account.role === "admin" ? "" : "selected"}>Spieler</option>
+          <option value="user" ${account.role === "user" ? "selected" : ""}>Spieler</option>
+          <option value="vip" ${account.role === "vip" ? "selected" : ""}>VIP</option>
           <option value="admin" ${account.role === "admin" ? "selected" : ""}>Admin</option>
         </select>
       </td>

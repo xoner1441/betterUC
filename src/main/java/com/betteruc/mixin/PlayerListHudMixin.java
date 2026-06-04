@@ -20,9 +20,11 @@ public class PlayerListHudMixin {
 
         MutableText name = cir.getReturnValue().copy();
         if (PingRelayClient.hasAdminBadge(entry)) {
-            name.append(Text.literal(" \u2605").formatted(Formatting.GOLD));
+            name.append(Text.literal(" bUC").formatted(Formatting.RED, Formatting.BOLD));
+        } else if (PingRelayClient.hasVipBadge(entry)) {
+            name.append(Text.literal(" bUC").formatted(Formatting.DARK_PURPLE, Formatting.BOLD));
         } else {
-            name.append(Text.literal(" \u25C6").formatted(Formatting.AQUA));
+            name.append(Text.literal(" bUC").formatted(Formatting.GREEN, Formatting.BOLD));
         }
         cir.setReturnValue(name);
     }

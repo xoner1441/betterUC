@@ -152,7 +152,11 @@ public final class PingRelayClient {
     }
 
     public static String roleLabel() {
-        return "admin".equals(role) ? "Admin" : "Spieler";
+        return switch (role) {
+            case "admin" -> "Admin";
+            case "vip" -> "VIP";
+            default -> "Spieler";
+        };
     }
 
     public static void refreshIdentity(MinecraftClient client) {
@@ -178,7 +182,32 @@ public final class PingRelayClient {
 
     public static boolean hasAdminBadge(PlayerListEntry entry) {
         RelayPlayer player = findRelayPlayer(entry);
-        return player != null && player.admin();
+        return player != null && "admin".equals(player.role());
+    }
+
+    public static boolean hasVipBadge(PlayerListEntry entry) {
+        RelayPlayer player = findRelayPlayer(entry);
+        return player != null && "vip".equals(player.role());
+    }
+
+    public static String roleNameTagForPlayer(String name, String uuid) {
+        RelayPlayer player = findRelayPlayer(name, uuid);
+        if (player == null) return "";
+        return switch (player.role()) {
+            case "admin" -> "Admin";
+            case "vip" -> "VIP";
+            default -> "User";
+        };
+    }
+
+    public static boolean isAdminPlayer(String name, String uuid) {
+        RelayPlayer player = findRelayPlayer(name, uuid);
+        return player != null && "admin".equals(player.role());
+    }
+
+    public static boolean isVipPlayer(String name, String uuid) {
+        RelayPlayer player = findRelayPlayer(name, uuid);
+        return player != null && "vip".equals(player.role());
     }
 
     public static String currentServerId(MinecraftClient client) {
@@ -302,7 +331,11 @@ public final class PingRelayClient {
             if ("welcome".equals(type) || "hello_ack".equals(type)) {
                 connected = true;
                 role = stringValue(json, "role", role).trim().toLowerCase(Locale.ROOT);
-                status = "admin".equals(role) ? "Admin verbunden" : "Verbunden";
+                status = switch (role) {
+                    case "admin" -> "Admin verbunden";
+                    case "vip" -> "VIP verbunden";
+                    default -> "Verbunden";
+                };
                 return;
             }
 
@@ -426,7 +459,7 @@ public final class PingRelayClient {
             nextPlayers.add(new RelayPlayer(
                     name.toLowerCase(Locale.ROOT),
                     stringValue(player, "uuid", ""),
-                    "admin".equals(stringValue(player, "role", "user")),
+                    cleanRole(stringValue(player, "role", "user")),
                     longValue(player, "priority", 50L)
             ));
         }
@@ -458,10 +491,19 @@ public final class PingRelayClient {
         if (entry == null) return null;
         String name = PlayerNameUtil.resolveProfileName(entry.getProfile());
         if (name == null || name.isBlank()) return null;
+        return findRelayPlayer(name, "");
+    }
+
+    private static RelayPlayer findRelayPlayer(String name, String uuid) {
+        if (name == null || name.isBlank()) return null;
         String normalizedName = name.toLowerCase(Locale.ROOT);
+        String normalizedUuid = uuid == null ? "" : uuid.trim().toLowerCase(Locale.ROOT);
         synchronized (LOCK) {
             for (RelayPlayer player : ONLINE_PLAYERS) {
-                if (player.nameLower().equals(normalizedName)) {
+                boolean uuidMatches = !normalizedUuid.isBlank()
+                        && player.uuid() != null
+                        && player.uuid().equalsIgnoreCase(normalizedUuid);
+                if (uuidMatches || player.nameLower().equals(normalizedName)) {
                     return player;
                 }
             }
@@ -469,9 +511,15 @@ public final class PingRelayClient {
         MinecraftClient client = MinecraftClient.getInstance();
         if (connected && client != null && client.player != null
                 && normalizedName.equals(playerName(client).toLowerCase(Locale.ROOT))) {
-            return new RelayPlayer(normalizedName, playerUuid(client), isAdminSession(), isAdminSession() ? 100L : 50L);
+            return new RelayPlayer(normalizedName, playerUuid(client), cleanRole(role), isAdminSession() ? 100L : 50L);
         }
         return null;
+    }
+
+    private static String cleanRole(String value) {
+        String cleaned = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+        if ("admin".equals(cleaned) || "vip".equals(cleaned)) return cleaned;
+        return "user";
     }
 
     private static String currentFaction() {
@@ -544,7 +592,7 @@ public final class PingRelayClient {
     private record PingTarget(Vec3d pos, String label) {
     }
 
-    private record RelayPlayer(String nameLower, String uuid, boolean admin, long priority) {
+    private record RelayPlayer(String nameLower, String uuid, String role, long priority) {
     }
 
     private static final class RelayListener implements WebSocket.Listener {

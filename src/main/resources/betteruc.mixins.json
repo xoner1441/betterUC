@@ -6,6 +6,7 @@
     "ChatBlacklistMixin",
     "GameRendererZoomMixin",
     "InGameHudAmmoMixin",
+    "PlayerEntityRendererMixin",
     "PlayerListHudMixin"
   ],
   "client": [],
