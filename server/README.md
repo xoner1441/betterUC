@@ -13,6 +13,7 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `GET /api/players` online mod users, requires an access code
 - `GET /admin` admin control panel
 - `GET /api/admin/accounts` list accounts, requires an admin user session or `ADMIN_KEY`
+- `POST /api/admin/backups` creates an immediate `accounts.json` backup, requires admin access
 - `POST /api/admin/accounts` create a code, requires an admin user session or `ADMIN_KEY`
 - `PATCH /api/admin/accounts/:id` edit account metadata, requires an admin user session or `ADMIN_KEY`
 - `POST /api/admin/accounts/:id/revoke` revoke a code
@@ -28,8 +29,11 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `BETTERUC_TOKEN=...` optional legacy shared token
 - `TOKEN_PEPPER=...` secret pepper for access-code hashes
 - `ADMIN_KEY=...` optional fallback secret for the admin control panel
+- `BACKUP_DIR=/opt/betteruc-relay/data/backups`
+- `BACKUP_RETENTION_DAYS=30`
 - `MAX_CLIENTS=500`
 - `PING_TTL_MS=15000`
 - `DATA_DIR=/opt/betteruc-relay/data`
 
 Access codes are only shown once. The server stores SHA-256 hashes with a secret pepper.
+Account data is backed up automatically once per day and can also be backed up manually in the admin panel.

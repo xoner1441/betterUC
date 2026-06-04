@@ -53,7 +53,8 @@ public final class PingHud {
         int screenW = client.getWindow().getScaledWidth();
         int screenH = client.getWindow().getScaledHeight();
 
-        String title = "Ping | " + safe(marker.sender());
+        PingRelayClient.PingType pingType = PingRelayClient.PingType.fromId(marker.pingType());
+        String title = pingType.label() + " | " + safe(marker.sender());
         String label = Math.round(distanceToPlayer(client, marker)) + "m";
         int width = Math.max(64, Math.max(client.textRenderer.getWidth(title), client.textRenderer.getWidth(label)) + 20);
         String style = BetterUCConfig.INSTANCE.pingHudStyle;
@@ -72,14 +73,42 @@ public final class PingHud {
                 drawMarkerBody(context, client, style, font, title, label, width, height, accent)
         );
 
-        int cross = Math.max(4, ModernHudRenderer.scaledSize(5, scale));
-        int thickness = Math.max(1, ModernHudRenderer.scaledSize(1, scale));
-        context.fill(targetX - cross, targetY, targetX + cross + 1, targetY + thickness, accent);
-        context.fill(targetX, targetY - cross, targetX + thickness, targetY + cross + 1, accent);
+        drawTargetMarker(context, client, targetX, targetY, accent, scale, pingType);
         int lineEndY = targetY - 6;
         int lineStartY = y + scaledHeight;
         if (lineEndY > lineStartY) {
+            int thickness = Math.max(1, ModernHudRenderer.scaledSize(1, scale));
             context.fill(targetX - thickness / 2, lineStartY, targetX + thickness, lineEndY, accent);
+        }
+    }
+
+    private static void drawTargetMarker(
+            DrawContext context,
+            MinecraftClient client,
+            int targetX,
+            int targetY,
+            int accent,
+            float scale,
+            PingRelayClient.PingType pingType
+    ) {
+        int cross = Math.max(4, ModernHudRenderer.scaledSize(5, scale));
+        int thickness = Math.max(1, ModernHudRenderer.scaledSize(1, scale));
+
+        switch (pingType) {
+            case DANGER -> {
+                context.drawCenteredTextWithShadow(client.textRenderer, Text.literal("!"), targetX, targetY - 18, accent);
+                context.fill(targetX - cross, targetY, targetX + cross + 1, targetY + thickness, accent);
+                context.fill(targetX, targetY - cross, targetX + thickness, targetY + cross + 1, accent);
+            }
+            case GATHER -> {
+                context.drawCenteredTextWithShadow(client.textRenderer, Text.literal("v"), targetX, targetY - 18, accent);
+                context.fill(targetX, targetY - cross - 2, targetX + thickness, targetY + cross + 1, accent);
+                context.fill(targetX - cross, targetY, targetX + cross + 1, targetY + thickness, accent);
+            }
+            default -> {
+                context.fill(targetX - cross, targetY, targetX + cross + 1, targetY + thickness, accent);
+                context.fill(targetX, targetY - cross, targetX + thickness, targetY + cross + 1, accent);
+            }
         }
     }
 

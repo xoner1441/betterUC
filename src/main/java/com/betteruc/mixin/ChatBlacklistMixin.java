@@ -5,6 +5,7 @@ import com.betteruc.BetterUCSuppressFlags;
 import com.betteruc.ServerGate;
 import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ClientScheduler;
+import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.ServerCommandUtil;
 import com.betteruc.client.UserStatsClient;
@@ -127,6 +128,7 @@ public class ChatBlacklistMixin {
 
         String raw = message.getString();
         CarFindTracker.handleIncomingChat(MinecraftClient.getInstance(), raw);
+        CommunicationDeviceTracker.handleChatLine(MinecraftClient.getInstance(), raw);
         PlantageHud.handleChatMessage(MinecraftClient.getInstance(), raw);
 
         if (BetterUCSuppressFlags.consumeBlacklistInfoLocalMessageBypass()) {

@@ -323,7 +323,7 @@ public class HudLayoutScreen extends Screen {
             case CASH -> singleLineWidth("BARGELD", previewCashValue(), "Bargeld: " + previewCashValue(), BetterUCConfig.INSTANCE.cashHudStyle);
             case POTION -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.potionHudStyle)
                     ? 120
-                    : Math.max(renderer.getWidth("Staerke II"), renderer.getWidth("Speed")) + 4;
+                    : Math.max(renderer.getWidth("Stärke II"), renderer.getWidth("Speed")) + 4;
             case SPRINT -> singleLineWidth("SPRINT", "ON", "ToggleSprint: ON", BetterUCConfig.INSTANCE.toggleSprintHudStyle);
             case HACK_TIMER -> singleLineWidth("HACK", "02:39", "Hack: 02:39", BetterUCConfig.INSTANCE.hackTimerHudStyle);
             case PLANT_TIMER -> twoLineWidth("PLANT", "Plantage Pulver 7/10", "Reif: 1:30:00 | Wasser: 20:00", BetterUCConfig.INSTANCE.plantTimerHudStyle);
@@ -400,15 +400,15 @@ public class HudLayoutScreen extends Screen {
             case CASH -> renderSingleLine(context, minecraft, style, font, x, y, "BARGELD", previewCashValue(), "Bargeld: " + previewCashValue(), BetterUCConfig.INSTANCE.cashHudColor);
             case POTION -> {
                 if (modernStyle) {
-                    ModernHudRenderer.drawTwoLineModule(context, minecraft, x, y, "EFFECT", "Staerke II", "1:26", 0xFF9328FF);
+                    ModernHudRenderer.drawTwoLineModule(context, minecraft, x, y, "EFFECT", "Stärke II", "1:26", 0xFF9328FF);
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, x, y + 33, "EFFECT", "Speed", "0:49", 0xFF7CAFC6);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Staerke II", x, y, 0xFF9328FF);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Stärke II", x, y, 0xFF9328FF);
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "1:26", x, y + 11, ModernHudRenderer.TEXT_DIM);
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Speed", x, y + 25, 0xFF7CAFC6);
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "0:49", x, y + 36, ModernHudRenderer.TEXT_DIM);
                 } else {
-                    context.drawTextWithShadow(textRenderer, Text.literal("Staerke II"), x, y, 0xFF9328FF);
+                    context.drawTextWithShadow(textRenderer, Text.literal("Stärke II"), x, y, 0xFF9328FF);
                     context.drawTextWithShadow(textRenderer, Text.literal("1:26"), x, y + 10, ModernHudRenderer.TEXT_DIM);
                     context.drawTextWithShadow(textRenderer, Text.literal("Speed"), x, y + 24, 0xFF7CAFC6);
                     context.drawTextWithShadow(textRenderer, Text.literal("0:49"), x, y + 34, ModernHudRenderer.TEXT_DIM);

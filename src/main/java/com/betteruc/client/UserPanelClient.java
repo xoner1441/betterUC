@@ -40,7 +40,7 @@ public final class UserPanelClient {
 
         URI uri = apiUri("/api/user/register");
         if (uri == null) {
-            sendLocalMessage(client, "\u00A7cWebserver-Adresse ist ungueltig.");
+            sendLocalMessage(client, "\u00A7cWebserver-Adresse ist ungültig.");
             return;
         }
 

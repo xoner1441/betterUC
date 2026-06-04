@@ -16,10 +16,13 @@ const createMessage = document.querySelector("#createMessage");
 const adminTokenBox = document.querySelector("#adminTokenBox");
 const adminGeneratedToken = document.querySelector("#adminGeneratedToken");
 const copyAdminToken = document.querySelector("#copyAdminToken");
+const createBackup = document.querySelector("#createBackup");
+const backupStatus = document.querySelector("#backupStatus");
 
 let adminKey = localStorage.getItem(ADMIN_STORAGE_KEY) || "";
 let panelSession = localStorage.getItem(PANEL_SESSION_KEY) || "";
 let accounts = [];
+let expandedAccounts = new Set();
 
 function setLoginMessage(text, type = "") {
   loginMessage.textContent = text;
@@ -75,6 +78,35 @@ function formatDate(value) {
   }
 }
 
+function formatBytes(value) {
+  const size = Number(value);
+  if (!Number.isFinite(size) || size <= 0) return "0 KB";
+  if (size < 1024 * 1024) return `${Math.ceil(size / 1024)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function moneyLabel(value) {
+  if (value === null || value === undefined) return "nicht getrackt";
+  return `${Number(value).toLocaleString("de-DE")}$`;
+}
+
+function numberLabel(value, suffix = "") {
+  if (value === null || value === undefined || value === "") return "nicht getrackt";
+  return `${Number(value).toLocaleString("de-DE")}${suffix}`;
+}
+
+function textLabel(value) {
+  return value ? String(value) : "nicht getrackt";
+}
+
+function renderBackupStatus(backups) {
+  if (!backupStatus) return;
+  const latest = Array.isArray(backups) ? backups[0] : null;
+  backupStatus.textContent = latest
+    ? `Backup: ${formatDate(latest.createdAt)} (${formatBytes(latest.size)})`
+    : "Noch kein Backup";
+}
+
 function accountMatches(account, query) {
   const role = accountRoleFilter?.value || "";
   const status = accountStatusFilter?.value || "";
@@ -101,6 +133,75 @@ function accountMatches(account, query) {
   return haystack.includes(query.toLowerCase());
 }
 
+function accountDetailHtml(account) {
+  const stats = account.stats || {};
+  const history = Array.isArray(account.statsHistory) ? account.statsHistory.slice(0, 6) : [];
+  const meta = [
+    ["Online", account.online ? "Ja" : "Nein"],
+    ["Verbunden seit", formatDate(account.connectedAt)],
+    ["Letzter Kontakt", formatDate(account.lastSeenAt)],
+    ["Letzter Weblogin", formatDate(account.lastPanelLoginAt)],
+    ["Server", account.lastServer || "nicht erkannt"],
+    ["Channel", account.lastChannel || "nicht erkannt"],
+    ["Version", account.lastVersion || "nicht erkannt"],
+    ["Web-Login", account.hasWebPassword ? "eingerichtet" : "nicht eingerichtet"]
+  ];
+  const statCards = [
+    ["Bank", moneyLabel(stats.bankMoney)],
+    ["Bargeld", moneyLabel(stats.cashMoney)],
+    ["Häuser", textLabel(stats.houses)],
+    ["Treuebonus", numberLabel(stats.loyaltyBonus, " Punkte")],
+    ["Spielzeit", numberLabel(stats.playTimeHours, " Stunden")],
+    ["Votepoints", numberLabel(stats.votepoints)],
+    ["Warns", textLabel(stats.warns)],
+    ["Fraktion", textLabel(stats.factionDisplay || account.faction)]
+  ];
+  const historyHtml = history.length === 0
+    ? `<p class="quiet">Noch kein Stats-Verlauf vorhanden.</p>`
+    : history.map(entry => `
+      <article class="history-entry">
+        <span>${formatDate(entry.at)}</span>
+        <strong>${escapeHtml(moneyLabel(entry.bankMoney))} Bank | ${escapeHtml(moneyLabel(entry.cashMoney))} Bargeld</strong>
+        <small>${escapeHtml(entry.factionDisplay || "Fraktion nicht erkannt")} | ${escapeHtml(textLabel(entry.warns))}</small>
+      </article>
+    `).join("");
+
+  return `
+    <tr class="admin-detail-row" data-id="${account.id}">
+      <td colspan="7">
+        <div class="admin-detail-grid">
+          <div>
+            <h4>Accountdetails</h4>
+            <div class="account-meta-grid">
+              ${meta.map(([label, value]) => `
+                <article class="account-meta-card">
+                  <span>${escapeHtml(label)}</span>
+                  <strong>${escapeHtml(value)}</strong>
+                </article>
+              `).join("")}
+            </div>
+          </div>
+          <div>
+            <h4>Stats</h4>
+            <div class="account-meta-grid">
+              ${statCards.map(([label, value]) => `
+                <article class="account-meta-card">
+                  <span>${escapeHtml(label)}</span>
+                  <strong>${escapeHtml(value)}</strong>
+                </article>
+              `).join("")}
+            </div>
+          </div>
+          <div>
+            <h4>Verlauf</h4>
+            <div class="history-list compact">${historyHtml}</div>
+          </div>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
 function renderAccounts() {
   const query = accountSearch.value.trim();
   const filtered = accounts.filter(account => accountMatches(account, query));
@@ -109,8 +210,10 @@ function renderAccounts() {
     return;
   }
 
-  accountsTable.innerHTML = filtered.map(account => `
-    <tr data-id="${account.id}">
+  accountsTable.innerHTML = filtered.map(account => {
+    const expanded = expandedAccounts.has(account.id);
+    return `
+    <tr data-id="${account.id}" class="${expanded ? "is-expanded" : ""}">
       <td>
         <strong>${escapeHtml(account.minecraftName || "Unbenannt")}</strong>
         <span>${escapeHtml(account.minecraftUuid || "keine UUID")} ${account.online ? "online" : ""}</span>
@@ -133,6 +236,7 @@ function renderAccounts() {
       </td>
       <td>
         <div class="row-actions">
+          <button class="button secondary toggle-details" type="button">${expanded ? "Zuklappen" : "Details"}</button>
           <button class="button secondary save-account" type="button">Speichern</button>
           <button class="button secondary reset-code" type="button">Code neu</button>
           ${account.status === "revoked"
@@ -142,7 +246,9 @@ function renderAccounts() {
         </div>
       </td>
     </tr>
-  `).join("");
+    ${expanded ? accountDetailHtml(account) : ""}
+  `;
+  }).join("");
 }
 
 function updateTotals(totals) {
@@ -150,12 +256,17 @@ function updateTotals(totals) {
   document.querySelector("#activeAccounts").textContent = totals.active ?? 0;
   document.querySelector("#revokedAccounts").textContent = totals.revoked ?? 0;
   document.querySelector("#onlineAccounts").textContent = totals.online ?? 0;
+  document.querySelector("#vipAccounts").textContent = totals.vip ?? 0;
+  document.querySelector("#adminAccounts").textContent = totals.admin ?? 0;
 }
 
 async function loadAccounts() {
   const data = await api("/api/admin/accounts");
   accounts = data.accounts || [];
+  const ids = new Set(accounts.map(account => account.id));
+  expandedAccounts = new Set([...expandedAccounts].filter(id => ids.has(id)));
   updateTotals(data.totals || {});
+  renderBackupStatus(data.backups || []);
   renderAccounts();
 }
 
@@ -220,6 +331,20 @@ document.querySelector("#refreshAccounts").addEventListener("click", () => {
   loadAccounts().catch(error => setCreateMessage(error.message, "error"));
 });
 
+createBackup?.addEventListener("click", async () => {
+  try {
+    backupStatus.textContent = "Backup wird erstellt ...";
+    const data = await api("/api/admin/backups", {
+      method: "POST",
+      body: "{}"
+    });
+    renderBackupStatus(data.backups || [data.backup]);
+    setCreateMessage("Backup wurde erstellt.", "success");
+  } catch (error) {
+    setCreateMessage(error.message, "error");
+  }
+});
+
 document.querySelector("#logoutAdmin").addEventListener("click", () => {
   localStorage.removeItem(ADMIN_STORAGE_KEY);
   localStorage.removeItem(PANEL_SESSION_KEY);
@@ -270,6 +395,15 @@ accountsTable.addEventListener("click", async event => {
   if (!id) return;
 
   try {
+    if (button.classList.contains("toggle-details")) {
+      if (expandedAccounts.has(id)) {
+        expandedAccounts.delete(id);
+      } else {
+        expandedAccounts.add(id);
+      }
+      renderAccounts();
+      return;
+    }
     if (button.classList.contains("save-account")) {
       const row = button.closest("tr");
       await updateAccount(id, {

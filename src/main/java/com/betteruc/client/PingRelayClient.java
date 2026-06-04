@@ -13,6 +13,8 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.client.network.ServerInfo;
 import net.minecraft.entity.Entity;
+import net.minecraft.sound.SoundEvent;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
@@ -51,6 +53,7 @@ public final class PingRelayClient {
     private static String status = "Nicht verbunden";
     private static String role = "user";
     private static long nextReconnectAtMs = 0L;
+    private static long lastPingSentMs = 0L;
 
     private PingRelayClient() {
     }
@@ -103,7 +106,16 @@ public final class PingRelayClient {
     }
 
     public static boolean sendPingAtCrosshair(MinecraftClient client) {
+        return sendPingAtCrosshair(client, PingType.NORMAL);
+    }
+
+    public static boolean sendPingAtCrosshair(MinecraftClient client, PingType pingType) {
+        PingType safeType = pingType == null ? PingType.NORMAL : pingType;
         if (client == null || client.player == null || client.world == null) return false;
+        if (!CommunicationDeviceTracker.canPing()) {
+            sendLocalMessage(client, CommunicationDeviceTracker.blockMessage());
+            return false;
+        }
         if (!connected || webSocket == null) {
             sendLocalMessage(client, "Ping System ist nicht verbunden (" + status + ").");
             return false;
@@ -113,10 +125,18 @@ public final class PingRelayClient {
             sendLocalMessage(client, "Fraktion noch nicht erkannt. Bitte /stats aktualisieren.");
             return false;
         }
+        long now = System.currentTimeMillis();
+        int cooldownMs = Math.max(0, Math.min(10000, BetterUCConfig.INSTANCE.pingCooldownMs));
+        long remainingMs = lastPingSentMs + cooldownMs - now;
+        if (remainingMs > 0L) {
+            sendLocalMessage(client, "Ping Cooldown: " + cooldownLabel(remainingMs) + ".");
+            return false;
+        }
 
         PingTarget target = targetFromCrosshair(client);
         JsonObject payload = new JsonObject();
         payload.addProperty("type", "ping");
+        payload.addProperty("pingType", safeType.id());
         payload.addProperty("sender", playerName(client));
         payload.addProperty("server", currentServerId(client));
         payload.addProperty("channel", channel());
@@ -126,10 +146,11 @@ public final class PingRelayClient {
         payload.addProperty("y", target.pos.y);
         payload.addProperty("z", target.pos.z);
         payload.addProperty("label", target.label);
-        payload.addProperty("color", BetterUCConfig.INSTANCE.pingRelayColor);
+        payload.addProperty("color", colorForType(safeType));
 
         try {
             webSocket.sendText(GSON.toJson(payload), true);
+            lastPingSentMs = now;
             return true;
         } catch (Exception e) {
             markDisconnected("Senden fehlgeschlagen");
@@ -157,6 +178,17 @@ public final class PingRelayClient {
             case "vip" -> "VIP";
             default -> "Spieler";
         };
+    }
+
+    public static String pingSoundLabel(String id) {
+        return PingSound.fromId(id).label();
+    }
+
+    public static String nextPingSoundId(String id) {
+        PingSound[] sounds = PingSound.values();
+        PingSound current = PingSound.fromId(id);
+        int next = (current.ordinal() + 1) % sounds.length;
+        return sounds[next].id();
     }
 
     public static void refreshIdentity(MinecraftClient client) {
@@ -350,11 +382,12 @@ public final class PingRelayClient {
                     stringValue(json, "id", ""),
                     stringValue(json, "sender", "Unbekannt"),
                     stringValue(json, "label", "Ping"),
+                    PingType.fromId(stringValue(json, "pingType", PingType.NORMAL.id())).id(),
                     stringValue(json, "dimension", "unknown"),
                     doubleValue(json, "x", 0.0D),
                     doubleValue(json, "y", 0.0D),
                     doubleValue(json, "z", 0.0D),
-                    stringValue(json, "color", BetterUCConfig.INSTANCE.pingRelayColor),
+                    stringValue(json, "color", colorForType(PingType.fromId(stringValue(json, "pingType", PingType.NORMAL.id())))),
                     longValue(json, "createdAt", System.currentTimeMillis()),
                     longValue(json, "expiresAt", System.currentTimeMillis() + BetterUCConfig.INSTANCE.pingRelayTtlSeconds * 1000L)
             );
@@ -366,6 +399,7 @@ public final class PingRelayClient {
                     ACTIVE_PINGS.remove(0);
                 }
             }
+            playPingSound(client, PingType.fromId(marker.pingType()));
         } catch (Exception e) {
             BetterUCMod.LOGGER.debug("Ignored invalid betterUC relay message: {}", raw);
         }
@@ -433,7 +467,7 @@ public final class PingRelayClient {
             if (current instanceof WebSocketHandshakeException handshakeException) {
                 int code = handshakeException.getResponse().statusCode();
                 if (code == 401 || code == 403) {
-                    return "Access Code ungueltig";
+                    return "Access Code ungültig";
                 }
                 if (code == 404) {
                     return "Relay-Route fehlt";
@@ -545,6 +579,31 @@ public final class PingRelayClient {
                 .orElse("unknown");
     }
 
+    private static String colorForType(PingType type) {
+        return switch (type == null ? PingType.NORMAL : type) {
+            case DANGER -> BetterUCConfig.INSTANCE.pingDangerColor;
+            case GATHER -> BetterUCConfig.INSTANCE.pingGatherColor;
+            default -> BetterUCConfig.INSTANCE.pingNormalColor;
+        };
+    }
+
+    private static String cooldownLabel(long remainingMs) {
+        if (remainingMs >= 1000L) {
+            return String.format(Locale.ROOT, "%.1fs", remainingMs / 1000.0D);
+        }
+        return remainingMs + "ms";
+    }
+
+    private static void playPingSound(MinecraftClient client, PingType type) {
+        if (!BetterUCConfig.INSTANCE.pingSoundEnabled || client == null || client.player == null) return;
+        float pitch = switch (type == null ? PingType.NORMAL : type) {
+            case DANGER -> 0.75F;
+            case GATHER -> 1.35F;
+            default -> 1.0F;
+        };
+        client.player.playSound(PingSound.fromId(BetterUCConfig.INSTANCE.pingSoundId).sound(), 0.45F, pitch);
+    }
+
     private static String encode(String value) {
         return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
@@ -579,6 +638,7 @@ public final class PingRelayClient {
             String id,
             String sender,
             String label,
+            String pingType,
             String dimension,
             double x,
             double y,
@@ -593,6 +653,75 @@ public final class PingRelayClient {
     }
 
     private record RelayPlayer(String nameLower, String uuid, String role, long priority) {
+    }
+
+    public enum PingType {
+        NORMAL("normal", "Normal"),
+        DANGER("danger", "Gefahr"),
+        GATHER("gather", "Sammeln");
+
+        private final String id;
+        private final String label;
+
+        PingType(String id, String label) {
+            this.id = id;
+            this.label = label;
+        }
+
+        public String id() {
+            return id;
+        }
+
+        public String label() {
+            return label;
+        }
+
+        public static PingType fromId(String id) {
+            String cleaned = id == null ? "" : id.trim().toLowerCase(Locale.ROOT);
+            for (PingType type : values()) {
+                if (type.id.equals(cleaned)) return type;
+            }
+            return NORMAL;
+        }
+    }
+
+    private enum PingSound {
+        PLING("pling", "Pling", SoundEvents.BLOCK_NOTE_BLOCK_PLING.value()),
+        BELL("bell", "Glocke", SoundEvents.BLOCK_NOTE_BLOCK_BELL.value()),
+        CHIME("chime", "Chime", SoundEvents.BLOCK_NOTE_BLOCK_CHIME.value()),
+        BIT("bit", "Bit", SoundEvents.BLOCK_NOTE_BLOCK_BIT.value()),
+        BANJO("banjo", "Banjo", SoundEvents.BLOCK_NOTE_BLOCK_BANJO.value()),
+        COWBELL("cowbell", "Cowbell", SoundEvents.BLOCK_NOTE_BLOCK_COW_BELL.value());
+
+        private final String id;
+        private final String label;
+        private final SoundEvent sound;
+
+        PingSound(String id, String label, SoundEvent sound) {
+            this.id = id;
+            this.label = label;
+            this.sound = sound;
+        }
+
+        private String id() {
+            return id;
+        }
+
+        private String label() {
+            return label;
+        }
+
+        private SoundEvent sound() {
+            return sound;
+        }
+
+        private static PingSound fromId(String id) {
+            String cleaned = id == null ? "" : id.trim().toLowerCase(Locale.ROOT);
+            for (PingSound sound : values()) {
+                if (sound.id.equals(cleaned)) return sound;
+            }
+            return PLING;
+        }
     }
 
     private static final class RelayListener implements WebSocket.Listener {

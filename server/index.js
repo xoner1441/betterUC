@@ -14,6 +14,12 @@ const PING_TTL_MS = Number(process.env.PING_TTL_MS || 15000);
 const PUBLIC_DIR = process.env.PUBLIC_DIR || path.join(__dirname, "public");
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 const STORE_FILE = path.join(DATA_DIR, "accounts.json");
+const BACKUP_DIR = process.env.BACKUP_DIR || path.join(DATA_DIR, "backups");
+const BACKUP_RETENTION_DAYS = Number(process.env.BACKUP_RETENTION_DAYS || 30);
+const BACKUP_INTERVAL_ENV = Number(process.env.BACKUP_INTERVAL_MS);
+const BACKUP_INTERVAL_MS = Number.isFinite(BACKUP_INTERVAL_ENV)
+  ? Math.max(60 * 60 * 1000, BACKUP_INTERVAL_ENV)
+  : 24 * 60 * 60 * 1000;
 const TOKEN_PEPPER = process.env.TOKEN_PEPPER || process.env.BETTERUC_TOKEN || "betteruc-local-pepper";
 const LEGACY_RELAY_TOKEN = (process.env.BETTERUC_TOKEN || "").trim();
 const ALLOW_LEGACY_TOKEN = String(process.env.ALLOW_LEGACY_TOKEN || "true").toLowerCase() !== "false";
@@ -36,6 +42,7 @@ const MIME_TYPES = new Map([
 
 let store = { version: 1, accounts: [] };
 let saveTimer = null;
+let backupTimer = null;
 const clients = new Set();
 const rateLimits = new Map();
 
@@ -102,6 +109,78 @@ async function saveStore() {
   const tmp = `${STORE_FILE}.tmp`;
   await fsp.writeFile(tmp, JSON.stringify(store, null, 2), "utf8");
   await fsp.rename(tmp, STORE_FILE);
+}
+
+function backupDateKey(date = new Date()) {
+  return date.toISOString().slice(0, 10);
+}
+
+function backupTimestamp(date = new Date()) {
+  return date.toISOString().replace(/[:.]/g, "-");
+}
+
+async function listStoreBackups() {
+  try {
+    const entries = await fsp.readdir(BACKUP_DIR, { withFileTypes: true });
+    const backups = await Promise.all(entries
+      .filter(entry => entry.isFile() && entry.name.startsWith("accounts-") && entry.name.endsWith(".json"))
+      .map(async entry => {
+        const filePath = path.join(BACKUP_DIR, entry.name);
+        const stat = await fsp.stat(filePath);
+        return {
+          name: entry.name,
+          size: stat.size,
+          createdAt: stat.mtime.toISOString()
+        };
+      }));
+    backups.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return backups;
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
+}
+
+async function cleanupStoreBackups() {
+  if (!Number.isFinite(BACKUP_RETENTION_DAYS) || BACKUP_RETENTION_DAYS <= 0) return;
+  const backups = await listStoreBackups();
+  const cutoff = Date.now() - BACKUP_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  await Promise.all(backups
+    .filter(backup => new Date(backup.createdAt).getTime() < cutoff)
+    .map(backup => fsp.unlink(path.join(BACKUP_DIR, backup.name)).catch(error => {
+      console.error("Could not remove old betterUC backup", backup.name, error);
+    })));
+}
+
+async function createStoreBackup(reason = "scheduled") {
+  await fsp.mkdir(BACKUP_DIR, { recursive: true });
+  await saveStore();
+  const cleanReason = String(reason || "manual").replace(/[^a-z0-9_-]/gi, "").toLowerCase() || "manual";
+  const fileName = `accounts-${backupTimestamp()}-${cleanReason}.json`;
+  const filePath = path.join(BACKUP_DIR, fileName);
+  await fsp.copyFile(STORE_FILE, filePath);
+  await cleanupStoreBackups();
+  const stat = await fsp.stat(filePath);
+  return {
+    name: fileName,
+    size: stat.size,
+    createdAt: stat.mtime.toISOString()
+  };
+}
+
+async function ensureDailyStoreBackup() {
+  const today = backupDateKey();
+  const backups = await listStoreBackups();
+  if (backups.some(backup => backup.name.startsWith(`accounts-${today}`))) return null;
+  return createStoreBackup("daily");
+}
+
+function scheduleStoreBackups() {
+  clearInterval(backupTimer);
+  ensureDailyStoreBackup().catch(error => console.error("Could not create betterUC daily backup", error));
+  backupTimer = setInterval(() => {
+    ensureDailyStoreBackup().catch(error => console.error("Could not create betterUC daily backup", error));
+  }, BACKUP_INTERVAL_MS);
 }
 
 function scheduleStoreSave() {
@@ -176,6 +255,12 @@ function cleanDimension(value) {
   return raw.replace(/[^a-z0-9_:.\\/-]/g, "").slice(0, 80) || "unknown";
 }
 
+function cleanPingType(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (raw === "danger" || raw === "gather") return raw;
+  return "normal";
+}
+
 function cleanStatus(value) {
   return value === "revoked" ? "revoked" : "active";
 }
@@ -208,6 +293,55 @@ function publicStats(account) {
   };
 }
 
+function statsSnapshot(stats) {
+  const source = stats && typeof stats === "object" ? stats : {};
+  return {
+    at: source.updatedAt || nowIso(),
+    bankMoney: cleanStatNumber(source.bankMoney),
+    cashMoney: cleanStatNumber(source.cashMoney),
+    factionDisplay: cleanStatText(source.factionDisplay || ""),
+    houses: cleanStatText(source.houses || ""),
+    loyaltyBonus: cleanStatNumber(source.loyaltyBonus),
+    playTimeHours: cleanStatNumber(source.playTimeHours),
+    votepoints: cleanStatNumber(source.votepoints),
+    warns: cleanStatText(source.warns || "")
+  };
+}
+
+function sameStatsSnapshot(left, right) {
+  if (!left || !right) return false;
+  return left.bankMoney === right.bankMoney
+    && left.cashMoney === right.cashMoney
+    && left.factionDisplay === right.factionDisplay
+    && left.houses === right.houses
+    && left.loyaltyBonus === right.loyaltyBonus
+    && left.playTimeHours === right.playTimeHours
+    && left.votepoints === right.votepoints
+    && left.warns === right.warns;
+}
+
+function publicStatsHistory(account) {
+  const history = Array.isArray(account && account.statsHistory) ? account.statsHistory : [];
+  return history
+    .slice(-20)
+    .map(statsSnapshot)
+    .filter(entry => entry.at)
+    .sort((a, b) => new Date(b.at) - new Date(a.at));
+}
+
+function appendStatsHistory(account, stats) {
+  const snapshot = statsSnapshot(stats);
+  const history = Array.isArray(account.statsHistory) ? account.statsHistory : [];
+  const previous = history[history.length - 1];
+  if (sameStatsSnapshot(previous, snapshot)) return;
+  account.statsHistory = [...history, snapshot].slice(-20);
+}
+
+function onlineClientForAccount(account) {
+  if (!account) return null;
+  return [...clients].find(client => client.account && client.account.id === account.id) || null;
+}
+
 function publicAccount(account) {
   const stats = publicStats(account);
   return {
@@ -225,12 +359,14 @@ function publicAccount(account) {
     lastServer: account.lastServer || "",
     lastChannel: account.lastChannel || "",
     lastVersion: account.lastVersion || "",
-    status: account.status || "active"
+    status: account.status || "active",
+    lastPanelLoginAt: account.lastPanelLoginAt || null
   };
 }
 
 function userPanelAccount(account) {
   const stats = publicStats(account);
+  const onlineClient = onlineClientForAccount(account);
   return {
     id: account.id,
     minecraftName: account.minecraftName || "",
@@ -239,20 +375,29 @@ function userPanelAccount(account) {
     factionDisplay: stats.factionDisplay || account.faction || "",
     role: cleanRole(account.role),
     status: account.status || "active",
+    online: Boolean(onlineClient),
+    connectedAt: onlineClient ? onlineClient.connectedAt : null,
     lastSeenAt: account.lastSeenAt || null,
     lastStatsAt: account.lastStatsAt || null,
+    lastServer: account.lastServer || "",
+    lastChannel: account.lastChannel || "",
+    lastVersion: account.lastVersion || "",
+    lastPanelLoginAt: account.lastPanelLoginAt || null,
+    tokenPrefix: account.tokenPrefix || "",
+    hasWebPassword: Boolean(account.webPasswordHash),
+    statsHistory: publicStatsHistory(account),
     stats
   };
 }
 
 function adminAccount(account) {
-  const onlineClient = [...clients].find(client =>
-    client.account && client.account.id === account.id
-  );
+  const onlineClient = onlineClientForAccount(account);
   return {
     ...publicAccount(account),
     online: Boolean(onlineClient),
-    connectedAt: onlineClient ? onlineClient.connectedAt : null
+    connectedAt: onlineClient ? onlineClient.connectedAt : null,
+    stats: publicStats(account),
+    statsHistory: publicStatsHistory(account)
   };
 }
 
@@ -438,19 +583,28 @@ function mergeStats(account, incoming) {
   const previous = account.stats && typeof account.stats === "object" ? account.stats : {};
   const next = { ...previous };
   const source = incoming && typeof incoming === "object" ? incoming : {};
+  let changed = false;
 
-  if (Object.hasOwn(source, "bankMoney")) next.bankMoney = cleanStatNumber(source.bankMoney);
-  if (Object.hasOwn(source, "cashMoney")) next.cashMoney = cleanStatNumber(source.cashMoney);
-  if (Object.hasOwn(source, "factionDisplay")) next.factionDisplay = cleanStatText(source.factionDisplay || "");
-  if (Object.hasOwn(source, "houses")) next.houses = cleanStatText(source.houses || "");
-  if (Object.hasOwn(source, "loyaltyBonus")) next.loyaltyBonus = cleanStatNumber(source.loyaltyBonus);
-  if (Object.hasOwn(source, "playTimeHours")) next.playTimeHours = cleanStatNumber(source.playTimeHours);
-  if (Object.hasOwn(source, "votepoints")) next.votepoints = cleanStatNumber(source.votepoints);
-  if (Object.hasOwn(source, "warns")) next.warns = cleanStatText(source.warns || "");
+  const setStat = (key, value) => {
+    if (next[key] !== value) changed = true;
+    next[key] = value;
+  };
+
+  if (Object.hasOwn(source, "bankMoney")) setStat("bankMoney", cleanStatNumber(source.bankMoney));
+  if (Object.hasOwn(source, "cashMoney")) setStat("cashMoney", cleanStatNumber(source.cashMoney));
+  if (Object.hasOwn(source, "factionDisplay")) setStat("factionDisplay", cleanStatText(source.factionDisplay || ""));
+  if (Object.hasOwn(source, "houses")) setStat("houses", cleanStatText(source.houses || ""));
+  if (Object.hasOwn(source, "loyaltyBonus")) setStat("loyaltyBonus", cleanStatNumber(source.loyaltyBonus));
+  if (Object.hasOwn(source, "playTimeHours")) setStat("playTimeHours", cleanStatNumber(source.playTimeHours));
+  if (Object.hasOwn(source, "votepoints")) setStat("votepoints", cleanStatNumber(source.votepoints));
+  if (Object.hasOwn(source, "warns")) setStat("warns", cleanStatText(source.warns || ""));
 
   next.updatedAt = nowIso();
   account.stats = next;
   account.lastStatsAt = next.updatedAt;
+  if (changed) {
+    appendStatsHistory(account, next);
+  }
 }
 
 function updateAccountFromClient(account, info) {
@@ -562,12 +716,26 @@ async function handleApi(req, res, url) {
       ok: true,
       accounts: store.accounts.map(adminAccount),
       players: onlinePlayersForResponse(),
+      backups: await listStoreBackups(),
       totals: {
         accounts: store.accounts.length,
         active: store.accounts.filter(account => cleanStatus(account.status) === "active").length,
         revoked: store.accounts.filter(account => cleanStatus(account.status) === "revoked").length,
-        online: clients.size
+        online: clients.size,
+        vip: store.accounts.filter(account => cleanRole(account.role) === "vip").length,
+        admin: store.accounts.filter(account => cleanRole(account.role) === "admin").length
       }
+    });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/backups") {
+    if (!requireAdmin(req, res, url)) return;
+    const backup = await createStoreBackup("manual");
+    json(res, 201, {
+      ok: true,
+      backup,
+      backups: await listStoreBackups()
     });
     return;
   }
@@ -969,6 +1137,7 @@ function broadcastPing(sender, payload) {
   const marker = {
     type: "ping",
     id: crypto.randomUUID(),
+    pingType: cleanPingType(payload.pingType),
     sender: sender.name || "unknown",
     label: cleanSmallLabel(payload.label || "Ping", "Ping"),
     dimension: cleanDimension(payload.dimension || "unknown"),
@@ -1065,6 +1234,7 @@ function removeClient(client) {
 
 async function main() {
   await loadStore();
+  scheduleStoreBackups();
 
   const server = http.createServer((req, res) => {
     handleHttp(req, res).catch(error => {

@@ -15,6 +15,7 @@ npm install --omit=dev
 grep -q '^TOKEN_PEPPER=' /etc/betteruc-relay.env || echo "TOKEN_PEPPER=$(openssl rand -hex 32)" >> /etc/betteruc-relay.env
 grep -q '^ALLOW_LEGACY_TOKEN=' /etc/betteruc-relay.env || echo "ALLOW_LEGACY_TOKEN=true" >> /etc/betteruc-relay.env
 grep -q '^ADMIN_KEY=' /etc/betteruc-relay.env || echo "ADMIN_KEY=$(openssl rand -base64 32 | tr -d '=+/')" >> /etc/betteruc-relay.env
+grep -q '^BACKUP_RETENTION_DAYS=' /etc/betteruc-relay.env || echo "BACKUP_RETENTION_DAYS=30" >> /etc/betteruc-relay.env
 
 cat > /etc/caddy/Caddyfile <<'EOF'
 betteruc.de, www.betteruc.de {
@@ -53,3 +54,4 @@ https://betteruc.de/admin
 ```
 
 Admin users can also open `/admin` from the Userpanel without entering this key.
+Backups are written to `/opt/betteruc-relay/data/backups` once per day. The admin panel also has a manual backup button.

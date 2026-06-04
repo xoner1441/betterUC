@@ -12,6 +12,8 @@ const panelUsername = document.querySelector("#panelUsername");
 const panelRoleBadge = document.querySelector("#panelRoleBadge");
 const panelStatusBadge = document.querySelector("#panelStatusBadge");
 const panelStats = document.querySelector("#panelStats");
+const panelAccountMeta = document.querySelector("#panelAccountMeta");
+const panelHistory = document.querySelector("#panelHistory");
 const panelUpdated = document.querySelector("#panelUpdated");
 const panelRefresh = document.querySelector("#panelRefresh");
 const panelAdmin = document.querySelector("#panelAdmin");
@@ -94,11 +96,28 @@ function textLabel(value) {
   return value ? String(value) : "Noch nicht getrackt";
 }
 
-function dateLabel(value) {
-  if (!value) return "Noch keine Stats empfangen";
+function dateLabel(value, fallback = "Noch keine Stats empfangen") {
+  if (!value) return fallback;
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Noch keine Stats empfangen";
+  if (Number.isNaN(date.getTime())) return fallback;
   return `Aktualisiert: ${date.toLocaleString("de-DE")}`;
+}
+
+function plainDateLabel(value, fallback = "nie") {
+  if (!value) return fallback;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return date.toLocaleString("de-DE");
+}
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  })[char]);
 }
 
 function roleLabel(role) {
@@ -113,6 +132,49 @@ function roleClass(role) {
   return "role-badge role-user";
 }
 
+function accountStatusLabel(user) {
+  if (user.status === "revoked") return "gesperrt";
+  return user.online ? "online" : "aktiv";
+}
+
+function renderMetaCards(user) {
+  if (!panelAccountMeta) return;
+  const meta = [
+    ["Online", user.online ? "Ja" : "Nein"],
+    ["Verbunden seit", plainDateLabel(user.connectedAt)],
+    ["Letzter Kontakt", plainDateLabel(user.lastSeenAt)],
+    ["Letzter Weblogin", plainDateLabel(user.lastPanelLoginAt)],
+    ["Server", user.lastServer || "nicht erkannt"],
+    ["Version", user.lastVersion || "nicht erkannt"],
+    ["Access Code", user.tokenPrefix ? `${user.tokenPrefix}...` : "nicht erkannt"],
+    ["Web-Login", user.hasWebPassword ? "eingerichtet" : "nicht eingerichtet"]
+  ];
+
+  panelAccountMeta.innerHTML = meta.map(([label, value]) => `
+    <article class="account-meta-card">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </article>
+  `).join("");
+}
+
+function renderHistory(history) {
+  if (!panelHistory) return;
+  const entries = Array.isArray(history) ? history.slice(0, 6) : [];
+  if (entries.length === 0) {
+    panelHistory.innerHTML = `<p class="quiet">Noch kein Verlauf vorhanden.</p>`;
+    return;
+  }
+
+  panelHistory.innerHTML = entries.map(entry => `
+    <article class="history-entry">
+      <span>${escapeHtml(plainDateLabel(entry.at))}</span>
+      <strong>${escapeHtml(moneyLabel(entry.bankMoney))} Bank | ${escapeHtml(moneyLabel(entry.cashMoney))} Bargeld</strong>
+      <small>${escapeHtml(entry.factionDisplay || "Fraktion nicht erkannt")} | ${escapeHtml(textLabel(entry.warns))}</small>
+    </article>
+  `).join("");
+}
+
 function renderPanel(user) {
   if (!panelDashboard || !panelStats) return;
   panelLoginForm.hidden = true;
@@ -124,7 +186,7 @@ function renderPanel(user) {
   }
   if (panelStatusBadge) {
     const active = user.status !== "revoked";
-    panelStatusBadge.textContent = active ? "aktiv" : "gesperrt";
+    panelStatusBadge.textContent = accountStatusLabel(user);
     panelStatusBadge.className = `status-pill ${active ? "active" : "revoked"}`;
   }
   if (panelAdmin) {
@@ -148,10 +210,12 @@ function renderPanel(user) {
 
   panelStats.innerHTML = cards.map(([label, value]) => `
     <article class="panel-stat-card">
-      <span>${label}</span>
-      <strong>${value}</strong>
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
     </article>
   `).join("");
+  renderMetaCards(user);
+  renderHistory(user.statsHistory);
   panelUpdated.textContent = dateLabel(user.lastStatsAt || stats.updatedAt);
 }
 

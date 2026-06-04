@@ -146,8 +146,16 @@ public final class UserStatsClient {
         UserPanelClient.uploadStats(client, currentStatsJson());
     }
 
+    public static void uploadCurrentStats(MinecraftClient client) {
+        uploadNow(client);
+    }
+
     private static JsonObject currentStatsJson() {
         JsonObject stats = new JsonObject();
+        int bankMoney = BankBalanceHud.getCurrentBankBalance();
+        if (bankMoney >= 0) lastBankMoney = bankMoney;
+        int cashMoney = CashHud.getCurrentCash();
+        if (cashMoney >= 0) lastCashMoney = cashMoney;
         if (lastBankMoney != null) stats.addProperty("bankMoney", lastBankMoney);
         if (lastCashMoney != null) stats.addProperty("cashMoney", lastCashMoney);
         if (!lastFactionDisplay.isBlank()) stats.addProperty("factionDisplay", lastFactionDisplay);

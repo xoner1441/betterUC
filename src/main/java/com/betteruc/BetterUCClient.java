@@ -7,6 +7,7 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.BetterUCFontManager;
+import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.MovementController;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.ServerCommandUtil;
@@ -16,6 +17,7 @@ import com.betteruc.client.VersionChecker;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.gui.CommandGui;
 import com.betteruc.gui.BetterUCScreen;
+import com.betteruc.gui.PingWheelScreen;
 import com.betteruc.hud.AmmoHud;
 import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.CashHud;
@@ -65,6 +67,7 @@ public class BetterUCClient implements ClientModInitializer {
     private static final int AUTO_STATS_ON_JOIN_DELAY_TICKS = 240;
     private static final long BLINFO_CACHE_MAX_AGE_MS = 20_000L;
     private static final long BLINFO_TIMEOUT_MS = 5000L;
+    private static final long PING_WHEEL_HOLD_MS = 250L;
     private static final KeyBinding.Category BETTERUC_KEY_CATEGORY =
             KeyBinding.Category.create(Identifier.of("betteruc", "controls"));
     private static final KeyBinding SETTINGS_KEY = new KeyBinding(
@@ -88,6 +91,9 @@ public class BetterUCClient implements ClientModInitializer {
     private int statsOnJoinDelay = -1;
     private final Map<Integer, Boolean> hotkeyPressedState = new HashMap<>();
     private final Set<Integer> activeHotkeyKeys = new HashSet<>();
+    private boolean pingKeyWasDown = false;
+    private long pingKeyDownAtMs = 0L;
+    private boolean pingWheelOpenedForPress = false;
 
     private static final class MatchedReason {
         private final String key;
@@ -181,6 +187,7 @@ public class BetterUCClient implements ClientModInitializer {
             AmmoHud.clear();
             BankBalanceHud.clear();
             CashHud.clear();
+            CommunicationDeviceTracker.reset();
             PingRelayClient.onJoin(client);
             statsOnJoinDelay = BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled
                     ? AUTO_STATS_ON_JOIN_DELAY_TICKS
@@ -190,6 +197,7 @@ public class BetterUCClient implements ClientModInitializer {
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             ServerCommandUtil.markDisconnected();
+            CommunicationDeviceTracker.reset();
             PingRelayClient.onDisconnect();
             resetRuntimeState(client);
         });
@@ -418,7 +426,7 @@ public class BetterUCClient implements ClientModInitializer {
         }
 
         client.player.sendMessage(Text.literal(
-                "\u00A77Suche Blacklist-Eintrag fuer \u00A7f" + requestedName + "\u00A77..."
+                "\u00A77Suche Blacklist-Eintrag für \u00A7f" + requestedName + "\u00A77..."
         ), false);
 
         BetterUCSuppressFlags.beginBlacklistInfoLookup(requestedName);
@@ -449,7 +457,7 @@ public class BetterUCClient implements ClientModInitializer {
         }
 
         MatchedReason finalMatched = matched;
-        client.player.sendMessage(Text.literal("\u00A77Lade Blacklist fuer \u00A7f" + spieler + "\u00A77..."), false);
+        client.player.sendMessage(Text.literal("\u00A77Lade Blacklist für \u00A7f" + spieler + "\u00A77..."), false);
 
         BetterUCSuppressFlags.suppressModBlOutput = true;
         BetterUCSuppressFlags.modBlCallback = () -> applyModBlFromLoadedData(client, spieler, isVogelfreiFlag, finalMatched);
@@ -468,7 +476,7 @@ public class BetterUCClient implements ClientModInitializer {
         }
 
         client.player.sendMessage(Text.literal(
-                "\u00A77Lade Blacklist fuer \u00A7f" + spieler + "\u00A77 (RP " + stufe + "/3)..."
+                "\u00A77Lade Blacklist für \u00A7f" + spieler + "\u00A77 (RP " + stufe + "/3)..."
         ), false);
 
         BetterUCSuppressFlags.suppressModBlOutput = true;
@@ -692,7 +700,7 @@ public class BetterUCClient implements ClientModInitializer {
         if (storedName == null) {
             BetterUCSuppressFlags.clearBlacklistInfoLookup();
             client.player.sendMessage(Text.literal(
-                    "\u00A7cKein Blacklist-Eintrag fuer \u00A7f" + spieler + "\u00A7c gefunden."
+                    "\u00A7cKein Blacklist-Eintrag für \u00A7f" + spieler + "\u00A7c gefunden."
             ), false);
             return;
         }
@@ -979,11 +987,54 @@ public class BetterUCClient implements ClientModInitializer {
     }
 
     private void handlePingHotkey(MinecraftClient client) {
+        boolean queuedPress = false;
         while (PING_KEY.wasPressed()) {
-            if (client.currentScreen == null) {
-                PingRelayClient.sendPingAtCrosshair(client);
-            }
+            queuedPress = true;
         }
+
+        if (client.currentScreen instanceof PingWheelScreen) return;
+
+        boolean down = PING_KEY.isPressed();
+        if (client.currentScreen != null) {
+            pingKeyWasDown = down;
+            pingWheelOpenedForPress = false;
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        if (queuedPress && !down) {
+            PingRelayClient.sendPingAtCrosshair(client, PingRelayClient.PingType.NORMAL);
+            resetPingPressState();
+            return;
+        }
+
+        if (down && !pingKeyWasDown) {
+            pingKeyWasDown = true;
+            pingKeyDownAtMs = now;
+            pingWheelOpenedForPress = false;
+            return;
+        }
+
+        if (down) {
+            if (!pingWheelOpenedForPress && now - pingKeyDownAtMs >= PING_WHEEL_HOLD_MS) {
+                client.setScreen(new PingWheelScreen(PING_KEY));
+                pingWheelOpenedForPress = true;
+            }
+            return;
+        }
+
+        if (pingKeyWasDown) {
+            if (!pingWheelOpenedForPress) {
+                PingRelayClient.sendPingAtCrosshair(client, PingRelayClient.PingType.NORMAL);
+            }
+            resetPingPressState();
+        }
+    }
+
+    private void resetPingPressState() {
+        pingKeyWasDown = false;
+        pingKeyDownAtMs = 0L;
+        pingWheelOpenedForPress = false;
     }
 
     private void handleConfiguredHotkeys(MinecraftClient client) {
@@ -1024,6 +1075,7 @@ public class BetterUCClient implements ClientModInitializer {
         BetterUCConfig.clearChatBlacklistRuntime();
         statsOnJoinDelay = -1;
         hotkeyPressedState.clear();
+        resetPingPressState();
         MovementController.reset(client);
         PaydayHud.clear();
         AmmoHud.clear();

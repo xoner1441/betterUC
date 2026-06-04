@@ -221,6 +221,12 @@ public class BetterUCConfig {
     public int pingRelayTtlSeconds = 15;
     public int pingRelayMaxDistance = 3000;
     public String pingRelayColor = "#38BDF8";
+    public String pingNormalColor = "#38BDF8";
+    public String pingDangerColor = "#FF5555";
+    public String pingGatherColor = "#22C55E";
+    public int pingCooldownMs = 2000;
+    public boolean pingSoundEnabled = true;
+    public String pingSoundId = "pling";
 
     public static class BlacklistReason {
         public int kills;
@@ -348,11 +354,32 @@ public class BetterUCConfig {
         }
         INSTANCE.pingRelayTtlSeconds = Math.max(5, Math.min(60, INSTANCE.pingRelayTtlSeconds));
         INSTANCE.pingRelayMaxDistance = Math.max(50, Math.min(10000, INSTANCE.pingRelayMaxDistance));
-        if (INSTANCE.pingRelayColor == null || !INSTANCE.pingRelayColor.matches("#?[0-9A-Fa-f]{6}")) {
-            INSTANCE.pingRelayColor = "#38BDF8";
-        } else if (!INSTANCE.pingRelayColor.startsWith("#")) {
-            INSTANCE.pingRelayColor = "#" + INSTANCE.pingRelayColor;
+        INSTANCE.pingRelayColor = sanitizeHexColor(INSTANCE.pingRelayColor, "#38BDF8");
+        INSTANCE.pingNormalColor = sanitizeHexColor(INSTANCE.pingNormalColor, INSTANCE.pingRelayColor);
+        INSTANCE.pingDangerColor = sanitizeHexColor(INSTANCE.pingDangerColor, "#FF5555");
+        INSTANCE.pingGatherColor = sanitizeHexColor(INSTANCE.pingGatherColor, "#22C55E");
+        INSTANCE.pingCooldownMs = Math.max(500, Math.min(10000, INSTANCE.pingCooldownMs));
+        INSTANCE.pingSoundId = sanitizePingSound(INSTANCE.pingSoundId);
+    }
+
+    private static String sanitizeHexColor(String value, String fallback) {
+        String raw = value == null ? "" : value.trim();
+        if (raw.matches("#?[0-9A-Fa-f]{6}")) {
+            return raw.startsWith("#") ? raw : "#" + raw;
         }
+        String cleanFallback = fallback == null ? "#38BDF8" : fallback.trim();
+        if (cleanFallback.matches("#?[0-9A-Fa-f]{6}")) {
+            return cleanFallback.startsWith("#") ? cleanFallback : "#" + cleanFallback;
+        }
+        return "#38BDF8";
+    }
+
+    private static String sanitizePingSound(String value) {
+        String raw = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+        return switch (raw) {
+            case "bell", "chime", "bit", "banjo", "cowbell" -> raw;
+            default -> "pling";
+        };
     }
 
     private static boolean isLegacyPingRelayUrl(String url) {

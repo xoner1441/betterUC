@@ -2,8 +2,10 @@ package com.betteruc.gui;
 
 import com.betteruc.BetterUCMod;
 import com.betteruc.client.BetterUCFontManager;
+import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.SyncRefreshActions;
+import com.betteruc.client.UserStatsClient;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.CashHud;
@@ -49,12 +51,14 @@ public class BetterUCScreen extends Screen {
             .map(container -> container.getMetadata().getVersion().getFriendlyString())
             .orElse("dev");
     private static final UpdateSection[] UPDATE_SECTIONS = new UpdateSection[]{
-            new UpdateSection("Neu in 1.1.4", new String[]{
+            new UpdateSection("Neu in 1.1.5", new String[]{
                     "VIP-Rolle mit eigenem Hologramm und Tablist-Badge",
                     "Userpanel zeigt Rolle, Status und aktuelle Tracking-Daten",
-                    "Adminpanel hat Filter fuer Rolle, Status, Online-Zustand und Fraktion",
-                    "Verbindungsseite im ClickGUI ist uebersichtlicher sortiert",
-                    "Website ist in Startseite, Access, Userpanel und Adminpanel getrennt"
+                    "Adminpanel hat Filter für Rolle, Status, Online-Zustand und Fraktion",
+                    "Verbindungsseite im ClickGUI ist übersichtlicher sortiert",
+                    "Website ist in Startseite, Access, Userpanel und Adminpanel getrennt",
+                    "Pingrad mit Normal-, Gefahr- und Sammeln-Pings",
+                    "Eigene Pingfarben, Ping-Soundauswahl und Cooldown gegen Spam"
             }),
             new UpdateSection("Neu in 1.1.3", new String[]{
                     "ClickGUI für die wichtigsten Einstellungen direkt im Spiel",
@@ -254,18 +258,44 @@ public class BetterUCScreen extends Screen {
                 value -> BetterUCConfig.INSTANCE.pingHudScale = (float) value);
         y = addIntSlider(x, y, width, "Sichtweite", BetterUCConfig.INSTANCE.pingRelayMaxDistance, 10000,
                 value -> BetterUCConfig.INSTANCE.pingRelayMaxDistance = Math.max(50, value));
-        y = addColorButton(x, y, width, "Ping Farbe", parsePingColor(),
-                color -> BetterUCConfig.INSTANCE.pingRelayColor = "#" + hex(color));
-        return addButton(x, y, width, "Ping testen", b -> PingRelayClient.sendPingAtCrosshair(client));
+        y = addToggle(x, y, width, "Ping Ton", BetterUCConfig.INSTANCE.pingSoundEnabled,
+                () -> BetterUCConfig.INSTANCE.pingSoundEnabled = !BetterUCConfig.INSTANCE.pingSoundEnabled);
+        y = addButton(x, y, width, "Sound: " + PingRelayClient.pingSoundLabel(BetterUCConfig.INSTANCE.pingSoundId), b -> {
+            BetterUCConfig.INSTANCE.pingSoundId = PingRelayClient.nextPingSoundId(BetterUCConfig.INSTANCE.pingSoundId);
+            BetterUCConfig.save();
+            refreshWidgets();
+        });
+        y = addRangeIntSlider(x, y, width, "Cooldown ms", BetterUCConfig.INSTANCE.pingCooldownMs, 500, 10000,
+                value -> BetterUCConfig.INSTANCE.pingCooldownMs = Math.max(500, value));
+        y = addColorButton(x, y, width, "Normal Farbe", parseHexColor(BetterUCConfig.INSTANCE.pingNormalColor, 0xFF38BDF8),
+                color -> {
+                    BetterUCConfig.INSTANCE.pingNormalColor = "#" + hex(color);
+                    BetterUCConfig.INSTANCE.pingRelayColor = BetterUCConfig.INSTANCE.pingNormalColor;
+                });
+        y = addColorButton(x, y, width, "Gefahr Farbe", parseHexColor(BetterUCConfig.INSTANCE.pingDangerColor, 0xFFFF5555),
+                color -> BetterUCConfig.INSTANCE.pingDangerColor = "#" + hex(color));
+        y = addColorButton(x, y, width, "Sammeln Farbe", parseHexColor(BetterUCConfig.INSTANCE.pingGatherColor, 0xFF22C55E),
+                color -> BetterUCConfig.INSTANCE.pingGatherColor = "#" + hex(color));
+        return addButton(x, y, width, "Ping testen", b -> PingRelayClient.sendPingAtCrosshair(client, PingRelayClient.PingType.NORMAL));
     }
 
     private int addConnectionControls(int x, int y, int width) {
         y = addInfo(x, y, width, "Status", PingRelayClient.statusLabel());
+        y = addInfo(x, y, width, "Spieler", currentPlayerName());
         y = addInfo(x, y, width, "Rolle", PingRelayClient.roleLabel());
         y = addInfo(x, y, width, "Fraktion", currentFactionLabel());
+        y = addInfo(x, y, width, "Kommunikation", CommunicationDeviceTracker.statusLabel());
+        y = addInfo(x, y, width, "Server", currentServerLabel());
+        y = addInfo(x, y, width, "Version", MOD_VERSION);
         y = addTextField(x, y, width, "Access Code", BetterUCConfig.INSTANCE.pingRelayToken, 160,
                 value -> BetterUCConfig.INSTANCE.pingRelayToken = value.trim());
         y = addButton(x, y, width, "Access Code holen", b -> Util.getOperatingSystem().open(URI.create("https://betteruc.de/access")));
+        y = addButton(x, y, width, "Stats neu senden", b -> {
+            UserStatsClient.uploadCurrentStats(client);
+            if (client != null && client.player != null) {
+                client.player.sendMessage(Text.literal("[betterUC] Stats werden ans Userpanel gesendet."), false);
+            }
+        });
         y = addTextField(x, y, width, "Ping Gruppe", BetterUCConfig.INSTANCE.pingRelayChannel, 32,
                 value -> BetterUCConfig.INSTANCE.pingRelayChannel = value);
         y = addTextField(x, y, width, "Relay Server", BetterUCConfig.INSTANCE.pingRelayUrl, 160,
@@ -334,6 +364,40 @@ public class BetterUCScreen extends Screen {
             @Override
             protected void applyValue() {
                 setter.accept(sliderIntValue(value, safeMax));
+            }
+        });
+        return y + 24;
+    }
+
+    private int addRangeIntSlider(
+            int x,
+            int y,
+            int width,
+            String label,
+            int current,
+            int min,
+            int max,
+            IntConsumer setter
+    ) {
+        int safeMin = Math.max(0, min);
+        int safeMax = Math.max(safeMin + 1, max);
+        int safeCurrent = clamp(current, safeMin, safeMax);
+        addScrollableControl(new SliderWidget(
+                x,
+                y,
+                width,
+                BUTTON_H,
+                Text.literal(label + ": " + safeCurrent),
+                (safeCurrent - safeMin) / (double) (safeMax - safeMin)
+        ) {
+            @Override
+            protected void updateMessage() {
+                setMessage(Text.literal(label + ": " + sliderRangeIntValue(value, safeMin, safeMax)));
+            }
+
+            @Override
+            protected void applyValue() {
+                setter.accept(sliderRangeIntValue(value, safeMin, safeMax));
             }
         });
         return y + 24;
@@ -666,17 +730,17 @@ public class BetterUCScreen extends Screen {
             }
             case POTION -> {
                 if (modernStyle) {
-                    ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY, "EFFECT", "Staerke II",
+                    ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY, "EFFECT", "Stärke II",
                             "1:26", 0xFF9328FF);
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY + 33, "EFFECT", "Speed",
                             "0:49", 0xFF7CAFC6);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Staerke II", previewX, previewY, 0xFF9328FF);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Stärke II", previewX, previewY, 0xFF9328FF);
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "1:26", previewX, previewY + 11, TEXT_MUTED);
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Speed", previewX, previewY + 25, 0xFF7CAFC6);
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "0:49", previewX, previewY + 36, TEXT_MUTED);
                 } else {
-                    context.drawTextWithShadow(textRenderer, Text.literal("Staerke II"), previewX, previewY, 0xFF9328FF);
+                    context.drawTextWithShadow(textRenderer, Text.literal("Stärke II"), previewX, previewY, 0xFF9328FF);
                     context.drawTextWithShadow(textRenderer, Text.literal("1:26"), previewX, previewY + 10, TEXT_MUTED);
                     context.drawTextWithShadow(textRenderer, Text.literal("Speed"), previewX, previewY + 24, 0xFF7CAFC6);
                     context.drawTextWithShadow(textRenderer, Text.literal("0:49"), previewX, previewY + 34, TEXT_MUTED);
@@ -1032,6 +1096,17 @@ public class BetterUCScreen extends Screen {
         return raw.isBlank() ? "nicht erkannt" : raw;
     }
 
+    private String currentPlayerName() {
+        if (client == null || client.player == null) return "nicht erkannt";
+        String name = client.player.getName().getString();
+        return name == null || name.isBlank() ? "nicht erkannt" : name;
+    }
+
+    private String currentServerLabel() {
+        String server = PingRelayClient.currentServerId(client);
+        return server == null || server.isBlank() ? "nicht erkannt" : server;
+    }
+
     private String takeFittingText(String text, int maxWidth) {
         if (textRenderer.getWidth(text) <= maxWidth) return text;
 
@@ -1185,6 +1260,10 @@ public class BetterUCScreen extends Screen {
         return clamp((int) (value * max), 0, max);
     }
 
+    private int sliderRangeIntValue(double value, int min, int max) {
+        return clamp(min + (int) Math.round(clamp01(value) * (max - min)), min, max);
+    }
+
     private double sliderDoubleValue(double value, double min, double max) {
         return min + clamp01(value) * (max - min);
     }
@@ -1193,15 +1272,15 @@ public class BetterUCScreen extends Screen {
         return Math.round(value * 100.0) + "%";
     }
 
-    private int parsePingColor() {
-        String raw = BetterUCConfig.INSTANCE.pingRelayColor == null ? "" : BetterUCConfig.INSTANCE.pingRelayColor.trim();
+    private int parseHexColor(String value, int fallback) {
+        String raw = value == null ? "" : value.trim();
         if (raw.startsWith("#")) {
             raw = raw.substring(1);
         }
         try {
             return 0xFF000000 | Integer.parseInt(raw, 16);
         } catch (NumberFormatException ignored) {
-            return 0xFF38BDF8;
+            return fallback;
         }
     }
 

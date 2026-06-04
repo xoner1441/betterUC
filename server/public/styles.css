@@ -512,6 +512,83 @@ select:focus {
   overflow-wrap: anywhere;
 }
 
+.account-meta-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.account-meta-card {
+  background: #0f1514;
+  border: 1px solid #2a3735;
+  padding: 12px;
+}
+
+.account-meta-card span {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.account-meta-card strong {
+  display: block;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.panel-history-block {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+}
+
+.panel-history-title {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.panel-history-title span {
+  font-weight: 900;
+}
+
+.panel-history-title small {
+  color: var(--muted);
+}
+
+.history-list {
+  display: grid;
+  gap: 8px;
+}
+
+.history-list.compact {
+  max-height: 260px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.history-entry {
+  background: #0f1514;
+  border: 1px solid #2a3735;
+  border-left: 4px solid var(--cyan);
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+}
+
+.history-entry span,
+.history-entry small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.history-entry strong {
+  font-size: 15px;
+}
+
 .footer {
   border-top: 1px solid rgba(255, 255, 255, 0.07);
   display: flex;
@@ -577,6 +654,16 @@ select:focus {
   gap: 10px;
 }
 
+.admin-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.admin-status {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .admin-header {
   justify-content: space-between;
   margin-bottom: 22px;
@@ -585,7 +672,7 @@ select:focus {
 .stats-row {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   margin-bottom: 18px;
 }
 
@@ -652,6 +739,22 @@ select:focus {
   background: rgba(21, 27, 26, 0.72);
 }
 
+.admin-table tr.is-expanded td,
+.admin-detail-row td {
+  background: rgba(27, 36, 36, 0.88);
+}
+
+.admin-detail-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr) minmax(260px, 0.9fr);
+  padding: 8px 0;
+}
+
+.admin-detail-grid h4 {
+  margin: 0 0 10px;
+}
+
 .row-input {
   min-width: 180px;
   width: 100%;
@@ -694,8 +797,10 @@ select:focus {
   .two-column,
   .access-layout,
   .panel-layout,
+  .account-meta-grid,
   .feature-grid,
   .admin-login,
+  .admin-detail-grid,
   .admin-grid,
   .stats-row {
     grid-template-columns: 1fr;
