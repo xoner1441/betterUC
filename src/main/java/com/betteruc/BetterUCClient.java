@@ -219,8 +219,6 @@ public class BetterUCClient implements ClientModInitializer {
                         return builder.buildFuture();
                     };
 
-            registerSeinzahlenCommand(dispatcher);
-            registerScallCommand(dispatcher, playerSuggestions);
             registerSetBlacklistCommands(dispatcher, playerSuggestions, reasonSuggestions);
             registerBlacklistInfoCommand(dispatcher, playerSuggestions);
             registerModBlCommand(dispatcher, playerSuggestions, modBlReasonSuggestions);
@@ -246,35 +244,6 @@ public class BetterUCClient implements ClientModInitializer {
         return names;
     }
 
-    private void registerSeinzahlenCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
-        dispatcher.register(ClientCommandManager.literal("seinzahlen").executes(context -> {
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client.player == null) return 0;
-            if (!ensureAllowedServerForManualCommand(client)) return 0;
-
-            BetterUCConfig.INSTANCE.currentBlackMoney = -1;
-            BetterUCSuppressFlags.markSilentStatsRequest();
-            sendServerCommand(client, "stats");
-            runDelayedOnClient(client, 5000, BetterUCSuppressFlags::cleanupStaleSilentStatsState);
-
-            runDelayedOnClient(client, 1500, () -> {
-                if (client.player == null) return;
-                int blackMoney = BetterUCConfig.INSTANCE.currentBlackMoney;
-                if (blackMoney <= 0) {
-                    client.player.sendMessage(Text.literal("\u00A7cKein Schwarzgeld gefunden!"), false);
-                    return;
-                }
-
-                sendServerCommand(client, "skasse einzahlen " + blackMoney);
-                client.player.sendMessage(
-                        Text.literal("\u00A7a[OK] S-Kasse Einzahlung: \u00A7f" + blackMoney + "$"),
-                        false
-                );
-            });
-            return 1;
-        }));
-    }
-
     private void registerUserPanelCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
         dispatcher.register(ClientCommandManager.literal("register")
                 .then(ClientCommandManager.argument("passwort", StringArgumentType.greedyString())
@@ -283,23 +252,6 @@ public class BetterUCClient implements ClientModInitializer {
                                     MinecraftClient.getInstance(),
                                     StringArgumentType.getString(context, "passwort")
                             );
-                            return 1;
-                        })));
-    }
-
-    private void registerScallCommand(
-            CommandDispatcher<FabricClientCommandSource> dispatcher,
-            SuggestionProvider<FabricClientCommandSource> playerSuggestions
-    ) {
-        dispatcher.register(ClientCommandManager.literal("scall")
-                .then(ClientCommandManager.argument("spieler", StringArgumentType.word())
-                        .suggests(playerSuggestions)
-                        .executes(context -> {
-                            MinecraftClient client = MinecraftClient.getInstance();
-                            if (client.player == null) return 0;
-                            if (!ensureAllowedServerForManualCommand(client)) return 0;
-                            String spieler = StringArgumentType.getString(context, "spieler");
-                            sendServerCommand(client, "s " + spieler + " Auf den Boden oder du Stirbst");
                             return 1;
                         })));
     }

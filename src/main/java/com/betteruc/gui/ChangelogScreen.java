@@ -54,7 +54,6 @@ public class ChangelogScreen extends Screen {
                     "Tools & Commands",
                     "Alltag im Spiel",
                     new String[]{
-                            "/seinzahlen zahlt Schwarzgeld automatisch in die S-Kasse ein",
                             "Hotkey Commands: eigene Befehle auf Tasten legen",
                             "Zoom-Taste frei wählbar, Zoom reagiert sofort",
                             "/car find Koordinaten werden automatisch ins Navi übernommen",
@@ -71,7 +70,6 @@ public class ChangelogScreen extends Screen {
                             "/modbl erweitert bestehende Blacklist-Einträge",
                             "/blinfo zeigt gespeicherte Infos zu einem Blacklist-Spieler",
                             "/setrp setzt RP-Stufen für Blacklist-Einträge",
-                            "/scall sendet einen schnellen Callout an einen Spieler",
                             "Normale /blacklist-Ausgabe bleibt serverseitig sichtbar"
                     }
             )

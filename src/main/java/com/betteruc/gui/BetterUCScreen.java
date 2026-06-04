@@ -84,8 +84,6 @@ public class BetterUCScreen extends Screen {
                     "Adminpanel verwaltet Codes, Rollen und Spielerdaten"
             }),
             new UpdateSection("Commandliste", new String[]{
-                    "/seinzahlen zahlt erkanntes Schwarzgeld in die S-Kasse ein",
-                    "/scall <spieler> sendet einen schnellen Call",
                     "/blset <spieler> <grund> oder /setbl setzt einen Blacklist-Eintrag",
                     "/modbl <spieler> <grund> erweitert einen bestehenden Blacklist-Eintrag",
                     "/blinfo <spieler> zeigt gespeicherte Blacklist-Infos",
