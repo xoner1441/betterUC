@@ -1,0 +1,67 @@
+name: Deploy betterUC server
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "server/**"
+      - ".github/workflows/deploy-server.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOY_HOST"
+          test -n "$DEPLOY_SSH_KEY"
+
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/betteruc_deploy_key
+          chmod 600 ~/.ssh/betteruc_deploy_key
+          ssh-keyscan -p "${DEPLOY_PORT:-22}" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload server files
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          USER_NAME="${DEPLOY_USER:-root}"
+          TARGET_PATH="${DEPLOY_PATH:-/opt/betteruc-relay}"
+          PORT="${DEPLOY_PORT:-22}"
+
+          rsync -az --delete \
+            --exclude "data/" \
+            --exclude "node_modules/" \
+            -e "ssh -i ~/.ssh/betteruc_deploy_key -p $PORT" \
+            server/ "$USER_NAME@$DEPLOY_HOST:$TARGET_PATH/"
+
+      - name: Install and restart relay
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          USER_NAME="${DEPLOY_USER:-root}"
+          TARGET_PATH="${DEPLOY_PATH:-/opt/betteruc-relay}"
+          PORT="${DEPLOY_PORT:-22}"
+
+          ssh -i ~/.ssh/betteruc_deploy_key -p "$PORT" "$USER_NAME@$DEPLOY_HOST" \
+            "cd '$TARGET_PATH' && npm install --omit=dev && systemctl restart betteruc-relay && systemctl status betteruc-relay --no-pager"

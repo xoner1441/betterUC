@@ -12,13 +12,16 @@ import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
 public class PingWheelScreen extends Screen {
-    private static final int PANEL = 0xEE0D1117;
+    private static final int OVERLAY = 0x72000000;
+    private static final int HUB = 0xEE0D1117;
+    private static final int HUB_INNER = 0xF0141A22;
+    private static final int PANEL = 0xF00D1117;
     private static final int PANEL_HOVER = 0xF0162330;
     private static final int BORDER = 0xAA334155;
     private static final int TEXT = 0xFFF8FAFC;
     private static final int MUTED = 0xFF94A3B8;
-    private static final int OPTION_W = 92;
-    private static final int OPTION_H = 36;
+    private static final int RADIUS = 78;
+    private static final int OPTION_RADIUS = 33;
 
     private final KeyBinding pingKey;
     private double lastMouseX;
@@ -41,17 +44,26 @@ public class PingWheelScreen extends Screen {
         lastMouseX = mouseX;
         lastMouseY = mouseY;
 
-        context.fill(0, 0, width, height, 0x66000000);
+        context.fill(0, 0, width, height, OVERLAY);
 
         int cx = width / 2;
         int cy = height / 2;
-        context.fill(cx - 42, cy - 14, cx + 42, cy + 14, 0xCC020617);
-        drawBorder(context, cx - 42, cy - 14, 84, 28, 0x8038BDF8);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("Pingtyp"), cx, cy - 5, TEXT);
+        PingRelayClient.PingType hovered = hoveredType(mouseX, mouseY);
 
-        drawOption(context, mouseX, mouseY, PingRelayClient.PingType.NORMAL, cx - OPTION_W / 2, cy - 74);
-        drawOption(context, mouseX, mouseY, PingRelayClient.PingType.DANGER, cx - OPTION_W - 24, cy + 34);
-        drawOption(context, mouseX, mouseY, PingRelayClient.PingType.GATHER, cx + 24, cy + 34);
+        drawLine(context, cx, cy, optionX(cx, PingRelayClient.PingType.NORMAL), optionY(cy, PingRelayClient.PingType.NORMAL), 1, 0x6638BDF8);
+        drawLine(context, cx, cy, optionX(cx, PingRelayClient.PingType.DANGER), optionY(cy, PingRelayClient.PingType.DANGER), 1, 0x66FF5555);
+        drawLine(context, cx, cy, optionX(cx, PingRelayClient.PingType.GATHER), optionY(cy, PingRelayClient.PingType.GATHER), 1, 0x6622C55E);
+
+        drawFilledCircle(context, cx, cy, 33, HUB);
+        drawFilledCircle(context, cx, cy, 26, HUB_INNER);
+        drawCircleBorder(context, cx, cy, 33, hovered == null ? 0xAA38BDF8 : colorFor(hovered));
+        context.drawCenteredTextWithShadow(textRenderer, Text.literal("PING"), cx, cy - 10, TEXT);
+        context.drawCenteredTextWithShadow(textRenderer, Text.literal(hovered == null ? "Abbruch" : hovered.label()), cx, cy + 5,
+                hovered == null ? MUTED : colorFor(hovered));
+
+        drawOption(context, mouseX, mouseY, PingRelayClient.PingType.NORMAL);
+        drawOption(context, mouseX, mouseY, PingRelayClient.PingType.DANGER);
+        drawOption(context, mouseX, mouseY, PingRelayClient.PingType.GATHER);
     }
 
     @Override
@@ -87,63 +99,76 @@ public class PingWheelScreen extends Screen {
         return false;
     }
 
-    private void drawOption(
-            DrawContext context,
-            double mouseX,
-            double mouseY,
-            PingRelayClient.PingType type,
-            int x,
-            int y
-    ) {
-        boolean hovered = inBounds(mouseX, mouseY, x, y, OPTION_W, OPTION_H);
+    private void drawOption(DrawContext context, double mouseX, double mouseY, PingRelayClient.PingType type) {
+        int x = optionX(width / 2, type);
+        int y = optionY(height / 2, type);
+        boolean hovered = isOverOption(mouseX, mouseY, type);
         int accent = colorFor(type);
-        context.fill(x, y, x + OPTION_W, y + OPTION_H, hovered ? PANEL_HOVER : PANEL);
-        drawBorder(context, x, y, OPTION_W, OPTION_H, hovered ? accent : BORDER);
+        int radius = hovered ? OPTION_RADIUS + hoverPulse() : OPTION_RADIUS;
 
-        String icon = switch (type) {
-            case DANGER -> "!";
-            case GATHER -> "v";
-            default -> "+";
-        };
-        context.drawTextWithShadow(textRenderer, Text.literal(icon), x + 10, y + 7, accent);
-        context.drawTextWithShadow(textRenderer, Text.literal(type.label()), x + 24, y + 7, TEXT);
-        context.drawTextWithShadow(textRenderer, Text.literal(shortDescription(type)), x + 24, y + 19, MUTED);
+        drawFilledCircle(context, x, y, radius + 2, hovered ? accent : BORDER);
+        drawFilledCircle(context, x, y, radius, hovered ? PANEL_HOVER : PANEL);
+        drawFilledCircle(context, x, y - 10, 13, withAlpha(accent, hovered ? 0xAA : 0x66));
+
+        context.drawCenteredTextWithShadow(textRenderer, Text.literal(icon(type)), x, y - 14, accent);
+        context.drawCenteredTextWithShadow(textRenderer, Text.literal(type.label()), x, y + 1, TEXT);
+        context.drawCenteredTextWithShadow(textRenderer, Text.literal(shortDescription(type)), x, y + 13, MUTED);
     }
 
     private boolean trySendSelected(double mouseX, double mouseY) {
         if (sent) return true;
         PingRelayClient.PingType selected = hoveredType(mouseX, mouseY);
-        if (selected == null) {
-            sent = true;
-            MinecraftClient minecraft = MinecraftClient.getInstance();
-            if (minecraft != null) {
-                minecraft.setScreen(null);
-            }
-            return false;
-        }
-
-        sent = true;
         MinecraftClient minecraft = MinecraftClient.getInstance();
-        PingRelayClient.sendPingAtCrosshair(minecraft, selected);
+        sent = true;
+
+        if (selected != null) {
+            PingRelayClient.sendPingAtCrosshair(minecraft, selected);
+        }
         if (minecraft != null) {
             minecraft.setScreen(null);
         }
-        return true;
+        return selected != null;
     }
 
     private PingRelayClient.PingType hoveredType(double mouseX, double mouseY) {
-        int cx = width / 2;
-        int cy = height / 2;
-        if (inBounds(mouseX, mouseY, cx - OPTION_W / 2, cy - 74, OPTION_W, OPTION_H)) {
-            return PingRelayClient.PingType.NORMAL;
-        }
-        if (inBounds(mouseX, mouseY, cx - OPTION_W - 24, cy + 34, OPTION_W, OPTION_H)) {
-            return PingRelayClient.PingType.DANGER;
-        }
-        if (inBounds(mouseX, mouseY, cx + 24, cy + 34, OPTION_W, OPTION_H)) {
-            return PingRelayClient.PingType.GATHER;
+        for (PingRelayClient.PingType type : PingRelayClient.PingType.values()) {
+            if (isOverOption(mouseX, mouseY, type)) return type;
         }
         return null;
+    }
+
+    private boolean isOverOption(double mouseX, double mouseY, PingRelayClient.PingType type) {
+        int x = optionX(width / 2, type);
+        int y = optionY(height / 2, type);
+        double dx = mouseX - x;
+        double dy = mouseY - y;
+        return dx * dx + dy * dy <= (OPTION_RADIUS + 6) * (OPTION_RADIUS + 6);
+    }
+
+    private int optionX(int cx, PingRelayClient.PingType type) {
+        double angle = angleFor(type);
+        return cx + (int) Math.round(Math.cos(angle) * RADIUS);
+    }
+
+    private int optionY(int cy, PingRelayClient.PingType type) {
+        double angle = angleFor(type);
+        return cy + (int) Math.round(Math.sin(angle) * RADIUS);
+    }
+
+    private double angleFor(PingRelayClient.PingType type) {
+        return switch (type) {
+            case NORMAL -> Math.toRadians(-90.0D);
+            case DANGER -> Math.toRadians(150.0D);
+            case GATHER -> Math.toRadians(30.0D);
+        };
+    }
+
+    private String icon(PingRelayClient.PingType type) {
+        return switch (type) {
+            case DANGER -> "!";
+            case GATHER -> "v";
+            default -> "+";
+        };
     }
 
     private String shortDescription(PingRelayClient.PingType type) {
@@ -152,6 +177,11 @@ public class PingWheelScreen extends Screen {
             case GATHER -> "Treffen";
             default -> "Standard";
         };
+    }
+
+    private int hoverPulse() {
+        double wave = (Math.sin(System.currentTimeMillis() / 120.0D) + 1.0D) * 0.5D;
+        return 2 + (int) Math.round(wave * 2.0D);
     }
 
     private int colorFor(PingRelayClient.PingType type) {
@@ -170,14 +200,31 @@ public class PingWheelScreen extends Screen {
         }
     }
 
-    private boolean inBounds(double mouseX, double mouseY, int x, int y, int w, int h) {
-        return mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h;
+    private int withAlpha(int color, int alpha) {
+        return ((alpha & 0xFF) << 24) | (color & 0x00FFFFFF);
     }
 
-    private void drawBorder(DrawContext context, int x, int y, int width, int height, int color) {
-        context.fill(x + 1, y, x + width - 1, y + 1, color);
-        context.fill(x + 1, y + height - 1, x + width - 1, y + height, color);
-        context.fill(x, y + 1, x + 1, y + height - 1, color);
-        context.fill(x + width - 1, y + 1, x + width, y + height - 1, color);
+    private void drawFilledCircle(DrawContext context, int cx, int cy, int radius, int color) {
+        for (int dy = -radius; dy <= radius; dy++) {
+            int width = (int) Math.round(Math.sqrt(radius * radius - dy * dy));
+            context.fill(cx - width, cy + dy, cx + width + 1, cy + dy + 1, color);
+        }
+    }
+
+    private void drawCircleBorder(DrawContext context, int cx, int cy, int radius, int color) {
+        drawFilledCircle(context, cx, cy, radius, color);
+        drawFilledCircle(context, cx, cy, Math.max(1, radius - 2), HUB);
+        drawFilledCircle(context, cx, cy, Math.max(1, radius - 9), HUB_INNER);
+    }
+
+    private void drawLine(DrawContext context, int x1, int y1, int x2, int y2, int thickness, int color) {
+        int steps = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1));
+        if (steps <= 0) return;
+        for (int i = 0; i <= steps; i++) {
+            double t = i / (double) steps;
+            int x = (int) Math.round(x1 + (x2 - x1) * t);
+            int y = (int) Math.round(y1 + (y2 - y1) * t);
+            context.fill(x - thickness, y - thickness, x + thickness + 1, y + thickness + 1, color);
+        }
     }
 }

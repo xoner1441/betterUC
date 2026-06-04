@@ -55,3 +55,28 @@ https://betteruc.de/admin
 
 Admin users can also open `/admin` from the Userpanel without entering this key.
 Backups are written to `/opt/betteruc-relay/data/backups` once per day. The admin panel also has a manual backup button.
+
+## Automatic GitHub deployment
+
+The repository contains `.github/workflows/deploy-server.yml`. After the secrets below are configured, every push to
+`main` that changes files in `server/` automatically uploads the relay/website and restarts `betteruc-relay`.
+
+Create a deploy key on your Windows PC:
+
+```powershell
+ssh-keygen -t ed25519 -C "betteruc-github-deploy" -f "$env:USERPROFILE\.ssh\betteruc_github_deploy" -N ""
+Get-Content "$env:USERPROFILE\.ssh\betteruc_github_deploy.pub" | ssh root@65.109.175.203 "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys"
+Get-Content "$env:USERPROFILE\.ssh\betteruc_github_deploy" -Raw
+```
+
+Add these GitHub repository secrets under `Settings -> Secrets and variables -> Actions`:
+
+```text
+DEPLOY_HOST=65.109.175.203
+DEPLOY_USER=root
+DEPLOY_PORT=22
+DEPLOY_PATH=/opt/betteruc-relay
+DEPLOY_SSH_KEY=<private key output from the last PowerShell command>
+```
+
+After that, push a server/website change or start the workflow manually from the GitHub Actions tab.
