@@ -12,9 +12,9 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `GET /api/status` public status
 - `GET /api/players` online mod users, requires an access code
 - `GET /admin` admin control panel
-- `GET /api/admin/accounts` list accounts, requires `ADMIN_KEY`
-- `POST /api/admin/accounts` create a code, requires `ADMIN_KEY`
-- `PATCH /api/admin/accounts/:id` edit account metadata, requires `ADMIN_KEY`
+- `GET /api/admin/accounts` list accounts, requires an admin user session or `ADMIN_KEY`
+- `POST /api/admin/accounts` create a code, requires an admin user session or `ADMIN_KEY`
+- `PATCH /api/admin/accounts/:id` edit account metadata, requires an admin user session or `ADMIN_KEY`
 - `POST /api/admin/accounts/:id/revoke` revoke a code
 - `POST /api/admin/accounts/:id/activate` reactivate a code
 - `POST /api/admin/accounts/:id/reset-code` generate a new code once
@@ -27,7 +27,7 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `PORT=3000`
 - `BETTERUC_TOKEN=...` optional legacy shared token
 - `TOKEN_PEPPER=...` secret pepper for access-code hashes
-- `ADMIN_KEY=...` secret for the admin control panel
+- `ADMIN_KEY=...` optional fallback secret for the admin control panel
 - `MAX_CLIENTS=500`
 - `PING_TTL_MS=15000`
 - `DATA_DIR=/opt/betteruc-relay/data`

@@ -13,8 +13,13 @@ public class ChangelogScreen extends Screen {
     private static final Page[] PAGES = new Page[]{
             new Page(
                     "Highlights",
-                    "betterUC 1.1.3",
+                    "betterUC 1.1.4",
                     new String[]{
+                            "VIP-Rolle mit dunkellila Hologramm und bUC-Tablist-Badge",
+                            "Userpanel zeigt Rolle, Status und getrackte Account-Daten",
+                            "Adminpanel kann Accounts nach Rolle, Status, Online-Zustand und Fraktion filtern",
+                            "Verbindungsseite im ClickGUI wurde klarer sortiert",
+                            "Website-Bereiche fuer Access, Userpanel und Adminpanel sind getrennt",
                             "Potion-HUD im Inventar-Stil mit Icon, Name und Dauer",
                             "CookDrug-Timer entfernt, weil der Server nun einen eigenen Timer hat",
                             "Plant-Timer für eigene Plantagen mit Wasser- und Düngerzeiten",

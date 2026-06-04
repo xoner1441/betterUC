@@ -8,6 +8,9 @@ const adminKeyInput = document.querySelector("#adminKey");
 const loginMessage = document.querySelector("#loginMessage");
 const accountsTable = document.querySelector("#accountsTable");
 const accountSearch = document.querySelector("#accountSearch");
+const accountRoleFilter = document.querySelector("#accountRoleFilter");
+const accountStatusFilter = document.querySelector("#accountStatusFilter");
+const accountFactionFilter = document.querySelector("#accountFactionFilter");
 const createForm = document.querySelector("#createAccount");
 const createMessage = document.querySelector("#createMessage");
 const adminTokenBox = document.querySelector("#adminTokenBox");
@@ -73,7 +76,18 @@ function formatDate(value) {
 }
 
 function accountMatches(account, query) {
+  const role = accountRoleFilter?.value || "";
+  const status = accountStatusFilter?.value || "";
+  const faction = accountFactionFilter?.value.trim().toLowerCase() || "";
+
+  if (role && account.role !== role) return false;
+  if (status === "online" && !account.online) return false;
+  if (status === "offline" && account.online) return false;
+  if ((status === "active" || status === "revoked") && account.status !== status) return false;
+  const factionHaystack = `${account.faction || ""} ${account.factionDisplay || ""}`.toLowerCase();
+  if (faction && !factionHaystack.includes(faction)) return false;
   if (!query) return true;
+
   const haystack = [
     account.minecraftName,
     account.minecraftUuid,
@@ -215,6 +229,9 @@ document.querySelector("#logoutAdmin").addEventListener("click", () => {
 });
 
 accountSearch.addEventListener("input", renderAccounts);
+accountRoleFilter?.addEventListener("change", renderAccounts);
+accountStatusFilter?.addEventListener("change", renderAccounts);
+accountFactionFilter?.addEventListener("input", renderAccounts);
 
 createForm.addEventListener("submit", async event => {
   event.preventDefault();

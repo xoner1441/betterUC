@@ -49,6 +49,13 @@ public class BetterUCScreen extends Screen {
             .map(container -> container.getMetadata().getVersion().getFriendlyString())
             .orElse("dev");
     private static final UpdateSection[] UPDATE_SECTIONS = new UpdateSection[]{
+            new UpdateSection("Neu in 1.1.4", new String[]{
+                    "VIP-Rolle mit eigenem Hologramm und Tablist-Badge",
+                    "Userpanel zeigt Rolle, Status und aktuelle Tracking-Daten",
+                    "Adminpanel hat Filter fuer Rolle, Status, Online-Zustand und Fraktion",
+                    "Verbindungsseite im ClickGUI ist uebersichtlicher sortiert",
+                    "Website ist in Startseite, Access, Userpanel und Adminpanel getrennt"
+            }),
             new UpdateSection("Neu in 1.1.3", new String[]{
                     "ClickGUI für die wichtigsten Einstellungen direkt im Spiel",
                     "Eigene Minecraft-Keybinds für ClickGUI und Command Menu",
@@ -253,12 +260,15 @@ public class BetterUCScreen extends Screen {
     }
 
     private int addConnectionControls(int x, int y, int width) {
+        y = addInfo(x, y, width, "Status", PingRelayClient.statusLabel());
+        y = addInfo(x, y, width, "Rolle", PingRelayClient.roleLabel());
+        y = addInfo(x, y, width, "Fraktion", currentFactionLabel());
         y = addTextField(x, y, width, "Access Code", BetterUCConfig.INSTANCE.pingRelayToken, 160,
                 value -> BetterUCConfig.INSTANCE.pingRelayToken = value.trim());
         y = addButton(x, y, width, "Access Code holen", b -> Util.getOperatingSystem().open(URI.create("https://betteruc.de/access")));
-        y = addTextField(x, y, width, "Gruppe", BetterUCConfig.INSTANCE.pingRelayChannel, 32,
+        y = addTextField(x, y, width, "Ping Gruppe", BetterUCConfig.INSTANCE.pingRelayChannel, 32,
                 value -> BetterUCConfig.INSTANCE.pingRelayChannel = value);
-        y = addTextField(x, y, width, "Server Adresse", BetterUCConfig.INSTANCE.pingRelayUrl, 160,
+        y = addTextField(x, y, width, "Relay Server", BetterUCConfig.INSTANCE.pingRelayUrl, 160,
                 value -> BetterUCConfig.INSTANCE.pingRelayUrl = value);
         y = addButton(x, y, width, "Standardserver nutzen", b -> {
             BetterUCConfig.INSTANCE.pingRelayUrl = BetterUCConfig.DEFAULT_PING_RELAY_URL;
@@ -277,6 +287,14 @@ public class BetterUCScreen extends Screen {
         addScrollableControl(ButtonWidget.builder(Text.literal(label), action)
                 .dimensions(x, y, width, BUTTON_H)
                 .build());
+        return y + 24;
+    }
+
+    private int addInfo(int x, int y, int width, String label, String value) {
+        ButtonWidget widget = ButtonWidget.builder(Text.literal(label + ": " + value), b -> {
+        }).dimensions(x, y, width, BUTTON_H).build();
+        widget.active = false;
+        addScrollableControl(widget);
         return y + 24;
     }
 
@@ -1002,6 +1020,18 @@ public class BetterUCScreen extends Screen {
         return "Ping Ziel: " + ("faction".equals(BetterUCConfig.INSTANCE.pingRelayScope) ? "Fraktion" : "Global");
     }
 
+    private String currentFactionLabel() {
+        String raw = BetterUCConfig.INSTANCE.currentPlayerFactionLabel == null
+                ? ""
+                : BetterUCConfig.INSTANCE.currentPlayerFactionLabel.trim();
+        if (raw.isBlank()) {
+            raw = BetterUCConfig.INSTANCE.currentPlayerFaction == null
+                    ? ""
+                    : BetterUCConfig.INSTANCE.currentPlayerFaction.trim();
+        }
+        return raw.isBlank() ? "nicht erkannt" : raw;
+    }
+
     private String takeFittingText(String text, int maxWidth) {
         if (textRenderer.getWidth(text) <= maxWidth) return text;
 
@@ -1208,7 +1238,7 @@ public class BetterUCScreen extends Screen {
         ZOOM(Category.GAMEPLAY, "Zoom", "Taste und FOV", 0xFFA78BFA, true),
         AUTO_STATS(Category.GAMEPLAY, "Auto Stats", "Automatisches /stats", 0xFF34D399, true),
         CHAT(Category.GAMEPLAY, "Chat", "Zeitstempel", 0xFF38BDF8, false),
-        CONNECTION(Category.GAMEPLAY, "Verbindung", "Access & Relay", 0xFF38BDF8, false),
+        CONNECTION(Category.GAMEPLAY, "Verbindung", "Account & Relay", 0xFF38BDF8, false),
 
         BLACKLIST(Category.TOOLS, "Blacklist", "Gründe und Sync", 0xFFF97316, false),
         PING(Category.TOOLS, "Ping", "Private Mod-Pings", 0xFF38BDF8, true),

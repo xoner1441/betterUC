@@ -9,6 +9,8 @@ const panelLoginForm = document.querySelector("#panelLoginForm");
 const panelDashboard = document.querySelector("#panelDashboard");
 const panelMessage = document.querySelector("#panelMessage");
 const panelUsername = document.querySelector("#panelUsername");
+const panelRoleBadge = document.querySelector("#panelRoleBadge");
+const panelStatusBadge = document.querySelector("#panelStatusBadge");
 const panelStats = document.querySelector("#panelStats");
 const panelUpdated = document.querySelector("#panelUpdated");
 const panelRefresh = document.querySelector("#panelRefresh");
@@ -99,11 +101,32 @@ function dateLabel(value) {
   return `Aktualisiert: ${date.toLocaleString("de-DE")}`;
 }
 
+function roleLabel(role) {
+  if (role === "admin") return "Admin";
+  if (role === "vip") return "VIP";
+  return "Spieler";
+}
+
+function roleClass(role) {
+  if (role === "admin") return "role-badge role-admin";
+  if (role === "vip") return "role-badge role-vip";
+  return "role-badge role-user";
+}
+
 function renderPanel(user) {
   if (!panelDashboard || !panelStats) return;
   panelLoginForm.hidden = true;
   panelDashboard.hidden = false;
   panelUsername.textContent = user.minecraftName || "-";
+  if (panelRoleBadge) {
+    panelRoleBadge.textContent = roleLabel(user.role);
+    panelRoleBadge.className = roleClass(user.role);
+  }
+  if (panelStatusBadge) {
+    const active = user.status !== "revoked";
+    panelStatusBadge.textContent = active ? "aktiv" : "gesperrt";
+    panelStatusBadge.className = `status-pill ${active ? "active" : "revoked"}`;
+  }
   if (panelAdmin) {
     const isAdmin = user.role === "admin";
     panelAdmin.hidden = !isAdmin;

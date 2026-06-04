@@ -445,6 +445,13 @@ select:focus {
   justify-content: flex-end;
 }
 
+.panel-name-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .panel-profile span,
 .panel-profile small,
 .panel-refresh-row span {
@@ -456,6 +463,27 @@ select:focus {
   display: block;
   font-size: 28px;
   margin: 2px 0;
+}
+
+.role-badge {
+  border: 1px solid currentColor;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 5px 8px;
+  text-transform: uppercase;
+}
+
+.role-badge.role-user {
+  color: var(--green);
+}
+
+.role-badge.role-vip {
+  color: #7e22ce;
+}
+
+.role-badge.role-admin {
+  color: var(--danger);
 }
 
 .panel-stat-grid {
@@ -586,6 +614,12 @@ select:focus {
   gap: 16px;
   grid-template-columns: minmax(320px, 420px) minmax(260px, 1fr);
   margin-bottom: 18px;
+}
+
+.filter-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .table-wrap {

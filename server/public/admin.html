@@ -90,6 +90,31 @@
             Suche
             <input id="accountSearch" placeholder="Name, Fraktion, Prefix" autocomplete="off">
           </label>
+          <div class="filter-grid">
+            <label>
+              Rolle
+              <select id="accountRoleFilter">
+                <option value="">Alle Rollen</option>
+                <option value="user">Spieler</option>
+                <option value="vip">VIP</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+            <label>
+              Status
+              <select id="accountStatusFilter">
+                <option value="">Alle Status</option>
+                <option value="active">Aktiv</option>
+                <option value="revoked">Gesperrt</option>
+                <option value="online">Online</option>
+                <option value="offline">Offline</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            Fraktion
+            <input id="accountFactionFilter" placeholder="z.B. Calderon Kartell" autocomplete="off">
+          </label>
           <p class="quiet">Vorhandene Codes können aus Sicherheitsgründen nicht angezeigt werden. Nutze Code neu, wenn jemand seinen Code verloren hat.</p>
         </div>
       </div>

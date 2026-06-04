@@ -40,7 +40,7 @@ curl http://127.0.0.1:3000/health
 curl http://127.0.0.1:3000/api/status
 ```
 
-Read the admin key:
+Read the fallback admin key:
 
 ```bash
 grep '^ADMIN_KEY=' /etc/betteruc-relay.env
@@ -51,3 +51,5 @@ Open:
 ```text
 https://betteruc.de/admin
 ```
+
+Admin users can also open `/admin` from the Userpanel without entering this key.
