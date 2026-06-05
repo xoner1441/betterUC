@@ -6,7 +6,7 @@
 - **Helper-Rolle** mit gelbem Hologramm und gelbem `bUC`-Tablist-Badge.
 - Helper ist unter Admin einsortiert, hat aber keine zusätzlichen Website-Rechte.
 - Website-Startseite und ClickGUI-Changelog wurden auf die aktuelle Version angepasst.
-- **Discord-Bot vorbereitet**: Live-Status, `/online`, `/user`, `/me`, Account-Linking per `/link`, Ticket-System und Admin-Code-Commands.
+- **Discord-Bot erweitert**: Ticket-System mit Schließen/Löschen, GitHub-Update-Posts, `/updates` Commands und Rollen-Sync für Mod-User, VIP, Helper und Admin.
 
 ### Geaendert
 - Die Feature- und Commandlisten zeigen nur noch Funktionen, die aktuell aktiv sind.

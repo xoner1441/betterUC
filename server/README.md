@@ -39,6 +39,15 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `DISCORD_TICKET_CATEGORY_NAME=Tickets`
 - `DISCORD_TEAM_ROLE_NAMES=Owner,Admin,Helper`
 - `DISCORD_MOD_USER_ROLE_NAME=Mod-User`
+- `DISCORD_USER_ROLE_NAME=...` optional extra role for normal users
+- `DISCORD_VIP_ROLE_NAME=VIP`
+- `DISCORD_HELPER_ROLE_NAME=Helper`
+- `DISCORD_ADMIN_ROLE_NAME=Admin`
+- `DISCORD_ROLE_SYNC_MS=300000`
+- `DISCORD_UPDATE_CHANNEL_NAME=updates`
+- `DISCORD_RELEASE_REPO=xoner1441/betterUC`
+- `DISCORD_RELEASE_CHECK_MS=900000`
+- `DISCORD_ANNOUNCE_EXISTING_RELEASE=false`
 
 Access codes are only shown once. The server stores SHA-256 hashes with a secret pepper.
 Account data is backed up automatically once per day and can also be backed up manually in the admin panel.
@@ -57,6 +66,12 @@ Slash commands:
 - `/unlink` removes that Discord link.
 - `/ticket` opens a private support ticket.
 - `/ticket-panel` posts a button-based ticket panel. Requires Discord `Manage Server`.
+- `/updates check` checks GitHub releases.
+- `/updates post_latest` posts the latest GitHub release to the update channel.
 - `/code create`, `/code reset`, `/code revoke` manage access codes. Requires Discord `Manage Server`.
 
 Invite the bot with the scopes `bot` and `applications.commands`.
+
+Linked accounts are synced to Discord roles. Every active linked account gets `DISCORD_MOD_USER_ROLE_NAME`.
+Accounts with betterUC roles `vip`, `helper` and `admin` also get the configured role names above. Revoked or unlinked
+accounts lose the managed betterUC roles again.

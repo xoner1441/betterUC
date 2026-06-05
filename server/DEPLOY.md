@@ -23,6 +23,15 @@ grep -q '^BACKUP_RETENTION_DAYS=' /etc/betteruc-relay.env || echo "BACKUP_RETENT
 # DISCORD_TICKET_CATEGORY_NAME=Tickets
 # DISCORD_TEAM_ROLE_NAMES=Owner,Admin,Helper
 # DISCORD_MOD_USER_ROLE_NAME=Mod-User
+# DISCORD_USER_ROLE_NAME=
+# DISCORD_VIP_ROLE_NAME=VIP
+# DISCORD_HELPER_ROLE_NAME=Helper
+# DISCORD_ADMIN_ROLE_NAME=Admin
+# DISCORD_ROLE_SYNC_MS=300000
+# DISCORD_UPDATE_CHANNEL_NAME=updates
+# DISCORD_RELEASE_REPO=xoner1441/betterUC
+# DISCORD_RELEASE_CHECK_MS=900000
+# DISCORD_ANNOUNCE_EXISTING_RELEASE=false
 
 cat > /etc/caddy/Caddyfile <<'EOF'
 betteruc.de, www.betteruc.de {
@@ -72,6 +81,12 @@ The relay can run the Discord support bot when `DISCORD_BOT_TOKEN` and `DISCORD_
 bot
 applications.commands
 ```
+
+The bot supports:
+
+- ticket channels through `/ticket` and `/ticket-panel`
+- automatic GitHub release posts in `DISCORD_UPDATE_CHANNEL_NAME`
+- role sync for `Mod-User`, `VIP`, `Helper` and `Admin` based on linked betterUC accounts
 
 After changing the env file, restart:
 

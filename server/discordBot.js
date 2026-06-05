@@ -1,5 +1,9 @@
 "use strict";
 
+const fs = require("fs");
+const fsp = fs.promises;
+const path = require("path");
+
 let ActionRowBuilder;
 let ActivityType;
 let ButtonBuilder;
@@ -16,6 +20,18 @@ const GUILD_ID = clean(process.env.DISCORD_GUILD_ID);
 const TICKET_CATEGORY_NAME = clean(process.env.DISCORD_TICKET_CATEGORY_NAME) || "Tickets";
 const TEAM_ROLE_NAMES = listEnv(process.env.DISCORD_TEAM_ROLE_NAMES || "Owner,Admin,Helper");
 const MOD_USER_ROLE_NAME = clean(process.env.DISCORD_MOD_USER_ROLE_NAME) || "Mod-User";
+const USER_ROLE_NAME = clean(process.env.DISCORD_USER_ROLE_NAME);
+const VIP_ROLE_NAME = clean(process.env.DISCORD_VIP_ROLE_NAME) || "VIP";
+const HELPER_ROLE_NAME = clean(process.env.DISCORD_HELPER_ROLE_NAME) || "Helper";
+const ADMIN_ROLE_NAME = clean(process.env.DISCORD_ADMIN_ROLE_NAME) || "Admin";
+const UPDATE_CHANNEL_NAME = clean(process.env.DISCORD_UPDATE_CHANNEL_NAME) || "updates";
+const RELEASE_REPO = clean(process.env.DISCORD_RELEASE_REPO) || "xoner1441/betterUC";
+const RELEASE_CHECK_MS = Math.max(5 * 60 * 1000, Number(process.env.DISCORD_RELEASE_CHECK_MS || 15 * 60 * 1000));
+const ANNOUNCE_EXISTING_RELEASE = String(process.env.DISCORD_ANNOUNCE_EXISTING_RELEASE || "false").toLowerCase() === "true";
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
+const BOT_STATE_FILE = process.env.DISCORD_BOT_STATE_FILE || path.join(DATA_DIR, "discord-bot-state.json");
+
+let botState = {};
 
 function loadDiscord() {
   if (Client) return;
@@ -42,6 +58,29 @@ function listEnv(value) {
     .split(",")
     .map(entry => entry.trim())
     .filter(Boolean);
+}
+
+async function readBotState() {
+  try {
+    const raw = await fsp.readFile(BOT_STATE_FILE, "utf8");
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    if (error.code === "ENOENT") return {};
+    console.warn("Could not read Discord bot state", error.message);
+    return {};
+  }
+}
+
+async function writeBotState(state) {
+  try {
+    await fsp.mkdir(path.dirname(BOT_STATE_FILE), { recursive: true });
+    const tmp = `${BOT_STATE_FILE}.tmp`;
+    await fsp.writeFile(tmp, JSON.stringify(state, null, 2), "utf8");
+    await fsp.rename(tmp, BOT_STATE_FILE);
+  } catch (error) {
+    console.warn("Could not write Discord bot state", error.message);
+  }
 }
 
 function roleLabel(role) {
@@ -127,6 +166,16 @@ function buildCommands() {
       .setName("ticket-panel")
       .setDescription("Postet ein Ticket-Panel mit Buttons in diesen Channel.")
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+    new SlashCommandBuilder()
+      .setName("updates")
+      .setDescription("Prueft oder postet betterUC GitHub-Updates.")
+      .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+      .addSubcommand(subcommand => subcommand
+        .setName("check")
+        .setDescription("Prueft, ob ein neues GitHub-Release existiert."))
+      .addSubcommand(subcommand => subcommand
+        .setName("post_latest")
+        .setDescription("Postet das aktuelle GitHub-Release erneut in den Update-Channel.")),
     new SlashCommandBuilder()
       .setName("code")
       .setDescription("Access-Codes ueber Discord verwalten.")
@@ -229,6 +278,88 @@ function userEmbed(account, onlinePlayer) {
   return embed;
 }
 
+function trimText(value, maxLength = 900) {
+  const raw = String(value || "").trim();
+  if (raw.length <= maxLength) return raw;
+  return `${raw.slice(0, maxLength - 3).trim()}...`;
+}
+
+function releaseEmbed(release) {
+  const tag = display(release.tag_name || release.name, "neues Release");
+  const url = release.html_url || `https://github.com/${RELEASE_REPO}/releases`;
+  const body = trimText(release.body || "Keine Release Notes hinterlegt.");
+  return new EmbedBuilder()
+    .setTitle(`betterUC ${tag} ist verfügbar`)
+    .setURL(url)
+    .setColor(0x38bdf8)
+    .setDescription(body)
+    .addFields(
+      { name: "Download", value: url, inline: false }
+    )
+    .setTimestamp(release.published_at ? new Date(release.published_at) : new Date());
+}
+
+async function fetchLatestRelease() {
+  const response = await fetch(`https://api.github.com/repos/${RELEASE_REPO}/releases/latest`, {
+    headers: {
+      "User-Agent": "betterUC-discord-bot",
+      "Accept": "application/vnd.github+json"
+    }
+  });
+  if (!response.ok) {
+    throw new Error(`GitHub Release Check fehlgeschlagen: HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
+async function findTextChannelByName(guild, name) {
+  await guild.channels.fetch().catch(() => null);
+  const lower = String(name || "").toLowerCase();
+  return guild.channels.cache.find(channel =>
+    channel.type === ChannelType.GuildText
+    && channel.name.toLowerCase() === lower
+  ) || null;
+}
+
+async function checkGithubRelease(client, options = {}) {
+  if (!GUILD_ID || !UPDATE_CHANNEL_NAME) {
+    return { status: "disabled" };
+  }
+
+  const release = await fetchLatestRelease();
+  const releaseKey = String(release.id || release.tag_name || release.html_url || "").trim();
+  if (!releaseKey) return { status: "missing_release_key" };
+
+  const previousKey = botState.latestReleaseKey || "";
+  const firstRun = !previousKey;
+  const changed = previousKey !== releaseKey;
+  const pendingPost = Boolean(botState.latestReleasePendingPost && previousKey === releaseKey);
+  const shouldPost = options.forcePost || pendingPost || (changed && (!firstRun || ANNOUNCE_EXISTING_RELEASE || options.announceExisting));
+
+  botState.latestReleaseKey = releaseKey;
+  botState.latestReleaseTag = release.tag_name || "";
+  botState.latestReleaseCheckedAt = new Date().toISOString();
+
+  if (!shouldPost) {
+    await writeBotState(botState);
+    return { status: firstRun ? "initialized" : "unchanged", release };
+  }
+
+  const guild = await client.guilds.fetch(GUILD_ID);
+  const channel = await findTextChannelByName(guild, UPDATE_CHANNEL_NAME);
+  if (!channel) {
+    botState.latestReleasePendingPost = true;
+    await writeBotState(botState);
+    throw new Error(`Discord-Update-Channel '${UPDATE_CHANNEL_NAME}' nicht gefunden.`);
+  }
+
+  await channel.send({ embeds: [releaseEmbed(release)] });
+  botState.latestReleasePendingPost = false;
+  botState.latestReleasePostedAt = new Date().toISOString();
+  await writeBotState(botState);
+  return { status: "posted", release };
+}
+
 function ticketLabel(topic) {
   if (topic === "bug") return "Bug melden";
   if (topic === "access") return "Access-Code Problem";
@@ -271,20 +402,58 @@ function resolveTeamRoles(guild) {
   return guild.roles.cache.filter(role => lowerNames.includes(role.name.toLowerCase()));
 }
 
-async function addModUserRole(member) {
-  if (!member || !member.guild || !MOD_USER_ROLE_NAME) return;
-  await member.guild.roles.fetch().catch(() => null);
-  const role = member.guild.roles.cache.find(entry => entry.name.toLowerCase() === MOD_USER_ROLE_NAME.toLowerCase());
-  if (!role || member.roles.cache.has(role.id)) return;
-  await member.roles.add(role).catch(error => console.warn("Could not add Mod-User role", error.message));
+function betterUcRoleName(role) {
+  if (role === "admin") return ADMIN_ROLE_NAME;
+  if (role === "helper") return HELPER_ROLE_NAME;
+  if (role === "vip") return VIP_ROLE_NAME;
+  return USER_ROLE_NAME;
 }
 
-async function removeModUserRole(member) {
-  if (!member || !member.guild || !MOD_USER_ROLE_NAME) return;
+function managedBetterUcRoleNames() {
+  return [MOD_USER_ROLE_NAME, USER_ROLE_NAME, VIP_ROLE_NAME, HELPER_ROLE_NAME, ADMIN_ROLE_NAME]
+    .map(clean)
+    .filter(Boolean);
+}
+
+function desiredBetterUcRoleNames(account) {
+  if (!account || account.status === "revoked") return [];
+  return [MOD_USER_ROLE_NAME, betterUcRoleName(account.role)]
+    .map(clean)
+    .filter(Boolean);
+}
+
+function roleByName(guild, roleName) {
+  const lower = clean(roleName).toLowerCase();
+  if (!lower) return null;
+  return guild.roles.cache.find(entry => entry.name.toLowerCase() === lower) || null;
+}
+
+async function syncBetterUcRoles(member, account) {
+  if (!member || !member.guild) return;
   await member.guild.roles.fetch().catch(() => null);
-  const role = member.guild.roles.cache.find(entry => entry.name.toLowerCase() === MOD_USER_ROLE_NAME.toLowerCase());
-  if (!role || !member.roles.cache.has(role.id)) return;
-  await member.roles.remove(role).catch(error => console.warn("Could not remove Mod-User role", error.message));
+  const desired = new Set(desiredBetterUcRoleNames(account).map(name => name.toLowerCase()));
+
+  for (const roleName of managedBetterUcRoleNames()) {
+    const role = roleByName(member.guild, roleName);
+    if (!role) continue;
+    const shouldHave = desired.has(roleName.toLowerCase());
+    const hasRole = member.roles.cache.has(role.id);
+    if (shouldHave && !hasRole) {
+      await member.roles.add(role).catch(error => console.warn("Could not add betterUC Discord role", roleName, account?.minecraftName || "", error.message));
+    } else if (!shouldHave && hasRole) {
+      await member.roles.remove(role).catch(error => console.warn("Could not remove betterUC Discord role", roleName, account?.minecraftName || "", error.message));
+    }
+  }
+}
+
+async function removeBetterUcRoles(member) {
+  if (!member || !member.guild) return;
+  await member.guild.roles.fetch().catch(() => null);
+  for (const roleName of managedBetterUcRoleNames()) {
+    const role = roleByName(member.guild, roleName);
+    if (!role || !member.roles.cache.has(role.id)) continue;
+    await member.roles.remove(role).catch(error => console.warn("Could not remove betterUC Discord role", roleName, error.message));
+  }
 }
 
 function ticketCategoryOverwrites(guild, teamRoles) {
@@ -369,7 +538,33 @@ async function closeTicket(interaction) {
   const closedName = `closed-${channel.name.replace(/^ticket-/, "")}`.slice(0, 100);
   await channel.setName(closedName).catch(() => null);
   await channel.permissionOverwrites.edit(interaction.user.id, { SendMessages: false }).catch(() => null);
-  await interaction.reply({ content: "Ticket geschlossen. Ein Teammitglied kann den Channel nun bei Bedarf loeschen.", ephemeral: false });
+  const deleteRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("ticket:delete")
+      .setLabel("Ticket loeschen")
+      .setStyle(ButtonStyle.Danger)
+  );
+  await interaction.reply({
+    content: "Ticket geschlossen. Ein Teammitglied kann den Channel nun loeschen.",
+    components: [deleteRow],
+    ephemeral: false
+  });
+}
+
+async function deleteTicket(interaction) {
+  const channel = interaction.channel;
+  if (!channel || channel.type !== ChannelType.GuildText || !channel.name.startsWith("closed-")) {
+    await interaction.reply({ content: "Dieses Ticket muss erst geschlossen werden.", ephemeral: true });
+    return;
+  }
+  if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
+    await interaction.reply({ content: "Nur Teammitglieder mit Channel-Rechten koennen Tickets loeschen.", ephemeral: true });
+    return;
+  }
+  await interaction.reply({ content: "Ticket wird geloescht...", ephemeral: true });
+  setTimeout(() => {
+    channel.delete("betterUC ticket closed").catch(error => console.warn("Could not delete ticket", error.message));
+  }, 1500);
 }
 
 function ticketPanelPayload() {
@@ -444,7 +639,7 @@ async function handleCodeCommand(interaction, context) {
       const account = await context.revokeAccountByMinecraftName(name);
       if (account.discordId && interaction.guild) {
         const member = await interaction.guild.members.fetch(account.discordId).catch(() => null);
-        await removeModUserRole(member);
+        await removeBetterUcRoles(member);
       }
       await interaction.reply({ content: `Account **${account.minecraftName}** wurde gesperrt.`, ephemeral: true });
     }
@@ -506,7 +701,7 @@ async function handleCommand(interaction, context) {
         interaction.options.getString("code", true),
         interaction.user.id
       );
-      await addModUserRole(await interactionMember(interaction));
+      await syncBetterUcRoles(await interactionMember(interaction), account);
       await interaction.reply({
         content: `Verknuepft mit **${account.minecraftName}**. Der Bot kann dich jetzt als betterUC Mod-User erkennen.`,
         ephemeral: true
@@ -520,7 +715,7 @@ async function handleCommand(interaction, context) {
   if (interaction.commandName === "unlink") {
     try {
       const account = await context.unlinkDiscordAccount(interaction.user.id);
-      await removeModUserRole(await interactionMember(interaction));
+      await removeBetterUcRoles(await interactionMember(interaction));
       await interaction.reply({
         content: `Verknuepfung zu **${account.minecraftName}** wurde geloest.`,
         ephemeral: true
@@ -539,6 +734,33 @@ async function handleCommand(interaction, context) {
   if (interaction.commandName === "ticket-panel") {
     await interaction.channel.send(ticketPanelPayload());
     await interaction.reply({ content: "Ticket-Panel wurde gepostet.", ephemeral: true });
+    return;
+  }
+
+  if (interaction.commandName === "updates") {
+    if (!hasManageGuild(interaction)) {
+      await interaction.reply({ content: "Dafuer brauchst du Discord-Adminrechte.", ephemeral: true });
+      return;
+    }
+    const subcommand = interaction.options.getSubcommand();
+    try {
+      const result = await checkGithubRelease(interaction.client, {
+        forcePost: subcommand === "post_latest",
+        announceExisting: true
+      });
+      if (result.status === "posted") {
+        await interaction.reply({ content: "Update wurde im Discord-Update-Channel gepostet.", ephemeral: true });
+      } else if (result.status === "unchanged" || result.status === "initialized") {
+        await interaction.reply({
+          content: `Kein neues Release. Aktuell erkannt: ${result.release?.tag_name || "unbekannt"}.`,
+          ephemeral: true
+        });
+      } else {
+        await interaction.reply({ content: `Update-Check Status: ${result.status}.`, ephemeral: true });
+      }
+    } catch (error) {
+      await interaction.reply({ content: error.message || "Update-Check fehlgeschlagen.", ephemeral: true });
+    }
     return;
   }
 
@@ -561,6 +783,10 @@ async function handleInteraction(interaction, context) {
       }
       if (interaction.customId === "ticket:close") {
         await closeTicket(interaction);
+        return;
+      }
+      if (interaction.customId === "ticket:delete") {
+        await deleteTicket(interaction);
       }
     }
   } catch (error) {
@@ -573,27 +799,17 @@ async function handleInteraction(interaction, context) {
   }
 }
 
-async function syncModUserRole(client, context) {
-  if (!GUILD_ID || !MOD_USER_ROLE_NAME) return;
+async function syncBetterUcRoleState(client, context) {
+  if (!GUILD_ID) return;
   const guild = await client.guilds.fetch(GUILD_ID).catch(() => null);
   if (!guild) return;
   await guild.roles.fetch().catch(() => null);
-  const role = guild.roles.cache.find(entry => entry.name.toLowerCase() === MOD_USER_ROLE_NAME.toLowerCase());
-  if (!role) return;
 
   for (const account of context.getAccounts()) {
     if (!account.discordId) continue;
     const member = await guild.members.fetch(account.discordId).catch(() => null);
     if (!member) continue;
-    if (account.status === "revoked") {
-      if (member.roles.cache.has(role.id)) {
-        await member.roles.remove(role).catch(error => console.warn("Could not remove Mod-User role", account.minecraftName, error.message));
-      }
-      continue;
-    }
-    if (!member.roles.cache.has(role.id)) {
-      await member.roles.add(role).catch(error => console.warn("Could not add Mod-User role", account.minecraftName, error.message));
-    }
+    await syncBetterUcRoles(member, account);
   }
 }
 
@@ -618,6 +834,7 @@ async function startDiscordBot(context) {
   let ready = false;
   let presenceTimer = null;
   let roleSyncTimer = null;
+  let releaseCheckTimer = null;
 
   const updatePresence = () => {
     if (!ready || !client.user) return;
@@ -638,6 +855,7 @@ async function startDiscordBot(context) {
 
   client.once("ready", async () => {
     ready = true;
+    botState = await readBotState();
     console.log(`betterUC Discord bot logged in as ${client.user.tag}`);
     try {
       if (GUILD_ID) {
@@ -652,9 +870,14 @@ async function startDiscordBot(context) {
       console.error("Could not sync betterUC Discord commands", error);
     }
     updatePresence();
+    syncBetterUcRoleState(client, context).catch(error => console.warn("Discord role sync failed", error.message));
     roleSyncTimer = setInterval(() => {
-      syncModUserRole(client, context).catch(error => console.warn("Discord role sync failed", error.message));
-    }, 10 * 60 * 1000);
+      syncBetterUcRoleState(client, context).catch(error => console.warn("Discord role sync failed", error.message));
+    }, Math.max(60 * 1000, Number(process.env.DISCORD_ROLE_SYNC_MS || 5 * 60 * 1000)));
+    checkGithubRelease(client).catch(error => console.warn("Discord release check failed", error.message));
+    releaseCheckTimer = setInterval(() => {
+      checkGithubRelease(client).catch(error => console.warn("Discord release check failed", error.message));
+    }, RELEASE_CHECK_MS);
   });
 
   client.on("interactionCreate", interaction => handleInteraction(interaction, context));
@@ -668,6 +891,7 @@ async function startDiscordBot(context) {
     stop() {
       clearTimeout(presenceTimer);
       clearInterval(roleSyncTimer);
+      clearInterval(releaseCheckTimer);
       client.destroy();
     }
   };
