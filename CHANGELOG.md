@@ -3,12 +3,14 @@
 ## [1.1.6] - 2026-06-05
 
 ### Neu
+- **Willkommensscreen** im Minecraft-Hauptmenü zeigt den Changelog nach einer neuen Mod-Version automatisch einmalig an.
 - **Helper-Rolle** mit gelbem Hologramm und gelbem `bUC`-Tablist-Badge.
 - Helper ist unter Admin einsortiert, hat aber keine zusätzlichen Website-Rechte.
 - Website-Startseite und ClickGUI-Changelog wurden auf die aktuelle Version angepasst.
+- **Discord-Bereich** in der ClickGUI öffnet oder kopiert den Community-Invite.
 - **Discord-Bot erweitert**: Ticket-System mit Schließen/Löschen, GitHub-Update-Posts, `/updates` Commands und Rollen-Sync für Mod-User, VIP, Helper und Admin.
 
-### Geaendert
+### Geändert
 - Die Feature- und Commandlisten zeigen nur noch Funktionen, die aktuell aktiv sind.
 - Pingrad, Ping-Cooldown, Soundauswahl und Reichweitenlimit bleiben als aktuelle Ping-Features hervorgehoben.
 - Server-Deploy kann den Discord-Bot automatisch mitstarten, wenn `DISCORD_BOT_TOKEN` und `DISCORD_GUILD_ID` gesetzt sind.

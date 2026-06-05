@@ -70,6 +70,7 @@ public class BetterUCConfig {
     public static final String HUD_STYLE_CARTOON = "cartoon";
     public static final String HUD_STYLE_CUSTOM = "custom";
     public static final String DEFAULT_PING_RELAY_URL = "wss://ping.betteruc.de/ws";
+    public static final String DEFAULT_DISCORD_INVITE_URL = "https://discord.gg/TRAQxCXz";
     private static final String LEGACY_PING_RELAY_URL = "ws://65.109.175.203:3000/ws";
     public static BetterUCConfig INSTANCE = new BetterUCConfig();
     private static final List<TrackableFaction> TRACKABLE_FACTIONS = List.of(
@@ -227,6 +228,8 @@ public class BetterUCConfig {
     public int pingCooldownMs = 2000;
     public boolean pingSoundEnabled = true;
     public String pingSoundId = "pling";
+    public String lastSeenWelcomeVersion = "";
+    public String discordInviteUrl = DEFAULT_DISCORD_INVITE_URL;
 
     public static class BlacklistReason {
         public int kills;
@@ -390,6 +393,28 @@ public class BetterUCConfig {
                 || normalized.equals("http://65.109.175.203:3000")
                 || normalized.equals("http://65.109.175.203:3000/ws")
                 || normalized.equals("ws://65.109.175.203:3000");
+    }
+
+    private static void sanitizeDiscordInvite() {
+        String raw = INSTANCE.discordInviteUrl == null ? "" : INSTANCE.discordInviteUrl.trim();
+        if (!raw.startsWith("https://") && !raw.startsWith("http://")) {
+            raw = DEFAULT_DISCORD_INVITE_URL;
+        }
+        INSTANCE.discordInviteUrl = raw.isBlank() ? DEFAULT_DISCORD_INVITE_URL : raw;
+    }
+
+    public static boolean hasSeenWelcomeChangelog(String version) {
+        String normalized = version == null ? "" : version.trim();
+        if (normalized.isEmpty()) return true;
+        String seen = INSTANCE.lastSeenWelcomeVersion == null ? "" : INSTANCE.lastSeenWelcomeVersion.trim();
+        return normalized.equals(seen);
+    }
+
+    public static void markWelcomeChangelogSeen(String version) {
+        String normalized = version == null ? "" : version.trim();
+        if (normalized.isEmpty()) return;
+        INSTANCE.lastSeenWelcomeVersion = normalized;
+        save();
     }
 
     private static Map<String, BlacklistReason> defaultBlacklistReasons() {
@@ -848,6 +873,7 @@ public class BetterUCConfig {
         sanitizeHudStyles();
         sanitizeHudScales();
         sanitizePingRelay();
+        sanitizeDiscordInvite();
         sanitizeTrackedFactions();
         rebuildRemoteFactionUnion();
         refreshRuntimeNameCaches();
@@ -909,6 +935,7 @@ public class BetterUCConfig {
             sanitizeHudStyles();
             sanitizeHudScales();
             sanitizePingRelay();
+            sanitizeDiscordInvite();
             if (INSTANCE.blReasons == null || INSTANCE.blReasons.isEmpty()) {
                 INSTANCE.blReasons = defaultBlacklistReasons();
             }

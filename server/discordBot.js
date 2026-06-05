@@ -460,13 +460,18 @@ function ticketCategoryOverwrites(guild, teamRoles) {
   const overwrites = [
     {
       id: guild.roles.everyone.id,
-      deny: ["ViewChannel"]
+      deny: [PermissionFlagsBits.ViewChannel]
     }
   ];
   for (const role of teamRoles.values()) {
     overwrites.push({
       id: role.id,
-      allow: ["ViewChannel", "SendMessages", "ReadMessageHistory", "ManageMessages"]
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.ManageMessages
+      ]
     });
   }
   return overwrites;
@@ -477,55 +482,115 @@ function ticketChannelOverwrites(guild, openerId, teamRoles) {
     ...ticketCategoryOverwrites(guild, teamRoles),
     {
       id: openerId,
-      allow: ["ViewChannel", "SendMessages", "ReadMessageHistory", "AttachFiles"]
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.AttachFiles
+      ]
     }
   ];
 }
 
+async function deferEphemeral(interaction) {
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferReply({ ephemeral: true });
+  }
+}
+
+async function respondEphemeral(interaction, content) {
+  if (interaction.deferred) {
+    await interaction.editReply({ content });
+  } else if (interaction.replied) {
+    await interaction.followUp({ content, ephemeral: true });
+  } else {
+    await interaction.reply({ content, ephemeral: true });
+  }
+}
+
+function ticketErrorMessage(error) {
+  const code = error?.code ? ` (${error.code})` : "";
+  const message = String(error?.message || "").trim();
+  if (message.includes("Missing Permissions") || error?.code === 50013) {
+    return "Ticket konnte nicht erstellt werden: Dem Bot fehlen Discord-Rechte. Gib dem Bot bitte 'Kanäle verwalten', 'Nachrichten senden' und Zugriff auf die Ticket-Kategorie.";
+  }
+  if (message.includes("Maximum number of channels") || error?.code === 30013) {
+    return "Ticket konnte nicht erstellt werden: Der Discord-Server hat das Channel-Limit erreicht.";
+  }
+  if (message) {
+    return `Ticket konnte nicht erstellt werden: ${message}${code}`;
+  }
+  return "Ticket konnte nicht erstellt werden. Bitte pruefe die Bot-Rechte und versuche es erneut.";
+}
+
+async function ensureTicketBotPermissions(guild) {
+  const botMember = guild.members.me || await guild.members.fetch(guild.client.user.id).catch(() => null);
+  if (!botMember) {
+    throw new Error("Bot-Mitglied konnte auf diesem Discord-Server nicht geladen werden.");
+  }
+  const missing = [];
+  if (!botMember.permissions.has(PermissionFlagsBits.ManageChannels)) missing.push("Kanäle verwalten");
+  if (!botMember.permissions.has(PermissionFlagsBits.SendMessages)) missing.push("Nachrichten senden");
+  if (!botMember.permissions.has(PermissionFlagsBits.ViewChannel)) missing.push("Kanäle ansehen");
+  if (missing.length > 0) {
+    throw new Error(`Dem Bot fehlen Rechte: ${missing.join(", ")}.`);
+  }
+}
+
 async function openTicket(interaction, topic) {
+  await deferEphemeral(interaction);
+
   const guild = interaction.guild;
   if (!guild) {
-    await interaction.reply({ content: "Tickets koennen nur auf dem Server erstellt werden.", ephemeral: true });
+    await respondEphemeral(interaction, "Tickets koennen nur auf dem Server erstellt werden.");
     return;
   }
 
-  await guild.roles.fetch().catch(() => null);
-  const teamRoles = resolveTeamRoles(guild);
-  const category = await findOrCreateTicketCategory(guild, teamRoles);
-  const openTicket = guild.channels.cache.find(channel =>
-    channel.type === ChannelType.GuildText
-    && channel.name.startsWith(`ticket-${ticketPrefix(topic)}-`)
-    && channel.topic
-    && channel.topic.includes(`discord:${interaction.user.id}`)
-  );
-  if (openTicket) {
-    await interaction.reply({ content: `Du hast bereits ein offenes Ticket: ${openTicket}`, ephemeral: true });
-    return;
+  try {
+    await ensureTicketBotPermissions(guild);
+    await guild.roles.fetch().catch(() => null);
+    await guild.channels.fetch().catch(() => null);
+    const teamRoles = resolveTeamRoles(guild);
+    const category = await findOrCreateTicketCategory(guild, teamRoles);
+    const openTicket = guild.channels.cache.find(channel =>
+      channel.type === ChannelType.GuildText
+      && channel.name.startsWith(`ticket-${ticketPrefix(topic)}-`)
+      && channel.topic
+      && channel.topic.includes(`discord:${interaction.user.id}`)
+    );
+    if (openTicket) {
+      await respondEphemeral(interaction, `Du hast bereits ein offenes Ticket: ${openTicket}`);
+      return;
+    }
+
+    const channel = await guild.channels.create({
+      name: `ticket-${ticketPrefix(topic)}-${slug(interaction.user.username)}`,
+      type: ChannelType.GuildText,
+      parent: category.id,
+      topic: `betterUC Ticket | ${ticketLabel(topic)} | discord:${interaction.user.id}`,
+      permissionOverwrites: ticketChannelOverwrites(guild, interaction.user.id, teamRoles),
+      reason: `betterUC ticket opened by ${interaction.user.tag}`
+    });
+
+    const embed = new EmbedBuilder()
+      .setTitle(`Ticket: ${ticketLabel(topic)}`)
+      .setColor(0x38bdf8)
+      .setDescription([
+        `${interaction.user}, beschreibe dein Anliegen bitte moeglichst genau.`,
+        "Ein Teammitglied meldet sich dann hier im Ticket."
+      ].join("\n"));
+    const closeRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("ticket:close")
+        .setLabel("Ticket schliessen")
+        .setStyle(ButtonStyle.Danger)
+    );
+    await channel.send({ content: `${interaction.user}`, embeds: [embed], components: [closeRow] });
+    await respondEphemeral(interaction, `Ticket erstellt: ${channel}`);
+  } catch (error) {
+    console.error("Discord ticket create error", error);
+    await respondEphemeral(interaction, ticketErrorMessage(error));
   }
-
-  const channel = await guild.channels.create({
-    name: `ticket-${ticketPrefix(topic)}-${slug(interaction.user.username)}`,
-    type: ChannelType.GuildText,
-    parent: category.id,
-    topic: `betterUC Ticket | ${ticketLabel(topic)} | discord:${interaction.user.id}`,
-    permissionOverwrites: ticketChannelOverwrites(guild, interaction.user.id, teamRoles)
-  });
-
-  const embed = new EmbedBuilder()
-    .setTitle(`Ticket: ${ticketLabel(topic)}`)
-    .setColor(0x38bdf8)
-    .setDescription([
-      `${interaction.user}, beschreibe dein Anliegen bitte moeglichst genau.`,
-      "Ein Teammitglied meldet sich dann hier im Ticket."
-    ].join("\n"));
-  const closeRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("ticket:close")
-      .setLabel("Ticket schliessen")
-      .setStyle(ButtonStyle.Danger)
-  );
-  await channel.send({ content: `${interaction.user}`, embeds: [embed], components: [closeRow] });
-  await interaction.reply({ content: `Ticket erstellt: ${channel}`, ephemeral: true });
 }
 
 async function closeTicket(interaction) {

@@ -81,7 +81,8 @@ public class BetterUCScreen extends Screen {
                     "Access Code verbindet die Mod mit dem betterUC Relay",
                     "/register <passwort> legt dein Userpanel-Passwort fest",
                     "Userpanel zeigt Bank, Bargeld, Häuser, Spielzeit, Warns und Fraktion",
-                    "Adminpanel verwaltet Codes, Rollen und Spielerdaten"
+                    "Adminpanel verwaltet Codes, Rollen und Spielerdaten",
+                    "Discord-Bereich öffnet oder kopiert den Community-Invite"
             }),
             new UpdateSection("Commandliste", new String[]{
                     "/blset <spieler> <grund> oder /setbl setzt einen Blacklist-Eintrag",
@@ -215,6 +216,7 @@ public class BetterUCScreen extends Screen {
             }
             case HOTKEYS -> y = addButton(x, y, controlW, "Hotkey Commands", b -> openScreen(new HotkeyCommandsScreen(this)));
             case COMMANDS -> y = addButton(x, y, controlW, "Command Menu", b -> openScreen(new CommandGui()));
+            case DISCORD -> y = addDiscordControls(x, y, controlW);
             case UPDATES -> {
             }
         }
@@ -323,6 +325,14 @@ public class BetterUCScreen extends Screen {
             PingRelayClient.tick(client);
             refreshWidgets();
         });
+    }
+
+    private int addDiscordControls(int x, int y, int width) {
+        y = addInfo(x, y, width, "Discord", "betterUC Community");
+        y = addButton(x, y, width, "Discord öffnen", b -> openDiscordInvite());
+        y = addButton(x, y, width, "Invite kopieren", b -> copyDiscordInvite());
+        return addTextField(x, y, width, "Invite Link", BetterUCConfig.INSTANCE.discordInviteUrl, 160,
+                value -> BetterUCConfig.INSTANCE.discordInviteUrl = value.trim());
     }
 
     private int addButton(int x, int y, int width, String label, ButtonWidget.PressAction action) {
@@ -807,6 +817,7 @@ public class BetterUCScreen extends Screen {
             case HOTKEYS -> drawMiniInfo(context, previewX, previewY, "Hotkeys",
                     BetterUCConfig.INSTANCE.hotkeyCommands.size() + " Commands", true);
             case COMMANDS -> drawMiniInfo(context, previewX, previewY, "Tools", "Command Menu", true);
+            case DISCORD -> drawMiniInfo(context, previewX, previewY, "Discord", "Invite öffnen", true);
             case UPDATES -> {
             }
         }
@@ -1119,6 +1130,38 @@ public class BetterUCScreen extends Screen {
         return server == null || server.isBlank() ? "nicht erkannt" : server;
     }
 
+    private void openDiscordInvite() {
+        String invite = safeDiscordInvite();
+        try {
+            Util.getOperatingSystem().open(URI.create(invite));
+        } catch (Exception e) {
+            BetterUCMod.LOGGER.warn("Could not open betterUC Discord invite {}", invite, e);
+            copyDiscordInvite();
+        }
+    }
+
+    private void copyDiscordInvite() {
+        String invite = safeDiscordInvite();
+        if (client != null) {
+            client.keyboard.setClipboard(invite);
+            if (client.player != null) {
+                client.player.sendMessage(Text.literal("[betterUC] Discord-Invite kopiert: " + invite), false);
+            }
+        }
+    }
+
+    private String safeDiscordInvite() {
+        String invite = BetterUCConfig.INSTANCE.discordInviteUrl == null
+                ? ""
+                : BetterUCConfig.INSTANCE.discordInviteUrl.trim();
+        if (!invite.startsWith("https://") && !invite.startsWith("http://")) {
+            invite = BetterUCConfig.DEFAULT_DISCORD_INVITE_URL;
+            BetterUCConfig.INSTANCE.discordInviteUrl = invite;
+            BetterUCConfig.save();
+        }
+        return invite;
+    }
+
     private String takeFittingText(String text, int maxWidth) {
         if (textRenderer.getWidth(text) <= maxWidth) return text;
 
@@ -1335,6 +1378,7 @@ public class BetterUCScreen extends Screen {
         PING(Category.TOOLS, "Ping", "Private Mod-Pings", 0xFF38BDF8, true),
         HOTKEYS(Category.TOOLS, "Hotkeys", "Commands auf Tasten", 0xFFFBBF24, false),
         COMMANDS(Category.TOOLS, "Commands", "Command Menu", 0xFF22C55E, false),
+        DISCORD(Category.TOOLS, "Discord", "Community Invite", 0xFF5865F2, false),
         UPDATES(Category.TOOLS, "Updates", "Changelog und neue Features", 0xFF38BDF8, false);
 
         private final Category category;

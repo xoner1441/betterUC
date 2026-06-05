@@ -17,6 +17,7 @@ import com.betteruc.client.VersionChecker;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.gui.CommandGui;
 import com.betteruc.gui.BetterUCScreen;
+import com.betteruc.gui.ChangelogScreen;
 import com.betteruc.gui.PingWheelScreen;
 import com.betteruc.hud.AmmoHud;
 import com.betteruc.hud.BankBalanceHud;
@@ -38,6 +39,7 @@ import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
@@ -94,6 +96,7 @@ public class BetterUCClient implements ClientModInitializer {
     private boolean pingKeyWasDown = false;
     private long pingKeyDownAtMs = 0L;
     private boolean pingWheelOpenedForPress = false;
+    private boolean welcomeChangelogChecked = false;
 
     private static final class MatchedReason {
         private final String key;
@@ -894,6 +897,7 @@ public class BetterUCClient implements ClientModInitializer {
     private void registerTickEvents() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             BetterUCFontManager.tick(client);
+            maybeOpenWelcomeChangelog(client);
             if (client.player == null) return;
 
             HackTimerHud.tick();
@@ -906,6 +910,28 @@ public class BetterUCClient implements ClientModInitializer {
             handlePingHotkey(client);
             handleScreenHotkeys(client);
         });
+    }
+
+    private void maybeOpenWelcomeChangelog(MinecraftClient client) {
+        if (welcomeChangelogChecked || client == null) return;
+        if (!(client.currentScreen instanceof TitleScreen)) return;
+
+        String currentVersion = currentModVersion();
+        if (BetterUCConfig.hasSeenWelcomeChangelog(currentVersion)) {
+            welcomeChangelogChecked = true;
+            return;
+        }
+
+        welcomeChangelogChecked = true;
+        BetterUCConfig.markWelcomeChangelogSeen(currentVersion);
+        client.setScreen(new ChangelogScreen(client.currentScreen, true));
+    }
+
+    private static String currentModVersion() {
+        return net.fabricmc.loader.api.FabricLoader.getInstance()
+                .getModContainer("betteruc")
+                .map(container -> container.getMetadata().getVersion().getFriendlyString())
+                .orElse("dev");
     }
 
     private void tickStatsOnJoin(MinecraftClient client) {

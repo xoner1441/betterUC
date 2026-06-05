@@ -15,11 +15,12 @@ public class ChangelogScreen extends Screen {
                     "Highlights",
                     "betterUC 1.1.6",
                     new String[]{
+                            "Willkommensscreen zeigt neue Features nach einem Update einmalig im Hauptmenü",
                             "Helper-Rolle mit gelbem Hologramm und bUC-Tablist-Badge",
                             "Helper ist unter Admin einsortiert, hat aber keine Website-Zusatzrechte",
+                            "VIP-Rolle mit dunkellila Hologramm und bUC-Tablist-Badge",
                             "Veraltete /seinzahlen- und /scall-Commands entfernt",
                             "Website, ClickGUI und Changelog zeigen nur noch aktive Features",
-                            "VIP-Rolle mit dunkellila Hologramm und bUC-Tablist-Badge",
                             "Userpanel zeigt Rolle, Status und getrackte Account-Daten",
                             "Adminpanel kann Accounts nach Rolle, Status, Online-Zustand und Fraktion filtern",
                             "Verbindungsseite im ClickGUI wurde klarer sortiert",
@@ -35,7 +36,8 @@ public class ChangelogScreen extends Screen {
                             "Ping Relay sendet private Markierungen an andere betterUC-Nutzer",
                             "Pingrad mit Normal-, Gefahr- und Sammeln-Pings",
                             "Eigene Pingfarben, Ping-Soundauswahl und Cooldown gegen Spam",
-                            "Discord-Bot mit Online-Liste, Tickets und Account-Linking vorbereitet"
+                            "Discord-Bereich in der ClickGUI öffnet oder kopiert den Community-Invite",
+                            "Discord-Bot mit Online-Liste, Tickets, Update-Posts und Account-Linking"
                     }
             ),
             new Page(
@@ -55,6 +57,20 @@ public class ChangelogScreen extends Screen {
                     }
             ),
             new Page(
+                    "Ping System",
+                    "Private Markierungen",
+                    new String[]{
+                            "Pingrad öffnet sich beim Halten der Ping-Taste",
+                            "Normal-, Gefahr- und Sammeln-Pings sind auswählbar",
+                            "Pings können global oder nur an die eigene Fraktion gesendet werden",
+                            "Pings werden nur in der eingestellten Reichweite erkannt",
+                            "Eigene Farben pro Pingtyp",
+                            "Ping-Sounds sind auswählbar und können deaktiviert werden",
+                            "Cooldown schützt vor Spam",
+                            "Pings werden blockiert, wenn Kommunikationsgeräte fehlen oder das Handy aus ist"
+                    }
+            ),
+            new Page(
                     "Tools & Commands",
                     "Alltag im Spiel",
                     new String[]{
@@ -62,7 +78,8 @@ public class ChangelogScreen extends Screen {
                             "Zoom-Taste frei wählbar, Zoom reagiert sofort",
                             "/car find Koordinaten werden automatisch ins Navi übernommen",
                             "Chat-Zeitstempel und größere Chat-Historie",
-                            "Ping-Taste ist in den Minecraft-Keybinds frei einstellbar"
+                            "Ping-Taste ist in den Minecraft-Keybinds frei einstellbar",
+                            "/register <passwort> verbindet deinen Ingame-Account mit dem Userpanel"
                     }
             ),
             new Page(
@@ -80,11 +97,17 @@ public class ChangelogScreen extends Screen {
     };
 
     private final Screen parent;
+    private final boolean welcomeMode;
     private int pageIndex = 0;
 
     public ChangelogScreen(Screen parent) {
-        super(Text.literal("betterUC Features"));
+        this(parent, false);
+    }
+
+    public ChangelogScreen(Screen parent, boolean welcomeMode) {
+        super(Text.literal(welcomeMode ? "betterUC Willkommen" : "betterUC Features"));
         this.parent = parent;
+        this.welcomeMode = welcomeMode;
     }
 
     @Override
@@ -92,21 +115,26 @@ public class ChangelogScreen extends Screen {
         int centerX = width / 2;
         int navY = height - 54;
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("<"), b -> {
+        ButtonWidget previousButton = ButtonWidget.builder(Text.literal("<"), b -> {
             if (pageIndex > 0) {
                 pageIndex--;
                 refreshWidgets();
             }
-        }).dimensions(centerX - BUTTON_W / 2 - 28, navY, 24, BUTTON_H).build()).active = pageIndex > 0;
+        }).dimensions(centerX - BUTTON_W / 2 - 28, navY, 24, BUTTON_H).build();
+        previousButton.active = pageIndex > 0;
+        addDrawableChild(previousButton);
 
-        addDrawableChild(ButtonWidget.builder(Text.literal(">"), b -> {
+        ButtonWidget nextButton = ButtonWidget.builder(Text.literal(">"), b -> {
             if (pageIndex < PAGES.length - 1) {
                 pageIndex++;
                 refreshWidgets();
             }
-        }).dimensions(centerX + BUTTON_W / 2 + 4, navY, 24, BUTTON_H).build()).active = pageIndex < PAGES.length - 1;
+        }).dimensions(centerX + BUTTON_W / 2 + 4, navY, 24, BUTTON_H).build();
+        nextButton.active = pageIndex < PAGES.length - 1;
+        addDrawableChild(nextButton);
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Zurück"), b -> {
+        String closeLabel = welcomeMode ? "Verstanden" : "Zurück";
+        addDrawableChild(ButtonWidget.builder(Text.literal(closeLabel), b -> {
             if (client != null) {
                 client.setScreen(parent);
             }
@@ -115,21 +143,29 @@ public class ChangelogScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        context.fill(0, 0, width, height, 0xD0000000);
+        if (welcomeMode && parent != null) {
+            parent.render(context, mouseX, mouseY, delta);
+        } else {
+            context.fill(0, 0, width, height, 0xD0000000);
+        }
+
+        context.fill(0, 0, width, height, welcomeMode ? 0x88000000 : 0x66000000);
+
+        int panelWidth = Math.min(590, width - 40);
+        int panelHeight = Math.min(300, height - 92);
+        int panelX = width / 2 - panelWidth / 2;
+        int panelY = Math.max(20, height / 2 - panelHeight / 2 - 8);
+
+        context.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xF010151C);
+        drawBorder(context, panelX, panelY, panelWidth, panelHeight, 0xFF38BDF8);
+
         super.render(context, mouseX, mouseY, delta);
 
-        int panelWidth = Math.min(560, width - 40);
-        int panelHeight = Math.min(270, height - 92);
-        int panelX = width / 2 - panelWidth / 2;
-        int panelY = 28;
-
-        context.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xE0101010);
-        drawBorder(context, panelX, panelY, panelWidth, panelHeight, 0xFFAAAAAA);
-
         Page page = PAGES[pageIndex];
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("betterUC Changelog & Features"), width / 2, panelY + 12, 0xFFFFFFFF);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal(page.title), width / 2, panelY + 28, 0xFFFFD866);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal(page.subtitle), width / 2, panelY + 42, 0xFFBBBBBB);
+        String heading = welcomeMode ? "Willkommen bei betterUC" : "betterUC Changelog & Features";
+        context.drawCenteredTextWithShadow(textRenderer, Text.literal(heading), width / 2, panelY + 12, 0xFFFFFFFF);
+        context.drawCenteredTextWithShadow(textRenderer, Text.literal(page.title), width / 2, panelY + 30, 0xFF38BDF8);
+        context.drawCenteredTextWithShadow(textRenderer, Text.literal(page.subtitle), width / 2, panelY + 44, 0xFFBBBBBB);
         context.drawCenteredTextWithShadow(
                 textRenderer,
                 Text.literal("Seite " + (pageIndex + 1) + "/" + PAGES.length),
@@ -139,7 +175,7 @@ public class ChangelogScreen extends Screen {
         );
 
         int x = panelX + 22;
-        int y = panelY + 66;
+        int y = panelY + 68;
         int maxLineWidth = panelWidth - 44;
         int bottomY = panelY + panelHeight - 14;
         for (String line : page.lines) {
