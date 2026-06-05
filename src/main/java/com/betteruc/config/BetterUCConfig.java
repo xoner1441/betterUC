@@ -70,7 +70,7 @@ public class BetterUCConfig {
     public static final String HUD_STYLE_CARTOON = "cartoon";
     public static final String HUD_STYLE_CUSTOM = "custom";
     public static final String DEFAULT_PING_RELAY_URL = "wss://ping.betteruc.de/ws";
-    public static final String DEFAULT_DISCORD_INVITE_URL = "https://discord.gg/TRAQxCXz";
+    public static final String DEFAULT_DISCORD_INVITE_URL = "https://discord.gg/UQQQw8hVsn";
     private static final String LEGACY_PING_RELAY_URL = "ws://65.109.175.203:3000/ws";
     public static BetterUCConfig INSTANCE = new BetterUCConfig();
     private static final List<TrackableFaction> TRACKABLE_FACTIONS = List.of(

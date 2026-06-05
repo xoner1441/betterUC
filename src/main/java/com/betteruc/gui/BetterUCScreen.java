@@ -330,9 +330,7 @@ public class BetterUCScreen extends Screen {
     private int addDiscordControls(int x, int y, int width) {
         y = addInfo(x, y, width, "Discord", "betterUC Community");
         y = addButton(x, y, width, "Discord öffnen", b -> openDiscordInvite());
-        y = addButton(x, y, width, "Invite kopieren", b -> copyDiscordInvite());
-        return addTextField(x, y, width, "Invite Link", BetterUCConfig.INSTANCE.discordInviteUrl, 160,
-                value -> BetterUCConfig.INSTANCE.discordInviteUrl = value.trim());
+        return addButton(x, y, width, "Invite kopieren", b -> copyDiscordInvite());
     }
 
     private int addButton(int x, int y, int width, String label, ButtonWidget.PressAction action) {
@@ -1151,15 +1149,7 @@ public class BetterUCScreen extends Screen {
     }
 
     private String safeDiscordInvite() {
-        String invite = BetterUCConfig.INSTANCE.discordInviteUrl == null
-                ? ""
-                : BetterUCConfig.INSTANCE.discordInviteUrl.trim();
-        if (!invite.startsWith("https://") && !invite.startsWith("http://")) {
-            invite = BetterUCConfig.DEFAULT_DISCORD_INVITE_URL;
-            BetterUCConfig.INSTANCE.discordInviteUrl = invite;
-            BetterUCConfig.save();
-        }
-        return invite;
+        return BetterUCConfig.DEFAULT_DISCORD_INVITE_URL;
     }
 
     private String takeFittingText(String text, int maxWidth) {
