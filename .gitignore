@@ -17,6 +17,9 @@ crash-reports/
 # Local scratch and generated inspection files
 .tmp-java*/
 .git-index-codex*
+discord-setup-bot/.env
+server/.env
+tmp/
 tmp-src/
 tmp-chat-src.jar
 ZipFsCheck.java

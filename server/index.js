@@ -7,6 +7,7 @@ const http = require("http");
 const path = require("path");
 const { URL } = require("url");
 const { WebSocketServer } = require("ws");
+const { startDiscordBot } = require("./discordBot");
 
 const PORT = Number(process.env.PORT || 3000);
 const MAX_CLIENTS = Number(process.env.MAX_CLIENTS || 500);
@@ -45,6 +46,7 @@ let saveTimer = null;
 let backupTimer = null;
 const clients = new Set();
 const rateLimits = new Map();
+let discordBot = { notifyStateChanged() {}, stop() {} };
 
 function nowIso() {
   return new Date().toISOString();
@@ -395,11 +397,126 @@ function adminAccount(account) {
   const onlineClient = onlineClientForAccount(account);
   return {
     ...publicAccount(account),
+    discordId: account.discordId || "",
+    discordLinkedAt: account.discordLinkedAt || null,
     online: Boolean(onlineClient),
     connectedAt: onlineClient ? onlineClient.connectedAt : null,
     stats: publicStats(account),
     statsHistory: publicStatsHistory(account)
   };
+}
+
+async function createAccessAccount({ minecraftName, faction = "", role = "user", createdBy = "server" }) {
+  const cleanedName = cleanMinecraftName(minecraftName);
+  if (cleanedName === null || !cleanedName) {
+    throw new Error("Minecraft-Name muss 3-16 Zeichen haben.");
+  }
+
+  const existing = findAccountByMinecraftName(cleanedName);
+  if (existing) {
+    throw new Error("Fuer diesen Minecraft-Namen existiert bereits ein aktiver Account. Nutze reset, wenn der Code verloren ist.");
+  }
+
+  const token = generateAccessCode();
+  const account = {
+    id: crypto.randomUUID(),
+    tokenHash: tokenHash(token),
+    tokenPrefix: token.slice(0, 10),
+    minecraftName: cleanedName,
+    minecraftUuid: "",
+    faction: cleanSmallLabel(faction || ""),
+    role: cleanRole(role),
+    status: "active",
+    createdAt: nowIso(),
+    createdBy: cleanSmallLabel(createdBy || "server", "server"),
+    lastSeenAt: null,
+    lastServer: "",
+    lastChannel: "",
+    lastVersion: ""
+  };
+
+  store.accounts.push(account);
+  await saveStore();
+  return {
+    accessCode: token,
+    account: adminAccount(account)
+  };
+}
+
+async function resetAccessCodeByMinecraftName(name) {
+  const account = findAccountByMinecraftName(name);
+  if (!account) {
+    throw new Error("Account nicht gefunden.");
+  }
+
+  const token = generateAccessCode();
+  account.tokenHash = tokenHash(token);
+  account.tokenPrefix = token.slice(0, 10);
+  account.status = "active";
+  account.resetAt = nowIso();
+  await saveStore();
+  return {
+    accessCode: token,
+    account: adminAccount(account)
+  };
+}
+
+async function revokeAccountByMinecraftName(name) {
+  const account = findAccountByMinecraftName(name);
+  if (!account) {
+    throw new Error("Account nicht gefunden.");
+  }
+
+  account.status = "revoked";
+  account.revokedAt = nowIso();
+  closeConnectionsForAccount(account.id, "account_revoked");
+  await saveStore();
+  discordBot.notifyStateChanged();
+  return adminAccount(account);
+}
+
+async function linkDiscordAccountByCode(accessCode, discordId) {
+  const account = findAccountByToken(accessCode);
+  if (!account || cleanStatus(account.status) !== "active") {
+    throw new Error("Access-Code ungueltig oder gesperrt.");
+  }
+
+  const existing = store.accounts.find(entry =>
+    entry.id !== account.id
+    && cleanStatus(entry.status) === "active"
+    && String(entry.discordId || "") === String(discordId || "")
+  );
+  if (existing) {
+    throw new Error("Dieser Discord-Account ist bereits mit einem anderen betterUC Account verbunden.");
+  }
+
+  account.discordId = cleanSmallLabel(discordId || "", "");
+  account.discordLinkedAt = nowIso();
+  await saveStore();
+  return adminAccount(account);
+}
+
+async function unlinkDiscordAccount(discordId) {
+  const account = store.accounts.find(entry =>
+    cleanStatus(entry.status) === "active"
+    && String(entry.discordId || "") === String(discordId || "")
+  );
+  if (!account) {
+    throw new Error("Dein Discord-Account ist mit keinem betterUC Account verbunden.");
+  }
+
+  delete account.discordId;
+  account.discordUnlinkedAt = nowIso();
+  await saveStore();
+  return adminAccount(account);
+}
+
+function findAccountByDiscordId(discordId) {
+  const account = store.accounts.find(entry =>
+    cleanStatus(entry.status) === "active"
+    && String(entry.discordId || "") === String(discordId || "")
+  );
+  return account ? adminAccount(account) : null;
 }
 
 function findAccountById(id) {
@@ -680,6 +797,7 @@ function broadcastPresence(server) {
     if (client.server !== server) continue;
     sendPresence(client);
   }
+  discordBot.notifyStateChanged();
 }
 
 async function handleApi(req, res, url) {
@@ -1237,6 +1355,25 @@ function removeClient(client) {
 async function main() {
   await loadStore();
   scheduleStoreBackups();
+  startDiscordBot({
+    getOnlinePlayers: onlinePlayersForResponse,
+    getAccounts: () => store.accounts.map(adminAccount),
+    findAccountByMinecraftName: name => {
+      const account = findAccountByMinecraftName(name);
+      return account ? adminAccount(account) : null;
+    },
+    createAccessAccount,
+    resetAccessCodeByMinecraftName,
+    revokeAccountByMinecraftName,
+    linkDiscordAccountByCode,
+    unlinkDiscordAccount,
+    findAccountByDiscordId
+  })
+    .then(bot => {
+      discordBot = bot;
+      discordBot.notifyStateChanged();
+    })
+    .catch(error => console.error("Could not start betterUC Discord bot", error));
 
   const server = http.createServer((req, res) => {
     handleHttp(req, res).catch(error => {

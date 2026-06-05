@@ -6,10 +6,12 @@
 - **Helper-Rolle** mit gelbem Hologramm und gelbem `bUC`-Tablist-Badge.
 - Helper ist unter Admin einsortiert, hat aber keine zusätzlichen Website-Rechte.
 - Website-Startseite und ClickGUI-Changelog wurden auf die aktuelle Version angepasst.
+- **Discord-Bot vorbereitet**: Live-Status, `/online`, `/user`, `/me`, Account-Linking per `/link`, Ticket-System und Admin-Code-Commands.
 
 ### Geaendert
 - Die Feature- und Commandlisten zeigen nur noch Funktionen, die aktuell aktiv sind.
 - Pingrad, Ping-Cooldown, Soundauswahl und Reichweitenlimit bleiben als aktuelle Ping-Features hervorgehoben.
+- Server-Deploy kann den Discord-Bot automatisch mitstarten, wenn `DISCORD_BOT_TOKEN` und `DISCORD_GUILD_ID` gesetzt sind.
 
 ### Entfernt
 - Veraltete Client-Commands **`/seinzahlen`** und **`/scall`** entfernt.

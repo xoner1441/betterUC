@@ -34,7 +34,8 @@ public class ChangelogScreen extends Screen {
                             "Update Notify zeigt neue GitHub-Versionen direkt im Chat",
                             "Ping Relay sendet private Markierungen an andere betterUC-Nutzer",
                             "Pingrad mit Normal-, Gefahr- und Sammeln-Pings",
-                            "Eigene Pingfarben, Ping-Soundauswahl und Cooldown gegen Spam"
+                            "Eigene Pingfarben, Ping-Soundauswahl und Cooldown gegen Spam",
+                            "Discord-Bot mit Online-Liste, Tickets und Account-Linking vorbereitet"
                     }
             ),
             new Page(

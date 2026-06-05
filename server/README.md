@@ -34,6 +34,29 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `MAX_CLIENTS=500`
 - `PING_TTL_MS=15000`
 - `DATA_DIR=/opt/betteruc-relay/data`
+- `DISCORD_BOT_TOKEN=...` optional, starts the Discord support bot
+- `DISCORD_GUILD_ID=...` Discord server ID for fast slash-command sync
+- `DISCORD_TICKET_CATEGORY_NAME=Tickets`
+- `DISCORD_TEAM_ROLE_NAMES=Owner,Admin,Helper`
+- `DISCORD_MOD_USER_ROLE_NAME=Mod-User`
 
 Access codes are only shown once. The server stores SHA-256 hashes with a secret pepper.
 Account data is backed up automatically once per day and can also be backed up manually in the admin panel.
+
+## Discord bot
+
+If `DISCORD_BOT_TOKEN` is configured, the relay also starts the betterUC Discord bot.
+
+Slash commands:
+
+- `/online` shows connected betterUC mod users.
+- `/relay` shows relay/account totals.
+- `/user name:<name>` shows known account and tracking data.
+- `/me` shows your linked betterUC account.
+- `/link code:<access-code>` links Discord to a betterUC account and gives the `Mod-User` role when possible.
+- `/unlink` removes that Discord link.
+- `/ticket` opens a private support ticket.
+- `/ticket-panel` posts a button-based ticket panel. Requires Discord `Manage Server`.
+- `/code create`, `/code reset`, `/code revoke` manage access codes. Requires Discord `Manage Server`.
+
+Invite the bot with the scopes `bot` and `applications.commands`.

@@ -17,6 +17,13 @@ grep -q '^ALLOW_LEGACY_TOKEN=' /etc/betteruc-relay.env || echo "ALLOW_LEGACY_TOK
 grep -q '^ADMIN_KEY=' /etc/betteruc-relay.env || echo "ADMIN_KEY=$(openssl rand -base64 32 | tr -d '=+/')" >> /etc/betteruc-relay.env
 grep -q '^BACKUP_RETENTION_DAYS=' /etc/betteruc-relay.env || echo "BACKUP_RETENTION_DAYS=30" >> /etc/betteruc-relay.env
 
+# Optional Discord bot. Fill these manually if the bot should run on the relay:
+# DISCORD_BOT_TOKEN=...
+# DISCORD_GUILD_ID=...
+# DISCORD_TICKET_CATEGORY_NAME=Tickets
+# DISCORD_TEAM_ROLE_NAMES=Owner,Admin,Helper
+# DISCORD_MOD_USER_ROLE_NAME=Mod-User
+
 cat > /etc/caddy/Caddyfile <<'EOF'
 betteruc.de, www.betteruc.de {
     reverse_proxy 127.0.0.1:3000
@@ -55,6 +62,23 @@ https://betteruc.de/admin
 
 Admin users can also open `/admin` from the Userpanel without entering this key.
 Backups are written to `/opt/betteruc-relay/data/backups` once per day. The admin panel also has a manual backup button.
+
+## Discord bot
+
+The relay can run the Discord support bot when `DISCORD_BOT_TOKEN` and `DISCORD_GUILD_ID` are present in
+`/etc/betteruc-relay.env`. Invite the bot with both scopes:
+
+```text
+bot
+applications.commands
+```
+
+After changing the env file, restart:
+
+```bash
+systemctl restart betteruc-relay
+systemctl status betteruc-relay --no-pager
+```
 
 ## Automatic GitHub deployment
 
