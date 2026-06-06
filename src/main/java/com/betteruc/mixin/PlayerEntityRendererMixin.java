@@ -1,6 +1,7 @@
 package com.betteruc.mixin;
 
 import com.betteruc.client.PingRelayClient;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.render.command.OrderedRenderCommandQueue;
@@ -22,6 +23,8 @@ public class PlayerEntityRendererMixin {
     private static final double BETTERUC_LABEL_MAX_DISTANCE_SQ = 48.0D * 48.0D;
     private static final float BETTERUC_LABEL_SCALE = 0.65F;
     private static final double BETTERUC_LABEL_WORLD_OFFSET = 0.23D;
+    private static final double UNIQUE_CLIENT_STACK_OFFSET = 0.28D;
+    private static final boolean UNIQUE_CLIENT_LOADED = detectUniqueClient();
 
     @Inject(
             method = "renderLabelIfPresent(Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;Lnet/minecraft/client/render/state/CameraRenderState;)V",
@@ -56,7 +59,7 @@ public class PlayerEntityRendererMixin {
 
         TextRenderer textRenderer = client.textRenderer;
         Vec3d pos = state.nameLabelPos;
-        double labelY = pos.y + 0.5D + BETTERUC_LABEL_WORLD_OFFSET + (state.extraEars ? 0.25D : 0.0D);
+        double labelY = pos.y + 0.5D + BETTERUC_LABEL_WORLD_OFFSET + uniqueClientStackOffset() + (state.extraEars ? 0.25D : 0.0D);
         float scale = 0.025F * BETTERUC_LABEL_SCALE;
         float x = -textRenderer.getWidth(text) / 2.0F;
 
@@ -84,5 +87,25 @@ public class PlayerEntityRendererMixin {
         if (helper) return Formatting.YELLOW;
         if (vip) return Formatting.DARK_PURPLE;
         return Formatting.GREEN;
+    }
+
+    private static double uniqueClientStackOffset() {
+        return UNIQUE_CLIENT_LOADED ? UNIQUE_CLIENT_STACK_OFFSET : 0.0D;
+    }
+
+    private static boolean detectUniqueClient() {
+        FabricLoader loader = FabricLoader.getInstance();
+        if (loader.isModLoaded("unique")) return true;
+        return loader.getAllMods().stream().anyMatch(mod -> {
+            String id = mod.getMetadata().getId();
+            String name = mod.getMetadata().getName();
+            return equalsIgnoreCase(id, "unique:client")
+                    || equalsIgnoreCase(name, "unique:client")
+                    || equalsIgnoreCase(name, "Unique Client");
+        });
+    }
+
+    private static boolean equalsIgnoreCase(String value, String expected) {
+        return value != null && value.equalsIgnoreCase(expected);
     }
 }
