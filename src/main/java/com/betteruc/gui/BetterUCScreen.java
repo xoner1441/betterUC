@@ -189,6 +189,10 @@ public class BetterUCScreen extends Screen {
                         color -> BetterUCConfig.INSTANCE.toggleSprintHudColor = color);
             }
             case HACK_TIMER, PLANT_TIMER -> {
+                if (selectedModule == ModuleOption.PLANT_TIMER) {
+                    y = addToggle(x, y, controlW, "Plant HUD", BetterUCConfig.INSTANCE.showPlantTimerHud,
+                            () -> BetterUCConfig.INSTANCE.showPlantTimerHud = !BetterUCConfig.INSTANCE.showPlantTimerHud);
+                }
             }
             case ZOOM -> {
                 y = addToggle(x, y, controlW, "Zoom", BetterUCConfig.INSTANCE.zoomEnabled,
@@ -1004,6 +1008,7 @@ public class BetterUCScreen extends Screen {
             case CASH -> BetterUCConfig.INSTANCE.showCashHud;
             case POTION -> BetterUCConfig.INSTANCE.showPotionEffectsHud;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintEnabled;
+            case PLANT_TIMER -> BetterUCConfig.INSTANCE.showPlantTimerHud;
             case ZOOM -> BetterUCConfig.INSTANCE.zoomEnabled;
             case AUTO_STATS -> BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled;
             case PING -> BetterUCConfig.INSTANCE.pingRelayEnabled;
@@ -1357,7 +1362,7 @@ public class BetterUCScreen extends Screen {
         POTION(Category.HUD, "Potion", "Aktive Effekte", 0xFF9328FF, true),
         SPRINT(Category.HUD, "Sprint", "ToggleSprint Anzeige", BetterUCConfig.DEFAULT_TOGGLE_SPRINT_HUD_COLOR, true),
         HACK_TIMER(Category.HUD, "Hack Timer", "Timer-Position", 0xFF60A5FA, false),
-        PLANT_TIMER(Category.HUD, "Plant Timer", "Plantage-Timer", 0xFF6CF27D, false),
+        PLANT_TIMER(Category.HUD, "Plant Timer", "Plantage-Timer", 0xFF6CF27D, true),
 
         ZOOM(Category.GAMEPLAY, "Zoom", "Taste und FOV", 0xFFA78BFA, true),
         AUTO_STATS(Category.GAMEPLAY, "Auto Stats", "Automatisches /stats", 0xFF34D399, true),

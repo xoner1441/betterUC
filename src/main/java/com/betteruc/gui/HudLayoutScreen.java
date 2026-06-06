@@ -188,7 +188,8 @@ public class HudLayoutScreen extends Screen {
             case CASH -> BetterUCConfig.INSTANCE.showCashHud;
             case POTION -> BetterUCConfig.INSTANCE.showPotionEffectsHud;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintEnabled;
-            case HACK_TIMER, PLANT_TIMER -> true;
+            case PLANT_TIMER -> BetterUCConfig.INSTANCE.showPlantTimerHud;
+            case HACK_TIMER -> true;
         };
     }
 

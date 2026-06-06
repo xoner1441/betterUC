@@ -5,11 +5,6 @@ import java.util.Locale;
 import java.util.Map;
 
 public class BetterUCSuppressFlags {
-    public static boolean suppressMemberOutput = false;
-    public static int pendingSilentMemberRequests = 0;
-    public static boolean activeSilentMemberCapture = false;
-    public static long lastSilentMemberRequestMs = 0L;
-    public static final long SILENT_MEMBER_TIMEOUT_MS = 5000L;
     public static boolean suppressStatsOutput = false;
     public static int pendingSilentStatsRequests = 0;
     public static boolean activeSilentStatsCapture = false;
@@ -28,12 +23,6 @@ public class BetterUCSuppressFlags {
     private static final long RECENT_REMOVE_HOLD_MS = 15000L;
     private static final Map<String, Long> pendingModBlReaddUntil = new HashMap<>();
     private static final Map<String, Long> recentBlacklistRemovalsUntil = new HashMap<>();
-
-    public static void markSilentMemberRequest() {
-        pendingSilentMemberRequests++;
-        suppressMemberOutput = true;
-        lastSilentMemberRequestMs = System.currentTimeMillis();
-    }
 
     public static void markSilentStatsRequest() {
         long now = System.currentTimeMillis();
@@ -85,24 +74,6 @@ public class BetterUCSuppressFlags {
         return true;
     }
 
-    public static boolean beginSilentMemberCaptureIfPending() {
-        cleanupStaleSilentMemberState();
-        if (pendingSilentMemberRequests <= 0) {
-            activeSilentMemberCapture = false;
-            suppressMemberOutput = false;
-            return false;
-        }
-        pendingSilentMemberRequests--;
-        activeSilentMemberCapture = true;
-        suppressMemberOutput = true;
-        return true;
-    }
-
-    public static boolean isSilentMemberCaptureActive() {
-        cleanupStaleSilentMemberState();
-        return suppressMemberOutput && activeSilentMemberCapture;
-    }
-
     public static boolean isSilentStatsCaptureActive() {
         cleanupStaleSilentStatsState();
         return suppressStatsOutput && activeSilentStatsCapture;
@@ -113,16 +84,7 @@ public class BetterUCSuppressFlags {
         suppressStatsOutput = false;
     }
 
-    public static void finishSilentMemberCapture() {
-        activeSilentMemberCapture = false;
-        suppressMemberOutput = false;
-    }
-
     public static void clearSilentBlacklistState() {
-        pendingSilentMemberRequests = 0;
-        activeSilentMemberCapture = false;
-        suppressMemberOutput = false;
-        lastSilentMemberRequestMs = 0L;
         pendingSilentStatsRequests = 0;
         activeSilentStatsCapture = false;
         suppressStatsOutput = false;
@@ -133,17 +95,6 @@ public class BetterUCSuppressFlags {
         bypassNextBlacklistInfoLocalMessage = false;
         pendingModBlReaddUntil.clear();
         recentBlacklistRemovalsUntil.clear();
-    }
-
-    public static void cleanupStaleSilentMemberState() {
-        if (lastSilentMemberRequestMs <= 0L) return;
-        long age = System.currentTimeMillis() - lastSilentMemberRequestMs;
-        if (age > SILENT_MEMBER_TIMEOUT_MS && !activeSilentMemberCapture) {
-            pendingSilentMemberRequests = 0;
-            activeSilentMemberCapture = false;
-            suppressMemberOutput = false;
-            lastSilentMemberRequestMs = 0L;
-        }
     }
 
     public static void cleanupStaleSilentStatsState() {

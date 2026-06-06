@@ -52,18 +52,6 @@ class ParserSmokeTest {
     }
 
     @Test
-    void memberInfoParsesHeaderAndStructuredLine() {
-        MemberInfoParser.Header header = MemberInfoParser.parseHeader("=== Mitglieder von Calderon Kartell (2/50) ===");
-        MemberInfoParser.ParsedLine line = MemberInfoParser.parseLine("1 | SpielerEins | online", null);
-
-        assertNotNull(header);
-        assertEquals("Calderon Kartell", header.factionName());
-        assertEquals(2, header.expectedEntries());
-        assertEquals(MemberInfoParser.Type.NAMES, line.type());
-        assertEquals("SpielerEins", line.names().get(0));
-    }
-
-    @Test
     void statsClassifierRecognizesCommonStatsLines() {
         assertTrue(StatsLineClassifier.isHeader("=== Statistiken ==="));
         assertTrue(StatsLineClassifier.isDetailLine("- Geld: 197925$"));

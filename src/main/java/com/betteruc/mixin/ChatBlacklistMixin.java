@@ -16,7 +16,6 @@ import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.PaydayHud;
 import com.betteruc.hud.PlantageHud;
 import com.betteruc.parser.BlacklistParser;
-import com.betteruc.parser.MemberInfoParser;
 import com.betteruc.parser.StatsLineClassifier;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.hud.ChatHud;
@@ -68,14 +67,10 @@ public class ChatBlacklistMixin {
     private static final Pattern HACK_TIMER_PATTERN =
             Pattern.compile("\\[Polizeicomputer\\].*Gesch(?:aetzte|\\u00E4tzte) Dauer: (\\d+) Sekunden");
 
-    private static boolean capturingMembers = false;
     private static boolean capturingBlacklist = false;
     private static boolean capturingStats = false;
-    private static boolean activeMemberCaptureIsSilent = false;
     private static boolean activeStatsCaptureIsSilent = false;
     private static boolean addingTimestamp = false;
-    private static String currentMemberFactionQuery = "kartell";
-    private static int expectedMemberEntries = -1;
     private static int expectedBlacklistEntries = -1;
 
     private static long lastAfkExitStatsRefreshMs = 0L;
@@ -94,7 +89,6 @@ public class ChatBlacklistMixin {
     private static final Map<String, String> tempReasons = new LinkedHashMap<>();
     private static final Map<String, int[]> tempStats = new LinkedHashMap<>();
     private static final Map<String, String> tempEntryRests = new LinkedHashMap<>();
-    private static final List<String> tempMembers = new ArrayList<>();
 
     @Inject(
             method = "addMessage(Lnet/minecraft/text/Text;)V",
@@ -119,7 +113,6 @@ public class ChatBlacklistMixin {
     private void scanForBlacklistInternal(Text message, CallbackInfo ci) {
         if (addingTimestamp) return;
         if (!ServerGate.isAllowedServer(MinecraftClient.getInstance())) return;
-        BetterUCSuppressFlags.cleanupStaleSilentMemberState();
         BetterUCSuppressFlags.cleanupStaleSilentStatsState();
         if (capturingStats && !BetterUCSuppressFlags.suppressStatsOutput && !BetterUCSuppressFlags.activeSilentStatsCapture) {
             capturingStats = false;
@@ -160,9 +153,7 @@ public class ChatBlacklistMixin {
         if (handleImplicitSilentStatsStart(raw, ci)) return;
         if (capturingStats && handleCapturingStats(raw, ci)) return;
         if (handleRealtimeBlacklistMessages(raw)) return;
-        if (handleMemberHeader(raw, ci)) return;
         if (handleBlacklistHeader(raw, ci)) return;
-        if (capturingMembers && handleCapturingMembers(raw, ci)) return;
         if (capturingBlacklist && handleCapturingBlacklist(raw, ci)) return;
 
         appendTimestampIfConfigured(message, ci);
@@ -399,39 +390,6 @@ public class ChatBlacklistMixin {
         activeStatsCaptureIsSilent = false;
     }
 
-    private boolean handleMemberHeader(String raw, CallbackInfo ci) {
-        MemberInfoParser.Header header = MemberInfoParser.parseHeader(raw);
-        if (header == null) return false;
-
-        if (capturingMembers) {
-            finishMembersCapture(false);
-        }
-
-        String normalizedFaction = BetterUCConfig.normalizeFactionQuery(header.factionName());
-        currentMemberFactionQuery = normalizedFaction.isEmpty() ? "kartell" : normalizedFaction;
-        expectedMemberEntries = header.expectedEntries();
-
-        capturingMembers = true;
-        capturingBlacklist = false;
-        boolean suppressingSilent = BetterUCSuppressFlags.beginSilentMemberCaptureIfPending();
-        activeMemberCaptureIsSilent = suppressingSilent;
-        tempMembers.clear();
-        BetterUCMod.LOGGER.info("Fraktion header erkannt: {}", currentMemberFactionQuery);
-
-        if (expectedMemberEntries == 0) {
-            finishMembersCapture(true);
-            if (suppressingSilent) {
-                ci.cancel();
-            }
-            return true;
-        }
-
-        if (suppressingSilent) {
-            ci.cancel();
-        }
-        return true;
-    }
-
     private boolean handleBlacklistHeader(String raw, CallbackInfo ci) {
         if (!BlacklistParser.isHeader(raw)) return false;
 
@@ -439,11 +397,7 @@ public class ChatBlacklistMixin {
             return false;
         }
 
-        if (capturingMembers) {
-            finishMembersCapture(false);
-        }
         capturingBlacklist = true;
-        capturingMembers = false;
 
         tempBlacklist.clear();
         tempVogelfrei.clear();
@@ -455,81 +409,6 @@ public class ChatBlacklistMixin {
 
         ci.cancel();
         return true;
-    }
-
-    private boolean handleCapturingMembers(String raw, CallbackInfo ci) {
-        boolean suppressingOutput = activeMemberCaptureIsSilent || BetterUCSuppressFlags.isSilentMemberCaptureActive();
-        MemberInfoParser.ParsedLine parsed = MemberInfoParser.parseLine(raw, MinecraftClient.getInstance());
-        if (parsed.type() == MemberInfoParser.Type.NAMES) {
-            addTempMembers(parsed.names());
-            BetterUCConfig.mergeRemoteMembersForFaction(currentMemberFactionQuery, new ArrayList<>(tempMembers));
-            if (MemberInfoParser.shouldFinishByExpectedMemberCount(expectedMemberEntries, tempMembers.size())) {
-                finishMembersCapture(false);
-            }
-            if (suppressingOutput) {
-                ci.cancel();
-            }
-            return true;
-        }
-
-        if (parsed.type() == MemberInfoParser.Type.DECORATION) {
-            if (!tempMembers.isEmpty()) {
-                finishMembersCapture(false);
-            }
-            if (suppressingOutput) {
-                ci.cancel();
-            }
-            return true;
-        }
-
-        if (parsed.type() == MemberInfoParser.Type.NO_RESULTS) {
-            finishMembersCapture(true);
-            if (suppressingOutput) {
-                ci.cancel();
-            }
-            return true;
-        }
-
-        finishMembersCapture(false);
-        return true;
-    }
-
-    private void finishMembersCapture(boolean forceApplyEvenIfEmpty) {
-        boolean suppressingOutput = activeMemberCaptureIsSilent || BetterUCSuppressFlags.isSilentMemberCaptureActive();
-
-        capturingMembers = false;
-        if (forceApplyEvenIfEmpty || !tempMembers.isEmpty()) {
-            BetterUCConfig.setRemoteMembersForFaction(currentMemberFactionQuery, new ArrayList<>(tempMembers));
-            BetterUCMod.LOGGER.info(
-                    "Fraktion geladen: {} Mitglieder ({}) | Gesamt: {}",
-                    tempMembers.size(),
-                    currentMemberFactionQuery,
-                    BetterUCConfig.INSTANCE.remoteFactionPlayers.size()
-            );
-        } else {
-            BetterUCMod.LOGGER.info(
-                    "Fraktion-Capture ohne gueltige Eintraege beendet ({}) | Gesamt bleibt bei {}",
-                    currentMemberFactionQuery,
-                    BetterUCConfig.INSTANCE.remoteFactionPlayers.size()
-            );
-        }
-
-        tempMembers.clear();
-        currentMemberFactionQuery = "kartell";
-        expectedMemberEntries = -1;
-        if (suppressingOutput) {
-            BetterUCSuppressFlags.finishSilentMemberCapture();
-        }
-        activeMemberCaptureIsSilent = false;
-    }
-
-    private void addTempMembers(List<String> names) {
-        if (names == null || names.isEmpty()) return;
-        for (String name : names) {
-            if (tempMembers.stream().noneMatch(s -> s.equalsIgnoreCase(name))) {
-                tempMembers.add(name);
-            }
-        }
     }
 
     private boolean handleCapturingBlacklist(String raw, CallbackInfo ci) {

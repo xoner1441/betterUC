@@ -1,6 +1,5 @@
 package com.betteruc.hud;
 
-import com.betteruc.PlayerNameUtil;
 import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
@@ -124,13 +123,6 @@ public class PlantageHud {
             return;
         }
 
-        String profileName = PlayerNameUtil.resolveProfileName(client.player.getGameProfile());
-        String ownName = fold(profileName == null || profileName.isBlank() ? client.player.getName().getString() : profileName);
-        if (!ownName.isBlank() && !isOwnPlantageMessage(folded, ownName)) {
-            if (changed) persistState();
-            return;
-        }
-
         PlantageState state = STATES.get(type);
         if (state == null) {
             if (changed) persistState();
@@ -189,13 +181,6 @@ public class PlantageHud {
         } catch (NumberFormatException ignored) {
         }
         return false;
-    }
-
-    private static boolean isOwnPlantageMessage(String folded, String ownName) {
-        String work = " " + folded + " ";
-        String own = " " + ownName + " ";
-        return work.contains(own + "hat eine ")
-                || work.contains(" wurde von" + own);
     }
 
     private static PlantageType detectType(String folded) {
@@ -274,6 +259,7 @@ public class PlantageHud {
     private static void render(DrawContext context) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return;
+        if (!BetterUCConfig.INSTANCE.showPlantTimerHud) return;
 
         long now = System.currentTimeMillis();
         int x = BetterUCConfig.INSTANCE.plantTimerX;

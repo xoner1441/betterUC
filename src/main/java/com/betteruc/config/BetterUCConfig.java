@@ -196,6 +196,7 @@ public class BetterUCConfig {
     public boolean showBankHud = true;
     public boolean showCashHud = true;
     public boolean showPotionEffectsHud = true;
+    public boolean showPlantTimerHud = true;
     public boolean toggleSprintEnabled = false;
     public boolean zoomEnabled = true;
     public int zoomKeyCode = 67; // GLFW_KEY_C
