@@ -215,8 +215,11 @@ function renderAccounts() {
     return `
     <tr data-id="${account.id}" class="${expanded ? "is-expanded" : ""}">
       <td>
-        <strong>${escapeHtml(account.minecraftName || "Unbenannt")}</strong>
-        <span>${escapeHtml(account.minecraftUuid || "keine UUID")} ${account.online ? "online" : ""}</span>
+        <div class="admin-player-name">
+          <strong>${escapeHtml(account.minecraftName || "Unbenannt")}</strong>
+          <span class="online-dot ${account.online ? "online" : "offline"}" title="${account.online ? "Online" : "Offline"}" aria-label="${account.online ? "Online" : "Offline"}"></span>
+        </div>
+        <span>${escapeHtml(account.minecraftUuid || "keine UUID")}</span>
       </td>
       <td>
         <input class="row-input faction-input" value="${escapeAttr(account.faction || "")}" maxlength="48" placeholder="Fraktion">
