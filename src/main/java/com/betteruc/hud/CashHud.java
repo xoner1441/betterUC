@@ -13,6 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CashHud {
+    private static final Pattern TEXT_FORMATTING_PATTERN = Pattern.compile("\\u00A7.");
     private static final Pattern CASH_STATS_PATTERN = Pattern.compile(
             "^\\s*[-\\u2010-\\u2015\\u2212]?\\s*Geld\\s*:?\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$",
             Pattern.CASE_INSENSITIVE
@@ -25,6 +26,12 @@ public class CashHud {
     );
     private static final Pattern CASH_DEPOSIT_PATTERN = Pattern.compile(
             "(?i)eingezahlt\\s*:?\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$"
+    );
+    private static final Pattern FACTION_BANK_DEPOSIT_PATTERN = Pattern.compile(
+            "(?i)\\[\\s*F-?Bank\\s*]\\s+(.+?)\\s+hat\\s+([0-9][0-9\\.]*)\\s*\\$\\s+(?:auf|in)\\s+die\\s+Fraktionsbank\\s+eingezahlt\\b"
+    );
+    private static final Pattern FACTION_BANK_WITHDRAW_PATTERN = Pattern.compile(
+            "(?i)\\[\\s*F-?Bank\\s*]\\s+(.+?)\\s+hat\\s+([0-9][0-9\\.]*)\\s*\\$\\s+aus\\s+der\\s+Fraktionsbank\\s+genommen\\b"
     );
     private static final Pattern CASH_SIGNED_DELTA_PATTERN = Pattern.compile(
             "^\\s*([+-])\\s*([0-9][0-9\\.]*)\\s*\\$\\s*$"
@@ -40,6 +47,25 @@ public class CashHud {
 
     public static void updateFromStatsLine(String raw) {
         if (raw == null || raw.isBlank()) return;
+        raw = stripFormatting(raw);
+
+        Matcher factionDepositMatcher = FACTION_BANK_DEPOSIT_PATTERN.matcher(raw);
+        if (factionDepositMatcher.find() && isCurrentPlayer(factionDepositMatcher.group(1))) {
+            Integer parsed = parseMoneyValue(factionDepositMatcher.group(2));
+            if (parsed != null) {
+                subtractCashAndPersist(parsed);
+            }
+            return;
+        }
+
+        Matcher factionWithdrawMatcher = FACTION_BANK_WITHDRAW_PATTERN.matcher(raw);
+        if (factionWithdrawMatcher.find() && isCurrentPlayer(factionWithdrawMatcher.group(1))) {
+            Integer parsed = parseMoneyValue(factionWithdrawMatcher.group(2));
+            if (parsed != null) {
+                addCashAndPersist(parsed);
+            }
+            return;
+        }
 
         Matcher payoutMatcher = CASH_PAYOUT_PATTERN.matcher(raw);
         if (payoutMatcher.find()) {
@@ -82,6 +108,16 @@ public class CashHud {
         if (parsed != null) {
             setCashAndPersist(Math.max(0, parsed));
         }
+    }
+
+    private static boolean isCurrentPlayer(String name) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.player == null || name == null) return false;
+        return name.trim().equalsIgnoreCase(client.player.getName().getString());
+    }
+
+    private static String stripFormatting(String raw) {
+        return TEXT_FORMATTING_PATTERN.matcher(raw).replaceAll("");
     }
 
     public static int getCurrentCash() {

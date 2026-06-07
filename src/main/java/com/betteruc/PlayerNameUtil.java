@@ -7,6 +7,7 @@ import java.lang.reflect.Method;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 
 public final class PlayerNameUtil {
 
@@ -23,6 +24,18 @@ public final class PlayerNameUtil {
         if (name != null && !name.isBlank()) return name;
 
         return null;
+    }
+
+    public static String resolveProfileUuid(Object profile) {
+        if (profile == null) return "";
+
+        UUID id = invokeUuidMethod(profile, "id");
+        if (id != null) return id.toString();
+
+        id = invokeUuidMethod(profile, "getId");
+        if (id != null) return id.toString();
+
+        return "";
     }
 
     public static Set<String> getOnlinePlayerNamesLowercase(MinecraftClient client) {
@@ -44,6 +57,16 @@ public final class PlayerNameUtil {
             Method method = target.getClass().getMethod(methodName);
             Object value = method.invoke(target);
             return value instanceof String s ? s : null;
+        } catch (ReflectiveOperationException | SecurityException ignored) {
+            return null;
+        }
+    }
+
+    private static UUID invokeUuidMethod(Object target, String methodName) {
+        try {
+            Method method = target.getClass().getMethod(methodName);
+            Object value = method.invoke(target);
+            return value instanceof UUID uuid ? uuid : null;
         } catch (ReflectiveOperationException | SecurityException ignored) {
             return null;
         }

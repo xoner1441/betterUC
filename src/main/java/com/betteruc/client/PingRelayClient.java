@@ -254,7 +254,7 @@ public final class PingRelayClient {
             case "helper" -> "Helper";
             case "partner" -> "Partner";
             case "vip" -> "VIP";
-            default -> "User";
+            default -> "";
         };
     }
 
@@ -603,20 +603,22 @@ public final class PingRelayClient {
     private static RelayPlayer findRelayPlayer(PlayerListEntry entry) {
         if (entry == null) return null;
         String name = PlayerNameUtil.resolveProfileName(entry.getProfile());
-        if (name == null || name.isBlank()) return null;
-        return findRelayPlayer(name, "");
+        String uuid = PlayerNameUtil.resolveProfileUuid(entry.getProfile());
+        if ((name == null || name.isBlank()) && uuid.isBlank()) return null;
+        return findRelayPlayer(name, uuid);
     }
 
     private static RelayPlayer findRelayPlayer(String name, String uuid) {
-        if (name == null || name.isBlank()) return null;
-        String normalizedName = name.toLowerCase(Locale.ROOT);
+        if ((name == null || name.isBlank()) && (uuid == null || uuid.isBlank())) return null;
+        String normalizedName = name == null ? "" : name.toLowerCase(Locale.ROOT);
         String normalizedUuid = uuid == null ? "" : uuid.trim().toLowerCase(Locale.ROOT);
         synchronized (LOCK) {
             for (RelayPlayer player : ONLINE_PLAYERS) {
                 boolean uuidMatches = !normalizedUuid.isBlank()
                         && player.uuid() != null
                         && player.uuid().equalsIgnoreCase(normalizedUuid);
-                if (uuidMatches || player.nameLower().equals(normalizedName)) {
+                boolean nameMatches = !normalizedName.isBlank() && player.nameLower().equals(normalizedName);
+                if (uuidMatches || nameMatches) {
                     return player;
                 }
             }

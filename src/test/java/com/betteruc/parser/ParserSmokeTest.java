@@ -59,6 +59,10 @@ class ParserSmokeTest {
         assertTrue(StatsLineClassifier.isImplicitDetailLine("12:34:56 - K/D: 1.45"));
         assertTrue(StatsLineClassifier.isDetailLine(" - K / D : 1,48 "));
         assertTrue(StatsLineClassifier.isDetailLine("06:53:37    - K/D: 1.48"));
+        assertTrue(StatsLineClassifier.isDetailLine("- Immobilien [Details]"));
+        assertTrue(StatsLineClassifier.isDetailLine("02:55:59 - Immobilien [Details]"));
+        assertTrue(StatsLineClassifier.isDetailLine("\u00A78- \u00A76Immobilien \u00A77[\u00A7cDetails\u00A77]"));
+        assertTrue(StatsLineClassifier.isDetailLine("03:06:58 \u00A78- \u00A76Immobilien \u00A77[\u00A7cDetails\u00A77]"));
         assertTrue(StatsLineClassifier.isStandaloneKdStatsLine("14:04:31    - K/D: 1.48"));
         assertTrue(StatsLineClassifier.isStandaloneKdStatsLine("\u00A7714:04:31 \u00A78- \u00A7eK/D: \u00A7c1.48"));
     }
@@ -69,6 +73,7 @@ class ParserSmokeTest {
         assertFalse(StatsLineClassifier.isDetailLine("02:23:31 - FABI1441"));
         assertFalse(StatsLineClassifier.isImplicitDetailLine("- JxsNothing"));
         assertFalse(StatsLineClassifier.isImplicitDetailLine("\u00BB FABI1441"));
+        assertFalse(StatsLineClassifier.isDetailLine("\u00A78- \u00A7bFABI1441"));
     }
 
     @Test

@@ -88,7 +88,7 @@ public class PlayerEntityRendererMixin {
         if (helper) return Formatting.YELLOW;
         if (partner) return Formatting.AQUA;
         if (vip) return Formatting.DARK_PURPLE;
-        return Formatting.GREEN;
+        return Formatting.WHITE;
     }
 
     private static double uniqueClientStackOffset() {

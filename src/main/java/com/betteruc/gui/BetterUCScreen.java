@@ -51,13 +51,13 @@ public class BetterUCScreen extends Screen {
             .map(container -> container.getMetadata().getVersion().getFriendlyString())
             .orElse("dev");
     private static final UpdateSection[] UPDATE_SECTIONS = new UpdateSection[]{
-            new UpdateSection("Neu in 1.1.7", new String[]{
-                    "Plant Timer reagiert auf sichtbare Plantage-Nachrichten von allen Spielern",
-                    "Plant Timer ist im HUD-Tab jetzt direkt togglebar",
-                    "Fraktionspings nutzen /stats und Relay-Fraktionen",
-                    "Alte /memberinfo-Silent-Abfrage entfernt",
-                    "Partner-Rolle mit aqua Hologramm und aqua bUC-Tablist-Badge",
-                    "Unique Client wird erkannt und betterUC-Hologramme werden höher gestapelt"
+            new UpdateSection("Neu in 1.1.8", new String[]{
+                    "bUC-Tablist-Badge wird jetzt als eigenes Overlay gerendert",
+                    "Andere Client-Icons wie Unique, LabyMod oder Badlion bleiben in der Tablist sichtbar",
+                    "Bargeld-HUD erkennt Einzahlungen und Auszahlungen an der Fraktionsbank",
+                    "Access-Code und Relay-Felder speichern zuverlaessiger beim Wechseln im ClickGUI",
+                    "Stats-Filter unterdrueckt Detailzeilen wie Immobilien sauberer",
+                    "Normale User bekommen nur noch das bUC-Tablist-Badge, Rollen behalten ihr Hologramm"
             }),
             new UpdateSection("Kurzstart", new String[]{
                     "Standard: N öffnet das betterUC ClickGUI",
@@ -103,7 +103,9 @@ public class BetterUCScreen extends Screen {
     private Category selectedCategory = Category.HUD;
     private ModuleOption selectedModule = ModuleOption.FPS;
     private final List<ScrollableControl> detailControls = new ArrayList<>();
+    private final List<Runnable> textFieldFlushers = new ArrayList<>();
     private boolean capturingZoomKey = false;
+    private boolean rebuildingWidgets = false;
     private int detailScrollOffset = 0;
     private int detailContentHeight = 0;
 
@@ -113,6 +115,10 @@ public class BetterUCScreen extends Screen {
 
     @Override
     protected void init() {
+        if (!rebuildingWidgets) {
+            flushTextFields();
+        }
+        textFieldFlushers.clear();
         if (selectedModule.category != selectedCategory) {
             selectedModule = firstModuleFor(selectedCategory);
             detailScrollOffset = 0;
@@ -125,7 +131,7 @@ public class BetterUCScreen extends Screen {
                 .dimensions(mainX() + 12, mainY() + mainH() - 28, 118, BUTTON_H)
                 .build());
         addDrawableChild(ButtonWidget.builder(Text.literal("Speichern & Schließen"), b -> {
-            BetterUCConfig.save();
+            saveConfig();
             close();
         }).dimensions(mainX() + mainW() - 150, mainY() + mainH() - 28, 138, BUTTON_H).build());
     }
@@ -234,7 +240,7 @@ public class BetterUCScreen extends Screen {
     private int addToggle(int x, int y, int width, String label, boolean active, Runnable toggleAction) {
         return addButton(x, y, width, label + ": " + (active ? "AN" : "AUS"), b -> {
             toggleAction.run();
-            BetterUCConfig.save();
+            saveConfig();
             refreshWidgets();
         });
     }
@@ -242,7 +248,7 @@ public class BetterUCScreen extends Screen {
     private int addHudStyleButton(int x, int y, int width, ModuleOption module) {
         return addButton(x, y, width, "Stil: " + BetterUCConfig.hudStyleLabel(getHudStyle(module)), b -> {
             setHudStyle(module, BetterUCConfig.toggleHudStyle(getHudStyle(module)));
-            BetterUCConfig.save();
+            saveConfig();
             refreshWidgets();
         });
     }
@@ -250,7 +256,7 @@ public class BetterUCScreen extends Screen {
     private int addCustomFontControls(int x, int y, int width, ModuleOption module) {
         y = addButton(x, y, width, "Font: " + BetterUCFontManager.selectedFontLabel(getHudFont(module)), b -> {
             setHudFont(module, BetterUCFontManager.nextCustomFontId(getHudFont(module)));
-            BetterUCConfig.save();
+            saveConfig();
             BetterUCFontManager.rebuildAndReload(client);
             refreshWidgets();
         });
@@ -270,7 +276,7 @@ public class BetterUCScreen extends Screen {
             BetterUCConfig.INSTANCE.pingRelayScope = "faction".equals(BetterUCConfig.INSTANCE.pingRelayScope)
                     ? "global"
                     : "faction";
-            BetterUCConfig.save();
+            saveConfig();
             refreshWidgets();
         });
         y = addDoubleSlider(x, y, width, "Ping Größe", BetterUCConfig.INSTANCE.pingHudScale,
@@ -282,7 +288,7 @@ public class BetterUCScreen extends Screen {
                 () -> BetterUCConfig.INSTANCE.pingSoundEnabled = !BetterUCConfig.INSTANCE.pingSoundEnabled);
         y = addButton(x, y, width, "Sound: " + PingRelayClient.pingSoundLabel(BetterUCConfig.INSTANCE.pingSoundId), b -> {
             BetterUCConfig.INSTANCE.pingSoundId = PingRelayClient.nextPingSoundId(BetterUCConfig.INSTANCE.pingSoundId);
-            BetterUCConfig.save();
+            saveConfig();
             refreshWidgets();
         });
         y = addRangeIntSlider(x, y, width, "Cooldown ms", BetterUCConfig.INSTANCE.pingCooldownMs, 500, 10000,
@@ -321,12 +327,13 @@ public class BetterUCScreen extends Screen {
         y = addTextField(x, y, width, "Relay Server", BetterUCConfig.INSTANCE.pingRelayUrl, 160,
                 value -> BetterUCConfig.INSTANCE.pingRelayUrl = value);
         y = addButton(x, y, width, "Standardserver nutzen", b -> {
+            flushTextFields();
             BetterUCConfig.INSTANCE.pingRelayUrl = BetterUCConfig.DEFAULT_PING_RELAY_URL;
             BetterUCConfig.save();
-            refreshWidgets();
+            refreshWidgetsWithoutFlushingTextFields();
         });
         return addButton(x, y, width, "Neu verbinden", b -> {
-            BetterUCConfig.save();
+            saveConfig();
             PingRelayClient.onDisconnect();
             PingRelayClient.tick(client);
             refreshWidgets();
@@ -473,6 +480,7 @@ public class BetterUCScreen extends Screen {
         timestampField.setMaxLength(32);
         timestampField.setText(BetterUCConfig.INSTANCE.chatTimestampFormat);
         timestampField.setChangedListener(text -> BetterUCConfig.INSTANCE.chatTimestampFormat = text);
+        textFieldFlushers.add(() -> BetterUCConfig.INSTANCE.chatTimestampFormat = timestampField.getText());
         addScrollableControl(timestampField);
         return y + 24;
     }
@@ -490,6 +498,7 @@ public class BetterUCScreen extends Screen {
         field.setPlaceholder(Text.literal(label));
         field.setText(current == null ? "" : current);
         field.setChangedListener(setter::accept);
+        textFieldFlushers.add(() -> setter.accept(field.getText()));
         addScrollableControl(field);
         return y + 24;
     }
@@ -953,7 +962,7 @@ public class BetterUCScreen extends Screen {
         }
 
         BetterUCConfig.INSTANCE.zoomKeyCode = keyCode;
-        BetterUCConfig.save();
+        saveConfig();
         capturingZoomKey = false;
         refreshWidgets();
         return true;
@@ -961,7 +970,7 @@ public class BetterUCScreen extends Screen {
 
     @Override
     public void removed() {
-        BetterUCConfig.save();
+        saveConfig();
         super.removed();
     }
 
@@ -1221,9 +1230,36 @@ public class BetterUCScreen extends Screen {
         return Math.max(0, detailContentHeight - detailControlsHeight());
     }
 
+    private void saveConfig() {
+        flushTextFields();
+        BetterUCConfig.save();
+    }
+
+    private void flushTextFields() {
+        for (Runnable flusher : textFieldFlushers) {
+            flusher.run();
+        }
+    }
+
     private void refreshWidgets() {
+        rebuildWidgets(true);
+    }
+
+    private void refreshWidgetsWithoutFlushingTextFields() {
+        rebuildWidgets(false);
+    }
+
+    private void rebuildWidgets(boolean flushTextFields) {
+        if (flushTextFields) {
+            flushTextFields();
+        }
         clearChildren();
-        init();
+        rebuildingWidgets = true;
+        try {
+            init();
+        } finally {
+            rebuildingWidgets = false;
+        }
     }
 
     private int mainW() {

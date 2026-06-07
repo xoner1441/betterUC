@@ -39,6 +39,7 @@ public final class StatsLineClassifier {
         if (trimmed.isEmpty()) return false;
         if (isHeader(trimmed)) return true;
         if (isKdLine(trimmed)) return true;
+        if (isDashStatsKeywordLine(trimmed)) return true;
         if (KEYWORD_PATTERN.matcher(trimmed).find() && trimmed.contains(":")) return true;
         return TIMED_LINE_PATTERN.matcher(trimmed).matches()
                 && (KEYWORD_PATTERN.matcher(trimmed).find() || isKdLine(trimmed));
@@ -147,13 +148,17 @@ public final class StatsLineClassifier {
         String work = stripTimestampPrefix(normalized);
         if (!work.startsWith("-")) return false;
         if (isKdLine(work)) return true;
-        if (KEYWORD_PATTERN.matcher(work).find() && work.contains(":")) return true;
-        return false;
+        return isDashStatsKeywordLine(work);
     }
 
     private static boolean isKdLine(String normalized) {
         String work = stripTimestampPrefix(normalized == null ? "" : normalized.trim());
         return startsWithListDash(work) && KD_LINE_PATTERN.matcher(work).find();
+    }
+
+    private static boolean isDashStatsKeywordLine(String normalized) {
+        String work = stripTimestampPrefix(normalized == null ? "" : normalized.trim());
+        return startsWithListDash(work) && KEYWORD_PATTERN.matcher(work).find();
     }
 
     private static boolean isAfkExitTailLine(String normalized) {
@@ -176,7 +181,7 @@ public final class StatsLineClassifier {
 
     private static String normalize(String input) {
         if (input == null || input.isEmpty()) return "";
-        return input
+        return input.replaceAll("(?i)\\u00A7[0-9A-FK-OR]", "")
                 .replace('\u2044', '/')
                 .replace('\u2215', '/')
                 .replace('\\', '/')

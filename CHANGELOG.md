@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.1.8] - 2026-06-07
+
+### Neu
+- **Tablist-Badge-Overlay**: betterUC zeichnet das `bUC`-Badge jetzt separat hinter den fertigen Tablist-Namen.
+- **Client-Kompatibilitaet**: Icons und Prefixe anderer Clients wie Unique, LabyMod oder Badlion bleiben sichtbar.
+
+### Geaendert
+- **Bargeld-HUD** aktualisiert sich jetzt bei Fraktionsbank-Einzahlungen und -Auszahlungen.
+- Normale Mod-User bekommen kein Hologramm mehr, sondern nur noch das Tablist-Badge.
+- Rollen wie Admin, Helper, Partner und VIP behalten Hologramm und farbiges Badge.
+- Access-Code- und Relay-Felder speichern beim Wechseln im ClickGUI zuverlaessiger.
+
+### Behoben
+- Stats-Detailzeilen wie `Immobilien [Details]` werden sauberer aus automatischen `/stats`-Abfragen gefiltert.
+- F-Bank-Zeilen mit `in die Fraktionsbank eingezahlt` werden nun korrekt erkannt.
+
+### Versionierung
+- Mod-Version auf **`1.1.8`** gesetzt.
+
 ## [1.1.7] - 2026-06-07
 
 ### Neu

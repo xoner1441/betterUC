@@ -13,8 +13,14 @@ public class ChangelogScreen extends Screen {
     private static final Page[] PAGES = new Page[]{
             new Page(
                     "Highlights",
-                    "betterUC 1.1.7",
+                    "betterUC 1.1.8",
                     new String[]{
+                            "bUC-Tablist-Badge wird als eigenes Overlay hinter den fertigen Namen gezeichnet",
+                            "Andere Client-Icons wie Unique, LabyMod oder Badlion bleiben in der Tablist sichtbar",
+                            "Bargeld-HUD erkennt Fraktionsbank-Einzahlungen und -Auszahlungen",
+                            "Access-Code und Relay-Felder speichern zuverlaessiger im ClickGUI",
+                            "Stats-Filter entfernt Detailzeilen wie Immobilien sauberer",
+                            "Normale Mod-User bekommen nur noch ein Tablist-Badge, Rollen behalten ihr Hologramm",
                             "Plant Timer reagiert jetzt auf sichtbare Plantage-Nachrichten von allen Spielern",
                             "Plant Timer ist im HUD-Tab togglebar",
                             "Fraktionspings nutzen /stats und das Relay-System ohne /memberinfo-Silent-Abfrage",
