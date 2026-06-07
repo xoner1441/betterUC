@@ -22,6 +22,7 @@ const TEAM_ROLE_NAMES = listEnv(process.env.DISCORD_TEAM_ROLE_NAMES || "Owner,Ad
 const MOD_USER_ROLE_NAME = clean(process.env.DISCORD_MOD_USER_ROLE_NAME) || "Mod-User";
 const USER_ROLE_NAME = clean(process.env.DISCORD_USER_ROLE_NAME);
 const VIP_ROLE_NAME = clean(process.env.DISCORD_VIP_ROLE_NAME) || "VIP";
+const PARTNER_ROLE_NAME = clean(process.env.DISCORD_PARTNER_ROLE_NAME) || "Partner";
 const HELPER_ROLE_NAME = clean(process.env.DISCORD_HELPER_ROLE_NAME) || "Helper";
 const ADMIN_ROLE_NAME = clean(process.env.DISCORD_ADMIN_ROLE_NAME) || "Admin";
 const UPDATE_CHANNEL_NAME = clean(process.env.DISCORD_UPDATE_CHANNEL_NAME) || "updates";
@@ -86,6 +87,7 @@ async function writeBotState(state) {
 function roleLabel(role) {
   if (role === "admin") return "Admin";
   if (role === "helper") return "Helper";
+  if (role === "partner") return "Partner";
   if (role === "vip") return "VIP";
   return "User";
 }
@@ -93,6 +95,7 @@ function roleLabel(role) {
 function roleColor(role) {
   if (role === "admin") return 0xff4d5a;
   if (role === "helper") return 0xfacc15;
+  if (role === "partner") return 0x22d3ee;
   if (role === "vip") return 0x6d28d9;
   return 0x22c55e;
 }
@@ -194,6 +197,7 @@ function buildCommands() {
           .addChoices(
             { name: "User", value: "user" },
             { name: "VIP", value: "vip" },
+            { name: "Partner", value: "partner" },
             { name: "Helper", value: "helper" },
             { name: "Admin", value: "admin" }
           ))
@@ -245,6 +249,7 @@ function relayEmbed(players, accounts) {
   const activeAccounts = accounts.filter(account => account.status !== "revoked");
   const admins = activeAccounts.filter(account => account.role === "admin").length;
   const helpers = activeAccounts.filter(account => account.role === "helper").length;
+  const partners = activeAccounts.filter(account => account.role === "partner").length;
   const vips = activeAccounts.filter(account => account.role === "vip").length;
 
   return new EmbedBuilder()
@@ -253,7 +258,7 @@ function relayEmbed(players, accounts) {
     .addFields(
       { name: "Online", value: String(players.length), inline: true },
       { name: "Accounts", value: String(activeAccounts.length), inline: true },
-      { name: "Team/VIP", value: `Admin ${admins} | Helper ${helpers} | VIP ${vips}`, inline: true }
+      { name: "Rollen", value: `Admin ${admins} | Helper ${helpers} | Partner ${partners} | VIP ${vips}`, inline: true }
     )
     .setTimestamp(new Date());
 }
@@ -405,12 +410,13 @@ function resolveTeamRoles(guild) {
 function betterUcRoleName(role) {
   if (role === "admin") return ADMIN_ROLE_NAME;
   if (role === "helper") return HELPER_ROLE_NAME;
+  if (role === "partner") return PARTNER_ROLE_NAME;
   if (role === "vip") return VIP_ROLE_NAME;
   return USER_ROLE_NAME;
 }
 
 function managedBetterUcRoleNames() {
-  return [MOD_USER_ROLE_NAME, USER_ROLE_NAME, VIP_ROLE_NAME, HELPER_ROLE_NAME, ADMIN_ROLE_NAME]
+  return [MOD_USER_ROLE_NAME, USER_ROLE_NAME, VIP_ROLE_NAME, PARTNER_ROLE_NAME, HELPER_ROLE_NAME, ADMIN_ROLE_NAME]
     .map(clean)
     .filter(Boolean);
 }

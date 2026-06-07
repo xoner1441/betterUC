@@ -41,6 +41,7 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `DISCORD_MOD_USER_ROLE_NAME=Mod-User`
 - `DISCORD_USER_ROLE_NAME=...` optional extra role for normal users
 - `DISCORD_VIP_ROLE_NAME=VIP`
+- `DISCORD_PARTNER_ROLE_NAME=Partner`
 - `DISCORD_HELPER_ROLE_NAME=Helper`
 - `DISCORD_ADMIN_ROLE_NAME=Admin`
 - `DISCORD_ROLE_SYNC_MS=300000`

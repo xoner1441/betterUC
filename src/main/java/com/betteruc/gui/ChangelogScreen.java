@@ -13,11 +13,17 @@ public class ChangelogScreen extends Screen {
     private static final Page[] PAGES = new Page[]{
             new Page(
                     "Highlights",
-                    "betterUC 1.1.6",
+                    "betterUC 1.1.7",
                     new String[]{
+                            "Plant Timer reagiert jetzt auf sichtbare Plantage-Nachrichten von allen Spielern",
+                            "Plant Timer ist im HUD-Tab togglebar",
+                            "Fraktionspings nutzen /stats und das Relay-System ohne /memberinfo-Silent-Abfrage",
+                            "Unique Client wird erkannt und betterUC-Hologramme werden automatisch höher gestapelt",
                             "Willkommensscreen zeigt neue Features nach einem Update einmalig im Hauptmenü",
                             "Helper-Rolle mit gelbem Hologramm und bUC-Tablist-Badge",
                             "Helper ist unter Admin einsortiert, hat aber keine Website-Zusatzrechte",
+                            "Partner-Rolle mit aqua Hologramm und aqua bUC-Tablist-Badge",
+                            "Partner wird im Userpanel angezeigt, bekommt aber keine Adminpanel-Rechte",
                             "VIP-Rolle mit dunkellila Hologramm und bUC-Tablist-Badge",
                             "Veraltete /seinzahlen- und /scall-Commands entfernt",
                             "Website, ClickGUI und Changelog zeigen nur noch aktive Features",

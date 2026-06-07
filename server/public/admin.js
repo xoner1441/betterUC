@@ -225,6 +225,7 @@ function renderAccounts() {
         <select class="row-input role-input">
           <option value="user" ${account.role === "user" ? "selected" : ""}>Spieler</option>
           <option value="helper" ${account.role === "helper" ? "selected" : ""}>Helper</option>
+          <option value="partner" ${account.role === "partner" ? "selected" : ""}>Partner</option>
           <option value="vip" ${account.role === "vip" ? "selected" : ""}>VIP</option>
           <option value="admin" ${account.role === "admin" ? "selected" : ""}>Admin</option>
         </select>
@@ -258,6 +259,7 @@ function updateTotals(totals) {
   document.querySelector("#revokedAccounts").textContent = totals.revoked ?? 0;
   document.querySelector("#onlineAccounts").textContent = totals.online ?? 0;
   document.querySelector("#helperAccounts").textContent = totals.helper ?? 0;
+  document.querySelector("#partnerAccounts").textContent = totals.partner ?? 0;
   document.querySelector("#vipAccounts").textContent = totals.vip ?? 0;
   document.querySelector("#adminAccounts").textContent = totals.admin ?? 0;
 }

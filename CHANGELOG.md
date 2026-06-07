@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.1.7] - 2026-06-07
+
+### Neu
+- **Plant Timer** reagiert jetzt auf sichtbare Plantage-Nachrichten von allen Spielern.
+- **Plant Timer** ist im ClickGUI als HUD-Modul togglebar.
+- **Partner-Rolle** mit aqua Hologramm, aqua `bUC`-Tablist-Badge und Userpanel-Anzeige.
+
+### Geändert
+- Fraktionspings verlassen sich jetzt auf `/stats` und das Relay-System.
+- Die alte `/memberinfo...`-Silent-Abfrage wurde entfernt.
+- Admin bleibt die einzige Rolle mit Adminpanel-Rechten; Partner ist eine normale Anzeige-/Statusrolle.
+
+### Versionierung
+- Mod-Version auf **`1.1.7`** gesetzt.
+
 ## [1.1.6] - 2026-06-05
 
 ### Neu

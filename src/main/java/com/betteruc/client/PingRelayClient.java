@@ -178,6 +178,7 @@ public final class PingRelayClient {
         return switch (role) {
             case "admin" -> "Admin";
             case "helper" -> "Helper";
+            case "partner" -> "Partner";
             case "vip" -> "VIP";
             default -> "Spieler";
         };
@@ -235,6 +236,11 @@ public final class PingRelayClient {
         return player != null && "vip".equals(player.role());
     }
 
+    public static boolean hasPartnerBadge(PlayerListEntry entry) {
+        RelayPlayer player = findRelayPlayer(entry);
+        return player != null && "partner".equals(player.role());
+    }
+
     public static boolean hasHelperBadge(PlayerListEntry entry) {
         RelayPlayer player = findRelayPlayer(entry);
         return player != null && "helper".equals(player.role());
@@ -246,6 +252,7 @@ public final class PingRelayClient {
         return switch (player.role()) {
             case "admin" -> "Admin";
             case "helper" -> "Helper";
+            case "partner" -> "Partner";
             case "vip" -> "VIP";
             default -> "User";
         };
@@ -259,6 +266,11 @@ public final class PingRelayClient {
     public static boolean isVipPlayer(String name, String uuid) {
         RelayPlayer player = findRelayPlayer(name, uuid);
         return player != null && "vip".equals(player.role());
+    }
+
+    public static boolean isPartnerPlayer(String name, String uuid) {
+        RelayPlayer player = findRelayPlayer(name, uuid);
+        return player != null && "partner".equals(player.role());
     }
 
     public static boolean isHelperPlayer(String name, String uuid) {
@@ -390,6 +402,7 @@ public final class PingRelayClient {
                 status = switch (role) {
                     case "admin" -> "Admin verbunden";
                     case "helper" -> "Helper verbunden";
+                    case "partner" -> "Partner verbunden";
                     case "vip" -> "VIP verbunden";
                     default -> "Verbunden";
                 };
@@ -618,7 +631,7 @@ public final class PingRelayClient {
 
     private static String cleanRole(String value) {
         String cleaned = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
-        if ("admin".equals(cleaned) || "helper".equals(cleaned) || "vip".equals(cleaned)) return cleaned;
+        if ("admin".equals(cleaned) || "helper".equals(cleaned) || "partner".equals(cleaned) || "vip".equals(cleaned)) return cleaned;
         return "user";
     }
 
@@ -626,6 +639,7 @@ public final class PingRelayClient {
         return switch (cleanRole(value)) {
             case "admin" -> 100L;
             case "helper" -> 85L;
+            case "partner" -> 80L;
             case "vip" -> 75L;
             default -> 50L;
         };

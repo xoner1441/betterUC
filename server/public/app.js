@@ -123,6 +123,7 @@ function escapeHtml(value) {
 function roleLabel(role) {
   if (role === "admin") return "Admin";
   if (role === "helper") return "Helper";
+  if (role === "partner") return "Partner";
   if (role === "vip") return "VIP";
   return "Spieler";
 }
@@ -130,6 +131,7 @@ function roleLabel(role) {
 function roleClass(role) {
   if (role === "admin") return "role-badge role-admin";
   if (role === "helper") return "role-badge role-helper";
+  if (role === "partner") return "role-badge role-partner";
   if (role === "vip") return "role-badge role-vip";
   return "role-badge role-user";
 }

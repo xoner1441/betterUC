@@ -269,7 +269,7 @@ function cleanStatus(value) {
 
 function cleanRole(value) {
   const role = String(value || "").trim().toLowerCase();
-  if (role === "admin" || role === "helper" || role === "vip") return role;
+  if (role === "admin" || role === "helper" || role === "partner" || role === "vip") return role;
   return "user";
 }
 
@@ -277,6 +277,7 @@ function rolePriority(role) {
   const cleaned = cleanRole(role);
   if (cleaned === "admin") return 100;
   if (cleaned === "helper") return 85;
+  if (cleaned === "partner") return 80;
   if (cleaned === "vip") return 75;
   return 50;
 }
@@ -842,6 +843,7 @@ async function handleApi(req, res, url) {
         revoked: store.accounts.filter(account => cleanStatus(account.status) === "revoked").length,
         online: clients.size,
         helper: store.accounts.filter(account => cleanRole(account.role) === "helper").length,
+        partner: store.accounts.filter(account => cleanRole(account.role) === "partner").length,
         vip: store.accounts.filter(account => cleanRole(account.role) === "vip").length,
         admin: store.accounts.filter(account => cleanRole(account.role) === "admin").length
       }

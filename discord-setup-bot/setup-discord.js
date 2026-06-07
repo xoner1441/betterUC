@@ -57,6 +57,13 @@ const ROLE_DEFS = [
     mentionable: true,
   },
   {
+    key: "partner",
+    name: "Partner",
+    color: 0x38bdf8,
+    permissions: 0n,
+    mentionable: true,
+  },
+  {
     key: "vip",
     name: "VIP",
     color: 0x7c3aed,
@@ -141,7 +148,7 @@ const START_MESSAGES = {
   regeln:
     "**Regeln**\n1. Bleib respektvoll.\n2. Keine Token, Passwörter oder privaten Daten posten.\n3. Bugs bitte mit Screenshot, Crashlog oder kurzer Beschreibung melden.\n4. Support bekommt nur genug Infos, um dir helfen zu können.",
   rollen:
-    "**Rollen**\n`Admin` verwaltet den Server und das betterUC System.\n`Helper` unterstützt im Support.\n`VIP` ist eine besondere Community-Rolle.\n`Mod-User` markiert Nutzer der Mod.\n`User` ist die normale Basisrolle.",
+    "**Rollen**\n`Admin` verwaltet den Server und das betterUC System.\n`Helper` unterstützt im Support.\n`Partner` ist eine aqua Community-/Partner-Rolle.\n`VIP` ist eine besondere Community-Rolle.\n`Mod-User` markiert Nutzer der Mod.\n`User` ist die normale Basisrolle.",
   faq:
     "**FAQ**\n**Wo bekomme ich die Mod?** Im Download-Channel.\n**Wie verbinde ich die Mod?** Erstelle auf der Website einen Access Code und trage ihn im ClickGUI ein.\n**Wie komme ich ins Userpanel?** Ingame `/register <passwort>` nutzen und danach auf der Website einloggen.",
   download:
@@ -347,7 +354,7 @@ async function ensureRoles(api, guildId) {
 }
 
 async function trySetRolePositions(api, guildId, roles) {
-  const ordered = ["muted", "user", "modUser", "vip", "helper", "admin", "owner"]
+  const ordered = ["muted", "user", "modUser", "vip", "partner", "helper", "admin", "owner"]
     .map((key, index) => {
       const role = roles.get(key);
       return role ? { id: role.id, position: index + 1 } : null;

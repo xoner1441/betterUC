@@ -51,12 +51,13 @@ public class BetterUCScreen extends Screen {
             .map(container -> container.getMetadata().getVersion().getFriendlyString())
             .orElse("dev");
     private static final UpdateSection[] UPDATE_SECTIONS = new UpdateSection[]{
-            new UpdateSection("Neu in 1.1.6", new String[]{
-                    "Helper-Rolle mit gelbem Hologramm und Tablist-Badge",
-                    "Helper steht unter Admin, bekommt aber keine Admin-Rechte",
-                    "Veraltete Commands /seinzahlen und /scall entfernt",
-                    "Website und ClickGUI zeigen nur noch aktive Features",
-                    "Pingrad, Cooldown und Reichweitenlimit bleiben enthalten"
+            new UpdateSection("Neu in 1.1.7", new String[]{
+                    "Plant Timer reagiert auf sichtbare Plantage-Nachrichten von allen Spielern",
+                    "Plant Timer ist im HUD-Tab jetzt direkt togglebar",
+                    "Fraktionspings nutzen /stats und Relay-Fraktionen",
+                    "Alte /memberinfo-Silent-Abfrage entfernt",
+                    "Partner-Rolle mit aqua Hologramm und aqua bUC-Tablist-Badge",
+                    "Unique Client wird erkannt und betterUC-Hologramme werden höher gestapelt"
             }),
             new UpdateSection("Kurzstart", new String[]{
                     "Standard: N öffnet das betterUC ClickGUI",
@@ -82,6 +83,7 @@ public class BetterUCScreen extends Screen {
                     "/register <passwort> legt dein Userpanel-Passwort fest",
                     "Userpanel zeigt Bank, Bargeld, Häuser, Spielzeit, Warns und Fraktion",
                     "Adminpanel verwaltet Codes, Rollen und Spielerdaten",
+                    "Admin bleibt die einzige Rolle mit Adminpanel-Rechten",
                     "Discord-Bereich öffnet oder kopiert den Community-Invite"
             }),
             new UpdateSection("Commandliste", new String[]{

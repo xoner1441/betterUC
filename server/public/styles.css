@@ -616,6 +616,10 @@ select:focus {
   color: var(--amber);
 }
 
+.role-badge.role-partner {
+  color: var(--cyan);
+}
+
 .role-badge.role-vip {
   color: #7e22ce;
 }

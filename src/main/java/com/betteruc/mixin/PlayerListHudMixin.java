@@ -20,6 +20,7 @@ public class PlayerListHudMixin {
     private static final String ADMIN_BADGE = "\uE101";
     private static final String VIP_BADGE = "\uE102";
     private static final String HELPER_BADGE = "\uE103";
+    private static final String PARTNER_BADGE = "\uE104";
 
     @Inject(method = "getPlayerName", at = @At("RETURN"), cancellable = true)
     private void betteruc$appendTablistBadge(PlayerListEntry entry, CallbackInfoReturnable<Text> cir) {
@@ -30,6 +31,8 @@ public class PlayerListHudMixin {
             name.append(betteruc$badge(ADMIN_BADGE));
         } else if (PingRelayClient.hasHelperBadge(entry)) {
             name.append(betteruc$badge(HELPER_BADGE));
+        } else if (PingRelayClient.hasPartnerBadge(entry)) {
+            name.append(betteruc$badge(PARTNER_BADGE));
         } else if (PingRelayClient.hasVipBadge(entry)) {
             name.append(betteruc$badge(VIP_BADGE));
         } else {

@@ -4,7 +4,7 @@ Dieses Tool richtet einen Discord-Server für betterUC automatisch ein.
 
 Es erstellt:
 
-- Rollen: `Owner`, `Admin`, `Helper`, `VIP`, `Mod-User`, `User`, `Muted`
+- Rollen: `Owner`, `Admin`, `Helper`, `Partner`, `VIP`, `Mod-User`, `User`, `Muted`
 - Kategorien und Textkanaele
 - einfache Rechte für Team-, Info-, Support- und Community-Bereiche
 - Startnachrichten für Willkommen, Regeln, Download, Access-Hilfe und Updates
