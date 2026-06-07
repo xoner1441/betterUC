@@ -15,20 +15,29 @@ public class CommandGui extends Screen {
 
     private static final int SLOT_SIZE = 18;
     private static final int COLS = 9;
-    private static final int ROWS = 3;
     private static final String[] NAMES = new String[]{
-            "Papierfabrik",
-            "SH-Park",
-            "Japan",
-            "Flughafen Parkplatz",
-            "Kirche Camper"
+            "Ruine",
+            "Wohnwagen Kirche",
+            "Flughafen",
+            "U-Bahn Mexican",
+            "Stadtpark",
+            "Deathmatch",
+            "Chinatown Berg",
+            "Verlassenes Gebäude",
+            "Leuchtturm",
+            "Mühle"
     };
     private static final String[] COMMANDS = new String[]{
-            "navi -36/70/-278",
-            "navi 65/67/347",
-            "navi 592/69/91",
-            "navi -312/69/670",
-            "navi 304/71/-205"
+            "navi 743/69/316",
+            "navi 304/71/-205 ",
+            "navi -311/69/669",
+            "navi -92/52/-34",
+            "navi 65/67/348",
+            "navi -467/69/426",
+            "navi 819/79/-33",
+            "navi 986/105/433",
+            "navi -772/64/149",
+            "navi 461/75/593"
     };
 
     public CommandGui() {
@@ -37,8 +46,8 @@ public class CommandGui extends Screen {
 
     @Override
     protected void init() {
-        int guiWidth = COLS * SLOT_SIZE + 8;
-        int guiHeight = ROWS * SLOT_SIZE + 8 + 20;
+        int guiWidth = guiWidth();
+        int guiHeight = guiHeight();
         int startX = width / 2 - guiWidth / 2;
         int startY = height / 2 - guiHeight / 2;
 
@@ -67,8 +76,8 @@ public class CommandGui extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        int guiWidth = COLS * SLOT_SIZE + 8;
-        int guiHeight = ROWS * SLOT_SIZE + 8 + 20;
+        int guiWidth = guiWidth();
+        int guiHeight = guiHeight();
         int startX = width / 2 - guiWidth / 2;
         int startY = height / 2 - guiHeight / 2;
 
@@ -95,11 +104,30 @@ public class CommandGui extends Screen {
             if (mouseX >= slotX && mouseX <= slotX + SLOT_SIZE - 2
                     && mouseY >= slotY && mouseY <= slotY + SLOT_SIZE - 2) {
                 context.drawTooltip(textRenderer, List.of(
-                        Text.literal("\u00A7e" + NAMES[i]),
+                        Text.literal("\u00A7e" + nameFor(i)),
                         Text.literal("\u00A77/" + COMMANDS[i])
                 ), mouseX, mouseY);
             }
         }
+    }
+
+    private static int guiWidth() {
+        return COLS * SLOT_SIZE + 8;
+    }
+
+    private static int guiHeight() {
+        return rows() * SLOT_SIZE + 8 + 20;
+    }
+
+    private static int rows() {
+        return Math.max(1, (COMMANDS.length + COLS - 1) / COLS);
+    }
+
+    private static String nameFor(int index) {
+        if (index >= 0 && index < NAMES.length && !NAMES[index].isBlank()) {
+            return NAMES[index];
+        }
+        return "Navi " + (index + 1);
     }
 
     @Override
