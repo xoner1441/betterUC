@@ -48,14 +48,17 @@ public class HealthHud {
 
         ModernHudRenderer.drawScaled(context, startX, y, scale, () -> {
             if (modernStyle) {
+                boolean rightAligned = ModernHudRenderer.isRightAligned(0, totalWidth);
+                int heartX = rightAligned ? totalWidth - 16 : 7;
+                int textX = rightAligned ? heartX - textWidth - 4 : 19;
                 ModernHudRenderer.drawPanel(context, 0, 0, totalWidth, 17, heartColor);
                 context.drawGuiTexture(
                         net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED,
                         net.minecraft.util.Identifier.ofVanilla("hud/heart/full"),
-                        7, 4, 9, 9,
+                        heartX, 4, 9, 9,
                         heartColor
                 );
-                context.drawText(client.textRenderer, healthText, 19, 4, textColor, true);
+                context.drawText(client.textRenderer, healthText, Math.max(6, textX), 4, textColor, true);
                 return;
             }
 

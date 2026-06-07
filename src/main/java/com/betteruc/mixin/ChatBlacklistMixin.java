@@ -353,11 +353,7 @@ public class ChatBlacklistMixin {
         if (shouldForceHideStatsLine(text.getString())) return true;
         if (isSilentStatsBlankLine(text.getString())) return true;
 
-        long now = System.currentTimeMillis();
-        boolean inStatsWindow = now <= Math.max(forceHideStatsLinesUntilMs, BetterUCSuppressFlags.forceHideStatsOutputUntilMs)
-                || now <= Math.max(forceHideDashStatsLinesUntilMs, BetterUCSuppressFlags.forceHideDashStatsOutputUntilMs)
-                || now <= forceHideAfkExitTailUntilMs;
-        return inStatsWindow && StatsLineClassifier.containsHoverSignal(text);
+        return false;
     }
 
     private boolean isSilentStatsBlankLine(String raw) {
@@ -658,7 +654,7 @@ public class ChatBlacklistMixin {
         String trimmed = raw == null ? "" : raw.trim();
         if (StatsLineClassifier.isDetailLine(trimmed)) return true;
         if (StatsLineClassifier.isImplicitDetailLine(trimmed)) return true;
-        return StatsLineClassifier.containsHoverSignal(text);
+        return false;
     }
 
 }

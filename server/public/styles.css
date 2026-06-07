@@ -404,6 +404,53 @@ h3 {
   border-left-color: #7c3aed;
 }
 
+.discord-section {
+  align-items: start;
+  display: grid;
+  gap: 34px;
+  grid-template-columns: minmax(0, 0.85fr) minmax(360px, 1.15fr);
+}
+
+.discord-copy {
+  max-width: 600px;
+}
+
+.discord-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.discord-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.discord-panel article {
+  background: rgba(21, 27, 26, 0.78);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--cyan);
+  padding: 20px;
+}
+
+.discord-panel article:nth-child(2) {
+  border-left-color: var(--green);
+}
+
+.discord-panel article:nth-child(3) {
+  border-left-color: var(--amber);
+}
+
+.discord-tag {
+  color: var(--cyan);
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 900;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
 .command-grid {
   display: grid;
   gap: 12px;
@@ -942,6 +989,7 @@ select:focus {
   .account-meta-grid,
   .feature-grid,
   .feature-overview-grid,
+  .discord-section,
   .command-grid,
   .admin-login,
   .admin-detail-grid,

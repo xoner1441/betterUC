@@ -18,6 +18,8 @@ public final class ModernHudRenderer {
     private static final int PANEL_BORDER = 0x70313A47;
     private static final int PANEL_HIGHLIGHT = 0x24FFFFFF;
     private static final int MIN_MODULE_WIDTH = 58;
+    private static final RenderTransform DEFAULT_TRANSFORM = new RenderTransform(0.0F, 1.0F);
+    private static final ThreadLocal<RenderTransform> ACTIVE_TRANSFORM = ThreadLocal.withInitial(() -> DEFAULT_TRANSFORM);
 
     private ModernHudRenderer() {
     }
@@ -32,12 +34,15 @@ public final class ModernHudRenderer {
         if (drawAction == null) return;
 
         float safeScale = BetterUCConfig.normalizeHudScale(scale);
+        RenderTransform previousTransform = ACTIVE_TRANSFORM.get();
         context.getMatrices().pushMatrix();
         try {
+            ACTIVE_TRANSFORM.set(new RenderTransform(x, safeScale));
             context.getMatrices().translate(x, y);
             context.getMatrices().scale(safeScale, safeScale);
             drawAction.run();
         } finally {
+            ACTIVE_TRANSFORM.set(previousTransform);
             context.getMatrices().popMatrix();
         }
     }
@@ -52,13 +57,16 @@ public final class ModernHudRenderer {
         if (drawAction == null) return;
 
         float safeScale = BetterUCConfig.normalizeHudScale(scale);
+        RenderTransform previousTransform = ACTIVE_TRANSFORM.get();
         context.getMatrices().pushMatrix();
         try {
+            ACTIVE_TRANSFORM.set(new RenderTransform(x * (1.0F - safeScale), safeScale));
             context.getMatrices().translate(x, y);
             context.getMatrices().scale(safeScale, safeScale);
             context.getMatrices().translate(-x, -y);
             drawAction.run();
         } finally {
+            ACTIVE_TRANSFORM.set(previousTransform);
             context.getMatrices().popMatrix();
         }
     }
@@ -96,10 +104,19 @@ public final class ModernHudRenderer {
         int valueWidth = renderer.getWidth(safeValue);
         int width = Math.max(MIN_MODULE_WIDTH, labelWidth + valueWidth + 28);
         int height = 18;
+        boolean rightAligned = isRightAligned(x, width);
 
         drawPanel(context, x, y, width, height, accentColor);
-        context.drawTextWithShadow(renderer, Text.literal(safeLabel), x + 8, y + 5, withAlpha(accentColor, 0xFF));
-        context.drawTextWithShadow(renderer, Text.literal(safeValue), x + width - valueWidth - 7, y + 5, valueColor);
+        if (rightAligned) {
+            int rightTextX = x + width - 8;
+            int valueX = rightTextX - valueWidth;
+            int labelX = valueX - labelWidth - 5;
+            context.drawTextWithShadow(renderer, Text.literal(safeLabel), labelX, y + 5, withAlpha(accentColor, 0xFF));
+            context.drawTextWithShadow(renderer, Text.literal(safeValue), valueX, y + 5, valueColor);
+        } else {
+            context.drawTextWithShadow(renderer, Text.literal(safeLabel), x + 8, y + 5, withAlpha(accentColor, 0xFF));
+            context.drawTextWithShadow(renderer, Text.literal(safeValue), x + width - valueWidth - 7, y + 5, valueColor);
+        }
     }
 
     public static void drawTwoLineModule(
@@ -136,18 +153,30 @@ public final class ModernHudRenderer {
                         renderer.getWidth(safeSecondary) + 16
                 ));
         int height = safeSecondary.isEmpty() ? 20 : 31;
+        boolean rightAligned = isRightAligned(x, width);
 
         drawPanel(context, x, y, width, height, accentColor);
-        context.drawTextWithShadow(renderer, Text.literal(safeLabel), x + 8, y + 5, withAlpha(accentColor, 0xFF));
-        context.drawTextWithShadow(
-                renderer,
-                Text.literal(safePrimary),
-                x + width - renderer.getWidth(safePrimary) - 7,
-                y + 5,
-                TEXT_PRIMARY
-        );
-        if (!safeSecondary.isEmpty()) {
-            context.drawTextWithShadow(renderer, Text.literal(safeSecondary), x + 8, y + 17, secondaryColor);
+        if (rightAligned) {
+            int rightTextX = x + width - 8;
+            int primaryWidth = renderer.getWidth(safePrimary);
+            int labelX = rightTextX - primaryWidth - renderer.getWidth(safeLabel) - 5;
+            context.drawTextWithShadow(renderer, Text.literal(safeLabel), labelX, y + 5, withAlpha(accentColor, 0xFF));
+            context.drawTextWithShadow(renderer, Text.literal(safePrimary), rightTextX - primaryWidth, y + 5, TEXT_PRIMARY);
+            if (!safeSecondary.isEmpty()) {
+                context.drawTextWithShadow(renderer, Text.literal(safeSecondary), rightTextX - renderer.getWidth(safeSecondary), y + 17, secondaryColor);
+            }
+        } else {
+            context.drawTextWithShadow(renderer, Text.literal(safeLabel), x + 8, y + 5, withAlpha(accentColor, 0xFF));
+            context.drawTextWithShadow(
+                    renderer,
+                    Text.literal(safePrimary),
+                    x + width - renderer.getWidth(safePrimary) - 7,
+                    y + 5,
+                    TEXT_PRIMARY
+            );
+            if (!safeSecondary.isEmpty()) {
+                context.drawTextWithShadow(renderer, Text.literal(safeSecondary), x + 8, y + 17, secondaryColor);
+            }
         }
     }
 
@@ -166,16 +195,25 @@ public final class ModernHudRenderer {
         String safeValue = safe(value);
         int width = Math.max(86, renderer.getWidth(safeLabel) + renderer.getWidth(safeValue) + 28);
         int height = 24;
+        boolean rightAligned = isRightAligned(x, width);
 
         drawPanel(context, x, y, width, height, accentColor);
-        context.drawTextWithShadow(renderer, Text.literal(safeLabel), x + 8, y + 5, withAlpha(accentColor, 0xFF));
-        context.drawTextWithShadow(
-                renderer,
-                Text.literal(safeValue),
-                x + width - renderer.getWidth(safeValue) - 7,
-                y + 5,
-                TEXT_PRIMARY
-        );
+        if (rightAligned) {
+            int rightTextX = x + width - 8;
+            int valueWidth = renderer.getWidth(safeValue);
+            int labelX = rightTextX - valueWidth - renderer.getWidth(safeLabel) - 5;
+            context.drawTextWithShadow(renderer, Text.literal(safeLabel), labelX, y + 5, withAlpha(accentColor, 0xFF));
+            context.drawTextWithShadow(renderer, Text.literal(safeValue), rightTextX - valueWidth, y + 5, TEXT_PRIMARY);
+        } else {
+            context.drawTextWithShadow(renderer, Text.literal(safeLabel), x + 8, y + 5, withAlpha(accentColor, 0xFF));
+            context.drawTextWithShadow(
+                    renderer,
+                    Text.literal(safeValue),
+                    x + width - renderer.getWidth(safeValue) - 7,
+                    y + 5,
+                    TEXT_PRIMARY
+            );
+        }
 
         int barX = x + 8;
         int barY = y + 18;
@@ -183,7 +221,11 @@ public final class ModernHudRenderer {
         context.fill(barX, barY, barX + barWidth, barY + 2, 0x66313A47);
         int filledWidth = Math.round(barWidth * clamp01(progress));
         if (filledWidth > 0) {
-            context.fill(barX, barY, barX + filledWidth, barY + 2, withAlpha(accentColor, 0xEE));
+            if (rightAligned) {
+                context.fill(barX + barWidth - filledWidth, barY, barX + barWidth, barY + 2, withAlpha(accentColor, 0xEE));
+            } else {
+                context.fill(barX, barY, barX + filledWidth, barY + 2, withAlpha(accentColor, 0xEE));
+            }
         }
     }
 
@@ -306,14 +348,29 @@ public final class ModernHudRenderer {
     public static void drawPanel(DrawContext context, int x, int y, int width, int height, int accentColor) {
         int safeWidth = Math.max(8, width);
         int safeHeight = Math.max(8, height);
+        boolean rightAligned = isRightAligned(x, safeWidth);
 
         fillSoftRect(context, x, y, safeWidth, safeHeight, PANEL_BG);
         fillSoftRect(context, x + 1, y + 1, safeWidth - 2, safeHeight - 2, PANEL_INNER);
         drawBorder(context, x, y, safeWidth, safeHeight, PANEL_BORDER);
 
         context.fill(x + 2, y + 2, x + safeWidth - 2, y + 3, PANEL_HIGHLIGHT);
-        context.fill(x + 2, y + 3, x + 4, y + safeHeight - 3, withAlpha(accentColor, 0xF2));
-        context.fill(x + 4, y + 3, x + 5, y + safeHeight - 3, withAlpha(accentColor, 0x44));
+        if (rightAligned) {
+            context.fill(x + safeWidth - 4, y + 3, x + safeWidth - 2, y + safeHeight - 3, withAlpha(accentColor, 0xF2));
+            context.fill(x + safeWidth - 5, y + 3, x + safeWidth - 4, y + safeHeight - 3, withAlpha(accentColor, 0x44));
+        } else {
+            context.fill(x + 2, y + 3, x + 4, y + safeHeight - 3, withAlpha(accentColor, 0xF2));
+            context.fill(x + 4, y + 3, x + 5, y + safeHeight - 3, withAlpha(accentColor, 0x44));
+        }
+    }
+
+    public static boolean isRightAligned(int x, int width) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.getWindow() == null) return false;
+        RenderTransform transform = ACTIVE_TRANSFORM.get();
+        float safeWidth = Math.max(1, width) * transform.scale();
+        float screenX = transform.originX() + (x * transform.scale());
+        return screenX + safeWidth / 2.0F >= client.getWindow().getScaledWidth() / 2.0F;
     }
 
     private static void fillSoftRect(DrawContext context, int x, int y, int width, int height, int color) {
@@ -348,5 +405,8 @@ public final class ModernHudRenderer {
 
     private static String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private record RenderTransform(float originX, float scale) {
     }
 }

@@ -76,11 +76,29 @@ public class PotionEffectsHud {
                 }
 
                 ModernHudRenderer.drawPanel(context, 0, currentY, EFFECT_WIDTH, EFFECT_HEIGHT, accentColor);
-                context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, effectIcon, 6, currentY + 7, EFFECT_ICON_SIZE, EFFECT_ICON_SIZE);
-
-                context.drawTextWithShadow(client.textRenderer, effectName, 28, currentY + 6, ModernHudRenderer.TEXT_PRIMARY);
-
-                context.drawTextWithShadow(client.textRenderer, durationText, 28, currentY + 16, ModernHudRenderer.TEXT_DIM);
+                if (ModernHudRenderer.isRightAligned(0, EFFECT_WIDTH)) {
+                    int iconX = EFFECT_WIDTH - EFFECT_ICON_SIZE - 7;
+                    int textRight = iconX - 6;
+                    context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, effectIcon, iconX, currentY + 7, EFFECT_ICON_SIZE, EFFECT_ICON_SIZE);
+                    context.drawTextWithShadow(
+                            client.textRenderer,
+                            effectName,
+                            Math.max(8, textRight - client.textRenderer.getWidth(effectName)),
+                            currentY + 6,
+                            ModernHudRenderer.TEXT_PRIMARY
+                    );
+                    context.drawTextWithShadow(
+                            client.textRenderer,
+                            durationText,
+                            Math.max(8, textRight - client.textRenderer.getWidth(durationText)),
+                            currentY + 16,
+                            ModernHudRenderer.TEXT_DIM
+                    );
+                } else {
+                    context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, effectIcon, 6, currentY + 7, EFFECT_ICON_SIZE, EFFECT_ICON_SIZE);
+                    context.drawTextWithShadow(client.textRenderer, effectName, 28, currentY + 6, ModernHudRenderer.TEXT_PRIMARY);
+                    context.drawTextWithShadow(client.textRenderer, durationText, 28, currentY + 16, ModernHudRenderer.TEXT_DIM);
+                }
 
                 currentY += effectSpacing;
             }

@@ -39,9 +39,9 @@ public final class StatsLineClassifier {
         if (trimmed.isEmpty()) return false;
         if (isHeader(trimmed)) return true;
         if (isKdLine(trimmed)) return true;
-        if (startsWithListDash(trimmed) || trimmed.startsWith("=")) return true;
         if (KEYWORD_PATTERN.matcher(trimmed).find() && trimmed.contains(":")) return true;
-        return TIMED_LINE_PATTERN.matcher(trimmed).matches();
+        return TIMED_LINE_PATTERN.matcher(trimmed).matches()
+                && (KEYWORD_PATTERN.matcher(trimmed).find() || isKdLine(trimmed));
     }
 
     public static boolean isImplicitDetailLine(String raw) {
@@ -148,8 +148,7 @@ public final class StatsLineClassifier {
         if (!work.startsWith("-")) return false;
         if (isKdLine(work)) return true;
         if (KEYWORD_PATTERN.matcher(work).find() && work.contains(":")) return true;
-
-        return work.matches("^-\\s*[A-Za-z\\u00C4\\u00D6\\u00DC\\u00E4\\u00F6\\u00FC\\u00DF/._| -]{1,40}\\s*:?\\s*[0-9].*$");
+        return false;
     }
 
     private static boolean isKdLine(String normalized) {

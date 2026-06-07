@@ -374,9 +374,13 @@ public class HudLayoutScreen extends Screen {
                 int textColor = BetterUCConfig.INSTANCE.healthHudTextColor;
                 int heartColor = BetterUCConfig.INSTANCE.healthHudHeartColor;
                 if (modernStyle) {
-                    ModernHudRenderer.drawPanel(context, x, y, widthFor(module), 17, heartColor);
-                    context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, HEART_TEXTURE, x + 7, y + 4, 9, 9, heartColor);
-                    context.drawText(minecraft.textRenderer, health, x + 19, y + 4, textColor, true);
+                    int moduleWidth = widthFor(module);
+                    boolean rightAligned = ModernHudRenderer.isRightAligned(x, moduleWidth);
+                    int heartX = rightAligned ? x + moduleWidth - 16 : x + 7;
+                    int textX = rightAligned ? heartX - minecraft.textRenderer.getWidth(health) - 4 : x + 19;
+                    ModernHudRenderer.drawPanel(context, x, y, moduleWidth, 17, heartColor);
+                    context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, HEART_TEXTURE, heartX, y + 4, 9, 9, heartColor);
+                    context.drawText(minecraft.textRenderer, health, Math.max(x + 6, textX), y + 4, textColor, true);
                     return;
                 }
                 context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, HEART_TEXTURE, x, y, 9, 9, heartColor);

@@ -3,6 +3,7 @@ package com.betteruc.parser;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -60,6 +61,14 @@ class ParserSmokeTest {
         assertTrue(StatsLineClassifier.isDetailLine("06:53:37    - K/D: 1.48"));
         assertTrue(StatsLineClassifier.isStandaloneKdStatsLine("14:04:31    - K/D: 1.48"));
         assertTrue(StatsLineClassifier.isStandaloneKdStatsLine("\u00A7714:04:31 \u00A78- \u00A7eK/D: \u00A7c1.48"));
+    }
+
+    @Test
+    void statsClassifierDoesNotEatMemberInfoPlayerLines() {
+        assertFalse(StatsLineClassifier.isDetailLine("- FABI1441"));
+        assertFalse(StatsLineClassifier.isDetailLine("02:23:31 - FABI1441"));
+        assertFalse(StatsLineClassifier.isImplicitDetailLine("- JxsNothing"));
+        assertFalse(StatsLineClassifier.isImplicitDetailLine("\u00BB FABI1441"));
     }
 
     @Test
