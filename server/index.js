@@ -346,6 +346,26 @@ function onlineClientForAccount(account) {
   return [...clients].find(client => client.account && client.account.id === account.id) || null;
 }
 
+function onlineAccountCount() {
+  return store.accounts.filter(account => onlineClientForAccount(account)).length;
+}
+
+function clientPresenceKey(client) {
+  const accountId = client && client.account && client.account.id;
+  if (accountId && accountId !== "legacy") return `account:${accountId}`;
+  const uuid = cleanSmallLabel(client && client.uuid || "", "");
+  if (uuid) return `uuid:${uuid.toLowerCase()}`;
+  return `name:${String(client && client.name || "unknown").toLowerCase()}@${client && client.server || "unknown"}`;
+}
+
+function uniqueOnlineClients() {
+  const byKey = new Map();
+  for (const client of clients) {
+    byKey.set(clientPresenceKey(client), client);
+  }
+  return [...byKey.values()];
+}
+
 function publicAccount(account) {
   const stats = publicStats(account);
   return {
@@ -756,7 +776,7 @@ async function readJsonBody(req, maxBytes = 32768) {
 }
 
 function onlinePlayersForResponse() {
-  return [...clients].map(client => ({
+  return uniqueOnlineClients().map(client => ({
     name: client.name,
     uuid: client.uuid,
     server: client.server,
@@ -773,7 +793,7 @@ function onlinePlayersForResponse() {
 }
 
 function presencePlayersForServer(server) {
-  return [...clients]
+  return uniqueOnlineClients()
     .filter(client => client.server === server)
     .map(client => ({
       name: client.name,
@@ -818,7 +838,7 @@ async function handleApi(req, res, url) {
       name: "betterUC Platform",
       version: "1.0.0",
       relay: {
-        online: clients.size,
+        online: onlinePlayersForResponse().length,
         ttlMs: PING_TTL_MS,
         maxClients: MAX_CLIENTS
       },
@@ -841,7 +861,7 @@ async function handleApi(req, res, url) {
         accounts: store.accounts.length,
         active: store.accounts.filter(account => cleanStatus(account.status) === "active").length,
         revoked: store.accounts.filter(account => cleanStatus(account.status) === "revoked").length,
-        online: clients.size,
+        online: onlineAccountCount(),
         helper: store.accounts.filter(account => cleanRole(account.role) === "helper").length,
         partner: store.accounts.filter(account => cleanRole(account.role) === "partner").length,
         vip: store.accounts.filter(account => cleanRole(account.role) === "vip").length,
@@ -1331,6 +1351,7 @@ function handleWsConnection(ws, req, auth, url) {
     connectedAt: nowIso()
   };
 
+  const replacedServers = replaceExistingClientSessions(client);
   clients.add(client);
   updateAccountFromClient(client.account, client);
   ws.send(JSON.stringify({
@@ -1342,10 +1363,31 @@ function handleWsConnection(ws, req, auth, url) {
     ttlMs: PING_TTL_MS
   }));
   broadcastPresence(client.server);
+  for (const server of replacedServers) {
+    if (server !== client.server) broadcastPresence(server);
+  }
 
   ws.on("message", raw => handleWsMessage(client, raw));
   ws.on("close", () => removeClient(client));
   ws.on("error", () => removeClient(client));
+}
+
+function replaceExistingClientSessions(client) {
+  const accountId = client && client.account && client.account.id;
+  if (!accountId || accountId === "legacy") return new Set();
+
+  const replacedServers = new Set();
+  for (const existing of [...clients]) {
+    if (!existing.account || existing.account.id !== accountId) continue;
+    replacedServers.add(existing.server);
+    clients.delete(existing);
+    try {
+      existing.ws.close(4000, "Replaced by newer betterUC connection");
+    } catch {
+      // Closing an already broken socket is harmless; the new connection continues.
+    }
+  }
+  return replacedServers;
 }
 
 function removeClient(client) {
