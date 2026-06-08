@@ -24,6 +24,8 @@ import net.minecraft.util.math.Vec3d;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.net.http.WebSocket;
 import java.net.http.WebSocketHandshakeException;
 import java.nio.charset.StandardCharsets;
@@ -43,7 +45,9 @@ public final class PingRelayClient {
     private static final Object LOCK = new Object();
     private static final List<PingMarker> ACTIVE_PINGS = new ArrayList<>();
     private static final List<RelayPlayer> ONLINE_PLAYERS = new ArrayList<>();
+    private static final List<RelayPlayer> GLOBAL_ONLINE_PLAYERS = new ArrayList<>();
     private static final long RECONNECT_DELAY_MS = 5000L;
+    private static final long ONLINE_PLAYERS_REFRESH_MS = 10000L;
     private static final double PING_RAYCAST_DISTANCE = 128.0D;
     private static final double MAX_RECEIVE_PING_DISTANCE = 128.0D;
     private static final String FALLBACK_RELAY_URL = "ws://65.109.175.203:3000/ws";
@@ -55,6 +59,9 @@ public final class PingRelayClient {
     private static String role = "user";
     private static long nextReconnectAtMs = 0L;
     private static long lastPingSentMs = 0L;
+    private static long lastOnlinePlayersRefreshMs = 0L;
+    private static boolean onlinePlayersRefreshInFlight = false;
+    private static boolean connectedViaFallbackRelay = false;
 
     private PingRelayClient() {
     }
@@ -85,7 +92,11 @@ public final class PingRelayClient {
             return;
         }
 
-        if (connected || connecting || System.currentTimeMillis() < nextReconnectAtMs) return;
+        if (connected) {
+            refreshOnlinePlayersFromApi(client);
+            return;
+        }
+        if (connecting || System.currentTimeMillis() < nextReconnectAtMs) return;
         connect(client);
     }
 
@@ -93,6 +104,7 @@ public final class PingRelayClient {
         synchronized (LOCK) {
             ACTIVE_PINGS.clear();
             ONLINE_PLAYERS.clear();
+            GLOBAL_ONLINE_PLAYERS.clear();
         }
         nextReconnectAtMs = 0L;
         tick(client);
@@ -103,6 +115,7 @@ public final class PingRelayClient {
         synchronized (LOCK) {
             ACTIVE_PINGS.clear();
             ONLINE_PLAYERS.clear();
+            GLOBAL_ONLINE_PLAYERS.clear();
         }
     }
 
@@ -258,6 +271,40 @@ public final class PingRelayClient {
         };
     }
 
+    public static String tabBadgeRoleForRenderedText(String renderedText) {
+        if (renderedText == null || renderedText.isBlank()) return "";
+        String normalizedText = renderedText.toLowerCase(Locale.ROOT);
+        RelayPlayer bestMatch = null;
+        synchronized (LOCK) {
+            for (RelayPlayer player : ONLINE_PLAYERS) {
+                if (containsMinecraftName(normalizedText, player.nameLower())
+                        && (bestMatch == null || player.nameLower().length() > bestMatch.nameLower().length())) {
+                    bestMatch = player;
+                }
+            }
+            for (RelayPlayer player : GLOBAL_ONLINE_PLAYERS) {
+                if (containsMinecraftName(normalizedText, player.nameLower())
+                        && (bestMatch == null
+                        || player.priority() > bestMatch.priority()
+                        || player.nameLower().length() > bestMatch.nameLower().length())) {
+                    bestMatch = player;
+                }
+            }
+        }
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client != null && client.player != null
+                && containsMinecraftName(normalizedText, playerName(client).toLowerCase(Locale.ROOT))) {
+            RelayPlayer localPlayer = findRelayPlayer(playerName(client), playerUuid(client));
+            if (localPlayer != null
+                    && (bestMatch == null || localPlayer.priority() >= bestMatch.priority())) {
+                bestMatch = localPlayer;
+            }
+        }
+
+        return bestMatch == null ? "" : cleanRole(bestMatch.role());
+    }
+
     public static boolean isAdminPlayer(String name, String uuid) {
         RelayPlayer player = findRelayPlayer(name, uuid);
         return player != null && "admin".equals(player.role());
@@ -347,6 +394,7 @@ public final class PingRelayClient {
                     }
 
                     webSocket = socket;
+                    connectedViaFallbackRelay = fallbackAttempt;
                 });
     }
 
@@ -420,6 +468,7 @@ public final class PingRelayClient {
 
             if ("presence".equals(type)) {
                 updatePresence(json);
+                refreshOnlinePlayersFromApi(client);
                 return;
             }
 
@@ -527,8 +576,11 @@ public final class PingRelayClient {
         connecting = false;
         connected = false;
         role = "user";
+        connectedViaFallbackRelay = false;
+        onlinePlayersRefreshInFlight = false;
         synchronized (LOCK) {
             ONLINE_PLAYERS.clear();
+            GLOBAL_ONLINE_PLAYERS.clear();
         }
         if (socket != null) {
             try {
@@ -543,8 +595,11 @@ public final class PingRelayClient {
         connected = false;
         connecting = false;
         role = "user";
+        connectedViaFallbackRelay = false;
+        onlinePlayersRefreshInFlight = false;
         synchronized (LOCK) {
             ONLINE_PLAYERS.clear();
+            GLOBAL_ONLINE_PLAYERS.clear();
         }
         status = newStatus;
         nextReconnectAtMs = System.currentTimeMillis() + RECONNECT_DELAY_MS;
@@ -572,6 +627,72 @@ public final class PingRelayClient {
         JsonArray players = json.has("players") && json.get("players").isJsonArray()
                 ? json.getAsJsonArray("players")
                 : new JsonArray();
+        List<RelayPlayer> nextPlayers = parseRelayPlayers(players);
+        synchronized (LOCK) {
+            ONLINE_PLAYERS.clear();
+            ONLINE_PLAYERS.addAll(nextPlayers);
+        }
+    }
+
+    private static void refreshOnlinePlayersFromApi(MinecraftClient client) {
+        if (!connected || client == null || client.player == null || onlinePlayersRefreshInFlight) return;
+        long now = System.currentTimeMillis();
+        if (now - lastOnlinePlayersRefreshMs < ONLINE_PLAYERS_REFRESH_MS) return;
+        URI uri = playersApiUri();
+        if (uri == null) return;
+        String token = accessToken();
+        if (token.isBlank()) return;
+
+        lastOnlinePlayersRefreshMs = now;
+        onlinePlayersRefreshInFlight = true;
+        HttpRequest request = HttpRequest.newBuilder(uri)
+                .timeout(Duration.ofSeconds(5))
+                .header("X-BetterUC-Token", token)
+                .GET()
+                .build();
+
+        HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .whenComplete((response, error) -> {
+                    onlinePlayersRefreshInFlight = false;
+                    if (error != null || response == null || response.statusCode() != 200) return;
+                    try {
+                        JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+                        JsonArray players = json.has("players") && json.get("players").isJsonArray()
+                                ? json.getAsJsonArray("players")
+                                : new JsonArray();
+                        List<RelayPlayer> nextPlayers = parseRelayPlayers(players);
+                        synchronized (LOCK) {
+                            GLOBAL_ONLINE_PLAYERS.clear();
+                            GLOBAL_ONLINE_PLAYERS.addAll(nextPlayers);
+                        }
+                    } catch (Exception e) {
+                        BetterUCMod.LOGGER.debug("Ignored invalid betterUC online players response");
+                    }
+                });
+    }
+
+    private static URI playersApiUri() {
+        try {
+            String raw = connectedViaFallbackRelay
+                    ? FALLBACK_RELAY_URL
+                    : BetterUCConfig.INSTANCE.pingRelayUrl.trim();
+            if (raw.startsWith("wss://")) raw = "https://" + raw.substring("wss://".length());
+            else if (raw.startsWith("ws://")) raw = "http://" + raw.substring("ws://".length());
+            else if (!raw.startsWith("http://") && !raw.startsWith("https://")) raw = "https://" + raw;
+
+            int queryIndex = raw.indexOf('?');
+            if (queryIndex >= 0) raw = raw.substring(0, queryIndex);
+            raw = raw.replaceFirst("/+$", "");
+            if (raw.endsWith("/ws")) {
+                raw = raw.substring(0, raw.length() - "/ws".length());
+            }
+            return URI.create(raw + "/api/players");
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static List<RelayPlayer> parseRelayPlayers(JsonArray players) {
         List<RelayPlayer> nextPlayers = new ArrayList<>();
         for (JsonElement element : players) {
             if (!element.isJsonObject()) continue;
@@ -585,10 +706,7 @@ public final class PingRelayClient {
                     longValue(player, "priority", 50L)
             ));
         }
-        synchronized (LOCK) {
-            ONLINE_PLAYERS.clear();
-            ONLINE_PLAYERS.addAll(nextPlayers);
-        }
+        return nextPlayers;
     }
 
     private static String channel() {
@@ -631,6 +749,15 @@ public final class PingRelayClient {
                     return player;
                 }
             }
+            for (RelayPlayer player : GLOBAL_ONLINE_PLAYERS) {
+                boolean uuidMatches = !normalizedUuid.isBlank()
+                        && player.uuid() != null
+                        && player.uuid().equalsIgnoreCase(normalizedUuid);
+                boolean nameMatches = !normalizedName.isBlank() && player.nameLower().equals(normalizedName);
+                if (uuidMatches || nameMatches) {
+                    return player;
+                }
+            }
         }
         MinecraftClient client = MinecraftClient.getInstance();
         if (connected && client != null && client.player != null
@@ -638,6 +765,24 @@ public final class PingRelayClient {
             return new RelayPlayer(normalizedName, playerUuid(client), cleanRole(role), priorityForRole(role));
         }
         return null;
+    }
+
+    private static boolean containsMinecraftName(String text, String name) {
+        if (text == null || name == null || text.isBlank() || name.isBlank()) return false;
+        int index = text.indexOf(name);
+        while (index >= 0) {
+            int before = index - 1;
+            int after = index + name.length();
+            boolean cleanStart = before < 0 || !isMinecraftNameChar(text.charAt(before));
+            boolean cleanEnd = after >= text.length() || !isMinecraftNameChar(text.charAt(after));
+            if (cleanStart && cleanEnd) return true;
+            index = text.indexOf(name, index + 1);
+        }
+        return false;
+    }
+
+    private static boolean isMinecraftNameChar(char value) {
+        return value == '_' || (value >= 'a' && value <= 'z') || (value >= '0' && value <= '9');
     }
 
     private static String cleanRole(String value) {

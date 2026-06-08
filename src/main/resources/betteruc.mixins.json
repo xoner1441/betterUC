@@ -7,7 +7,7 @@
     "GameRendererZoomMixin",
     "InGameHudAmmoMixin",
     "PlayerEntityRendererMixin",
-    "PlayerListHudMixin"
+    "TextRendererTabBadgeMixin"
   ],
   "client": [],
   "injectors": {
