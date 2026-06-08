@@ -282,10 +282,19 @@ public final class PingRelayClient {
         if (client == null) return "singleplayer";
         ServerInfo info = client.getCurrentServerEntry();
         if (info != null && info.address != null && !info.address.isBlank()) {
-            return info.address.trim().toLowerCase(Locale.ROOT);
+            return normalizeServerId(info.address);
         }
         if (client.isInSingleplayer()) return "singleplayer";
         return "unknown";
+    }
+
+    private static String normalizeServerId(String address) {
+        String raw = address == null ? "" : address.trim().toLowerCase(Locale.ROOT);
+        if (raw.isBlank()) return "unknown";
+        if (raw.contains("unicacity.eu")) return "unicacity.eu";
+        return raw.replaceFirst("^([a-z]+://)", "")
+                .replaceFirst("/.*$", "")
+                .replaceFirst(":\\d+$", "");
     }
 
     public static String currentDimension(MinecraftClient client) {

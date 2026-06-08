@@ -234,6 +234,18 @@ function cleanSmallLabel(value, fallback = "") {
   return raw.replace(/[^\p{L}\p{N}_ .-]/gu, "").slice(0, 48).trim() || fallback;
 }
 
+function normalizeServerId(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) return "unknown";
+  const withoutScheme = raw.replace(/^[a-z]+:\/\//, "");
+  const hostPart = withoutScheme.split("/")[0];
+  const hostWithoutPort = hostPart.replace(/:\d+$/, "");
+  if (hostWithoutPort === "unicacity.eu" || hostWithoutPort.endsWith(".unicacity.eu")) {
+    return "unicacity.eu";
+  }
+  return cleanSmallLabel(hostPart, "unknown").toLowerCase();
+}
+
 function cleanStatText(value, fallback = "") {
   const raw = String(value || "").trim();
   if (!raw) return fallback;
@@ -1247,7 +1259,7 @@ function safeNumber(value, fallback) {
 function updateClientInfo(client, payload) {
   client.name = cleanMinecraftName(payload.name) || client.name || "unknown";
   client.uuid = cleanSmallLabel(payload.uuid || client.uuid || "", "");
-  client.server = cleanSmallLabel(payload.server || client.server || "unknown", "unknown").toLowerCase();
+  client.server = normalizeServerId(payload.server || client.server || "unknown");
   client.channel = cleanChannel(payload.channel || client.channel || "global");
   if (Object.hasOwn(payload, "faction")) {
     client.faction = cleanSmallLabel(payload.faction || "", "");
@@ -1344,7 +1356,7 @@ function handleWsConnection(ws, req, auth, url) {
     priority: rolePriority(auth.role),
     name: cleanMinecraftName(url.searchParams.get("name")) || auth.account.minecraftName || "unknown",
     uuid: cleanSmallLabel(url.searchParams.get("uuid") || "", ""),
-    server: cleanSmallLabel(url.searchParams.get("server") || "unknown", "unknown").toLowerCase(),
+    server: normalizeServerId(url.searchParams.get("server") || "unknown"),
     channel: cleanChannel(url.searchParams.get("channel") || "global"),
     faction: cleanSmallLabel(url.searchParams.get("faction") || "", ""),
     version: cleanSmallLabel(url.searchParams.get("version") || "", ""),
