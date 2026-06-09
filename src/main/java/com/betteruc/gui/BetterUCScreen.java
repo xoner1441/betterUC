@@ -52,7 +52,7 @@ public class BetterUCScreen extends Screen {
             .map(container -> container.getMetadata().getVersion().getFriendlyString())
             .orElse("dev");
     private static final UpdateSection[] UPDATE_SECTIONS = new UpdateSection[]{
-            new UpdateSection("Neu in 1.1.10", new String[]{
+            new UpdateSection("Neu in 1.2.0", new String[]{
                     "bUC-Tablist-Badge wird jetzt als eigenes Overlay gerendert",
                     "Andere Client-Icons wie Unique, LabyMod oder Badlion bleiben in der Tablist sichtbar",
                     "HUD-Farbverlauf ist jetzt pro HUD einzeln einstellbar",

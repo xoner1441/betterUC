@@ -13,7 +13,7 @@ public class ChangelogScreen extends Screen {
     private static final Page[] PAGES = new Page[]{
             new Page(
                     "Highlights",
-                    "betterUC 1.1.10",
+                    "betterUC 1.2.0",
                     new String[]{
                             "bUC-Tablist-Badge wird als eigenes Overlay hinter den fertigen Namen gezeichnet",
                             "Andere Client-Icons wie Unique, LabyMod oder Badlion bleiben in der Tablist sichtbar",
