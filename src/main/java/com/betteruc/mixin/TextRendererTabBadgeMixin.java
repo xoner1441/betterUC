@@ -2,6 +2,7 @@ package com.betteruc.mixin;
 
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.TabBadgeRenderState;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.ScreenRect;
 import net.minecraft.text.MutableText;
@@ -81,6 +82,7 @@ public abstract class TextRendererTabBadgeMixin {
             boolean shadow
     ) {
         if (betteruc$preparingBadge || !TabBadgeRenderState.isPlayerListRendering()) return;
+        if (!betteruc$isLikelyTabListText(x, y, textWidth)) return;
 
         String role = PingRelayClient.tabBadgeRoleForRenderedText(renderedText);
         if (role.isBlank()) return;
@@ -103,6 +105,28 @@ public abstract class TextRendererTabBadgeMixin {
         } finally {
             betteruc$preparingBadge = false;
         }
+    }
+
+    @Unique
+    private static boolean betteruc$isLikelyTabListText(float x, float y, int textWidth) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.getWindow() == null) {
+            return false;
+        }
+
+        int scaledWidth = client.getWindow().getScaledWidth();
+        int scaledHeight = client.getWindow().getScaledHeight();
+        if (scaledWidth <= 0 || scaledHeight <= 0 || textWidth <= 0) {
+            return false;
+        }
+
+        float minX = Math.max(34.0F, scaledWidth * 0.12F);
+        float maxY = Math.max(96.0F, scaledHeight * 0.62F);
+        return x >= minX
+                && x + textWidth <= scaledWidth - 20.0F
+                && y >= 12.0F
+                && y <= maxY
+                && textWidth <= 180;
     }
 
     @Unique
