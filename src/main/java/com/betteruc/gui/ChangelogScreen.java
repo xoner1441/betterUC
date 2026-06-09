@@ -13,10 +13,12 @@ public class ChangelogScreen extends Screen {
     private static final Page[] PAGES = new Page[]{
             new Page(
                     "Highlights",
-                    "betterUC 1.1.8",
+                    "betterUC 1.1.9",
                     new String[]{
                             "bUC-Tablist-Badge wird als eigenes Overlay hinter den fertigen Namen gezeichnet",
                             "Andere Client-Icons wie Unique, LabyMod oder Badlion bleiben in der Tablist sichtbar",
+                            "HUD-Farbverlauf ist jetzt pro HUD einzeln einstellbar",
+                            "Auto-Updater lädt neue Release-JARs herunter und ersetzt sie nach dem Schließen des Spiels",
                             "Bargeld-HUD erkennt Fraktionsbank-Einzahlungen und -Auszahlungen",
                             "Access-Code und Relay-Felder speichern zuverlaessiger im ClickGUI",
                             "Stats-Filter entfernt Detailzeilen wie Immobilien sauberer",
@@ -44,7 +46,7 @@ public class ChangelogScreen extends Screen {
                             "HUD-Positionen und Größen können in der HUD Vorschau angepasst werden",
                             "Zoom und Auto-Stats Join direkt im Settings-HUD schaltbar",
                             "Build kopiert die Mod-JAR automatisch in den Minecraft-Mods-Ordner",
-                            "Update Notify zeigt neue GitHub-Versionen direkt im Chat",
+                            "Update Notify zeigt neue GitHub-Versionen direkt im Chat und kann Updates automatisch vorbereiten",
                             "Ping Relay sendet private Markierungen an andere betterUC-Nutzer",
                             "Pingrad mit Normal-, Gefahr- und Sammeln-Pings",
                             "Eigene Pingfarben, Ping-Soundauswahl und Cooldown gegen Spam",

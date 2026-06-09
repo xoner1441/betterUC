@@ -227,6 +227,7 @@ public class BetterUCClient implements ClientModInitializer {
             registerModBlCommand(dispatcher, playerSuggestions, modBlReasonSuggestions);
             registerSetRpCommand(dispatcher, playerSuggestions);
             registerUserPanelCommand(dispatcher);
+            registerUpdateCommand(dispatcher);
         });
     }
 
@@ -257,6 +258,14 @@ public class BetterUCClient implements ClientModInitializer {
                             );
                             return 1;
                         })));
+    }
+
+    private void registerUpdateCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
+        dispatcher.register(ClientCommandManager.literal("betterucupdate")
+                .executes(context -> {
+                    VersionChecker.installLatestUpdate(MinecraftClient.getInstance(), true);
+                    return 1;
+                }));
     }
 
     private void registerSetBlacklistCommands(

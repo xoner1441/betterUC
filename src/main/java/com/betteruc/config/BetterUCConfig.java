@@ -256,6 +256,7 @@ public class BetterUCConfig {
     public String pingSoundId = "pling";
     public String lastSeenWelcomeVersion = "";
     public String discordInviteUrl = DEFAULT_DISCORD_INVITE_URL;
+    public boolean autoUpdateEnabled = true;
 
     public static class BlacklistReason {
         public int kills;

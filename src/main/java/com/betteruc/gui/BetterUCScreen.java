@@ -6,6 +6,7 @@ import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.SyncRefreshActions;
 import com.betteruc.client.UserStatsClient;
+import com.betteruc.client.VersionChecker;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.CashHud;
@@ -55,6 +56,7 @@ public class BetterUCScreen extends Screen {
                     "bUC-Tablist-Badge wird jetzt als eigenes Overlay gerendert",
                     "Andere Client-Icons wie Unique, LabyMod oder Badlion bleiben in der Tablist sichtbar",
                     "HUD-Farbverlauf ist jetzt pro HUD einzeln einstellbar",
+                    "Auto-Updater kann neue Release-JARs herunterladen und nach dem Schließen ersetzen",
                     "Bargeld-HUD erkennt Einzahlungen und Auszahlungen an der Fraktionsbank",
                     "Access-Code und Relay-Felder speichern zuverlaessiger beim Wechseln im ClickGUI",
                     "Stats-Filter unterdrueckt Detailzeilen wie Immobilien sauberer",
@@ -96,7 +98,7 @@ public class BetterUCScreen extends Screen {
             new UpdateSection("Komfort", new String[]{
                     "Auto-Stats aktualisiert HUD- und Userpanel-Daten nach Join und AFK",
                     "Stats-Ausgaben werden im Chat möglichst sauber unterdrückt",
-                    "Update Notify prüft GitHub und meldet neue Versionen direkt im Chat",
+                    "Update Notify prüft GitHub und kann neue Versionen automatisch vorbereiten",
                     "Hotkey Commands können im Tools-Bereich frei angelegt werden"
             })
     };
@@ -238,6 +240,9 @@ public class BetterUCScreen extends Screen {
             case COMMANDS -> y = addButton(x, y, controlW, "Command Menu", b -> openScreen(new CommandGui()));
             case DISCORD -> y = addDiscordControls(x, y, controlW);
             case UPDATES -> {
+                y = addToggle(x, y, controlW, "Auto-Updater", BetterUCConfig.INSTANCE.autoUpdateEnabled,
+                        () -> BetterUCConfig.INSTANCE.autoUpdateEnabled = !BetterUCConfig.INSTANCE.autoUpdateEnabled);
+                y = addButton(x, y, controlW, "Update installieren", b -> VersionChecker.installLatestUpdate(client, true));
             }
         }
 
