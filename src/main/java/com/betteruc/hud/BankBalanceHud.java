@@ -74,6 +74,15 @@ public class BankBalanceHud {
         int y = BetterUCConfig.INSTANCE.bankHudY;
         String value = formatMoney(currentBankBalance) + "$";
         String style = BetterUCConfig.INSTANCE.bankHudStyle;
+        String displayText = BetterUCConfig.prefixedHudText(
+                BetterUCConfig.INSTANCE.bankHudPrefixEnabled,
+                BetterUCConfig.INSTANCE.bankHudPrefix,
+                value
+        );
+        String moduleLabel = BetterUCConfig.hudModuleLabel(
+                BetterUCConfig.INSTANCE.bankHudPrefixEnabled,
+                BetterUCConfig.INSTANCE.bankHudPrefix
+        );
         ModernHudRenderer.drawScaledWithGradient(
                 context,
                 x,
@@ -83,16 +92,16 @@ public class BankBalanceHud {
                 BetterUCConfig.INSTANCE.bankHudGradientColor,
                 () -> {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
-                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.bankHudCustomFont, "Bank: " + value, 0, 0, BetterUCConfig.INSTANCE.bankHudColor);
+                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.bankHudCustomFont, displayText, 0, 0, BetterUCConfig.INSTANCE.bankHudColor);
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, "Bank: " + value, 0, 0, BetterUCConfig.INSTANCE.bankHudColor);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, displayText, 0, 0, BetterUCConfig.INSTANCE.bankHudColor);
             } else {
                 ModernHudRenderer.drawModule(
                         context,
                         client,
                         0,
                         0,
-                        "BANK",
+                        moduleLabel,
                         value,
                         BetterUCConfig.INSTANCE.bankHudColor
                 );

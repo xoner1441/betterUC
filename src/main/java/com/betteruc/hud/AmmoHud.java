@@ -94,6 +94,17 @@ public class AmmoHud {
         int y = BetterUCConfig.INSTANCE.ammoHudY;
 
         String style = BetterUCConfig.INSTANCE.ammoHudStyle;
+        String ammoValue = ammoText.getString();
+        String ammoDisplay = BetterUCConfig.prefixedHudText(
+                BetterUCConfig.INSTANCE.ammoHudPrefixEnabled,
+                BetterUCConfig.INSTANCE.ammoHudPrefix,
+                ammoValue
+        );
+        Text ammoDisplayText = Text.literal(ammoDisplay);
+        String moduleLabel = BetterUCConfig.hudModuleLabel(
+                BetterUCConfig.INSTANCE.ammoHudPrefixEnabled,
+                BetterUCConfig.INSTANCE.ammoHudPrefix
+        );
         ModernHudRenderer.drawScaledWithGradient(
                 context,
                 x,
@@ -103,12 +114,12 @@ public class AmmoHud {
                 BetterUCConfig.INSTANCE.ammoHudGradientColor,
                 () -> {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
-                ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.ammoHudCustomFont, ammoText, 0, 0, 0xFFFFAA33);
+                ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.ammoHudCustomFont, ammoDisplayText, 0, 0, 0xFFFFAA33);
                 if (!weaponName.isBlank()) {
                     ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.ammoHudCustomFont, weaponText, 0, 11, 0xFF55FF55);
                 }
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, ammoText, 0, 0, 0xFFFFAA33);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, ammoDisplayText, 0, 0, 0xFFFFAA33);
                 if (!weaponName.isBlank()) {
                     ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, weaponText, 0, 10, 0xFF55FF55);
                 }
@@ -118,8 +129,8 @@ public class AmmoHud {
                         client,
                         0,
                         0,
-                        "AMMO",
-                        ammoText.getString(),
+                        moduleLabel,
+                        ammoValue,
                         weaponText.getString(),
                         0xFFFFAA33,
                         0xFF7CFF8A

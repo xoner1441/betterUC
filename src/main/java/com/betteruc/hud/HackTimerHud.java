@@ -41,7 +41,12 @@ public class HackTimerHud {
         int x = BetterUCConfig.INSTANCE.hackTimerX;
         int y = BetterUCConfig.INSTANCE.hackTimerY;
 
-        Text text = getDisplayText();
+        String timerValue = getTimerValue();
+        Text text = getDisplayText(timerValue);
+        String moduleLabel = BetterUCConfig.hudModuleLabel(
+                BetterUCConfig.INSTANCE.hackTimerHudPrefixEnabled,
+                BetterUCConfig.INSTANCE.hackTimerHudPrefix
+        );
         int accentColor = secondsRemaining <= 15 ? 0xFFFF4D6D : 0xFF60A5FA;
         String style = BetterUCConfig.INSTANCE.hackTimerHudStyle;
         ModernHudRenderer.drawScaledWithGradient(
@@ -62,21 +67,32 @@ public class HackTimerHud {
                         client,
                         0,
                         0,
-                        "HACK",
-                        text.getString().replace("Hack: ", ""),
+                        moduleLabel,
+                        timerValue,
                         accentColor
                 );
             }
         });
     }
 
-    private static Text getDisplayText() {
+    private static String getTimerValue() {
         if (secondsRemaining != cachedSeconds) {
             cachedSeconds = secondsRemaining;
             int minutes = secondsRemaining / 60;
             int seconds = secondsRemaining % 60;
-            cachedTextString = "Hack: " + twoDigits(minutes) + ":" + twoDigits(seconds);
-            cachedText = Text.literal(cachedTextString);
+            cachedTextString = twoDigits(minutes) + ":" + twoDigits(seconds);
+        }
+        return cachedTextString;
+    }
+
+    private static Text getDisplayText(String timerValue) {
+        String display = BetterUCConfig.prefixedHudText(
+                BetterUCConfig.INSTANCE.hackTimerHudPrefixEnabled,
+                BetterUCConfig.INSTANCE.hackTimerHudPrefix,
+                timerValue
+        );
+        if (!display.equals(cachedText.getString())) {
+            cachedText = Text.literal(display);
         }
         return cachedText;
     }

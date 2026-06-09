@@ -213,6 +213,22 @@ public class BetterUCConfig {
     public String plantTimerHudCustomFont = "";
     public String customHudFont = "";
     public String cartoonHudFont = "";
+    public boolean toggleSprintHudPrefixEnabled = true;
+    public boolean fpsHudPrefixEnabled = true;
+    public boolean paydayHudPrefixEnabled = true;
+    public boolean ammoHudPrefixEnabled = true;
+    public boolean bankHudPrefixEnabled = true;
+    public boolean cashHudPrefixEnabled = true;
+    public boolean hackTimerHudPrefixEnabled = true;
+    public boolean plantTimerHudPrefixEnabled = true;
+    public String toggleSprintHudPrefix = "ToggleSprint";
+    public String fpsHudPrefix = "FPS";
+    public String paydayHudPrefix = "Payday";
+    public String ammoHudPrefix = "Ammo";
+    public String bankHudPrefix = "Bank";
+    public String cashHudPrefix = "Bargeld";
+    public String hackTimerHudPrefix = "Hack";
+    public String plantTimerHudPrefix = "Plant";
     public boolean showHealthHud = true;
     public boolean showFpsHud = true;
     public boolean showPaydayHud = true;
@@ -318,6 +334,33 @@ public class BetterUCConfig {
         return Math.max(MIN_HUD_SCALE, Math.min(MAX_HUD_SCALE, scale));
     }
 
+    public static String hudPrefix(String prefix) {
+        if (prefix == null) {
+            return "";
+        }
+        return prefix.trim().replaceAll("\\s+", " ");
+    }
+
+    public static String hudModuleLabel(boolean enabled, String prefix) {
+        if (!enabled) {
+            return "";
+        }
+        return hudPrefix(prefix).toUpperCase(Locale.ROOT);
+    }
+
+    public static String prefixedHudText(boolean enabled, String prefix, String value) {
+        String safeValue = value == null ? "" : value;
+        if (!enabled) {
+            return safeValue;
+        }
+
+        String safePrefix = hudPrefix(prefix);
+        if (safePrefix.isEmpty()) {
+            return safeValue;
+        }
+        return safePrefix + ": " + safeValue;
+    }
+
     private static String normalizeHudStyle(String style, String fallback) {
         String normalized = style == null ? "" : style.trim().toLowerCase(Locale.ROOT);
         if (HUD_STYLE_MODERN.equals(normalized)
@@ -355,6 +398,28 @@ public class BetterUCConfig {
         INSTANCE.hackTimerHudScale = normalizeHudScale(INSTANCE.hackTimerHudScale);
         INSTANCE.plantTimerHudScale = normalizeHudScale(INSTANCE.plantTimerHudScale);
         INSTANCE.pingHudScale = normalizeHudScale(INSTANCE.pingHudScale);
+    }
+
+    private static void sanitizeHudPrefixes() {
+        INSTANCE.toggleSprintHudPrefix = sanitizeHudPrefix(INSTANCE.toggleSprintHudPrefix, "ToggleSprint");
+        INSTANCE.fpsHudPrefix = sanitizeHudPrefix(INSTANCE.fpsHudPrefix, "FPS");
+        INSTANCE.paydayHudPrefix = sanitizeHudPrefix(INSTANCE.paydayHudPrefix, "Payday");
+        INSTANCE.ammoHudPrefix = sanitizeHudPrefix(INSTANCE.ammoHudPrefix, "Ammo");
+        INSTANCE.bankHudPrefix = sanitizeHudPrefix(INSTANCE.bankHudPrefix, "Bank");
+        INSTANCE.cashHudPrefix = sanitizeHudPrefix(INSTANCE.cashHudPrefix, "Bargeld");
+        INSTANCE.hackTimerHudPrefix = sanitizeHudPrefix(INSTANCE.hackTimerHudPrefix, "Hack");
+        INSTANCE.plantTimerHudPrefix = sanitizeHudPrefix(INSTANCE.plantTimerHudPrefix, "Plant");
+    }
+
+    private static String sanitizeHudPrefix(String value, String fallback) {
+        String normalized = hudPrefix(value);
+        if (normalized.isEmpty()) {
+            return fallback;
+        }
+        if (normalized.length() > 24) {
+            return normalized.substring(0, 24).trim();
+        }
+        return normalized;
     }
 
     private static void sanitizeHudGradients() {
@@ -939,6 +1004,7 @@ public class BetterUCConfig {
         ensureRuntimeCollections();
         sanitizeHudStyles();
         sanitizeHudScales();
+        sanitizeHudPrefixes();
         sanitizeHudGradients();
         sanitizePingRelay();
         sanitizeDiscordInvite();
@@ -1003,6 +1069,7 @@ public class BetterUCConfig {
             sanitizeHudGradients();
             sanitizeHudStyles();
             sanitizeHudScales();
+            sanitizeHudPrefixes();
             sanitizePingRelay();
             sanitizeDiscordInvite();
             if (INSTANCE.blReasons == null || INSTANCE.blReasons.isEmpty()) {

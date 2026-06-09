@@ -174,7 +174,8 @@ public final class ModernHudRenderer {
         String safeValue = safe(value);
         int labelWidth = renderer.getWidth(safeLabel);
         int valueWidth = renderer.getWidth(safeValue);
-        int width = Math.max(MIN_MODULE_WIDTH, labelWidth + valueWidth + 28);
+        int gap = safeLabel.isEmpty() ? 0 : 5;
+        int width = Math.max(MIN_MODULE_WIDTH, labelWidth + valueWidth + gap + 23);
         int height = 18;
         boolean rightAligned = isRightAligned(x, width);
 
@@ -182,11 +183,15 @@ public final class ModernHudRenderer {
         if (rightAligned) {
             int rightTextX = x + width - 8;
             int valueX = rightTextX - valueWidth;
-            int labelX = valueX - labelWidth - 5;
-            drawHudTextWithShadow(context, renderer, safeLabel, labelX, y + 5, accentColor);
+            if (!safeLabel.isEmpty()) {
+                int labelX = valueX - labelWidth - gap;
+                drawHudTextWithShadow(context, renderer, safeLabel, labelX, y + 5, accentColor);
+            }
             context.drawTextWithShadow(renderer, Text.literal(safeValue), valueX, y + 5, valueColor);
         } else {
-            drawHudTextWithShadow(context, renderer, safeLabel, x + 8, y + 5, accentColor);
+            if (!safeLabel.isEmpty()) {
+                drawHudTextWithShadow(context, renderer, safeLabel, x + 8, y + 5, accentColor);
+            }
             context.drawTextWithShadow(renderer, Text.literal(safeValue), x + width - valueWidth - 7, y + 5, valueColor);
         }
     }
@@ -219,9 +224,12 @@ public final class ModernHudRenderer {
         String safeLabel = safe(label);
         String safePrimary = safe(primary);
         String safeSecondary = safe(secondary);
+        int labelWidth = renderer.getWidth(safeLabel);
+        int primaryWidth = renderer.getWidth(safePrimary);
+        int labelGap = safeLabel.isEmpty() ? 0 : 5;
         int width = Math.max(MIN_MODULE_WIDTH,
                 Math.max(
-                        renderer.getWidth(safeLabel) + renderer.getWidth(safePrimary) + 28,
+                        labelWidth + primaryWidth + labelGap + 23,
                         renderer.getWidth(safeSecondary) + 16
                 ));
         int height = safeSecondary.isEmpty() ? 20 : 31;
@@ -230,15 +238,18 @@ public final class ModernHudRenderer {
         drawPanel(context, x, y, width, height, accentColor);
         if (rightAligned) {
             int rightTextX = x + width - 8;
-            int primaryWidth = renderer.getWidth(safePrimary);
-            int labelX = rightTextX - primaryWidth - renderer.getWidth(safeLabel) - 5;
-            drawHudTextWithShadow(context, renderer, safeLabel, labelX, y + 5, accentColor);
+            if (!safeLabel.isEmpty()) {
+                int labelX = rightTextX - primaryWidth - labelWidth - labelGap;
+                drawHudTextWithShadow(context, renderer, safeLabel, labelX, y + 5, accentColor);
+            }
             context.drawTextWithShadow(renderer, Text.literal(safePrimary), rightTextX - primaryWidth, y + 5, TEXT_PRIMARY);
             if (!safeSecondary.isEmpty()) {
                 context.drawTextWithShadow(renderer, Text.literal(safeSecondary), rightTextX - renderer.getWidth(safeSecondary), y + 17, secondaryColor);
             }
         } else {
-            drawHudTextWithShadow(context, renderer, safeLabel, x + 8, y + 5, accentColor);
+            if (!safeLabel.isEmpty()) {
+                drawHudTextWithShadow(context, renderer, safeLabel, x + 8, y + 5, accentColor);
+            }
             context.drawTextWithShadow(
                     renderer,
                     Text.literal(safePrimary),
@@ -265,23 +276,29 @@ public final class ModernHudRenderer {
         TextRenderer renderer = client.textRenderer;
         String safeLabel = safe(label);
         String safeValue = safe(value);
-        int width = Math.max(86, renderer.getWidth(safeLabel) + renderer.getWidth(safeValue) + 28);
+        int labelWidth = renderer.getWidth(safeLabel);
+        int valueWidth = renderer.getWidth(safeValue);
+        int gap = safeLabel.isEmpty() ? 0 : 5;
+        int width = Math.max(86, labelWidth + valueWidth + gap + 23);
         int height = 24;
         boolean rightAligned = isRightAligned(x, width);
 
         drawPanel(context, x, y, width, height, accentColor);
         if (rightAligned) {
             int rightTextX = x + width - 8;
-            int valueWidth = renderer.getWidth(safeValue);
-            int labelX = rightTextX - valueWidth - renderer.getWidth(safeLabel) - 5;
-            drawHudTextWithShadow(context, renderer, safeLabel, labelX, y + 5, accentColor);
+            if (!safeLabel.isEmpty()) {
+                int labelX = rightTextX - valueWidth - labelWidth - gap;
+                drawHudTextWithShadow(context, renderer, safeLabel, labelX, y + 5, accentColor);
+            }
             context.drawTextWithShadow(renderer, Text.literal(safeValue), rightTextX - valueWidth, y + 5, TEXT_PRIMARY);
         } else {
-            drawHudTextWithShadow(context, renderer, safeLabel, x + 8, y + 5, accentColor);
+            if (!safeLabel.isEmpty()) {
+                drawHudTextWithShadow(context, renderer, safeLabel, x + 8, y + 5, accentColor);
+            }
             context.drawTextWithShadow(
                     renderer,
                     Text.literal(safeValue),
-                    x + width - renderer.getWidth(safeValue) - 7,
+                    x + width - valueWidth - 7,
                     y + 5,
                     TEXT_PRIMARY
             );

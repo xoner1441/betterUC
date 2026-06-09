@@ -278,7 +278,16 @@ public class PlantageHud {
                 if (!state.isActive(now)) continue;
 
                 int blockHeight = 35;
-                String title = "Plantage " + state.type.label + (state.count > 0 ? " " + state.count + "/10" : "");
+                String plantValue = state.type.label + (state.count > 0 ? " " + state.count + "/10" : "");
+                String title = BetterUCConfig.prefixedHudText(
+                        BetterUCConfig.INSTANCE.plantTimerHudPrefixEnabled,
+                        BetterUCConfig.INSTANCE.plantTimerHudPrefix,
+                        plantValue
+                );
+                String moduleLabel = BetterUCConfig.hudModuleLabel(
+                        BetterUCConfig.INSTANCE.plantTimerHudPrefixEnabled,
+                        BetterUCConfig.INSTANCE.plantTimerHudPrefix
+                );
                 String timers = "Reif: " + formatRemaining(state.plantedAtMs + GROW_DURATION_MS - now)
                         + " | Wasser: " + formatCare(state.nextWaterAtMs - now)
                         + " | D\u00FCnger: " + formatCare(state.nextFertilizeAtMs - now);
@@ -303,8 +312,8 @@ public class PlantageHud {
                         client,
                         0,
                         currentY,
-                        "PLANT",
-                        title,
+                        moduleLabel,
+                        plantValue,
                         timers,
                         state.type.color,
                         0xFFFFD866

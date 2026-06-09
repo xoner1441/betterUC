@@ -24,7 +24,16 @@ public class ToggleSprintHud {
         int x = BetterUCConfig.INSTANCE.toggleSprintHudX;
         int y = BetterUCConfig.INSTANCE.toggleSprintHudY;
         String style = BetterUCConfig.INSTANCE.toggleSprintHudStyle;
-        String text = "ToggleSprint: " + (isOn ? "ON" : "OFF");
+        String value = isOn ? "ON" : "OFF";
+        String text = BetterUCConfig.prefixedHudText(
+                BetterUCConfig.INSTANCE.toggleSprintHudPrefixEnabled,
+                BetterUCConfig.INSTANCE.toggleSprintHudPrefix,
+                value
+        );
+        String moduleLabel = BetterUCConfig.hudModuleLabel(
+                BetterUCConfig.INSTANCE.toggleSprintHudPrefixEnabled,
+                BetterUCConfig.INSTANCE.toggleSprintHudPrefix
+        );
         ModernHudRenderer.drawScaledWithGradient(
                 context,
                 x,
@@ -43,8 +52,8 @@ public class ToggleSprintHud {
                         client,
                         0,
                         0,
-                        "SPRINT",
-                        isOn ? "ON" : "OFF",
+                        moduleLabel,
+                        value,
                         color,
                         isOn ? ModernHudRenderer.TEXT_PRIMARY : ModernHudRenderer.TEXT_DIM
                 );

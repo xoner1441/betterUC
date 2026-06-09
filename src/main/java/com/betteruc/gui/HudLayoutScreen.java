@@ -318,19 +318,19 @@ public class HudLayoutScreen extends Screen {
                 int textWidth = renderer.getWidth("10");
                 yield BetterUCConfig.isModernHudStyle(style) ? Math.max(34, textWidth + 27) : 9 + 4 + textWidth;
             }
-            case FPS -> singleLineWidth("FPS", "144", "FPS: 144", BetterUCConfig.INSTANCE.fpsHudStyle);
+            case FPS -> singleLineWidth(hudLabel(module), "144", prefixedText(module, "144"), BetterUCConfig.INSTANCE.fpsHudStyle);
             case PAYDAY -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.paydayHudStyle)
-                    ? Math.max(86, renderer.getWidth("PAYDAY") + renderer.getWidth("25/60 min") + 28)
-                    : renderer.getWidth("Payday: 25/60 Minuten") + 4;
-            case AMMO -> twoLineWidth("AMMO", "20/96", "TS19", BetterUCConfig.INSTANCE.ammoHudStyle);
-            case BANK -> singleLineWidth("BANK", "88.375$", "Bank: 88.375$", BetterUCConfig.INSTANCE.bankHudStyle);
-            case CASH -> singleLineWidth("BARGELD", previewCashValue(), "Bargeld: " + previewCashValue(), BetterUCConfig.INSTANCE.cashHudStyle);
+                    ? progressWidth(hudLabel(module), "25/60 min")
+                    : renderer.getWidth(prefixedText(module, "25/60 Minuten")) + 4;
+            case AMMO -> twoLineWidth(hudLabel(module), prefixedText(module, "20/96"), "TS19", BetterUCConfig.INSTANCE.ammoHudStyle);
+            case BANK -> singleLineWidth(hudLabel(module), "88.375$", prefixedText(module, "88.375$"), BetterUCConfig.INSTANCE.bankHudStyle);
+            case CASH -> singleLineWidth(hudLabel(module), previewCashValue(), prefixedText(module, previewCashValue()), BetterUCConfig.INSTANCE.cashHudStyle);
             case POTION -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.potionHudStyle)
                     ? 120
                     : Math.max(renderer.getWidth("Stärke II"), renderer.getWidth("Speed")) + 4;
-            case SPRINT -> singleLineWidth("SPRINT", "ON", "ToggleSprint: ON", BetterUCConfig.INSTANCE.toggleSprintHudStyle);
-            case HACK_TIMER -> singleLineWidth("HACK", "02:39", "Hack: 02:39", BetterUCConfig.INSTANCE.hackTimerHudStyle);
-            case PLANT_TIMER -> twoLineWidth("PLANT", "Plantage Pulver 7/10", "Reif: 1:30:00 | Wasser: 20:00", BetterUCConfig.INSTANCE.plantTimerHudStyle);
+            case SPRINT -> singleLineWidth(hudLabel(module), "ON", prefixedText(module, "ON"), BetterUCConfig.INSTANCE.toggleSprintHudStyle);
+            case HACK_TIMER -> singleLineWidth(hudLabel(module), "02:39", prefixedText(module, "02:39"), BetterUCConfig.INSTANCE.hackTimerHudStyle);
+            case PLANT_TIMER -> twoLineWidth(hudLabel(module), prefixedText(module, "Plantage Pulver 7/10"), "Reif: 1:30:00 | Wasser: 20:00", BetterUCConfig.INSTANCE.plantTimerHudStyle);
         };
     }
 
@@ -347,20 +347,28 @@ public class HudLayoutScreen extends Screen {
 
     private int singleLineWidth(String label, String value, String text, String style) {
         if (BetterUCConfig.isModernHudStyle(style)) {
-            return Math.max(58, textRenderer.getWidth(label) + textRenderer.getWidth(value) + 28);
+            int labelGap = label.isBlank() ? 0 : 5;
+            return Math.max(58, textRenderer.getWidth(label) + textRenderer.getWidth(value) + labelGap + 23);
         }
         return textRenderer.getWidth(text) + 4;
     }
 
     private int twoLineWidth(String label, String primary, String secondary, String style) {
         if (BetterUCConfig.isModernHudStyle(style)) {
+            String modernPrimary = stripPrefixValue(label, primary);
+            int labelGap = label.isBlank() ? 0 : 5;
             return Math.max(58,
                     Math.max(
-                            textRenderer.getWidth(label) + textRenderer.getWidth(primary) + 28,
+                            textRenderer.getWidth(label) + textRenderer.getWidth(modernPrimary) + labelGap + 23,
                             textRenderer.getWidth(secondary) + 16
                     ));
         }
         return Math.max(textRenderer.getWidth(primary), textRenderer.getWidth(secondary)) + 4;
+    }
+
+    private int progressWidth(String label, String value) {
+        int labelGap = label.isBlank() ? 0 : 5;
+        return Math.max(86, textRenderer.getWidth(label) + textRenderer.getWidth(value) + labelGap + 23);
     }
 
     private void renderHudModule(DrawContext context, HudModule module, int x, int y) {
@@ -400,19 +408,19 @@ public class HudLayoutScreen extends Screen {
                     ModernHudRenderer.drawHudTextWithShadow(context, minecraft.textRenderer, health, x + 11, y, textColor);
                 }
             }
-            case FPS -> renderSingleLine(context, minecraft, style, font, x, y, "FPS", "144", "FPS: 144", BetterUCConfig.INSTANCE.fpsHudColor);
+            case FPS -> renderSingleLine(context, minecraft, style, font, x, y, hudLabel(module), "144", prefixedText(module, "144"), BetterUCConfig.INSTANCE.fpsHudColor);
             case PAYDAY -> {
                 if (modernStyle) {
-                    ModernHudRenderer.drawProgressModule(context, minecraft, x, y, "PAYDAY", "25/60 min", 25.0F / 60.0F, BetterUCConfig.INSTANCE.paydayHudColor);
+                    ModernHudRenderer.drawProgressModule(context, minecraft, x, y, hudLabel(module), "25/60 min", 25.0F / 60.0F, BetterUCConfig.INSTANCE.paydayHudColor);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Payday: 25/60 Minuten", x, y, BetterUCConfig.INSTANCE.paydayHudColor);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, prefixedText(module, "25/60 Minuten"), x, y, BetterUCConfig.INSTANCE.paydayHudColor);
                 } else {
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "Payday: 25/60 Minuten", x, y, BetterUCConfig.INSTANCE.paydayHudColor);
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, prefixedText(module, "25/60 Minuten"), x, y, BetterUCConfig.INSTANCE.paydayHudColor);
                 }
             }
-            case AMMO -> renderTwoLine(context, minecraft, style, font, x, y, "AMMO", "20/96", "TS19", 0xFFFFAA33, 0xFF55FF55);
-            case BANK -> renderSingleLine(context, minecraft, style, font, x, y, "BANK", "88.375$", "Bank: 88.375$", BetterUCConfig.INSTANCE.bankHudColor);
-            case CASH -> renderSingleLine(context, minecraft, style, font, x, y, "BARGELD", previewCashValue(), "Bargeld: " + previewCashValue(), BetterUCConfig.INSTANCE.cashHudColor);
+            case AMMO -> renderTwoLine(context, minecraft, style, font, x, y, hudLabel(module), prefixedText(module, "20/96"), "TS19", 0xFFFFAA33, 0xFF55FF55);
+            case BANK -> renderSingleLine(context, minecraft, style, font, x, y, hudLabel(module), "88.375$", prefixedText(module, "88.375$"), BetterUCConfig.INSTANCE.bankHudColor);
+            case CASH -> renderSingleLine(context, minecraft, style, font, x, y, hudLabel(module), previewCashValue(), prefixedText(module, previewCashValue()), BetterUCConfig.INSTANCE.cashHudColor);
             case POTION -> {
                 if (modernStyle) {
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, x, y, "EFFECT", "Stärke II", "1:26", 0xFF9328FF);
@@ -429,9 +437,9 @@ public class HudLayoutScreen extends Screen {
                     ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "0:49", x, y + 34, ModernHudRenderer.TEXT_DIM);
                 }
             }
-            case SPRINT -> renderSingleLine(context, minecraft, style, font, x, y, "SPRINT", "ON", "ToggleSprint: ON", BetterUCConfig.INSTANCE.toggleSprintHudColor);
-            case HACK_TIMER -> renderSingleLine(context, minecraft, style, font, x, y, "HACK", "02:39", "Hack: 02:39", 0xFF60A5FA);
-            case PLANT_TIMER -> renderTwoLine(context, minecraft, style, font, x, y, "PLANT", "Plantage Pulver 7/10", "Reif: 1:30:00 | Wasser: 20:00", 0xFF6CF27D, 0xFFFFD866);
+            case SPRINT -> renderSingleLine(context, minecraft, style, font, x, y, hudLabel(module), "ON", prefixedText(module, "ON"), BetterUCConfig.INSTANCE.toggleSprintHudColor);
+            case HACK_TIMER -> renderSingleLine(context, minecraft, style, font, x, y, hudLabel(module), "02:39", prefixedText(module, "02:39"), 0xFF60A5FA);
+            case PLANT_TIMER -> renderTwoLine(context, minecraft, style, font, x, y, hudLabel(module), prefixedText(module, "Plantage Pulver 7/10"), "Reif: 1:30:00 | Wasser: 20:00", 0xFF6CF27D, 0xFFFFD866);
             }
         });
     }
@@ -471,7 +479,7 @@ public class HudLayoutScreen extends Screen {
             int secondaryColor
     ) {
         if (BetterUCConfig.isModernHudStyle(style)) {
-            ModernHudRenderer.drawTwoLineModule(context, minecraft, x, y, label, primary, secondary, primaryColor, secondaryColor);
+            ModernHudRenderer.drawTwoLineModule(context, minecraft, x, y, label, stripPrefixValue(label, primary), secondary, primaryColor, secondaryColor);
         } else if (BetterUCConfig.isStylizedHudStyle(style)) {
             ModernHudRenderer.drawStyledText(context, minecraft, style, font, primary, x, y, primaryColor);
             ModernHudRenderer.drawStyledText(context, minecraft, style, font, secondary, x, y + 11, secondaryColor);
@@ -544,6 +552,45 @@ public class HudLayoutScreen extends Screen {
     private String previewCashValue() {
         int live = CashHud.getCurrentCash();
         return live >= 0 ? CashHud.formatMoney(live) + "$" : CashHud.formatMoney(1278) + "$";
+    }
+
+    private String hudLabel(HudModule module) {
+        return switch (module) {
+            case FPS -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.fpsHudPrefixEnabled, BetterUCConfig.INSTANCE.fpsHudPrefix);
+            case PAYDAY -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.paydayHudPrefixEnabled, BetterUCConfig.INSTANCE.paydayHudPrefix);
+            case AMMO -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.ammoHudPrefixEnabled, BetterUCConfig.INSTANCE.ammoHudPrefix);
+            case BANK -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.bankHudPrefixEnabled, BetterUCConfig.INSTANCE.bankHudPrefix);
+            case CASH -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.cashHudPrefixEnabled, BetterUCConfig.INSTANCE.cashHudPrefix);
+            case SPRINT -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.toggleSprintHudPrefixEnabled, BetterUCConfig.INSTANCE.toggleSprintHudPrefix);
+            case HACK_TIMER -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.hackTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.hackTimerHudPrefix);
+            case PLANT_TIMER -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.plantTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.plantTimerHudPrefix);
+            default -> "";
+        };
+    }
+
+    private String prefixedText(HudModule module, String value) {
+        return switch (module) {
+            case FPS -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.fpsHudPrefixEnabled, BetterUCConfig.INSTANCE.fpsHudPrefix, value);
+            case PAYDAY -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.paydayHudPrefixEnabled, BetterUCConfig.INSTANCE.paydayHudPrefix, value);
+            case AMMO -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.ammoHudPrefixEnabled, BetterUCConfig.INSTANCE.ammoHudPrefix, value);
+            case BANK -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.bankHudPrefixEnabled, BetterUCConfig.INSTANCE.bankHudPrefix, value);
+            case CASH -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.cashHudPrefixEnabled, BetterUCConfig.INSTANCE.cashHudPrefix, value);
+            case SPRINT -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.toggleSprintHudPrefixEnabled, BetterUCConfig.INSTANCE.toggleSprintHudPrefix, value);
+            case HACK_TIMER -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.hackTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.hackTimerHudPrefix, value);
+            case PLANT_TIMER -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.plantTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.plantTimerHudPrefix, value);
+            default -> value;
+        };
+    }
+
+    private String stripPrefixValue(String label, String text) {
+        if (label.isBlank()) {
+            return text;
+        }
+        int separator = text.indexOf(':');
+        if (separator < 0 || separator + 1 >= text.length()) {
+            return text;
+        }
+        return text.substring(separator + 1).trim();
     }
 
     private void resizeSelectedModule(double mouseX, double mouseY) {

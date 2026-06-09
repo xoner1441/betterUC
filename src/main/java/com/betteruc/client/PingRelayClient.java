@@ -273,17 +273,17 @@ public final class PingRelayClient {
 
     public static String tabBadgeRoleForRenderedText(String renderedText) {
         if (renderedText == null || renderedText.isBlank()) return "";
-        String normalizedText = renderedText.toLowerCase(Locale.ROOT);
+        String normalizedText = renderedText.toLowerCase(Locale.ROOT).trim();
         RelayPlayer bestMatch = null;
         synchronized (LOCK) {
             for (RelayPlayer player : ONLINE_PLAYERS) {
-                if (containsMinecraftName(normalizedText, player.nameLower())
+                if (looksLikeTabListName(normalizedText, player.nameLower())
                         && (bestMatch == null || player.nameLower().length() > bestMatch.nameLower().length())) {
                     bestMatch = player;
                 }
             }
             for (RelayPlayer player : GLOBAL_ONLINE_PLAYERS) {
-                if (containsMinecraftName(normalizedText, player.nameLower())
+                if (looksLikeTabListName(normalizedText, player.nameLower())
                         && (bestMatch == null
                         || player.priority() > bestMatch.priority()
                         || player.nameLower().length() > bestMatch.nameLower().length())) {
@@ -294,7 +294,7 @@ public final class PingRelayClient {
 
         MinecraftClient client = MinecraftClient.getInstance();
         if (client != null && client.player != null
-                && containsMinecraftName(normalizedText, playerName(client).toLowerCase(Locale.ROOT))) {
+                && looksLikeTabListName(normalizedText, playerName(client).toLowerCase(Locale.ROOT))) {
             RelayPlayer localPlayer = findRelayPlayer(playerName(client), playerUuid(client));
             if (localPlayer != null
                     && (bestMatch == null || localPlayer.priority() >= bestMatch.priority())) {
@@ -303,6 +303,34 @@ public final class PingRelayClient {
         }
 
         return bestMatch == null ? "" : cleanRole(bestMatch.role());
+    }
+
+    private static boolean looksLikeTabListName(String renderedText, String playerNameLower) {
+        if (renderedText == null || playerNameLower == null || renderedText.isBlank() || playerNameLower.isBlank()) {
+            return false;
+        }
+        if (!containsMinecraftName(renderedText, playerNameLower)) {
+            return false;
+        }
+
+        int index = renderedText.indexOf(playerNameLower);
+        if (index < 0) {
+            return false;
+        }
+
+        String before = renderedText.substring(0, index);
+        String after = renderedText.substring(index + playerNameLower.length());
+
+        // Tablist rows may contain short client icons/prefixes, but chat lines contain
+        // message text around the name. Keep this strict so the bUC badge cannot leak
+        // into chat or scoreboard text when another mod changes render order.
+        return before.length() <= 8
+                && after.length() <= 4
+                && !after.contains(":")
+                && !after.contains(">")
+                && !after.contains("»")
+                && !after.contains(" sagt")
+                && !after.contains(" ");
     }
 
     public static boolean isAdminPlayer(String name, String uuid) {

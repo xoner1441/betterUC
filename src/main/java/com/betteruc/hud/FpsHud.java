@@ -26,6 +26,16 @@ public class FpsHud {
         int y = BetterUCConfig.INSTANCE.fpsHudY;
         int fps = Math.max(0, currentFps);
         String style = BetterUCConfig.INSTANCE.fpsHudStyle;
+        String value = String.valueOf(fps);
+        String displayText = BetterUCConfig.prefixedHudText(
+                BetterUCConfig.INSTANCE.fpsHudPrefixEnabled,
+                BetterUCConfig.INSTANCE.fpsHudPrefix,
+                value
+        );
+        String moduleLabel = BetterUCConfig.hudModuleLabel(
+                BetterUCConfig.INSTANCE.fpsHudPrefixEnabled,
+                BetterUCConfig.INSTANCE.fpsHudPrefix
+        );
         ModernHudRenderer.drawScaledWithGradient(
                 context,
                 x,
@@ -35,17 +45,17 @@ public class FpsHud {
                 BetterUCConfig.INSTANCE.fpsHudGradientColor,
                 () -> {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
-                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.fpsHudCustomFont, "FPS: " + fps, 0, 0, BetterUCConfig.INSTANCE.fpsHudColor);
+                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.fpsHudCustomFont, displayText, 0, 0, BetterUCConfig.INSTANCE.fpsHudColor);
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, "FPS: " + fps, 0, 0, BetterUCConfig.INSTANCE.fpsHudColor);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, displayText, 0, 0, BetterUCConfig.INSTANCE.fpsHudColor);
             } else {
                 ModernHudRenderer.drawModule(
                         context,
                         client,
                         0,
                         0,
-                        "FPS",
-                        String.valueOf(fps),
+                        moduleLabel,
+                        value,
                         BetterUCConfig.INSTANCE.fpsHudColor
                 );
             }

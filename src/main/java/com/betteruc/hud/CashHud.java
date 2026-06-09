@@ -33,6 +33,12 @@ public class CashHud {
     private static final Pattern FACTION_BANK_WITHDRAW_PATTERN = Pattern.compile(
             "(?i)\\[\\s*F-?Bank\\s*]\\s+(.+?)\\s+hat\\s+([0-9][0-9\\.]*)\\s*\\$\\s+aus\\s+der\\s+Fraktionsbank\\s+genommen\\b"
     );
+    private static final Pattern PLAYER_MONEY_SENT_PATTERN = Pattern.compile(
+            "(?i)\\bdu\\s+hast\\s+(.+?)\\s+([0-9][0-9\\.]*)\\s*\\$\\s+gegeben\\s*!?"
+    );
+    private static final Pattern PLAYER_MONEY_RECEIVED_PATTERN = Pattern.compile(
+            "(?i)\\b(.+?)\\s+hat\\s+dir\\s+([0-9][0-9\\.]*)\\s*\\$\\s+gegeben\\s*!?"
+    );
     private static final Pattern CASH_SIGNED_DELTA_PATTERN = Pattern.compile(
             "^\\s*([+-])\\s*([0-9][0-9\\.]*)\\s*\\$\\s*$"
     );
@@ -61,6 +67,24 @@ public class CashHud {
         Matcher factionWithdrawMatcher = FACTION_BANK_WITHDRAW_PATTERN.matcher(raw);
         if (factionWithdrawMatcher.find() && isCurrentPlayer(factionWithdrawMatcher.group(1))) {
             Integer parsed = parseMoneyValue(factionWithdrawMatcher.group(2));
+            if (parsed != null) {
+                addCashAndPersist(parsed);
+            }
+            return;
+        }
+
+        Matcher moneySentMatcher = PLAYER_MONEY_SENT_PATTERN.matcher(raw);
+        if (moneySentMatcher.find()) {
+            Integer parsed = parseMoneyValue(moneySentMatcher.group(2));
+            if (parsed != null) {
+                subtractCashAndPersist(parsed);
+            }
+            return;
+        }
+
+        Matcher moneyReceivedMatcher = PLAYER_MONEY_RECEIVED_PATTERN.matcher(raw);
+        if (moneyReceivedMatcher.find()) {
+            Integer parsed = parseMoneyValue(moneyReceivedMatcher.group(2));
             if (parsed != null) {
                 addCashAndPersist(parsed);
             }
@@ -143,6 +167,15 @@ public class CashHud {
         int y = BetterUCConfig.INSTANCE.cashHudY;
         String value = formatMoney(currentCash) + "$";
         String style = BetterUCConfig.INSTANCE.cashHudStyle;
+        String displayText = BetterUCConfig.prefixedHudText(
+                BetterUCConfig.INSTANCE.cashHudPrefixEnabled,
+                BetterUCConfig.INSTANCE.cashHudPrefix,
+                value
+        );
+        String moduleLabel = BetterUCConfig.hudModuleLabel(
+                BetterUCConfig.INSTANCE.cashHudPrefixEnabled,
+                BetterUCConfig.INSTANCE.cashHudPrefix
+        );
 
         ModernHudRenderer.drawScaledWithGradient(
                 context,
@@ -153,16 +186,16 @@ public class CashHud {
                 BetterUCConfig.INSTANCE.cashHudGradientColor,
                 () -> {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
-                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.cashHudCustomFont, "Bargeld: " + value, 0, 0, BetterUCConfig.INSTANCE.cashHudColor);
+                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.cashHudCustomFont, displayText, 0, 0, BetterUCConfig.INSTANCE.cashHudColor);
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, "Bargeld: " + value, 0, 0, BetterUCConfig.INSTANCE.cashHudColor);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, displayText, 0, 0, BetterUCConfig.INSTANCE.cashHudColor);
             } else {
                 ModernHudRenderer.drawModule(
                         context,
                         client,
                         0,
                         0,
-                        "BARGELD",
+                        moduleLabel,
                         value,
                         BetterUCConfig.INSTANCE.cashHudColor
                 );

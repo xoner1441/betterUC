@@ -66,11 +66,23 @@ public class PaydayHud {
         float progress = totalMinutes <= 0 ? 0.0F : currentMinutes / (float) totalMinutes;
         String value = currentMinutes + "/" + totalMinutes + " min";
         String style = BetterUCConfig.INSTANCE.paydayHudStyle;
-        String text = "Payday: " + currentMinutes + "/" + totalMinutes + " Minuten";
+        String fullValue = currentMinutes + "/" + totalMinutes + " Minuten";
+        String text = BetterUCConfig.prefixedHudText(
+                BetterUCConfig.INSTANCE.paydayHudPrefixEnabled,
+                BetterUCConfig.INSTANCE.paydayHudPrefix,
+                fullValue
+        );
         if (pausedByAfk) {
             text += " (AFK)";
         }
         String displayText = text;
+        String baseModuleLabel = BetterUCConfig.hudModuleLabel(
+                BetterUCConfig.INSTANCE.paydayHudPrefixEnabled,
+                BetterUCConfig.INSTANCE.paydayHudPrefix
+        );
+        String moduleLabel = pausedByAfk && !baseModuleLabel.isBlank()
+                ? baseModuleLabel + " AFK"
+                : baseModuleLabel;
         ModernHudRenderer.drawScaledWithGradient(
                 context,
                 x,
@@ -89,7 +101,7 @@ public class PaydayHud {
                         client,
                         0,
                         0,
-                        pausedByAfk ? "PAYDAY AFK" : "PAYDAY",
+                        moduleLabel,
                         value,
                         progress,
                         BetterUCConfig.INSTANCE.paydayHudColor

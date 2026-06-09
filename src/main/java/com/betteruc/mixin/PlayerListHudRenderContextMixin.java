@@ -28,7 +28,7 @@ public abstract class PlayerListHudRenderContextMixin {
 
     @Inject(
             method = "render(Lnet/minecraft/client/gui/DrawContext;ILnet/minecraft/scoreboard/Scoreboard;Lnet/minecraft/scoreboard/ScoreboardObjective;)V",
-            at = @At("TAIL")
+            at = @At("RETURN")
     )
     private void betteruc$endPlayerListRender(
             DrawContext context,
