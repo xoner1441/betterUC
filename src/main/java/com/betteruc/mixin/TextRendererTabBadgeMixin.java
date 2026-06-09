@@ -1,7 +1,7 @@
 package com.betteruc.mixin;
 
 import com.betteruc.client.PingRelayClient;
-import net.minecraft.client.MinecraftClient;
+import com.betteruc.client.TabBadgeRenderState;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.ScreenRect;
 import net.minecraft.text.MutableText;
@@ -11,7 +11,6 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -81,7 +80,7 @@ public abstract class TextRendererTabBadgeMixin {
             float y,
             boolean shadow
     ) {
-        if (betteruc$preparingBadge || !betteruc$isPlayerListOpen()) return;
+        if (betteruc$preparingBadge || !TabBadgeRenderState.isPlayerListRendering()) return;
 
         String role = PingRelayClient.tabBadgeRoleForRenderedText(renderedText);
         if (role.isBlank()) return;
@@ -104,20 +103,6 @@ public abstract class TextRendererTabBadgeMixin {
         } finally {
             betteruc$preparingBadge = false;
         }
-    }
-
-    @Unique
-    private static boolean betteruc$isPlayerListOpen() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client == null
-                || client.player == null
-                || client.currentScreen != null
-                || client.options == null
-                || client.getWindow() == null) {
-            return false;
-        }
-        return client.options.playerListKey.isPressed()
-                || GLFW.glfwGetKey(client.getWindow().getHandle(), GLFW.GLFW_KEY_TAB) == GLFW.GLFW_PRESS;
     }
 
     @Unique

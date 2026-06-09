@@ -51,9 +51,10 @@ public class BetterUCScreen extends Screen {
             .map(container -> container.getMetadata().getVersion().getFriendlyString())
             .orElse("dev");
     private static final UpdateSection[] UPDATE_SECTIONS = new UpdateSection[]{
-            new UpdateSection("Neu in 1.1.8", new String[]{
+            new UpdateSection("Neu in 1.1.9", new String[]{
                     "bUC-Tablist-Badge wird jetzt als eigenes Overlay gerendert",
                     "Andere Client-Icons wie Unique, LabyMod oder Badlion bleiben in der Tablist sichtbar",
+                    "HUD-Farbverlauf ist jetzt pro HUD einzeln einstellbar",
                     "Bargeld-HUD erkennt Einzahlungen und Auszahlungen an der Fraktionsbank",
                     "Access-Code und Relay-Felder speichern zuverlaessiger beim Wechseln im ClickGUI",
                     "Stats-Filter unterdrueckt Detailzeilen wie Immobilien sauberer",
@@ -148,6 +149,9 @@ public class BetterUCScreen extends Screen {
                 y = addCustomFontControls(x, y, controlW, selectedModule);
             }
         }
+        if (selectedModule.category == Category.HUD) {
+            y = addHudGradientControls(x, y, controlW, selectedModule);
+        }
 
         switch (selectedModule) {
             case HEALTH -> {
@@ -217,7 +221,11 @@ public class BetterUCScreen extends Screen {
                         () -> BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled = !BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
                 y = addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(client, true));
             }
-            case CHAT -> y = addTimestampField(x, y, controlW);
+            case CHAT -> {
+                y = addToggle(x, y, controlW, "Chat-Zeit", BetterUCConfig.INSTANCE.chatTimestampsEnabled,
+                        () -> BetterUCConfig.INSTANCE.chatTimestampsEnabled = !BetterUCConfig.INSTANCE.chatTimestampsEnabled);
+                y = addTimestampField(x, y, controlW);
+            }
             case CONNECTION -> y = addConnectionControls(x, y, controlW);
             case BLACKLIST -> {
                 y = addButton(x, y, controlW, "Blacklist Gründe", b -> openScreen(new BlacklistConfigScreen(this)));
@@ -376,6 +384,16 @@ public class BetterUCScreen extends Screen {
                 color,
                 target
         )));
+    }
+
+    private int addHudGradientControls(int x, int y, int width, ModuleOption module) {
+        y = addToggle(x, y, width, "Farbverlauf", getHudGradientEnabled(module),
+                () -> setHudGradientEnabled(module, !getHudGradientEnabled(module)));
+        if (getHudGradientEnabled(module)) {
+            y = addColorButton(x, y, width, "Gradient Farbe", getHudGradientColor(module),
+                    color -> setHudGradientColor(module, color));
+        }
+        return y;
     }
 
     private int addIntSlider(int x, int y, int width, String label, int current, int max, IntConsumer setter) {
@@ -669,6 +687,7 @@ public class BetterUCScreen extends Screen {
         String font = getHudFont(selectedModule);
         boolean modernStyle = BetterUCConfig.isModernHudStyle(style);
         boolean stylizedStyle = BetterUCConfig.isStylizedHudStyle(style);
+        ModernHudRenderer.withHudGradient(getHudGradientEnabled(selectedModule), getHudGradientColor(selectedModule), () -> {
         switch (selectedModule) {
             case HEALTH -> {
                 if (modernStyle) {
@@ -682,8 +701,8 @@ public class BetterUCScreen extends Screen {
                             9,
                             BetterUCConfig.INSTANCE.healthHudHeartColor
                     );
-                    context.drawText(textRenderer, Text.literal("10"), previewX + 19, previewY + 4,
-                            BetterUCConfig.INSTANCE.healthHudTextColor, true);
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "10", previewX + 19, previewY + 4,
+                            BetterUCConfig.INSTANCE.healthHudTextColor);
                     return;
                 }
                 context.drawGuiTexture(
@@ -700,8 +719,8 @@ public class BetterUCScreen extends Screen {
                             BetterUCConfig.INSTANCE.healthHudTextColor);
                     return;
                 }
-                context.drawText(textRenderer, Text.literal("10"), previewX + 11, previewY,
-                        BetterUCConfig.INSTANCE.healthHudTextColor, true);
+                ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "10", previewX + 11, previewY,
+                        BetterUCConfig.INSTANCE.healthHudTextColor);
             }
             case FPS -> {
                 if (modernStyle) {
@@ -711,7 +730,7 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "FPS: 144", previewX, previewY,
                             BetterUCConfig.INSTANCE.fpsHudColor);
                 } else {
-                    context.drawTextWithShadow(textRenderer, Text.literal("FPS: 144"), previewX, previewY,
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "FPS: 144", previewX, previewY,
                             BetterUCConfig.INSTANCE.fpsHudColor);
                 }
             }
@@ -723,7 +742,7 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Payday: 25/60 Minuten", previewX, previewY,
                             BetterUCConfig.INSTANCE.paydayHudColor);
                 } else {
-                    context.drawTextWithShadow(textRenderer, Text.literal("Payday: 25/60 Minuten"), previewX, previewY,
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "Payday: 25/60 Minuten", previewX, previewY,
                             BetterUCConfig.INSTANCE.paydayHudColor);
                 }
             }
@@ -735,8 +754,8 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "20/96", previewX, previewY, 0xFFFFAA33);
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "TS19", previewX, previewY + 11, 0xFF55FF55);
                 } else {
-                    context.drawTextWithShadow(textRenderer, Text.literal("20/96"), previewX, previewY, 0xFFFFAA33);
-                    context.drawTextWithShadow(textRenderer, Text.literal("TS19"), previewX, previewY + 10, 0xFF55FF55);
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "20/96", previewX, previewY, 0xFFFFAA33);
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "TS19", previewX, previewY + 10, 0xFF55FF55);
                 }
             }
             case BANK -> {
@@ -747,7 +766,7 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Bank: " + previewBankValue(), previewX, previewY,
                             BetterUCConfig.INSTANCE.bankHudColor);
                 } else {
-                    context.drawTextWithShadow(textRenderer, Text.literal("Bank: " + previewBankValue()), previewX, previewY,
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "Bank: " + previewBankValue(), previewX, previewY,
                             BetterUCConfig.INSTANCE.bankHudColor);
                 }
             }
@@ -759,7 +778,7 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Bargeld: " + previewCashValue(), previewX, previewY,
                             BetterUCConfig.INSTANCE.cashHudColor);
                 } else {
-                    context.drawTextWithShadow(textRenderer, Text.literal("Bargeld: " + previewCashValue()), previewX, previewY,
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "Bargeld: " + previewCashValue(), previewX, previewY,
                             BetterUCConfig.INSTANCE.cashHudColor);
                 }
             }
@@ -775,10 +794,10 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Speed", previewX, previewY + 25, 0xFF7CAFC6);
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "0:49", previewX, previewY + 36, TEXT_MUTED);
                 } else {
-                    context.drawTextWithShadow(textRenderer, Text.literal("Stärke II"), previewX, previewY, 0xFF9328FF);
-                    context.drawTextWithShadow(textRenderer, Text.literal("1:26"), previewX, previewY + 10, TEXT_MUTED);
-                    context.drawTextWithShadow(textRenderer, Text.literal("Speed"), previewX, previewY + 24, 0xFF7CAFC6);
-                    context.drawTextWithShadow(textRenderer, Text.literal("0:49"), previewX, previewY + 34, TEXT_MUTED);
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "Stärke II", previewX, previewY, 0xFF9328FF);
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "1:26", previewX, previewY + 10, TEXT_MUTED);
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "Speed", previewX, previewY + 24, 0xFF7CAFC6);
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "0:49", previewX, previewY + 34, TEXT_MUTED);
                 }
             }
             case SPRINT -> {
@@ -789,7 +808,7 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "ToggleSprint: ON", previewX, previewY,
                             BetterUCConfig.INSTANCE.toggleSprintHudColor);
                 } else {
-                    context.drawTextWithShadow(textRenderer, Text.literal("ToggleSprint: ON"), previewX, previewY,
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "ToggleSprint: ON", previewX, previewY,
                             BetterUCConfig.INSTANCE.toggleSprintHudColor);
                 }
             }
@@ -802,7 +821,7 @@ public class BetterUCScreen extends Screen {
                 } else if (stylizedStyle) {
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Hack: " + time, previewX, previewY, 0xFF60A5FA);
                 } else {
-                    context.drawTextWithShadow(textRenderer, Text.literal("Hack: " + time), previewX, previewY, 0xFF60A5FA);
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "Hack: " + time, previewX, previewY, 0xFF60A5FA);
                 }
             }
             case PLANT_TIMER -> {
@@ -813,13 +832,15 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Plantage Pulver 7/10", previewX, previewY, 0xFF6CF27D);
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Reif: 1:30:00 | Wasser: 20:00", previewX, previewY + 11, 0xFFFFD866);
                 } else {
-                    context.drawTextWithShadow(textRenderer, Text.literal("Plantage Pulver 7/10"), previewX, previewY, 0xFF6CF27D);
-                    context.drawTextWithShadow(textRenderer, Text.literal("Reif: 1:30:00 | Wasser: 20:00"), previewX, previewY + 10, 0xFFFFD866);
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "Plantage Pulver 7/10", previewX, previewY, 0xFF6CF27D);
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "Reif: 1:30:00 | Wasser: 20:00", previewX, previewY + 10, 0xFFFFD866);
                 }
             }
             case ZOOM -> drawMiniInfo(context, previewX, previewY, "Zoom", zoomKeyLabel(), BetterUCConfig.INSTANCE.zoomEnabled);
             case AUTO_STATS -> drawMiniInfo(context, previewX, previewY, "Auto-Stats", "Join /stats", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
-            case CHAT -> drawMiniInfo(context, previewX, previewY, "Chat", BetterUCConfig.INSTANCE.chatTimestampFormat, true);
+            case CHAT -> drawMiniInfo(context, previewX, previewY, "Chat",
+                    BetterUCConfig.INSTANCE.chatTimestampsEnabled ? BetterUCConfig.INSTANCE.chatTimestampFormat : "AUS",
+                    BetterUCConfig.INSTANCE.chatTimestampsEnabled);
             case CONNECTION -> drawMiniInfo(context, previewX, previewY, "Verbindung", PingRelayClient.statusLabel(),
                     PingRelayClient.isConnected());
             case BLACKLIST -> drawMiniInfo(context, previewX, previewY, "Blacklist",
@@ -834,6 +855,7 @@ public class BetterUCScreen extends Screen {
             case UPDATES -> {
             }
         }
+        });
     }
 
     private void renderUpdates(DrawContext context, int x, int y, int width, int height) {
@@ -1093,6 +1115,72 @@ public class BetterUCScreen extends Screen {
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudCustomFont = fontId;
             case PING -> BetterUCConfig.INSTANCE.pingHudCustomFont = fontId;
             default -> BetterUCConfig.INSTANCE.customHudFont = fontId;
+        }
+    }
+
+    private boolean getHudGradientEnabled(ModuleOption module) {
+        return switch (module) {
+            case HEALTH -> BetterUCConfig.INSTANCE.healthHudGradientEnabled;
+            case FPS -> BetterUCConfig.INSTANCE.fpsHudGradientEnabled;
+            case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudGradientEnabled;
+            case AMMO -> BetterUCConfig.INSTANCE.ammoHudGradientEnabled;
+            case BANK -> BetterUCConfig.INSTANCE.bankHudGradientEnabled;
+            case CASH -> BetterUCConfig.INSTANCE.cashHudGradientEnabled;
+            case POTION -> BetterUCConfig.INSTANCE.potionHudGradientEnabled;
+            case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudGradientEnabled;
+            case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientEnabled;
+            case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudGradientEnabled;
+            default -> false;
+        };
+    }
+
+    private void setHudGradientEnabled(ModuleOption module, boolean enabled) {
+        switch (module) {
+            case HEALTH -> BetterUCConfig.INSTANCE.healthHudGradientEnabled = enabled;
+            case FPS -> BetterUCConfig.INSTANCE.fpsHudGradientEnabled = enabled;
+            case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudGradientEnabled = enabled;
+            case AMMO -> BetterUCConfig.INSTANCE.ammoHudGradientEnabled = enabled;
+            case BANK -> BetterUCConfig.INSTANCE.bankHudGradientEnabled = enabled;
+            case CASH -> BetterUCConfig.INSTANCE.cashHudGradientEnabled = enabled;
+            case POTION -> BetterUCConfig.INSTANCE.potionHudGradientEnabled = enabled;
+            case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudGradientEnabled = enabled;
+            case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientEnabled = enabled;
+            case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudGradientEnabled = enabled;
+            default -> {
+            }
+        }
+    }
+
+    private int getHudGradientColor(ModuleOption module) {
+        return switch (module) {
+            case HEALTH -> BetterUCConfig.INSTANCE.healthHudGradientColor;
+            case FPS -> BetterUCConfig.INSTANCE.fpsHudGradientColor;
+            case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudGradientColor;
+            case AMMO -> BetterUCConfig.INSTANCE.ammoHudGradientColor;
+            case BANK -> BetterUCConfig.INSTANCE.bankHudGradientColor;
+            case CASH -> BetterUCConfig.INSTANCE.cashHudGradientColor;
+            case POTION -> BetterUCConfig.INSTANCE.potionHudGradientColor;
+            case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudGradientColor;
+            case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientColor;
+            case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudGradientColor;
+            default -> BetterUCConfig.DEFAULT_HUD_GRADIENT_COLOR;
+        };
+    }
+
+    private void setHudGradientColor(ModuleOption module, int color) {
+        switch (module) {
+            case HEALTH -> BetterUCConfig.INSTANCE.healthHudGradientColor = color;
+            case FPS -> BetterUCConfig.INSTANCE.fpsHudGradientColor = color;
+            case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudGradientColor = color;
+            case AMMO -> BetterUCConfig.INSTANCE.ammoHudGradientColor = color;
+            case BANK -> BetterUCConfig.INSTANCE.bankHudGradientColor = color;
+            case CASH -> BetterUCConfig.INSTANCE.cashHudGradientColor = color;
+            case POTION -> BetterUCConfig.INSTANCE.potionHudGradientColor = color;
+            case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudGradientColor = color;
+            case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientColor = color;
+            case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudGradientColor = color;
+            default -> {
+            }
         }
     }
 

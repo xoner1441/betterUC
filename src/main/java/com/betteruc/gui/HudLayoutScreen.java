@@ -22,6 +22,8 @@ public class HudLayoutScreen extends Screen {
     private static final int TEXT_PRIMARY = 0xFFF8FAFC;
     private static final int TEXT_MUTED = 0xFF94A3B8;
     private static final int HANDLE_SIZE = 7;
+    private static final int SNAP_DISTANCE = 8;
+    private static final int SNAP_GAP = 6;
     private static final Identifier HEART_TEXTURE = Identifier.ofVanilla("hud/heart/full");
 
     private final Screen parent;
@@ -115,7 +117,8 @@ public class HudLayoutScreen extends Screen {
         int maxY = Math.max(0, height - bounds.height);
         int newX = clamp((int) Math.round(click.x()) - dragOffsetX, 0, maxX);
         int newY = clamp((int) Math.round(click.y()) - dragOffsetY, 0, maxY);
-        setPosition(draggingModule, newX, newY);
+        Bounds snapped = snapBounds(draggingModule, new Bounds(newX, newY, bounds.width, bounds.height));
+        setPosition(draggingModule, snapped.x, snapped.y);
         return true;
     }
 
@@ -367,7 +370,14 @@ public class HudLayoutScreen extends Screen {
         boolean modernStyle = BetterUCConfig.isModernHudStyle(style);
         boolean stylizedStyle = BetterUCConfig.isStylizedHudStyle(style);
 
-        ModernHudRenderer.drawScaledAround(context, x, y, getScale(module), () -> {
+        ModernHudRenderer.drawScaledAroundWithGradient(
+                context,
+                x,
+                y,
+                getScale(module),
+                getGradientEnabled(module),
+                getGradientColor(module),
+                () -> {
             switch (module) {
             case HEALTH -> {
                 Text health = Text.literal("10");
@@ -380,14 +390,14 @@ public class HudLayoutScreen extends Screen {
                     int textX = rightAligned ? heartX - minecraft.textRenderer.getWidth(health) - 4 : x + 19;
                     ModernHudRenderer.drawPanel(context, x, y, moduleWidth, 17, heartColor);
                     context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, HEART_TEXTURE, heartX, y + 4, 9, 9, heartColor);
-                    context.drawText(minecraft.textRenderer, health, Math.max(x + 6, textX), y + 4, textColor, true);
+                    ModernHudRenderer.drawHudTextWithShadow(context, minecraft.textRenderer, health, Math.max(x + 6, textX), y + 4, textColor);
                     return;
                 }
                 context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, HEART_TEXTURE, x, y, 9, 9, heartColor);
                 if (stylizedStyle) {
                     ModernHudRenderer.drawStyledText(context, minecraft.textRenderer, style, font, health, x + 12, y, textColor);
                 } else {
-                    context.drawText(minecraft.textRenderer, health, x + 11, y, textColor, true);
+                    ModernHudRenderer.drawHudTextWithShadow(context, minecraft.textRenderer, health, x + 11, y, textColor);
                 }
             }
             case FPS -> renderSingleLine(context, minecraft, style, font, x, y, "FPS", "144", "FPS: 144", BetterUCConfig.INSTANCE.fpsHudColor);
@@ -397,7 +407,7 @@ public class HudLayoutScreen extends Screen {
                 } else if (stylizedStyle) {
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Payday: 25/60 Minuten", x, y, BetterUCConfig.INSTANCE.paydayHudColor);
                 } else {
-                    context.drawTextWithShadow(textRenderer, Text.literal("Payday: 25/60 Minuten"), x, y, BetterUCConfig.INSTANCE.paydayHudColor);
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "Payday: 25/60 Minuten", x, y, BetterUCConfig.INSTANCE.paydayHudColor);
                 }
             }
             case AMMO -> renderTwoLine(context, minecraft, style, font, x, y, "AMMO", "20/96", "TS19", 0xFFFFAA33, 0xFF55FF55);
@@ -413,10 +423,10 @@ public class HudLayoutScreen extends Screen {
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Speed", x, y + 25, 0xFF7CAFC6);
                     ModernHudRenderer.drawStyledText(context, minecraft, style, font, "0:49", x, y + 36, ModernHudRenderer.TEXT_DIM);
                 } else {
-                    context.drawTextWithShadow(textRenderer, Text.literal("Stärke II"), x, y, 0xFF9328FF);
-                    context.drawTextWithShadow(textRenderer, Text.literal("1:26"), x, y + 10, ModernHudRenderer.TEXT_DIM);
-                    context.drawTextWithShadow(textRenderer, Text.literal("Speed"), x, y + 24, 0xFF7CAFC6);
-                    context.drawTextWithShadow(textRenderer, Text.literal("0:49"), x, y + 34, ModernHudRenderer.TEXT_DIM);
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "Stärke II", x, y, 0xFF9328FF);
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "1:26", x, y + 10, ModernHudRenderer.TEXT_DIM);
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "Speed", x, y + 24, 0xFF7CAFC6);
+                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "0:49", x, y + 34, ModernHudRenderer.TEXT_DIM);
                 }
             }
             case SPRINT -> renderSingleLine(context, minecraft, style, font, x, y, "SPRINT", "ON", "ToggleSprint: ON", BetterUCConfig.INSTANCE.toggleSprintHudColor);
@@ -443,7 +453,7 @@ public class HudLayoutScreen extends Screen {
         } else if (BetterUCConfig.isStylizedHudStyle(style)) {
             ModernHudRenderer.drawStyledText(context, minecraft, style, font, text, x, y, color);
         } else {
-            context.drawTextWithShadow(textRenderer, Text.literal(text), x, y, color);
+            ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, text, x, y, color);
         }
     }
 
@@ -466,8 +476,8 @@ public class HudLayoutScreen extends Screen {
             ModernHudRenderer.drawStyledText(context, minecraft, style, font, primary, x, y, primaryColor);
             ModernHudRenderer.drawStyledText(context, minecraft, style, font, secondary, x, y + 11, secondaryColor);
         } else {
-            context.drawTextWithShadow(textRenderer, Text.literal(primary), x, y, primaryColor);
-            context.drawTextWithShadow(textRenderer, Text.literal(secondary), x, y + 10, secondaryColor);
+            ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, primary, x, y, primaryColor);
+            ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, secondary, x, y + 10, secondaryColor);
         }
     }
 
@@ -498,6 +508,36 @@ public class HudLayoutScreen extends Screen {
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudCustomFont;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudCustomFont;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudCustomFont;
+        };
+    }
+
+    private boolean getGradientEnabled(HudModule module) {
+        return switch (module) {
+            case HEALTH -> BetterUCConfig.INSTANCE.healthHudGradientEnabled;
+            case FPS -> BetterUCConfig.INSTANCE.fpsHudGradientEnabled;
+            case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudGradientEnabled;
+            case AMMO -> BetterUCConfig.INSTANCE.ammoHudGradientEnabled;
+            case BANK -> BetterUCConfig.INSTANCE.bankHudGradientEnabled;
+            case CASH -> BetterUCConfig.INSTANCE.cashHudGradientEnabled;
+            case POTION -> BetterUCConfig.INSTANCE.potionHudGradientEnabled;
+            case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudGradientEnabled;
+            case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientEnabled;
+            case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudGradientEnabled;
+        };
+    }
+
+    private int getGradientColor(HudModule module) {
+        return switch (module) {
+            case HEALTH -> BetterUCConfig.INSTANCE.healthHudGradientColor;
+            case FPS -> BetterUCConfig.INSTANCE.fpsHudGradientColor;
+            case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudGradientColor;
+            case AMMO -> BetterUCConfig.INSTANCE.ammoHudGradientColor;
+            case BANK -> BetterUCConfig.INSTANCE.bankHudGradientColor;
+            case CASH -> BetterUCConfig.INSTANCE.cashHudGradientColor;
+            case POTION -> BetterUCConfig.INSTANCE.potionHudGradientColor;
+            case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudGradientColor;
+            case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientColor;
+            case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudGradientColor;
         };
     }
 
@@ -570,6 +610,62 @@ public class HudLayoutScreen extends Screen {
         if (handleContains(mouseX, mouseY, bounds.x, midY)) return ResizeHandle.LEFT;
         if (handleContains(mouseX, mouseY, right, midY)) return ResizeHandle.RIGHT;
         return ResizeHandle.NONE;
+    }
+
+    private Bounds snapBounds(HudModule movingModule, Bounds moving) {
+        int snapX = moving.x;
+        int snapY = moving.y;
+        int bestXDistance = SNAP_DISTANCE + 1;
+        int bestYDistance = SNAP_DISTANCE + 1;
+
+        for (HudModule otherModule : activeModules()) {
+            if (otherModule == movingModule) continue;
+
+            Bounds other = boundsFor(otherModule);
+            if (rangesOverlapOrClose(moving.y, moving.height, other.y, other.height)) {
+                int[] xCandidates = {
+                        other.x,
+                        other.right() - moving.width,
+                        other.x + other.width / 2 - moving.width / 2,
+                        other.right() + SNAP_GAP,
+                        other.x - moving.width - SNAP_GAP
+                };
+                for (int candidate : xCandidates) {
+                    int distance = Math.abs(moving.x - candidate);
+                    if (distance <= SNAP_DISTANCE && distance < bestXDistance) {
+                        snapX = candidate;
+                        bestXDistance = distance;
+                    }
+                }
+            }
+
+            if (rangesOverlapOrClose(moving.x, moving.width, other.x, other.width)) {
+                int[] yCandidates = {
+                        other.y,
+                        other.bottom() - moving.height,
+                        other.y + other.height / 2 - moving.height / 2,
+                        other.bottom() + SNAP_GAP,
+                        other.y - moving.height - SNAP_GAP
+                };
+                for (int candidate : yCandidates) {
+                    int distance = Math.abs(moving.y - candidate);
+                    if (distance <= SNAP_DISTANCE && distance < bestYDistance) {
+                        snapY = candidate;
+                        bestYDistance = distance;
+                    }
+                }
+            }
+        }
+
+        int maxX = Math.max(0, width - moving.width);
+        int maxY = Math.max(0, height - moving.height);
+        return new Bounds(clamp(snapX, 0, maxX), clamp(snapY, 0, maxY), moving.width, moving.height);
+    }
+
+    private boolean rangesOverlapOrClose(int startA, int sizeA, int startB, int sizeB) {
+        int endA = startA + sizeA;
+        int endB = startB + sizeB;
+        return startA <= endB + SNAP_DISTANCE && startB <= endA + SNAP_DISTANCE;
     }
 
     private boolean handleContains(double mouseX, double mouseY, int centerX, int centerY) {

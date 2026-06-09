@@ -44,11 +44,18 @@ public class HackTimerHud {
         Text text = getDisplayText();
         int accentColor = secondsRemaining <= 15 ? 0xFFFF4D6D : 0xFF60A5FA;
         String style = BetterUCConfig.INSTANCE.hackTimerHudStyle;
-        ModernHudRenderer.drawScaled(context, x, y, BetterUCConfig.INSTANCE.hackTimerHudScale, () -> {
+        ModernHudRenderer.drawScaledWithGradient(
+                context,
+                x,
+                y,
+                BetterUCConfig.INSTANCE.hackTimerHudScale,
+                BetterUCConfig.INSTANCE.hackTimerHudGradientEnabled,
+                BetterUCConfig.INSTANCE.hackTimerHudGradientColor,
+                () -> {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
                 ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.hackTimerHudCustomFont, text, 0, 0, accentColor);
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                context.drawTextWithShadow(client.textRenderer, text, 0, 0, accentColor);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, text, 0, 0, accentColor);
             } else {
                 ModernHudRenderer.drawModule(
                         context,

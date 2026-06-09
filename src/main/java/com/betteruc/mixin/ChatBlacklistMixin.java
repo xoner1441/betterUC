@@ -564,6 +564,7 @@ public class ChatBlacklistMixin {
     }
 
     private void appendTimestampIfConfigured(Text message, CallbackInfo ci) {
+        if (!BetterUCConfig.INSTANCE.chatTimestampsEnabled) return;
         String format = BetterUCConfig.INSTANCE.chatTimestampFormat;
         if (format == null || format.isEmpty()) return;
 
@@ -581,6 +582,7 @@ public class ChatBlacklistMixin {
     }
 
     private static Text withTimestampIfEnabled(Text base) {
+        if (!BetterUCConfig.INSTANCE.chatTimestampsEnabled) return base;
         String format = BetterUCConfig.INSTANCE.chatTimestampFormat;
         if (format == null || format.isEmpty()) return base;
 

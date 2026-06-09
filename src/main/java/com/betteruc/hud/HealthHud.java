@@ -46,7 +46,14 @@ public class HealthHud {
         int heartColor = BetterUCConfig.INSTANCE.healthHudHeartColor;
         int textColor = BetterUCConfig.INSTANCE.healthHudTextColor;
 
-        ModernHudRenderer.drawScaled(context, startX, y, scale, () -> {
+        ModernHudRenderer.drawScaledWithGradient(
+                context,
+                startX,
+                y,
+                scale,
+                BetterUCConfig.INSTANCE.healthHudGradientEnabled,
+                BetterUCConfig.INSTANCE.healthHudGradientColor,
+                () -> {
             if (modernStyle) {
                 boolean rightAligned = ModernHudRenderer.isRightAligned(0, totalWidth);
                 int heartX = rightAligned ? totalWidth - 16 : 7;
@@ -56,9 +63,9 @@ public class HealthHud {
                         net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED,
                         net.minecraft.util.Identifier.ofVanilla("hud/heart/full"),
                         heartX, 4, 9, 9,
-                        heartColor
+                        ModernHudRenderer.hudTextColor(heartColor)
                 );
-                context.drawText(client.textRenderer, healthText, Math.max(6, textX), 4, textColor, true);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, healthText, Math.max(6, textX), 4, textColor);
                 return;
             }
 
@@ -66,13 +73,13 @@ public class HealthHud {
                     net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED,
                     net.minecraft.util.Identifier.ofVanilla("hud/heart/full"),
                     0, 0, 9, 9,
-                    heartColor
+                    ModernHudRenderer.hudTextColor(heartColor)
             );
 
             if (stylizedStyle) {
                 ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.healthHudCustomFont, healthText, 12, 0, textColor);
             } else {
-                context.drawText(client.textRenderer, healthText, 11, 0, textColor, true);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, healthText, 11, 0, textColor);
             }
         });
     }

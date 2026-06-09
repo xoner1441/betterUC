@@ -74,11 +74,18 @@ public class BankBalanceHud {
         int y = BetterUCConfig.INSTANCE.bankHudY;
         String value = formatMoney(currentBankBalance) + "$";
         String style = BetterUCConfig.INSTANCE.bankHudStyle;
-        ModernHudRenderer.drawScaled(context, x, y, BetterUCConfig.INSTANCE.bankHudScale, () -> {
+        ModernHudRenderer.drawScaledWithGradient(
+                context,
+                x,
+                y,
+                BetterUCConfig.INSTANCE.bankHudScale,
+                BetterUCConfig.INSTANCE.bankHudGradientEnabled,
+                BetterUCConfig.INSTANCE.bankHudGradientColor,
+                () -> {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
                 ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.bankHudCustomFont, "Bank: " + value, 0, 0, BetterUCConfig.INSTANCE.bankHudColor);
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                context.drawTextWithShadow(client.textRenderer, Text.literal("Bank: " + value), 0, 0, BetterUCConfig.INSTANCE.bankHudColor);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, "Bank: " + value, 0, 0, BetterUCConfig.INSTANCE.bankHudColor);
             } else {
                 ModernHudRenderer.drawModule(
                         context,

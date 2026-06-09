@@ -265,7 +265,14 @@ public class PlantageHud {
         int x = BetterUCConfig.INSTANCE.plantTimerX;
         int y = BetterUCConfig.INSTANCE.plantTimerY;
 
-        ModernHudRenderer.drawScaled(context, x, y, BetterUCConfig.INSTANCE.plantTimerHudScale, () -> {
+        ModernHudRenderer.drawScaledWithGradient(
+                context,
+                x,
+                y,
+                BetterUCConfig.INSTANCE.plantTimerHudScale,
+                BetterUCConfig.INSTANCE.plantTimerHudGradientEnabled,
+                BetterUCConfig.INSTANCE.plantTimerHudGradientColor,
+                () -> {
             int currentY = 0;
             for (PlantageState state : STATES.values()) {
                 if (!state.isActive(now)) continue;
@@ -285,8 +292,8 @@ public class PlantageHud {
                 }
 
                 if (!BetterUCConfig.isModernHudStyle(style)) {
-                    context.drawTextWithShadow(client.textRenderer, Text.literal(title), 0, currentY, state.type.color);
-                    context.drawTextWithShadow(client.textRenderer, Text.literal(timers), 0, currentY + 10, 0xFFFFD866);
+                    ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, title, 0, currentY, state.type.color);
+                    ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, timers, 0, currentY + 10, 0xFFFFD866);
                     currentY += 24;
                     continue;
                 }

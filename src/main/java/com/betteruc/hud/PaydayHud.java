@@ -71,11 +71,18 @@ public class PaydayHud {
             text += " (AFK)";
         }
         String displayText = text;
-        ModernHudRenderer.drawScaled(context, x, y, BetterUCConfig.INSTANCE.paydayHudScale, () -> {
+        ModernHudRenderer.drawScaledWithGradient(
+                context,
+                x,
+                y,
+                BetterUCConfig.INSTANCE.paydayHudScale,
+                BetterUCConfig.INSTANCE.paydayHudGradientEnabled,
+                BetterUCConfig.INSTANCE.paydayHudGradientColor,
+                () -> {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
                 ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.paydayHudCustomFont, displayText, 0, 0, BetterUCConfig.INSTANCE.paydayHudColor);
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                context.drawTextWithShadow(client.textRenderer, Text.literal(displayText), 0, 0, BetterUCConfig.INSTANCE.paydayHudColor);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, displayText, 0, 0, BetterUCConfig.INSTANCE.paydayHudColor);
             } else {
                 ModernHudRenderer.drawProgressModule(
                         context,

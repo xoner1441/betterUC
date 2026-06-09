@@ -20,6 +20,7 @@ public final class ModernHudRenderer {
     private static final int MIN_MODULE_WIDTH = 58;
     private static final RenderTransform DEFAULT_TRANSFORM = new RenderTransform(0.0F, 1.0F);
     private static final ThreadLocal<RenderTransform> ACTIVE_TRANSFORM = ThreadLocal.withInitial(() -> DEFAULT_TRANSFORM);
+    private static final ThreadLocal<GradientStyle> ACTIVE_GRADIENT = new ThreadLocal<>();
 
     private ModernHudRenderer() {
     }
@@ -47,6 +48,18 @@ public final class ModernHudRenderer {
         }
     }
 
+    public static void drawScaledWithGradient(
+            DrawContext context,
+            int x,
+            int y,
+            float scale,
+            boolean gradientEnabled,
+            int gradientColor,
+            Runnable drawAction
+    ) {
+        withHudGradient(gradientEnabled, gradientColor, () -> drawScaled(context, x, y, scale, drawAction));
+    }
+
     public static void drawScaledAround(
             DrawContext context,
             int x,
@@ -71,8 +84,67 @@ public final class ModernHudRenderer {
         }
     }
 
+    public static void drawScaledAroundWithGradient(
+            DrawContext context,
+            int x,
+            int y,
+            float scale,
+            boolean gradientEnabled,
+            int gradientColor,
+            Runnable drawAction
+    ) {
+        withHudGradient(gradientEnabled, gradientColor, () -> drawScaledAround(context, x, y, scale, drawAction));
+    }
+
     public static int scaledSize(int baseSize, float scale) {
         return Math.max(1, (int) Math.ceil(baseSize * BetterUCConfig.normalizeHudScale(scale)));
+    }
+
+    public static void withHudGradient(boolean enabled, int gradientColor, Runnable drawAction) {
+        if (drawAction == null) return;
+
+        GradientStyle previousGradient = ACTIVE_GRADIENT.get();
+        ACTIVE_GRADIENT.set(new GradientStyle(enabled, gradientColor));
+        try {
+            drawAction.run();
+        } finally {
+            if (previousGradient == null) {
+                ACTIVE_GRADIENT.remove();
+            } else {
+                ACTIVE_GRADIENT.set(previousGradient);
+            }
+        }
+    }
+
+    public static int hudTextColor(int baseColor) {
+        return hudGradientColor(baseColor, 0.45F);
+    }
+
+    public static void drawHudTextWithShadow(
+            DrawContext context,
+            TextRenderer renderer,
+            Text text,
+            int x,
+            int y,
+            int baseColor
+    ) {
+        Text safeText = text == null ? Text.literal("") : text;
+        if (!hudGradientEnabled()) {
+            context.drawTextWithShadow(renderer, safeText, x, y, withAlpha(baseColor, 0xFF));
+            return;
+        }
+        drawTextLeftToRight(context, renderer, safeText, x, y, baseColor, true);
+    }
+
+    public static void drawHudTextWithShadow(
+            DrawContext context,
+            TextRenderer renderer,
+            String text,
+            int x,
+            int y,
+            int baseColor
+    ) {
+        drawHudTextWithShadow(context, renderer, Text.literal(safe(text)), x, y, baseColor);
     }
 
     public static void drawModule(
@@ -111,10 +183,10 @@ public final class ModernHudRenderer {
             int rightTextX = x + width - 8;
             int valueX = rightTextX - valueWidth;
             int labelX = valueX - labelWidth - 5;
-            context.drawTextWithShadow(renderer, Text.literal(safeLabel), labelX, y + 5, withAlpha(accentColor, 0xFF));
+            drawHudTextWithShadow(context, renderer, safeLabel, labelX, y + 5, accentColor);
             context.drawTextWithShadow(renderer, Text.literal(safeValue), valueX, y + 5, valueColor);
         } else {
-            context.drawTextWithShadow(renderer, Text.literal(safeLabel), x + 8, y + 5, withAlpha(accentColor, 0xFF));
+            drawHudTextWithShadow(context, renderer, safeLabel, x + 8, y + 5, accentColor);
             context.drawTextWithShadow(renderer, Text.literal(safeValue), x + width - valueWidth - 7, y + 5, valueColor);
         }
     }
@@ -160,13 +232,13 @@ public final class ModernHudRenderer {
             int rightTextX = x + width - 8;
             int primaryWidth = renderer.getWidth(safePrimary);
             int labelX = rightTextX - primaryWidth - renderer.getWidth(safeLabel) - 5;
-            context.drawTextWithShadow(renderer, Text.literal(safeLabel), labelX, y + 5, withAlpha(accentColor, 0xFF));
+            drawHudTextWithShadow(context, renderer, safeLabel, labelX, y + 5, accentColor);
             context.drawTextWithShadow(renderer, Text.literal(safePrimary), rightTextX - primaryWidth, y + 5, TEXT_PRIMARY);
             if (!safeSecondary.isEmpty()) {
                 context.drawTextWithShadow(renderer, Text.literal(safeSecondary), rightTextX - renderer.getWidth(safeSecondary), y + 17, secondaryColor);
             }
         } else {
-            context.drawTextWithShadow(renderer, Text.literal(safeLabel), x + 8, y + 5, withAlpha(accentColor, 0xFF));
+            drawHudTextWithShadow(context, renderer, safeLabel, x + 8, y + 5, accentColor);
             context.drawTextWithShadow(
                     renderer,
                     Text.literal(safePrimary),
@@ -202,10 +274,10 @@ public final class ModernHudRenderer {
             int rightTextX = x + width - 8;
             int valueWidth = renderer.getWidth(safeValue);
             int labelX = rightTextX - valueWidth - renderer.getWidth(safeLabel) - 5;
-            context.drawTextWithShadow(renderer, Text.literal(safeLabel), labelX, y + 5, withAlpha(accentColor, 0xFF));
+            drawHudTextWithShadow(context, renderer, safeLabel, labelX, y + 5, accentColor);
             context.drawTextWithShadow(renderer, Text.literal(safeValue), rightTextX - valueWidth, y + 5, TEXT_PRIMARY);
         } else {
-            context.drawTextWithShadow(renderer, Text.literal(safeLabel), x + 8, y + 5, withAlpha(accentColor, 0xFF));
+            drawHudTextWithShadow(context, renderer, safeLabel, x + 8, y + 5, accentColor);
             context.drawTextWithShadow(
                     renderer,
                     Text.literal(safeValue),
@@ -222,9 +294,9 @@ public final class ModernHudRenderer {
         int filledWidth = Math.round(barWidth * clamp01(progress));
         if (filledWidth > 0) {
             if (rightAligned) {
-                context.fill(barX + barWidth - filledWidth, barY, barX + barWidth, barY + 2, withAlpha(accentColor, 0xEE));
+                fillHorizontalGradient(context, barX + barWidth - filledWidth, barY, filledWidth, 2, accentColor, 0xEE);
             } else {
-                context.fill(barX, barY, barX + filledWidth, barY + 2, withAlpha(accentColor, 0xEE));
+                fillHorizontalGradient(context, barX, barY, filledWidth, 2, accentColor, 0xEE);
             }
         }
     }
@@ -328,7 +400,11 @@ public final class ModernHudRenderer {
             int color
     ) {
         Text safeText = text == null ? Text.literal("") : text;
-        int solidColor = withAlpha(color, 0xFF);
+        if (hudGradientEnabled()) {
+            drawOutlinedTextLeftToRight(context, renderer, safeText, x, y, color);
+            return;
+        }
+        int solidColor = hudGradientColor(color, 0.45F);
         int outline = 0xFF24132E;
         int shadow = 0x99000000;
 
@@ -354,7 +430,11 @@ public final class ModernHudRenderer {
         fillSoftRect(context, x + 1, y + 1, safeWidth - 2, safeHeight - 2, PANEL_INNER);
         drawBorder(context, x, y, safeWidth, safeHeight, PANEL_BORDER);
 
-        context.fill(x + 2, y + 2, x + safeWidth - 2, y + 3, PANEL_HIGHLIGHT);
+        if (hudGradientEnabled()) {
+            fillHorizontalGradient(context, x + 2, y + 2, safeWidth - 4, 1, accentColor, 0xA8);
+        } else {
+            context.fill(x + 2, y + 2, x + safeWidth - 2, y + 3, PANEL_HIGHLIGHT);
+        }
         if (rightAligned) {
             context.fill(x + safeWidth - 4, y + 3, x + safeWidth - 2, y + safeHeight - 3, withAlpha(accentColor, 0xF2));
             context.fill(x + safeWidth - 5, y + 3, x + safeWidth - 4, y + safeHeight - 3, withAlpha(accentColor, 0x44));
@@ -385,8 +465,100 @@ public final class ModernHudRenderer {
         context.fill(x + width - 1, y + 1, x + width, y + height - 1, color);
     }
 
+    private static void fillHorizontalGradient(DrawContext context, int x, int y, int width, int height, int baseColor, int alpha) {
+        int safeWidth = Math.max(1, width);
+        for (int column = 0; column < safeWidth; column++) {
+            float progress = safeWidth <= 1 ? 0.0F : column / (float) (safeWidth - 1);
+            context.fill(x + column, y, x + column + 1, y + Math.max(1, height), withAlpha(hudGradientColor(baseColor, progress), alpha));
+        }
+    }
+
+    private static void drawOutlinedTextLeftToRight(
+            DrawContext context,
+            TextRenderer renderer,
+            Text text,
+            int x,
+            int y,
+            int baseColor
+    ) {
+        Text safeText = text == null ? Text.literal("") : text;
+        int outline = 0xFF24132E;
+        int shadow = 0x99000000;
+
+        context.drawText(renderer, safeText, x + 2, y + 2, shadow, false);
+        context.drawText(renderer, safeText, x - 1, y, outline, false);
+        context.drawText(renderer, safeText, x + 1, y, outline, false);
+        context.drawText(renderer, safeText, x, y - 1, outline, false);
+        context.drawText(renderer, safeText, x, y + 1, outline, false);
+        context.drawText(renderer, safeText, x - 1, y - 1, outline, false);
+        context.drawText(renderer, safeText, x + 1, y - 1, outline, false);
+        context.drawText(renderer, safeText, x - 1, y + 1, outline, false);
+        context.drawText(renderer, safeText, x + 1, y + 1, outline, false);
+        drawTextLeftToRight(context, renderer, safeText, x, y - 1, brighten(baseColor), false);
+        drawTextLeftToRight(context, renderer, safeText, x, y, baseColor, false);
+    }
+
+    private static void drawTextLeftToRight(
+            DrawContext context,
+            TextRenderer renderer,
+            Text text,
+            int x,
+            int y,
+            int baseColor,
+            boolean shadow
+    ) {
+        Text safeText = text == null ? Text.literal("") : text;
+        String raw = safeText.getString();
+        if (raw.isEmpty()) return;
+
+        int totalWidth = Math.max(1, renderer.getWidth(safeText));
+        int currentX = x;
+        for (int offset = 0; offset < raw.length(); ) {
+            int codePoint = raw.codePointAt(offset);
+            String part = new String(Character.toChars(codePoint));
+            Text partText = Text.literal(part).setStyle(safeText.getStyle());
+            int partWidth = Math.max(1, renderer.getWidth(partText));
+            float progress = totalWidth <= partWidth ? 0.0F : (currentX - x + partWidth / 2.0F) / (float) totalWidth;
+            int color = hudGradientColor(baseColor, progress);
+            if (shadow) {
+                context.drawTextWithShadow(renderer, partText, currentX, y, color);
+            } else {
+                context.drawText(renderer, partText, currentX, y, color, false);
+            }
+            currentX += partWidth;
+            offset += Character.charCount(codePoint);
+        }
+    }
+
+    private static int hudGradientColor(int baseColor, float progress) {
+        int start = withAlpha(baseColor, 0xFF);
+        if (!hudGradientEnabled()) {
+            return start;
+        }
+        int end = withAlpha(activeGradientColor(), 0xFF);
+        float safeProgress = clamp01(progress);
+        int red = lerp((start >> 16) & 0xFF, (end >> 16) & 0xFF, safeProgress);
+        int green = lerp((start >> 8) & 0xFF, (end >> 8) & 0xFF, safeProgress);
+        int blue = lerp(start & 0xFF, end & 0xFF, safeProgress);
+        return 0xFF000000 | (red << 16) | (green << 8) | blue;
+    }
+
+    private static boolean hudGradientEnabled() {
+        GradientStyle style = ACTIVE_GRADIENT.get();
+        return style != null && style.enabled();
+    }
+
+    private static int activeGradientColor() {
+        GradientStyle style = ACTIVE_GRADIENT.get();
+        return style == null ? BetterUCConfig.DEFAULT_HUD_GRADIENT_COLOR : style.color();
+    }
+
     private static int withAlpha(int color, int alpha) {
         return ((alpha & 0xFF) << 24) | (color & 0x00FFFFFF);
+    }
+
+    private static int lerp(int start, int end, float progress) {
+        return Math.round(start + (end - start) * progress);
     }
 
     private static int brighten(int color) {
@@ -408,5 +580,8 @@ public final class ModernHudRenderer {
     }
 
     private record RenderTransform(float originX, float scale) {
+    }
+
+    private record GradientStyle(boolean enabled, int color) {
     }
 }

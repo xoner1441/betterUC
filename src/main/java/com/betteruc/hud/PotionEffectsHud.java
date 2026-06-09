@@ -52,7 +52,14 @@ public class PotionEffectsHud {
         float tickRate = client.world == null ? 20.0F : client.world.getTickManager().getTickRate();
         int effectSpacing = spacing;
 
-        ModernHudRenderer.drawScaled(context, x, y, BetterUCConfig.INSTANCE.potionHudScale, () -> {
+        ModernHudRenderer.drawScaledWithGradient(
+                context,
+                x,
+                y,
+                BetterUCConfig.INSTANCE.potionHudScale,
+                BetterUCConfig.INSTANCE.potionHudGradientEnabled,
+                BetterUCConfig.INSTANCE.potionHudGradientColor,
+                () -> {
             int currentY = 0;
             for (StatusEffectInstance effect : ACTIVE_EFFECTS) {
                 RegistryEntry<StatusEffect> entry = effect.getEffectType();
@@ -69,8 +76,8 @@ public class PotionEffectsHud {
                 }
 
                 if (!BetterUCConfig.isModernHudStyle(style)) {
-                    context.drawTextWithShadow(client.textRenderer, effectName, 0, currentY, accentColor);
-                    context.drawTextWithShadow(client.textRenderer, durationText, 0, currentY + 10, ModernHudRenderer.TEXT_DIM);
+                    ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, effectName, 0, currentY, accentColor);
+                    ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, durationText, 0, currentY + 10, ModernHudRenderer.TEXT_DIM);
                     currentY += Math.max(21, effectSpacing - 11);
                     continue;
                 }

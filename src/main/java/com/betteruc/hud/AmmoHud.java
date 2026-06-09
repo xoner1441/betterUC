@@ -94,16 +94,23 @@ public class AmmoHud {
         int y = BetterUCConfig.INSTANCE.ammoHudY;
 
         String style = BetterUCConfig.INSTANCE.ammoHudStyle;
-        ModernHudRenderer.drawScaled(context, x, y, BetterUCConfig.INSTANCE.ammoHudScale, () -> {
+        ModernHudRenderer.drawScaledWithGradient(
+                context,
+                x,
+                y,
+                BetterUCConfig.INSTANCE.ammoHudScale,
+                BetterUCConfig.INSTANCE.ammoHudGradientEnabled,
+                BetterUCConfig.INSTANCE.ammoHudGradientColor,
+                () -> {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
                 ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.ammoHudCustomFont, ammoText, 0, 0, 0xFFFFAA33);
                 if (!weaponName.isBlank()) {
                     ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.ammoHudCustomFont, weaponText, 0, 11, 0xFF55FF55);
                 }
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                context.drawTextWithShadow(client.textRenderer, ammoText, 0, 0, 0xFFFFAA33);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, ammoText, 0, 0, 0xFFFFAA33);
                 if (!weaponName.isBlank()) {
-                    context.drawTextWithShadow(client.textRenderer, weaponText, 0, 10, 0xFF55FF55);
+                    ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, weaponText, 0, 10, 0xFF55FF55);
                 }
             } else {
                 ModernHudRenderer.drawTwoLineModule(

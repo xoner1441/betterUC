@@ -26,11 +26,18 @@ public class FpsHud {
         int y = BetterUCConfig.INSTANCE.fpsHudY;
         int fps = Math.max(0, currentFps);
         String style = BetterUCConfig.INSTANCE.fpsHudStyle;
-        ModernHudRenderer.drawScaled(context, x, y, BetterUCConfig.INSTANCE.fpsHudScale, () -> {
+        ModernHudRenderer.drawScaledWithGradient(
+                context,
+                x,
+                y,
+                BetterUCConfig.INSTANCE.fpsHudScale,
+                BetterUCConfig.INSTANCE.fpsHudGradientEnabled,
+                BetterUCConfig.INSTANCE.fpsHudGradientColor,
+                () -> {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
                 ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.fpsHudCustomFont, "FPS: " + fps, 0, 0, BetterUCConfig.INSTANCE.fpsHudColor);
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                context.drawTextWithShadow(client.textRenderer, Text.literal("FPS: " + fps), 0, 0, BetterUCConfig.INSTANCE.fpsHudColor);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, "FPS: " + fps, 0, 0, BetterUCConfig.INSTANCE.fpsHudColor);
             } else {
                 ModernHudRenderer.drawModule(
                         context,

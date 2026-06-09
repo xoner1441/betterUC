@@ -62,6 +62,7 @@ public class BetterUCConfig {
     public static final int DEFAULT_HEALTH_HUD_COLOR = 0xFFFF5555;
     public static final int DEFAULT_HEALTH_HUD_HEART_COLOR = DEFAULT_HEALTH_HUD_COLOR;
     public static final int DEFAULT_HEALTH_HUD_TEXT_COLOR = DEFAULT_HEALTH_HUD_COLOR;
+    public static final int DEFAULT_HUD_GRADIENT_COLOR = 0xFFA855F7;
     public static final float MIN_HUD_SCALE = 0.5F;
     public static final float MAX_HUD_SCALE = 3.0F;
     public static final float DEFAULT_HUD_SCALE = 1.0F;
@@ -167,6 +168,29 @@ public class BetterUCConfig {
     public int healthHudHeartColor = 0;
     public int healthHudTextColor = 0;
     public int healthHudColor = DEFAULT_HEALTH_HUD_COLOR;
+    public boolean hudColorGradientEnabled = false;
+    public int hudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
+    public int hudGradientConfigVersion = 0;
+    public boolean healthHudGradientEnabled = false;
+    public boolean toggleSprintHudGradientEnabled = false;
+    public boolean fpsHudGradientEnabled = false;
+    public boolean paydayHudGradientEnabled = false;
+    public boolean ammoHudGradientEnabled = false;
+    public boolean bankHudGradientEnabled = false;
+    public boolean cashHudGradientEnabled = false;
+    public boolean potionHudGradientEnabled = false;
+    public boolean hackTimerHudGradientEnabled = false;
+    public boolean plantTimerHudGradientEnabled = false;
+    public int healthHudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
+    public int toggleSprintHudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
+    public int fpsHudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
+    public int paydayHudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
+    public int ammoHudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
+    public int bankHudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
+    public int cashHudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
+    public int potionHudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
+    public int hackTimerHudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
+    public int plantTimerHudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
     public String healthHudStyle = HUD_STYLE_TRANSPARENT;
     public String toggleSprintHudStyle = HUD_STYLE_MODERN;
     public String fpsHudStyle = HUD_STYLE_MODERN;
@@ -206,6 +230,7 @@ public class BetterUCConfig {
 
     public String factionUrl = "https://example.com/faction.json";
     public int reloadIntervalMinutes = 5;
+    public boolean chatTimestampsEnabled = true;
     public String chatTimestampFormat = "[HH:mm:ss]";
     public int maxChatHistory = 2000;
     public int lastKnownCash = -1;
@@ -329,6 +354,46 @@ public class BetterUCConfig {
         INSTANCE.hackTimerHudScale = normalizeHudScale(INSTANCE.hackTimerHudScale);
         INSTANCE.plantTimerHudScale = normalizeHudScale(INSTANCE.plantTimerHudScale);
         INSTANCE.pingHudScale = normalizeHudScale(INSTANCE.pingHudScale);
+    }
+
+    private static void sanitizeHudGradients() {
+        INSTANCE.hudGradientColor = sanitizeHudColor(INSTANCE.hudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
+
+        if (INSTANCE.hudGradientConfigVersion < 1) {
+            INSTANCE.healthHudGradientEnabled = INSTANCE.hudColorGradientEnabled;
+            INSTANCE.toggleSprintHudGradientEnabled = INSTANCE.hudColorGradientEnabled;
+            INSTANCE.fpsHudGradientEnabled = INSTANCE.hudColorGradientEnabled;
+            INSTANCE.paydayHudGradientEnabled = INSTANCE.hudColorGradientEnabled;
+            INSTANCE.ammoHudGradientEnabled = INSTANCE.hudColorGradientEnabled;
+            INSTANCE.bankHudGradientEnabled = INSTANCE.hudColorGradientEnabled;
+            INSTANCE.cashHudGradientEnabled = INSTANCE.hudColorGradientEnabled;
+            INSTANCE.potionHudGradientEnabled = INSTANCE.hudColorGradientEnabled;
+            INSTANCE.hackTimerHudGradientEnabled = INSTANCE.hudColorGradientEnabled;
+            INSTANCE.plantTimerHudGradientEnabled = INSTANCE.hudColorGradientEnabled;
+
+            INSTANCE.healthHudGradientColor = INSTANCE.hudGradientColor;
+            INSTANCE.toggleSprintHudGradientColor = INSTANCE.hudGradientColor;
+            INSTANCE.fpsHudGradientColor = INSTANCE.hudGradientColor;
+            INSTANCE.paydayHudGradientColor = INSTANCE.hudGradientColor;
+            INSTANCE.ammoHudGradientColor = INSTANCE.hudGradientColor;
+            INSTANCE.bankHudGradientColor = INSTANCE.hudGradientColor;
+            INSTANCE.cashHudGradientColor = INSTANCE.hudGradientColor;
+            INSTANCE.potionHudGradientColor = INSTANCE.hudGradientColor;
+            INSTANCE.hackTimerHudGradientColor = INSTANCE.hudGradientColor;
+            INSTANCE.plantTimerHudGradientColor = INSTANCE.hudGradientColor;
+            INSTANCE.hudGradientConfigVersion = 1;
+        }
+
+        INSTANCE.healthHudGradientColor = sanitizeHudColor(INSTANCE.healthHudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
+        INSTANCE.toggleSprintHudGradientColor = sanitizeHudColor(INSTANCE.toggleSprintHudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
+        INSTANCE.fpsHudGradientColor = sanitizeHudColor(INSTANCE.fpsHudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
+        INSTANCE.paydayHudGradientColor = sanitizeHudColor(INSTANCE.paydayHudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
+        INSTANCE.ammoHudGradientColor = sanitizeHudColor(INSTANCE.ammoHudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
+        INSTANCE.bankHudGradientColor = sanitizeHudColor(INSTANCE.bankHudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
+        INSTANCE.cashHudGradientColor = sanitizeHudColor(INSTANCE.cashHudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
+        INSTANCE.potionHudGradientColor = sanitizeHudColor(INSTANCE.potionHudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
+        INSTANCE.hackTimerHudGradientColor = sanitizeHudColor(INSTANCE.hackTimerHudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
+        INSTANCE.plantTimerHudGradientColor = sanitizeHudColor(INSTANCE.plantTimerHudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
     }
 
     private static void sanitizePingRelay() {
@@ -873,6 +938,7 @@ public class BetterUCConfig {
         ensureRuntimeCollections();
         sanitizeHudStyles();
         sanitizeHudScales();
+        sanitizeHudGradients();
         sanitizePingRelay();
         sanitizeDiscordInvite();
         sanitizeTrackedFactions();
@@ -933,6 +999,7 @@ public class BetterUCConfig {
             INSTANCE.healthHudColor = sanitizeHudColor(INSTANCE.healthHudColor, DEFAULT_HEALTH_HUD_COLOR);
             INSTANCE.healthHudHeartColor = sanitizeHudColor(INSTANCE.healthHudHeartColor, INSTANCE.healthHudColor);
             INSTANCE.healthHudTextColor = sanitizeHudColor(INSTANCE.healthHudTextColor, INSTANCE.healthHudColor);
+            sanitizeHudGradients();
             sanitizeHudStyles();
             sanitizeHudScales();
             sanitizePingRelay();

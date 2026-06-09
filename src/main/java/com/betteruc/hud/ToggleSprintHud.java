@@ -25,17 +25,18 @@ public class ToggleSprintHud {
         int y = BetterUCConfig.INSTANCE.toggleSprintHudY;
         String style = BetterUCConfig.INSTANCE.toggleSprintHudStyle;
         String text = "ToggleSprint: " + (isOn ? "ON" : "OFF");
-        ModernHudRenderer.drawScaled(context, x, y, BetterUCConfig.INSTANCE.toggleSprintHudScale, () -> {
+        ModernHudRenderer.drawScaledWithGradient(
+                context,
+                x,
+                y,
+                BetterUCConfig.INSTANCE.toggleSprintHudScale,
+                BetterUCConfig.INSTANCE.toggleSprintHudGradientEnabled,
+                BetterUCConfig.INSTANCE.toggleSprintHudGradientColor,
+                () -> {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
                 ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.toggleSprintHudCustomFont, text, 0, 0, color);
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                context.drawTextWithShadow(
-                        client.textRenderer,
-                        Text.literal(text),
-                        0,
-                        0,
-                        color
-                );
+                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, text, 0, 0, color);
             } else {
                 ModernHudRenderer.drawModule(
                         context,

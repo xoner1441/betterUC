@@ -144,11 +144,18 @@ public class CashHud {
         String value = formatMoney(currentCash) + "$";
         String style = BetterUCConfig.INSTANCE.cashHudStyle;
 
-        ModernHudRenderer.drawScaled(context, x, y, BetterUCConfig.INSTANCE.cashHudScale, () -> {
+        ModernHudRenderer.drawScaledWithGradient(
+                context,
+                x,
+                y,
+                BetterUCConfig.INSTANCE.cashHudScale,
+                BetterUCConfig.INSTANCE.cashHudGradientEnabled,
+                BetterUCConfig.INSTANCE.cashHudGradientColor,
+                () -> {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
                 ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.cashHudCustomFont, "Bargeld: " + value, 0, 0, BetterUCConfig.INSTANCE.cashHudColor);
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                context.drawTextWithShadow(client.textRenderer, Text.literal("Bargeld: " + value), 0, 0, BetterUCConfig.INSTANCE.cashHudColor);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, "Bargeld: " + value, 0, 0, BetterUCConfig.INSTANCE.cashHudColor);
             } else {
                 ModernHudRenderer.drawModule(
                         context,
