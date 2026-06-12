@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.2.1] - 2026-06-12
+
+### Neu
+- **Chat-Customizations** fuer WPS/HQ-Nachrichten: Gesucht, getoetet, inhaftiert, veraendert und geloescht werden kompakter dargestellt.
+- **Reinf-Customizations** fuer Fraktions- und Buendnisrufe mit Spieler, Ort und Entfernung.
+- **Pay-Customization** fuer `/pay`: Geld senden und erhalten wird als kurze PAY-Nachricht angezeigt.
+- Neuer Shortcut **`/abbuchen <betrag>`** als Ersatz fuer `/bank abbuchen <betrag>`.
+
+### Geaendert
+- WPS/HQ- und Reinf-Customizations sind im Client-Tab getrennt togglebar.
+- Empfangene `/pay`-Spielernamen werden dunkelgruen dargestellt.
+- betterUC-Hologramme koennen im ClickGUI ein- und ausgeschaltet werden.
+
+### Versionierung
+- Mod-Version auf **`1.2.1`** gesetzt.
+
 ## [1.1.8] - 2026-06-07
 
 ### Neu

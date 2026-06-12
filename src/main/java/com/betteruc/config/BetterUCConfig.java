@@ -6,10 +6,10 @@ import com.betteruc.parser.FactionStatsParser;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.Reader;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -247,6 +247,8 @@ public class BetterUCConfig {
     public String factionUrl = "https://example.com/faction.json";
     public int reloadIntervalMinutes = 5;
     public boolean chatTimestampsEnabled = true;
+    public boolean chatCustomizationEnabled = true;
+    public boolean reinfCustomizationEnabled = true;
     public String chatTimestampFormat = "[HH:mm:ss]";
     public int maxChatHistory = 2000;
     public int lastKnownCash = -1;
@@ -254,6 +256,7 @@ public class BetterUCConfig {
     public String currentPlayerFactionLabel = "";
     public boolean pingRelayEnabled = true;
     public boolean showPingHud = true;
+    public boolean showRoleHolograms = true;
     public float pingHudScale = DEFAULT_HUD_SCALE;
     public String pingHudStyle = HUD_STYLE_MODERN;
     public String pingHudCustomFont = "";
@@ -1019,11 +1022,20 @@ public class BetterUCConfig {
     }
 
     private static void loadFromFile(File file) {
-        try (Reader r = new FileReader(file)) {
-            BetterUCConfig loaded = GSON.fromJson(r, BetterUCConfig.class);
+        try {
+            String rawJson = Files.readString(file.toPath(), StandardCharsets.UTF_8);
+            boolean hasChatCustomizationSetting = rawJson.contains("\"chatCustomizationEnabled\"");
+            boolean hasReinfCustomizationSetting = rawJson.contains("\"reinfCustomizationEnabled\"");
+            BetterUCConfig loaded = GSON.fromJson(rawJson, BetterUCConfig.class);
             if (loaded == null) return;
 
             INSTANCE = loaded;
+            if (!hasChatCustomizationSetting) {
+                INSTANCE.chatCustomizationEnabled = true;
+            }
+            if (!hasReinfCustomizationSetting) {
+                INSTANCE.reinfCustomizationEnabled = true;
+            }
             ensureRuntimeCollections();
             if (INSTANCE.hotkeyCommands == null)         INSTANCE.hotkeyCommands = new ArrayList<>();
             if (INSTANCE.trackedFactionQueries == null)  INSTANCE.trackedFactionQueries = defaultTrackedFactionQueries();

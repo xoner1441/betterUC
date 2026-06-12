@@ -13,8 +13,15 @@ public class ChangelogScreen extends Screen {
     private static final Page[] PAGES = new Page[]{
             new Page(
                     "Highlights",
-                    "betterUC 1.2.0",
+                    "betterUC 1.2.1",
                     new String[]{
+                            "WPS/HQ-Nachrichten koennen im Chat kompakter und uebersichtlicher dargestellt werden",
+                            "Reinf- und Verstaerkungsrufe haben eine eigene Chat-Customization mit Spieler, Ort und Entfernung",
+                            "Reinf- und WPS/HQ-Customizations sind im Client-Tab getrennt schaltbar",
+                            "/pay-Nachrichten werden als kurze PAY-Zeilen angezeigt",
+                            "Empfangene /pay-Betraege sind dunkelgruen markiert",
+                            "betterUC-Hologramme koennen im ClickGUI ein- und ausgeschaltet werden",
+                            "Neuer Shortcut: /abbuchen <betrag> sendet /bank abbuchen <betrag>",
                             "bUC-Tablist-Badge wird als eigenes Overlay hinter den fertigen Namen gezeichnet",
                             "Andere Client-Icons wie Unique, LabyMod oder Badlion bleiben in der Tablist sichtbar",
                             "HUD-Farbverlauf ist jetzt pro HUD einzeln einstellbar",

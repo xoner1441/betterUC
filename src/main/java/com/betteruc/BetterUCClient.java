@@ -228,6 +228,7 @@ public class BetterUCClient implements ClientModInitializer {
             registerSetRpCommand(dispatcher, playerSuggestions);
             registerUserPanelCommand(dispatcher);
             registerUpdateCommand(dispatcher);
+            registerBankShortcutCommands(dispatcher);
         });
     }
 
@@ -266,6 +267,20 @@ public class BetterUCClient implements ClientModInitializer {
                     VersionChecker.installLatestUpdate(MinecraftClient.getInstance(), true);
                     return 1;
                 }));
+    }
+
+    private void registerBankShortcutCommands(CommandDispatcher<FabricClientCommandSource> dispatcher) {
+        dispatcher.register(ClientCommandManager.literal("abbuchen")
+                .then(ClientCommandManager.argument("betrag", StringArgumentType.word())
+                        .executes(context -> {
+                            MinecraftClient client = MinecraftClient.getInstance();
+                            if (client.player == null) return 0;
+                            if (!ensureAllowedServerForManualCommand(client)) return 0;
+
+                            String betrag = StringArgumentType.getString(context, "betrag");
+                            sendServerCommand(client, "bank abbuchen " + betrag);
+                            return 1;
+                        })));
     }
 
     private void registerSetBlacklistCommands(

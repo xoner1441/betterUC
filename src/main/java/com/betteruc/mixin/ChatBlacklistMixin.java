@@ -4,6 +4,7 @@ import com.betteruc.BetterUCMod;
 import com.betteruc.BetterUCSuppressFlags;
 import com.betteruc.ServerGate;
 import com.betteruc.client.CarFindTracker;
+import com.betteruc.client.ChatCustomizationFormatter;
 import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.PingRelayClient;
@@ -132,6 +133,22 @@ public class ChatBlacklistMixin {
         if (handleHackTimer(raw)) return;
         handlePaydayReset(raw);
         updateMoney(raw);
+
+        boolean wpsHqCustomizationEnabled = BetterUCConfig.INSTANCE.chatCustomizationEnabled;
+        boolean reinfCustomizationEnabled = BetterUCConfig.INSTANCE.reinfCustomizationEnabled;
+        if (wpsHqCustomizationEnabled || reinfCustomizationEnabled) {
+            ChatCustomizationFormatter.Result customized = ChatCustomizationFormatter.transform(
+                    raw,
+                    wpsHqCustomizationEnabled,
+                    reinfCustomizationEnabled
+            );
+            if (customized != null && customized.cancelOriginal()) {
+                appendCustomMessages(customized.replacementMessages(), ci);
+                return;
+            }
+        } else {
+            ChatCustomizationFormatter.clearPending();
+        }
 
         if (isSilentStatsBlankLine(raw)) {
             ci.cancel();
@@ -576,6 +593,20 @@ public class ChatBlacklistMixin {
             addingTimestamp = true;
             ((ChatHud) (Object) this).addMessage(newMessage);
         } catch (Exception ignored) {
+        } finally {
+            addingTimestamp = false;
+        }
+    }
+
+    private void appendCustomMessages(List<Text> messages, CallbackInfo ci) {
+        ci.cancel();
+        if (messages == null || messages.isEmpty()) return;
+
+        addingTimestamp = true;
+        try {
+            for (Text line : messages) {
+                ((ChatHud) (Object) this).addMessage(withTimestampIfEnabled(line));
+            }
         } finally {
             addingTimestamp = false;
         }

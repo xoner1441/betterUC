@@ -52,15 +52,13 @@ public class BetterUCScreen extends Screen {
             .map(container -> container.getMetadata().getVersion().getFriendlyString())
             .orElse("dev");
     private static final UpdateSection[] UPDATE_SECTIONS = new UpdateSection[]{
-            new UpdateSection("Neu in 1.2.0", new String[]{
-                    "bUC-Tablist-Badge wird jetzt als eigenes Overlay gerendert",
-                    "Andere Client-Icons wie Unique, LabyMod oder Badlion bleiben in der Tablist sichtbar",
-                    "HUD-Farbverlauf ist jetzt pro HUD einzeln einstellbar",
-                    "Auto-Updater kann neue Release-JARs herunterladen und nach dem Schließen ersetzen",
-                    "Bargeld-HUD erkennt Einzahlungen und Auszahlungen an der Fraktionsbank",
-                    "Access-Code und Relay-Felder speichern zuverlaessiger beim Wechseln im ClickGUI",
-                    "Stats-Filter unterdrueckt Detailzeilen wie Immobilien sauberer",
-                    "Normale User bekommen nur noch das bUC-Tablist-Badge, Rollen behalten ihr Hologramm"
+            new UpdateSection("Neu in 1.2.1", new String[]{
+                    "WPS/HQ-Nachrichten koennen im Chat kompakter dargestellt werden",
+                    "Reinf-/Verstaerkungsrufe bekommen eine eigene lesbare Chat-Ansicht",
+                    "/pay-Nachrichten werden als kurze PAY-Zeilen angezeigt",
+                    "Reinf- und WPS/HQ-Customizations sind getrennt im Client-Tab schaltbar",
+                    "betterUC-Hologramme koennen im ClickGUI ein- und ausgeschaltet werden",
+                    "Neuer Shortcut: /abbuchen <betrag> sendet /bank abbuchen <betrag>"
             }),
             new UpdateSection("Kurzstart", new String[]{
                     "Standard: N öffnet das betterUC ClickGUI",
@@ -227,6 +225,10 @@ public class BetterUCScreen extends Screen {
                 y = addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(client, true));
             }
             case CHAT -> {
+                y = addToggle(x, y, controlW, "WPS/HQ Customizations", BetterUCConfig.INSTANCE.chatCustomizationEnabled,
+                        () -> BetterUCConfig.INSTANCE.chatCustomizationEnabled = !BetterUCConfig.INSTANCE.chatCustomizationEnabled);
+                y = addToggle(x, y, controlW, "Reinf Customizations", BetterUCConfig.INSTANCE.reinfCustomizationEnabled,
+                        () -> BetterUCConfig.INSTANCE.reinfCustomizationEnabled = !BetterUCConfig.INSTANCE.reinfCustomizationEnabled);
                 y = addToggle(x, y, controlW, "Chat-Zeit", BetterUCConfig.INSTANCE.chatTimestampsEnabled,
                         () -> BetterUCConfig.INSTANCE.chatTimestampsEnabled = !BetterUCConfig.INSTANCE.chatTimestampsEnabled);
                 y = addTimestampField(x, y, controlW);
@@ -325,6 +327,8 @@ public class BetterUCScreen extends Screen {
         y = addInfo(x, y, width, "Status", PingRelayClient.statusLabel());
         y = addInfo(x, y, width, "Spieler", currentPlayerName());
         y = addInfo(x, y, width, "Rolle", PingRelayClient.roleLabel());
+        y = addToggle(x, y, width, "Hologramme", BetterUCConfig.INSTANCE.showRoleHolograms,
+                () -> BetterUCConfig.INSTANCE.showRoleHolograms = !BetterUCConfig.INSTANCE.showRoleHolograms);
         y = addInfo(x, y, width, "Fraktion", currentFactionLabel());
         y = addInfo(x, y, width, "Kommunikation", CommunicationDeviceTracker.statusLabel());
         y = addInfo(x, y, width, "Server", currentServerLabel());
@@ -1581,7 +1585,7 @@ public class BetterUCScreen extends Screen {
 
         ZOOM(Category.GAMEPLAY, "Zoom", "Taste und FOV", 0xFFA78BFA, true),
         AUTO_STATS(Category.GAMEPLAY, "Auto Stats", "Automatisches /stats", 0xFF34D399, true),
-        CHAT(Category.GAMEPLAY, "Chat", "Zeitstempel", 0xFF38BDF8, false),
+        CHAT(Category.GAMEPLAY, "Chat", "Zeitstempel & Customization", 0xFF38BDF8, false),
         CONNECTION(Category.GAMEPLAY, "Verbindung", "Account & Relay", 0xFF38BDF8, false),
 
         BLACKLIST(Category.TOOLS, "Blacklist", "Gründe und Sync", 0xFFF97316, false),

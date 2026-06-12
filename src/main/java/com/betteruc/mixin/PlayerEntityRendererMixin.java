@@ -1,6 +1,7 @@
 package com.betteruc.mixin;
 
 import com.betteruc.client.PingRelayClient;
+import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -37,6 +38,7 @@ public class PlayerEntityRendererMixin {
             CameraRenderState cameraState,
             CallbackInfo ci
     ) {
+        if (!BetterUCConfig.INSTANCE.showRoleHolograms) return;
         if (state == null || state.nameLabelPos == null) return;
         if (state.squaredDistanceToCamera > BETTERUC_LABEL_MAX_DISTANCE_SQ) return;
 
