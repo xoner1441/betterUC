@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.2.2] - 2026-06-14
+
+### Neu
+- **WPS/HQ-Chatformat weiter verbessert**: Gesucht, getoetet, inhaftiert, veraendert und geloescht wirken jetzt ruhiger und einheitlicher.
+- WPS/HQ-Labels werden klein und ohne fetten Text dargestellt.
+- Neuer Trenner **`◆`** fuer formatierte Chatzeilen.
+- Lange Fahndungsgruende bleiben kompakt in einer Grund-Zeile.
+- Zeit, Wanteds oder Wanted-Aenderungen werden in einer eigenen Zeile angezeigt.
+- **Drogenabgabe-Abkuerzung**: `Drogenabgabe 5/10/15g` wird zu `DA 5g/10g/15g`.
+
+### Geaendert
+- Plus-Abstaende in Fahndungsgruenden werden automatisch geglaettet, z. B. `+Gute Fuehrung` zu `+ Gute Fuehrung`.
+- Waffen- und Drogenabnahme bleiben kurze Einzeiler ohne falsche Fahndungsgrund-Uebernahme.
+
+### Versionierung
+- Mod-Version auf **`1.2.2`** gesetzt.
+
 ## [1.2.1] - 2026-06-12
 
 ### Neu
@@ -7,11 +24,14 @@
 - **Reinf-Customizations** fuer Fraktions- und Buendnisrufe mit Spieler, Ort und Entfernung.
 - **Pay-Customization** fuer `/pay`: Geld senden und erhalten wird als kurze PAY-Nachricht angezeigt.
 - Neuer Shortcut **`/abbuchen <betrag>`** als Ersatz fuer `/bank abbuchen <betrag>`.
+- Neuer Helper/Admin-Command **`/buonline`** zeigt online Mod-User mit Fraktion und Mod-Version.
 
 ### Geaendert
 - WPS/HQ- und Reinf-Customizations sind im Client-Tab getrennt togglebar.
 - Empfangene `/pay`-Spielernamen werden dunkelgruen dargestellt.
 - betterUC-Hologramme koennen im ClickGUI ein- und ausgeschaltet werden.
+- WPS/HQ-Verhaftungs- und Kill-Gruende werden auch bei spaeter eintreffender Fahndungsgrund-Zeile noch zusammengefuehrt.
+- Waffen- und Drogenabnahme-Zeilen werden jetzt als einzelne kompakte Zeile angezeigt, ohne die folgende HQ-Fahndungsgrund-Zeile zu uebernehmen.
 
 ### Versionierung
 - Mod-Version auf **`1.2.1`** gesetzt.

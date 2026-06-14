@@ -4,44 +4,54 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class ChatCustomizationFormatter {
-    private static final long PENDING_TTL_MS = 4000L;
+    private static final long PENDING_TTL_MS = 30000L;
+    private static final Pattern PLAYER_TOKEN_PATTERN = Pattern.compile("[A-Za-z0-9_]{2,16}");
 
     private static final Pattern WANTED_START_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:»\\s*)?HQ:\\s*Gesuchter:\\s*([^\\.]+)\\.\\s*Grund:\\s*(.+?)\\s*$",
+            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*Gesuchter:.*?(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+).*?Grund.*?[:\\s]+(.+?)(?:\\s*\\[.*?\\])?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern WANTED_LEVEL_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:»\\s*)?HQ:\\s*([^\\s]+)'s\\s+momentanes\\s+WantedLevel:\\s*(\\d+)\\s*$",
+            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+?)(?:['’]?s)\\s+momentanes\\s+WantedLevel.*?(\\d+)\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern KILLED_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:»\\s*)?HQ:\\s*(.+?)\\s+wurde\\s+von\\s+(.+?)\\s+getötet\\.\\s*$",
+            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(?:HQ:\\s*)?(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+wurde\\s+von\\s+(.+?)\\s+get(?:ötet|oetet|otet)\\.?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern JAILED_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:»\\s*)?HQ:\\s*(.+?)\\s+wurde\\s+von\\s+(.+?)\\s+eingesperrt\\.\\s*$",
+            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(?:HQ:\\s*)?(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+wurde\\s+von\\s+(.+?)\\s+eingesperrt\\.?\\s*$",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern WEAPON_SEIZED_PATTERN = Pattern.compile(
+            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(?:HQ:\\s*)?(?:[\\p{L} ]+\\s+)?(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+hat\\s+(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+die\\s+Waffen\\s+abgenommen\\.?\\s*$",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern DRUG_SEIZED_PATTERN = Pattern.compile(
+            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(?:HQ:\\s*)?(?:[\\p{L} ]+\\s+)?(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+hat\\s+(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+(?:die\\s+)?Drogen\\s+abgenommen\\.?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern SEARCH_REASON_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:»\\s*)?HQ\\s+Fahndungsgrund:\\s*(.+?)\\s*\\|\\s*Fahndungszeit:\\s*(\\d+)\\s*Minuten\\.?\\s*$",
+            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:?\\s*Fahndungsgrund:\\s*(.+?)\\s*[|¦]\\s*Fahndungszeit:\\s*(\\d+)\\s*(Minute(?:n)?|Stunde(?:n)?)\\.?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern CHANGED_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:»\\s*)?HQ:\\s*(.+?)\\s+hat\\s+(.+?)\\s+WantedPunkte\\s+verändert!\\s*$",
+            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*(?:.*?\\s+)?(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+hat\\s+(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)['’]?s\\s+WantedPunkte\\s+verändert!\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern NEW_REASON_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:»\\s*)?HQ\\s+Neuer\\s+Grund:\\s*(.+?)\\s*\\[(\\d+)\\s*»\\s*(\\d+)\\s*WantedPunkte\\]\\s*$",
+            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:?\\s*Neuer\\s+Grund:\\s*(.+?)\\s*(?:[|¦]\\s*)?\\[(\\d+)\\s*[»>]\\s*(\\d+)\\s*WantedPunkte\\](?:\\s*\\[.*?\\])?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern DELETED_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:»\\s*)?HQ:\\s*(.+?)\\s+hat\\s+(.+?)'s\\s+Akten\\s+gelöscht,\\s*over\\.\\s*$",
+            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*(?:.*?\\s+)?(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+hat\\s+(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)['’]?s\\s+Akten\\s+gel[öo]scht,\\s*over\\.?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
 
@@ -129,46 +139,60 @@ public final class ChatCustomizationFormatter {
 
         Matcher wantedStart = WANTED_START_PATTERN.matcher(clean);
         if (wantedStart.matches()) {
-            pending = new Pending(PendingType.WANTED, "", wantedStart.group(1), wantedStart.group(2), System.currentTimeMillis());
+            pending = new Pending(PendingType.WANTED, "", playerName(wantedStart.group(1)), wantedStart.group(2), System.currentTimeMillis());
             return Result.suppress();
         }
 
         Matcher wantedLevel = WANTED_LEVEL_PATTERN.matcher(clean);
-        if (wantedLevel.matches() && matchesPending(PendingType.WANTED, wantedLevel.group(1))) {
+        if (wantedLevel.matches() && matchesPending(PendingType.WANTED, playerName(wantedLevel.group(1)))) {
             Pending current = pending;
             pending = null;
-            return Result.replace(List.of(
+            return Result.replace(messages(
                     headline("GESUCHT", current.target()),
-                    detail(current.reason(), wantedLevel.group(2) + " Wanteds")
+                    reasonDetails(current.reason(), wantedLevel.group(2) + " Wanteds")
             ));
         }
 
         Matcher killed = KILLED_PATTERN.matcher(clean);
         if (killed.matches()) {
-            pending = new Pending(PendingType.KILLED, killed.group(2), killed.group(1), "", System.currentTimeMillis());
+            pending = new Pending(PendingType.KILLED, playerName(killed.group(2)), playerName(killed.group(1)), "", System.currentTimeMillis());
             return Result.suppress();
         }
 
         Matcher jailed = JAILED_PATTERN.matcher(clean);
         if (jailed.matches()) {
-            pending = new Pending(PendingType.JAILED, jailed.group(2), jailed.group(1), "", System.currentTimeMillis());
+            pending = new Pending(PendingType.JAILED, playerName(jailed.group(2)), playerName(jailed.group(1)), "", System.currentTimeMillis());
             return Result.suppress();
         }
 
+        Matcher weaponSeized = WEAPON_SEIZED_PATTERN.matcher(clean);
+        if (weaponSeized.matches()) {
+            return Result.replace(List.of(
+                    headline("WAFFEN ABNAHME", playerName(weaponSeized.group(1)), playerName(weaponSeized.group(2)))
+            ));
+        }
+
+        Matcher drugSeized = DRUG_SEIZED_PATTERN.matcher(clean);
+        if (drugSeized.matches()) {
+            return Result.replace(List.of(
+                    headline("DROGEN ABNAHME", playerName(drugSeized.group(1)), playerName(drugSeized.group(2)))
+            ));
+        }
+
         Matcher searchReason = SEARCH_REASON_PATTERN.matcher(clean);
-        if (searchReason.matches() && (matchesPending(PendingType.KILLED) || matchesPending(PendingType.JAILED))) {
+        if (searchReason.matches() && isFahndungPending()) {
             Pending current = pending;
             pending = null;
-            String action = current.type() == PendingType.KILLED ? "GETÖTET" : "INHAFTIERT";
-            return Result.replace(List.of(
+            String action = fahndungAction(current.type());
+            return Result.replace(messages(
                     headline(action, current.actor(), current.target()),
-                    detail(searchReason.group(1), searchReason.group(2) + " Minuten")
+                    reasonDetails(searchReason.group(1), searchReason.group(2) + " " + searchReason.group(3))
             ));
         }
 
         Matcher changed = CHANGED_PATTERN.matcher(clean);
         if (changed.matches()) {
-            pending = new Pending(PendingType.CHANGED, changed.group(1), changed.group(2), "", System.currentTimeMillis());
+            pending = new Pending(PendingType.CHANGED, playerName(changed.group(1)), playerName(changed.group(2)), "", System.currentTimeMillis());
             return Result.suppress();
         }
 
@@ -176,16 +200,16 @@ public final class ChatCustomizationFormatter {
         if (newReason.matches() && matchesPending(PendingType.CHANGED)) {
             Pending current = pending;
             pending = null;
-            return Result.replace(List.of(
+            return Result.replace(messages(
                     headline("VERÄNDERT", current.actor(), current.target()),
-                    detail(newReason.group(1), newReason.group(2) + " » " + newReason.group(3) + " Wanteds")
+                    reasonDetails(newReason.group(1), newReason.group(2) + " » " + newReason.group(3) + " Wanteds")
             ));
         }
 
         Matcher deleted = DELETED_PATTERN.matcher(clean);
         if (deleted.matches()) {
             return Result.replace(List.of(
-                    headline("GELÖSCHT", deleted.group(1), deleted.group(2)),
+                    headline("GELÖSCHT", playerName(deleted.group(1)), playerName(deleted.group(2))),
                     detail("Akten gelöscht", "")
             ));
         }
@@ -213,15 +237,29 @@ public final class ChatCustomizationFormatter {
                 && key(pending.target()).equals(key(target));
     }
 
+    private static boolean isFahndungPending() {
+        return pending != null
+                && (pending.type() == PendingType.KILLED
+                || pending.type() == PendingType.JAILED);
+    }
+
+    private static String fahndungAction(PendingType type) {
+        return switch (type) {
+            case KILLED -> "GETÖTET";
+            case JAILED -> "INHAFTIERT";
+            default -> "HQ";
+        };
+    }
+
     private static Text headline(String action, String target) {
         return action(action)
-                .append(separator(" ✦ "))
+                .append(separator(" ◆ "))
                 .append(name(target));
     }
 
     private static Text headline(String action, String actor, String target) {
         return action(action)
-                .append(separator(" ✦ "))
+                .append(separator(" ◆ "))
                 .append(name(actor))
                 .append(separator(" » "))
                 .append(name(target));
@@ -237,6 +275,39 @@ public final class ChatCustomizationFormatter {
         return text;
     }
 
+    private static List<Text> messages(Text headline, List<Text> details) {
+        List<Text> messages = new ArrayList<>(1 + details.size());
+        messages.add(headline);
+        messages.addAll(details);
+        return messages;
+    }
+
+    private static List<Text> reasonDetails(String reason, String suffix) {
+        String normalizedReason = normalizeReason(reason);
+        if (suffix == null || suffix.isBlank()) {
+            return List.of(detail(normalizedReason, ""));
+        }
+
+        return List.of(
+                detail(normalizedReason, ""),
+                valueDetail(suffix)
+        );
+    }
+
+    private static String normalizeReason(String reason) {
+        String normalized = reason == null ? "" : reason.trim();
+        if (normalized.isBlank()) return "";
+
+        return normalized
+                .replaceAll("\\s*\\+\\s*", " + ")
+                .replaceAll("(?i)\\bDrogenabgabe\\s*(5|10|15)\\s*g?\\b", "DA $1g");
+    }
+
+    private static Text valueDetail(String value) {
+        return Text.literal("» ").formatted(Formatting.GRAY)
+                .append(Text.literal(value == null ? "" : value.trim()).formatted(Formatting.YELLOW));
+    }
+
     private static Text amountDetail(String amount, Formatting color) {
         return Text.literal("\u00BB ").formatted(Formatting.GRAY)
                 .append(Text.literal(amount == null ? "" : amount.trim()).formatted(color, Formatting.BOLD));
@@ -244,7 +315,7 @@ public final class ChatCustomizationFormatter {
 
     private static Text payHeadline(String actor, String target) {
         return action("PAY")
-                .append(separator(" \u2726 "))
+                .append(separator(" \u25C6 "))
                 .append(payName(actor))
                 .append(separator(" \u00BB "))
                 .append(payName(target));
@@ -252,7 +323,7 @@ public final class ChatCustomizationFormatter {
 
     private static Text supportHeadline(String action, String target) {
         return action(action)
-                .append(separator(" \u2726 "))
+                .append(separator(" \u25C6 "))
                 .append(supportName(target));
     }
 
@@ -298,7 +369,8 @@ public final class ChatCustomizationFormatter {
     }
 
     private static MutableText action(String value) {
-        return Text.literal(value).formatted(Formatting.RED, Formatting.BOLD);
+        String label = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+        return Text.literal(label).formatted(Formatting.RED);
     }
 
     private static MutableText name(String value) {
@@ -329,6 +401,19 @@ public final class ChatCustomizationFormatter {
             cleaned = cleaned.substring(1);
         }
         return cleaned.isBlank() ? "0" : cleaned;
+    }
+
+    private static String playerName(String value) {
+        if (value == null) return "";
+        String cleaned = value.replaceAll("§.", "")
+                .replaceAll("\\[[^\\]]+\\]", " ")
+                .trim();
+        Matcher matcher = PLAYER_TOKEN_PATTERN.matcher(cleaned);
+        String last = "";
+        while (matcher.find()) {
+            last = matcher.group();
+        }
+        return last.isBlank() ? cleaned : last;
     }
 
     private static String key(String value) {

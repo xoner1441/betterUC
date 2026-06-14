@@ -52,13 +52,14 @@ public class BetterUCScreen extends Screen {
             .map(container -> container.getMetadata().getVersion().getFriendlyString())
             .orElse("dev");
     private static final UpdateSection[] UPDATE_SECTIONS = new UpdateSection[]{
-            new UpdateSection("Neu in 1.2.1", new String[]{
-                    "WPS/HQ-Nachrichten koennen im Chat kompakter dargestellt werden",
-                    "Reinf-/Verstaerkungsrufe bekommen eine eigene lesbare Chat-Ansicht",
-                    "/pay-Nachrichten werden als kurze PAY-Zeilen angezeigt",
-                    "Reinf- und WPS/HQ-Customizations sind getrennt im Client-Tab schaltbar",
-                    "betterUC-Hologramme koennen im ClickGUI ein- und ausgeschaltet werden",
-                    "Neuer Shortcut: /abbuchen <betrag> sendet /bank abbuchen <betrag>"
+            new UpdateSection("Neu in 1.2.2", new String[]{
+                    "WPS/HQ-Chatformat wirkt jetzt ruhiger und einheitlicher",
+                    "Labels sind klein geschrieben und nicht mehr fett",
+                    "Formatierte Chatzeilen nutzen nun den Trenner ◆",
+                    "Lange Fahndungsgruende bleiben kompakt in einer Grund-Zeile",
+                    "Zeit, Wanteds und Wanted-Aenderungen stehen separat darunter",
+                    "Drogenabgabe 5/10/15g wird automatisch zu DA 5g/10g/15g",
+                    "Plus-Abstaende in Gruenden werden automatisch geglaettet"
             }),
             new UpdateSection("Kurzstart", new String[]{
                     "Standard: N öffnet das betterUC ClickGUI",
@@ -91,7 +92,8 @@ public class BetterUCScreen extends Screen {
                     "/blset <spieler> <grund> oder /setbl setzt einen Blacklist-Eintrag",
                     "/modbl <spieler> <grund> erweitert einen bestehenden Blacklist-Eintrag",
                     "/blinfo <spieler> zeigt gespeicherte Blacklist-Infos",
-                    "/setrp <spieler> <1-3> setzt die RP-Stufe"
+                    "/setrp <spieler> <1-3> setzt die RP-Stufe",
+                    "/buonline zeigt Helpern und Admins online Mod-User"
             }),
             new UpdateSection("Komfort", new String[]{
                     "Auto-Stats aktualisiert HUD- und Userpanel-Daten nach Join und AFK",

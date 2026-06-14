@@ -13,8 +13,15 @@ public class ChangelogScreen extends Screen {
     private static final Page[] PAGES = new Page[]{
             new Page(
                     "Highlights",
-                    "betterUC 1.2.1",
+                    "betterUC 1.2.2",
                     new String[]{
+                            "WPS/HQ-Chatformat wirkt jetzt ruhiger und einheitlicher",
+                            "Labels wie gesucht, getoetet, inhaftiert und veraendert sind klein und nicht mehr fett",
+                            "Formatierte Chatzeilen nutzen nun den Trenner ◆",
+                            "Lange Fahndungsgruende bleiben kompakt in einer Grund-Zeile",
+                            "Zeit, Wanteds und Wanted-Aenderungen stehen separat darunter",
+                            "Drogenabgabe 5/10/15g wird automatisch zu DA 5g/10g/15g",
+                            "Plus-Abstaende in Gruenden werden automatisch geglaettet",
                             "WPS/HQ-Nachrichten koennen im Chat kompakter und uebersichtlicher dargestellt werden",
                             "Reinf- und Verstaerkungsrufe haben eine eigene Chat-Customization mit Spieler, Ort und Entfernung",
                             "Reinf- und WPS/HQ-Customizations sind im Client-Tab getrennt schaltbar",
@@ -22,6 +29,7 @@ public class ChangelogScreen extends Screen {
                             "Empfangene /pay-Betraege sind dunkelgruen markiert",
                             "betterUC-Hologramme koennen im ClickGUI ein- und ausgeschaltet werden",
                             "Neuer Shortcut: /abbuchen <betrag> sendet /bank abbuchen <betrag>",
+                            "/buonline zeigt Helpern und Admins online Mod-User mit Fraktion und Version",
                             "bUC-Tablist-Badge wird als eigenes Overlay hinter den fertigen Namen gezeichnet",
                             "Andere Client-Icons wie Unique, LabyMod oder Badlion bleiben in der Tablist sichtbar",
                             "HUD-Farbverlauf ist jetzt pro HUD einzeln einstellbar",
@@ -100,7 +108,8 @@ public class ChangelogScreen extends Screen {
                             "/car find Koordinaten werden automatisch ins Navi übernommen",
                             "Chat-Zeitstempel und größere Chat-Historie",
                             "Ping-Taste ist in den Minecraft-Keybinds frei einstellbar",
-                            "/register <passwort> verbindet deinen Ingame-Account mit dem Userpanel"
+                            "/register <passwort> verbindet deinen Ingame-Account mit dem Userpanel",
+                            "/buonline zeigt Helpern und Admins online Mod-User"
                     }
             ),
             new Page(

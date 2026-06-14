@@ -15,7 +15,9 @@ import net.minecraft.client.network.ServerInfo;
 import net.minecraft.entity.Entity;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -269,6 +271,63 @@ public final class PingRelayClient {
             case "vip" -> "VIP";
             default -> "";
         };
+    }
+
+    public static void showOnlineCommandList(MinecraftClient client) {
+        if (client == null || client.player == null) return;
+        if (!connected) {
+            sendLocalMessage(client, "Online-Liste nicht verfuegbar: Relay ist nicht verbunden.");
+            return;
+        }
+
+        String sessionRole = cleanRole(role);
+        if (!"admin".equals(sessionRole) && !"helper".equals(sessionRole)) {
+            sendLocalMessage(client, "Keine Berechtigung. /buonline ist nur fuer Helper und Admins.");
+            return;
+        }
+
+        URI uri = playersApiUri();
+        String token = accessToken();
+        if (uri == null || token.isBlank()) {
+            sendLocalMessage(client, "Online-Liste nicht verfuegbar: Zugangscode oder Relay-Adresse fehlt.");
+            return;
+        }
+
+        sendLocalMessage(client, "Online-Liste wird geladen...");
+        HttpRequest request = HttpRequest.newBuilder(uri)
+                .timeout(Duration.ofSeconds(5))
+                .header("X-BetterUC-Token", token)
+                .GET()
+                .build();
+
+        HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .whenComplete((response, error) -> client.execute(() -> {
+                    if (client.player == null) return;
+                    if (error != null || response == null) {
+                        sendLocalMessage(client, "Online-Liste konnte nicht geladen werden.");
+                        return;
+                    }
+                    if (response.statusCode() == 401) {
+                        sendLocalMessage(client, "Online-Liste konnte nicht geladen werden: Access Code ungueltig.");
+                        return;
+                    }
+                    if (response.statusCode() != 200) {
+                        sendLocalMessage(client, "Online-Liste konnte nicht geladen werden: HTTP " + response.statusCode() + ".");
+                        return;
+                    }
+
+                    try {
+                        JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+                        JsonArray players = json.has("players") && json.get("players").isJsonArray()
+                                ? json.getAsJsonArray("players")
+                                : new JsonArray();
+                        List<OnlineListEntry> entries = parseOnlineListEntries(players);
+                        renderOnlineList(client, entries);
+                    } catch (Exception e) {
+                        BetterUCMod.LOGGER.debug("Ignored invalid betterUC online list response", e);
+                        sendLocalMessage(client, "Online-Liste konnte nicht gelesen werden.");
+                    }
+                }));
     }
 
     public static String tabBadgeRoleForRenderedText(String renderedText) {
@@ -737,6 +796,76 @@ public final class PingRelayClient {
         return nextPlayers;
     }
 
+    private static List<OnlineListEntry> parseOnlineListEntries(JsonArray players) {
+        List<OnlineListEntry> entries = new ArrayList<>();
+        for (JsonElement element : players) {
+            if (!element.isJsonObject()) continue;
+            JsonObject player = element.getAsJsonObject();
+            String name = stringValue(player, "name", "").trim();
+            if (name.isBlank()) continue;
+            entries.add(new OnlineListEntry(
+                    name,
+                    cleanDisplayLabel(stringValue(player, "faction", "")),
+                    cleanDisplayLabel(stringValue(player, "version", "")),
+                    cleanRole(stringValue(player, "role", "user")),
+                    longValue(player, "priority", 50L)
+            ));
+        }
+        entries.sort((a, b) -> {
+            int priorityCompare = Long.compare(b.priority(), a.priority());
+            if (priorityCompare != 0) return priorityCompare;
+            return a.name().compareToIgnoreCase(b.name());
+        });
+        return entries;
+    }
+
+    private static void renderOnlineList(MinecraftClient client, List<OnlineListEntry> entries) {
+        MutableText header = Text.literal("[betterUC] ").formatted(Formatting.GRAY)
+                .append(Text.literal("Online Mod-User: ").formatted(Formatting.AQUA))
+                .append(Text.literal(String.valueOf(entries.size())).formatted(Formatting.WHITE, Formatting.BOLD));
+        sendText(client, header);
+
+        sendText(client, Text.literal("User | Fraktion | Mod-Version").formatted(Formatting.DARK_GRAY));
+        if (entries.isEmpty()) {
+            sendText(client, Text.literal("Keine verbundenen Mod-User gefunden.").formatted(Formatting.GRAY));
+            return;
+        }
+
+        for (OnlineListEntry entry : entries) {
+            String faction = entry.faction().isBlank() ? "unbekannt" : entry.faction();
+            String version = versionLabel(entry.version());
+            MutableText line = Text.literal("- ").formatted(Formatting.DARK_GRAY)
+                    .append(Text.literal(entry.name()).formatted(roleFormatting(entry.role())))
+                    .append(Text.literal(" | ").formatted(Formatting.DARK_GRAY))
+                    .append(Text.literal(faction).formatted(Formatting.AQUA))
+                    .append(Text.literal(" | ").formatted(Formatting.DARK_GRAY))
+                    .append(Text.literal(version).formatted(Formatting.GRAY));
+            sendText(client, line);
+        }
+    }
+
+    private static Formatting roleFormatting(String role) {
+        return switch (cleanRole(role)) {
+            case "admin" -> Formatting.RED;
+            case "helper" -> Formatting.YELLOW;
+            case "partner" -> Formatting.AQUA;
+            case "vip" -> Formatting.DARK_PURPLE;
+            default -> Formatting.WHITE;
+        };
+    }
+
+    private static String versionLabel(String version) {
+        String clean = version == null ? "" : version.trim();
+        if (clean.isBlank()) return "unbekannt";
+        return clean.toLowerCase(Locale.ROOT).startsWith("v") ? clean : "v" + clean;
+    }
+
+    private static String cleanDisplayLabel(String value) {
+        if (value == null) return "";
+        String clean = value.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ').trim();
+        return clean.length() > 48 ? clean.substring(0, 48) : clean;
+    }
+
     private static String channel() {
         String raw = BetterUCConfig.INSTANCE.pingRelayChannel == null ? "" : BetterUCConfig.INSTANCE.pingRelayChannel.trim();
         return raw.isEmpty() ? "global" : raw.replaceAll("[^A-Za-z0-9_-]", "").toLowerCase(Locale.ROOT);
@@ -917,6 +1046,12 @@ public final class PingRelayClient {
         }
     }
 
+    private static void sendText(MinecraftClient client, Text message) {
+        if (client != null && client.player != null && message != null) {
+            client.player.sendMessage(message, false);
+        }
+    }
+
     public record PingMarker(
             String id,
             String sender,
@@ -936,6 +1071,9 @@ public final class PingRelayClient {
     }
 
     private record RelayPlayer(String nameLower, String uuid, String role, long priority) {
+    }
+
+    private record OnlineListEntry(String name, String faction, String version, String role, long priority) {
     }
 
     public enum PingType {

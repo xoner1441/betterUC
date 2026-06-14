@@ -229,6 +229,7 @@ public class BetterUCClient implements ClientModInitializer {
             registerUserPanelCommand(dispatcher);
             registerUpdateCommand(dispatcher);
             registerBankShortcutCommands(dispatcher);
+            registerBetterUcOnlineCommand(dispatcher);
         });
     }
 
@@ -281,6 +282,14 @@ public class BetterUCClient implements ClientModInitializer {
                             sendServerCommand(client, "bank abbuchen " + betrag);
                             return 1;
                         })));
+    }
+
+    private void registerBetterUcOnlineCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
+        dispatcher.register(ClientCommandManager.literal("buonline")
+                .executes(context -> {
+                    PingRelayClient.showOnlineCommandList(MinecraftClient.getInstance());
+                    return 1;
+                }));
     }
 
     private void registerSetBlacklistCommands(
