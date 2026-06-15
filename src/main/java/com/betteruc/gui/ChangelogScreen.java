@@ -13,10 +13,12 @@ public class ChangelogScreen extends Screen {
     private static final Page[] PAGES = new Page[]{
             new Page(
                     "Highlights",
-                    "betterUC 1.2.2",
+                    "betterUC 1.2.3",
                     new String[]{
                             "/adropdrink gibt Lieferanten-Getraenke automatisch im 2,5s-Takt ab",
+                            "Auto-Dropdrink stoppt, wenn du nicht in der Kneipe bist",
                             "Fischer-Automation sucht, faengt und gibt Fisch am Steg ab",
+                            "Lieferjunge-Scoreboard wird genauer ausgelesen",
                             "WPS/HQ-Chatformat wirkt jetzt ruhiger und einheitlicher",
                             "Labels wie gesucht, getoetet, inhaftiert und veraendert sind klein und nicht mehr fett",
                             "Formatierte Chatzeilen nutzen nun den Trenner ◆",

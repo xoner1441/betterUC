@@ -1,10 +1,22 @@
 # Changelog
 
-## [1.2.2] - 2026-06-14
+## [1.2.3] - 2026-06-15
 
 ### Neu
 - Neuer Custom-Command **`/adropdrink`** fuer Lieferantenjobs: liest die Getränke-Anzahl aus dem Lieferjunge-Scoreboard und sendet `/dropdrink` automatisch im 2,5-Sekunden-Takt.
-- **Fischer-Automation**: erkennt Fischer-Jobhinweise, sucht nach Fang oder Netzverlust erneut und sendet am Steg automatisch `/dropfish`.
+- **Auto-Dropdrink stoppt sicher**, wenn der Server meldet, dass du nicht in der Kneipe bist.
+- **Fischer-Automation**: erkennt Fischer-Jobhinweise, sendet `/findschwarm` und `/catchfish`, sucht nach Fang oder Netzverlust erneut und gibt den Fisch am Steg automatisch mit `/dropfish` ab.
+
+### Geaendert
+- Die Lieferjunge-Getränke-Anzahl wird aus dem sichtbar gerenderten Scoreboard-Wert gelesen, damit interne Scoreboard-Werte nicht mehr zu falschen Mengen führen.
+- Website, ClickGUI und Willkommens-Changelog listen die neuen Job-Automationen.
+
+### Versionierung
+- Mod-Version auf **`1.2.3`** gesetzt.
+
+## [1.2.2] - 2026-06-14
+
+### Neu
 - **WPS/HQ-Chatformat weiter verbessert**: Gesucht, getoetet, inhaftiert, veraendert und geloescht wirken jetzt ruhiger und einheitlicher.
 - WPS/HQ-Labels werden klein und ohne fetten Text dargestellt.
 - Neuer Trenner **`◆`** fuer formatierte Chatzeilen.

@@ -52,9 +52,11 @@ public class BetterUCScreen extends Screen {
             .map(container -> container.getMetadata().getVersion().getFriendlyString())
             .orElse("dev");
     private static final UpdateSection[] UPDATE_SECTIONS = new UpdateSection[]{
-            new UpdateSection("Neu in 1.2.2", new String[]{
+            new UpdateSection("Neu in 1.2.3", new String[]{
                     "/adropdrink gibt Lieferanten-Getraenke automatisch im 2,5s-Takt ab",
+                    "Auto-Dropdrink stoppt, wenn du nicht in der Kneipe bist",
                     "Fischer-Automation sucht, fängt und gibt Fisch am Steg ab",
+                    "Lieferjunge-Scoreboard wird genauer ausgelesen",
                     "WPS/HQ-Chatformat wirkt jetzt ruhiger und einheitlicher",
                     "Labels sind klein geschrieben und nicht mehr fett",
                     "Formatierte Chatzeilen nutzen nun den Trenner ◆",
