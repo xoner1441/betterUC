@@ -53,6 +53,8 @@ public class BetterUCScreen extends Screen {
             .orElse("dev");
     private static final UpdateSection[] UPDATE_SECTIONS = new UpdateSection[]{
             new UpdateSection("Neu in 1.2.2", new String[]{
+                    "/adropdrink gibt Lieferanten-Getraenke automatisch im 2,5s-Takt ab",
+                    "Fischer-Automation sucht, fängt und gibt Fisch am Steg ab",
                     "WPS/HQ-Chatformat wirkt jetzt ruhiger und einheitlicher",
                     "Labels sind klein geschrieben und nicht mehr fett",
                     "Formatierte Chatzeilen nutzen nun den Trenner ◆",
@@ -93,6 +95,7 @@ public class BetterUCScreen extends Screen {
                     "/modbl <spieler> <grund> erweitert einen bestehenden Blacklist-Eintrag",
                     "/blinfo <spieler> zeigt gespeicherte Blacklist-Infos",
                     "/setrp <spieler> <1-3> setzt die RP-Stufe",
+                    "/adropdrink sendet /dropdrink automatisch anhand des Lieferjunge-Scoreboards",
                     "/buonline zeigt Helpern und Admins online Mod-User"
             }),
             new UpdateSection("Komfort", new String[]{

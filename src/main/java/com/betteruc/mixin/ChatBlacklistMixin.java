@@ -3,6 +3,8 @@ package com.betteruc.mixin;
 import com.betteruc.BetterUCMod;
 import com.betteruc.BetterUCSuppressFlags;
 import com.betteruc.ServerGate;
+import com.betteruc.client.AutoDropDrinkClient;
+import com.betteruc.client.AutoFisherClient;
 import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ChatCustomizationFormatter;
 import com.betteruc.client.ClientScheduler;
@@ -121,6 +123,8 @@ public class ChatBlacklistMixin {
         }
 
         String raw = message.getString();
+        AutoDropDrinkClient.handleChatLine(MinecraftClient.getInstance(), raw);
+        AutoFisherClient.handleChatLine(MinecraftClient.getInstance(), raw);
         CarFindTracker.handleIncomingChat(MinecraftClient.getInstance(), raw);
         CommunicationDeviceTracker.handleChatLine(MinecraftClient.getInstance(), raw);
         PlantageHud.handleChatMessage(MinecraftClient.getInstance(), raw);

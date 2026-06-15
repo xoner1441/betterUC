@@ -3,6 +3,8 @@
 ## [1.2.2] - 2026-06-14
 
 ### Neu
+- Neuer Custom-Command **`/adropdrink`** fuer Lieferantenjobs: liest die Getränke-Anzahl aus dem Lieferjunge-Scoreboard und sendet `/dropdrink` automatisch im 2,5-Sekunden-Takt.
+- **Fischer-Automation**: erkennt Fischer-Jobhinweise, sucht nach Fang oder Netzverlust erneut und sendet am Steg automatisch `/dropfish`.
 - **WPS/HQ-Chatformat weiter verbessert**: Gesucht, getoetet, inhaftiert, veraendert und geloescht wirken jetzt ruhiger und einheitlicher.
 - WPS/HQ-Labels werden klein und ohne fetten Text dargestellt.
 - Neuer Trenner **`◆`** fuer formatierte Chatzeilen.

@@ -15,6 +15,8 @@ public class ChangelogScreen extends Screen {
                     "Highlights",
                     "betterUC 1.2.2",
                     new String[]{
+                            "/adropdrink gibt Lieferanten-Getraenke automatisch im 2,5s-Takt ab",
+                            "Fischer-Automation sucht, faengt und gibt Fisch am Steg ab",
                             "WPS/HQ-Chatformat wirkt jetzt ruhiger und einheitlicher",
                             "Labels wie gesucht, getoetet, inhaftiert und veraendert sind klein und nicht mehr fett",
                             "Formatierte Chatzeilen nutzen nun den Trenner ◆",
@@ -107,6 +109,8 @@ public class ChangelogScreen extends Screen {
                             "Zoom-Taste frei wählbar, Zoom reagiert sofort",
                             "/car find Koordinaten werden automatisch ins Navi übernommen",
                             "Chat-Zeitstempel und größere Chat-Historie",
+                            "/adropdrink sendet /dropdrink automatisch anhand des Lieferjunge-Scoreboards",
+                            "Fischer-Jobhinweise starten /findschwarm, /catchfish und /dropfish automatisch",
                             "Ping-Taste ist in den Minecraft-Keybinds frei einstellbar",
                             "/register <passwort> verbindet deinen Ingame-Account mit dem Userpanel",
                             "/buonline zeigt Helpern und Admins online Mod-User"

@@ -4,6 +4,8 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import com.betteruc.client.AutoDropDrinkClient;
+import com.betteruc.client.AutoFisherClient;
 import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.BetterUCFontManager;
@@ -229,6 +231,7 @@ public class BetterUCClient implements ClientModInitializer {
             registerUserPanelCommand(dispatcher);
             registerUpdateCommand(dispatcher);
             registerBankShortcutCommands(dispatcher);
+            registerAutoDropDrinkCommand(dispatcher);
             registerBetterUcOnlineCommand(dispatcher);
         });
     }
@@ -282,6 +285,14 @@ public class BetterUCClient implements ClientModInitializer {
                             sendServerCommand(client, "bank abbuchen " + betrag);
                             return 1;
                         })));
+    }
+
+    private void registerAutoDropDrinkCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
+        dispatcher.register(ClientCommandManager.literal("adropdrink")
+                .executes(context -> {
+                    AutoDropDrinkClient.start(MinecraftClient.getInstance());
+                    return 1;
+                }));
     }
 
     private void registerBetterUcOnlineCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
@@ -937,6 +948,7 @@ public class BetterUCClient implements ClientModInitializer {
             PlantageHud.tick();
             AmmoHud.tickReloadKey(client);
             PingRelayClient.tick(client);
+            AutoDropDrinkClient.tick(client);
             tickStatsOnJoin(client);
             handleConfiguredHotkeys(client);
             MovementController.tick(client);
@@ -1092,6 +1104,8 @@ public class BetterUCClient implements ClientModInitializer {
         AmmoHud.clear();
         BankBalanceHud.clear();
         CashHud.clear();
+        AutoDropDrinkClient.reset();
+        AutoFisherClient.reset();
 
         BetterUCSuppressFlags.suppressModBlOutput = false;
         BetterUCSuppressFlags.modBlCallback = null;
