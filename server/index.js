@@ -204,15 +204,20 @@ function passwordHash(password, salt) {
   return crypto.scryptSync(String(password), salt, 64).toString("base64url");
 }
 
+function normalizeWebPassword(password) {
+  return String(password || "").trim();
+}
+
 function isValidPassword(password) {
-  const raw = String(password || "");
-  return raw.length >= 6 && raw.length <= 72 && raw.trim().length >= 6;
+  const raw = normalizeWebPassword(password);
+  return raw.length >= 6 && raw.length <= 72;
 }
 
 function setWebPassword(account, password) {
+  const normalized = normalizeWebPassword(password);
   const salt = crypto.randomBytes(16).toString("base64url");
   account.webPasswordSalt = salt;
-  account.webPasswordHash = passwordHash(password, salt);
+  account.webPasswordHash = passwordHash(normalized, salt);
   account.webPasswordSetAt = nowIso();
 }
 
@@ -229,7 +234,7 @@ function invalidateWebSessions(account) {
 
 function verifyWebPassword(account, password) {
   if (!account || !account.webPasswordHash || !account.webPasswordSalt) return false;
-  const expected = passwordHash(password, account.webPasswordSalt);
+  const expected = passwordHash(normalizeWebPassword(password), account.webPasswordSalt);
   return constantTimeEquals(expected, account.webPasswordHash);
 }
 

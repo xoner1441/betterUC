@@ -462,8 +462,8 @@ accountsTable.addEventListener("click", async event => {
     }
     if (button.classList.contains("set-web-password")) {
       const panel = button.closest(".web-profile-panel");
-      const password = panel?.querySelector(".web-password-input")?.value || "";
-      if (password.trim().length < 6 || password.length > 72) {
+      const password = (panel?.querySelector(".web-password-input")?.value || "").trim();
+      if (password.length < 6 || password.length > 72) {
         setCreateMessage("Webpasswort muss 6 bis 72 Zeichen lang sein.", "error");
         return;
       }
