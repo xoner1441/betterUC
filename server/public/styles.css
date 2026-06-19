@@ -972,6 +972,23 @@ select:focus {
   margin: 0 0 10px;
 }
 
+.web-profile-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.admin-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-detail-actions .button {
+  min-height: 36px;
+  padding: 0 12px;
+}
+
 .row-input {
   min-width: 180px;
   width: 100%;

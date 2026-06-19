@@ -63,7 +63,7 @@ public final class CommunicationDeviceTracker {
             return;
         }
 
-        if (line.contains("handy")
+        if (containsPhoneWord(line)
                 && (line.contains("ist ausgeschaltet")
                 || line.contains("ausgeschaltet")
                 || line.contains("ausgeschalten"))) {
@@ -72,7 +72,7 @@ public final class CommunicationDeviceTracker {
             return;
         }
 
-        if (line.contains("handy")
+        if (containsPhoneWord(line)
                 && (line.contains("ist eingeschaltet")
                 || line.contains("eingeschaltet")
                 || line.contains("angeschaltet")
@@ -130,6 +130,10 @@ public final class CommunicationDeviceTracker {
             return "Akku leer";
         }
         return "Blockiert";
+    }
+
+    private static boolean containsPhoneWord(String line) {
+        return line != null && (line.contains("handy") || line.contains("telefon"));
     }
 
     private static String normalize(String value) {

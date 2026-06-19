@@ -216,6 +216,17 @@ function setWebPassword(account, password) {
   account.webPasswordSetAt = nowIso();
 }
 
+function clearWebPassword(account) {
+  delete account.webPasswordSalt;
+  delete account.webPasswordHash;
+  delete account.webPasswordSetAt;
+  account.webPasswordClearedAt = nowIso();
+}
+
+function invalidateWebSessions(account) {
+  account.webSessionsInvalidAfter = nowIso();
+}
+
 function verifyWebPassword(account, password) {
   if (!account || !account.webPasswordHash || !account.webPasswordSalt) return false;
   const expected = passwordHash(password, account.webPasswordSalt);
@@ -396,7 +407,10 @@ function publicAccount(account) {
     lastChannel: account.lastChannel || "",
     lastVersion: account.lastVersion || "",
     status: account.status || "active",
-    lastPanelLoginAt: account.lastPanelLoginAt || null
+    lastPanelLoginAt: account.lastPanelLoginAt || null,
+    webPasswordSetAt: account.webPasswordSetAt || null,
+    webPasswordClearedAt: account.webPasswordClearedAt || null,
+    webSessionsInvalidAfter: account.webSessionsInvalidAfter || null
   };
 }
 
@@ -636,6 +650,7 @@ function createUserSession(account) {
   const payload = Buffer.from(JSON.stringify({
     sub: account.id,
     name: account.minecraftName || "",
+    iat: Date.now(),
     exp: Date.now() + USER_SESSION_TTL_MS
   })).toString("base64url");
   return `${payload}.${signSessionPayload(payload)}`;
@@ -668,6 +683,11 @@ function verifyUserSession(token) {
     if (!data || data.exp < Date.now()) return null;
     const account = findAccountById(data.sub);
     if (!account || cleanStatus(account.status) !== "active") return null;
+    const invalidAfter = Date.parse(account.webSessionsInvalidAfter || "");
+    if (Number.isFinite(invalidAfter)) {
+      const issuedAt = Number(data.iat || 0);
+      if (!issuedAt || issuedAt < invalidAfter) return null;
+    }
     return account;
   } catch {
     return null;
@@ -995,6 +1015,37 @@ async function handleApi(req, res, url) {
         accessCode: token,
         account: adminAccount(account)
       });
+      return;
+    }
+
+    if (req.method === "POST" && action === "web-password") {
+      const body = await readJsonBody(req);
+      if (!isValidPassword(body.password)) {
+        json(res, 400, { ok: false, error: "Passwort muss 6 bis 72 Zeichen lang sein." });
+        return;
+      }
+      setWebPassword(account, body.password);
+      invalidateWebSessions(account);
+      account.updatedAt = nowIso();
+      await saveStore();
+      json(res, 200, { ok: true, account: adminAccount(account) });
+      return;
+    }
+
+    if (req.method === "POST" && action === "clear-web-password") {
+      clearWebPassword(account);
+      invalidateWebSessions(account);
+      account.updatedAt = nowIso();
+      await saveStore();
+      json(res, 200, { ok: true, account: adminAccount(account) });
+      return;
+    }
+
+    if (req.method === "POST" && action === "logout-web") {
+      invalidateWebSessions(account);
+      account.updatedAt = nowIso();
+      await saveStore();
+      json(res, 200, { ok: true, account: adminAccount(account) });
       return;
     }
 

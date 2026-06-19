@@ -56,11 +56,11 @@ public final class ChatCustomizationFormatter {
     );
 
     private static final Pattern PAY_SENT_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?Du\\s+hast\\s+([^\\s]+)\\s+([+-]?[0-9.]+)\\$\\s+gegeben!\\s*$",
+            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:[^\\p{L}\\p{N}_\\[]+\\s*)?Du\\s+hast\\s+([^\\s]+)\\s+([+-]?[0-9.]+)\\$\\s+gegeben!\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern PAY_RECEIVED_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?([^\\s]+)\\s+hat\\s+dir\\s+([+-]?[0-9.]+)\\$\\s+gegeben!\\s*$",
+            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:[^\\p{L}\\p{N}_\\[]+\\s*)?([^\\s]+)\\s+hat\\s+dir\\s+([+-]?[0-9.]+)\\$\\s+gegeben!\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern SUPPORT_REQUEST_PATTERN = Pattern.compile(

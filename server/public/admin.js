@@ -143,8 +143,14 @@ function accountDetailHtml(account) {
     ["Letzter Weblogin", formatDate(account.lastPanelLoginAt)],
     ["Server", account.lastServer || "nicht erkannt"],
     ["Channel", account.lastChannel || "nicht erkannt"],
-    ["Version", account.lastVersion || "nicht erkannt"],
-    ["Web-Login", account.hasWebPassword ? "eingerichtet" : "nicht eingerichtet"]
+    ["Version", account.lastVersion || "nicht erkannt"]
+  ];
+  const webProfile = [
+    ["Web-Login", account.hasWebPassword ? "eingerichtet" : "nicht eingerichtet"],
+    ["Passwort gesetzt", formatDate(account.webPasswordSetAt)],
+    ["Letzter Weblogin", formatDate(account.lastPanelLoginAt)],
+    ["Zuletzt entfernt", formatDate(account.webPasswordClearedAt)],
+    ["Sessions abgemeldet", formatDate(account.webSessionsInvalidAfter)]
   ];
   const statCards = [
     ["Bank", moneyLabel(stats.bankMoney)],
@@ -179,6 +185,29 @@ function accountDetailHtml(account) {
                   <strong>${escapeHtml(value)}</strong>
                 </article>
               `).join("")}
+            </div>
+          </div>
+          <div>
+            <h4>Webprofil</h4>
+            <div class="account-meta-grid">
+              ${webProfile.map(([label, value]) => `
+                <article class="account-meta-card">
+                  <span>${escapeHtml(label)}</span>
+                  <strong>${escapeHtml(value)}</strong>
+                </article>
+              `).join("")}
+            </div>
+            <div class="web-profile-panel">
+              <label>
+                Neues Webpasswort
+                <input class="row-input web-password-input" type="password" autocomplete="new-password" placeholder="mind. 6 Zeichen">
+              </label>
+              <div class="admin-detail-actions">
+                <button class="button secondary set-web-password" type="button">Passwort setzen</button>
+                <button class="button secondary logout-web" type="button">Websession abmelden</button>
+                <button class="button secondary danger clear-web-password" type="button" ${account.hasWebPassword ? "" : "disabled"}>Weblogin entfernen</button>
+              </div>
+              <p class="quiet">Wenn du den Weblogin entfernst, kann sich der Spieler erst nach neuem Passwort wieder anmelden.</p>
             </div>
           </div>
           <div>
@@ -302,6 +331,14 @@ async function runAccountAction(id, action) {
   await loadAccounts();
 }
 
+async function setAccountWebPassword(id, password) {
+  await api(`/api/admin/accounts/${encodeURIComponent(id)}/web-password`, {
+    method: "POST",
+    body: JSON.stringify({ password })
+  });
+  await loadAccounts();
+}
+
 function escapeHtml(value) {
   return String(value || "").replace(/[&<>"']/g, char => ({
     "&": "&amp;",
@@ -421,6 +458,30 @@ accountsTable.addEventListener("click", async event => {
     }
     if (button.classList.contains("reset-code")) {
       await runAccountAction(id, "reset-code");
+      return;
+    }
+    if (button.classList.contains("set-web-password")) {
+      const panel = button.closest(".web-profile-panel");
+      const password = panel?.querySelector(".web-password-input")?.value || "";
+      if (password.trim().length < 6 || password.length > 72) {
+        setCreateMessage("Webpasswort muss 6 bis 72 Zeichen lang sein.", "error");
+        return;
+      }
+      await setAccountWebPassword(id, password);
+      setCreateMessage("Webpasswort wurde gesetzt.", "success");
+      return;
+    }
+    if (button.classList.contains("clear-web-password")) {
+      const row = button.closest("tr");
+      const name = row?.previousElementSibling?.querySelector("td strong")?.textContent?.trim() || "diesen Account";
+      if (!confirm(`Weblogin fuer ${name} entfernen? Der Spieler kann sich danach erst mit neuem Passwort wieder anmelden.`)) return;
+      await runAccountAction(id, "clear-web-password");
+      setCreateMessage("Weblogin wurde entfernt.", "success");
+      return;
+    }
+    if (button.classList.contains("logout-web")) {
+      await runAccountAction(id, "logout-web");
+      setCreateMessage("Websession wurde abgemeldet.", "success");
       return;
     }
     if (button.classList.contains("revoke-account")) {
