@@ -5,6 +5,7 @@ const fs = require("fs");
 const fsp = fs.promises;
 const http = require("http");
 const path = require("path");
+const { Readable } = require("stream");
 const { URL } = require("url");
 const { WebSocketServer } = require("ws");
 const { startDiscordBot } = require("./discordBot");
@@ -28,6 +29,9 @@ const ADMIN_KEY = (process.env.ADMIN_KEY || "").trim();
 const SESSION_SECRET = process.env.SESSION_SECRET || TOKEN_PEPPER;
 const USER_SESSION_TTL_MS = Number(process.env.USER_SESSION_TTL_MS || 1000 * 60 * 60 * 24 * 14);
 const GITHUB_RELEASES_URL = "https://github.com/xoner1441/betterUC/releases";
+const GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/xoner1441/betterUC/releases/latest";
+const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || "https://betteruc.de").replace(/\/+$/, "");
+const RELEASE_CACHE_TTL_MS = Number(process.env.RELEASE_CACHE_TTL_MS || 5 * 60 * 1000);
 
 const MIME_TYPES = new Map([
   [".html", "text/html; charset=utf-8"],
@@ -38,12 +42,14 @@ const MIME_TYPES = new Map([
   [".jpg", "image/jpeg"],
   [".jpeg", "image/jpeg"],
   [".webp", "image/webp"],
-  [".ico", "image/x-icon"]
+  [".ico", "image/x-icon"],
+  [".jar", "application/java-archive"]
 ]);
 
 let store = { version: 1, accounts: [] };
 let saveTimer = null;
 let backupTimer = null;
+let latestReleaseCache = { fetchedAt: 0, release: null };
 const clients = new Set();
 const rateLimits = new Map();
 let discordBot = { notifyStateChanged() {}, stop() {} };
@@ -858,6 +864,144 @@ function broadcastPresence(server) {
   discordBot.notifyStateChanged();
 }
 
+function absolutePublicUrl(req, pathname) {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const forwardedHost = req.headers["x-forwarded-host"];
+  const proto = typeof forwardedProto === "string" && forwardedProto.trim()
+    ? forwardedProto.split(",")[0].trim()
+    : "https";
+  const host = typeof forwardedHost === "string" && forwardedHost.trim()
+    ? forwardedHost.split(",")[0].trim()
+    : req.headers.host;
+  const base = host ? `${proto}://${host}` : PUBLIC_BASE_URL;
+  return `${base.replace(/\/+$/, "")}${pathname}`;
+}
+
+function normalizeReleaseVersion(value) {
+  return String(value || "").trim().replace(/^v/i, "");
+}
+
+function isBetterUcJarAsset(name, url) {
+  const value = `${name || ""} ${url || ""}`.toLowerCase();
+  return value.includes("betteruc")
+    && value.endsWith(".jar")
+    && !value.includes("sources")
+    && !value.includes("dev")
+    && !value.includes("-all");
+}
+
+function releaseResponse(release, req) {
+  return {
+    ok: true,
+    version: normalizeReleaseVersion(release.tagName),
+    tagName: release.tagName,
+    name: release.name || release.tagName,
+    body: release.body || "",
+    publishedAt: release.publishedAt || null,
+    htmlUrl: release.htmlUrl || GITHUB_RELEASES_URL,
+    downloadPage: absolutePublicUrl(req, "/download"),
+    downloadUrl: absolutePublicUrl(req, "/download/latest.jar"),
+    assetName: release.assetName || "",
+    assetSize: release.assetSize || 0
+  };
+}
+
+async function fetchLatestRelease() {
+  const now = Date.now();
+  if (latestReleaseCache.release && now - latestReleaseCache.fetchedAt < RELEASE_CACHE_TTL_MS) {
+    return latestReleaseCache.release;
+  }
+
+  const response = await fetch(GITHUB_LATEST_RELEASE_API, {
+    headers: {
+      "Accept": "application/vnd.github+json",
+      "User-Agent": "betterUC-download-page"
+    }
+  });
+  if (!response.ok) {
+    throw new Error(`GitHub release API HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  const assets = Array.isArray(data.assets) ? data.assets : [];
+  const jarAsset = assets.find(asset => isBetterUcJarAsset(asset.name, asset.browser_download_url));
+  const release = {
+    tagName: String(data.tag_name || data.name || "").trim(),
+    name: String(data.name || data.tag_name || "").trim(),
+    body: String(data.body || ""),
+    publishedAt: data.published_at || null,
+    htmlUrl: String(data.html_url || GITHUB_RELEASES_URL),
+    assetName: jarAsset ? String(jarAsset.name || "") : "",
+    assetUrl: jarAsset ? String(jarAsset.browser_download_url || "") : "",
+    assetSize: jarAsset ? Number(jarAsset.size || 0) : 0
+  };
+
+  if (!release.tagName) {
+    throw new Error("Latest release has no tag name");
+  }
+
+  latestReleaseCache = { fetchedAt: now, release };
+  return release;
+}
+
+async function handleLatestJarDownload(req, res) {
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    text(res, 405, "Method not allowed");
+    return;
+  }
+
+  let release;
+  try {
+    release = await fetchLatestRelease();
+  } catch (error) {
+    console.error("Could not resolve latest betterUC release", error);
+    text(res, 502, "Latest release is currently not available");
+    return;
+  }
+
+  if (!release.assetUrl) {
+    text(res, 404, "No betterUC jar asset found in latest release");
+    return;
+  }
+
+  if (req.method === "HEAD") {
+    res.writeHead(200, {
+      "content-type": "application/java-archive",
+      "content-disposition": `attachment; filename="${release.assetName || `betterUC-${normalizeReleaseVersion(release.tagName)}.jar`}"`,
+      "cache-control": "no-cache"
+    });
+    res.end();
+    return;
+  }
+
+  try {
+    const upstream = await fetch(release.assetUrl, {
+      headers: { "User-Agent": "betterUC-download-proxy" }
+    });
+    if (!upstream.ok || !upstream.body) {
+      throw new Error(`Release asset HTTP ${upstream.status}`);
+    }
+
+    const headers = {
+      "content-type": upstream.headers.get("content-type") || "application/java-archive",
+      "content-disposition": `attachment; filename="${release.assetName || `betterUC-${normalizeReleaseVersion(release.tagName)}.jar`}"`,
+      "cache-control": "no-cache"
+    };
+    const length = upstream.headers.get("content-length");
+    if (length) headers["content-length"] = length;
+
+    res.writeHead(200, headers);
+    Readable.fromWeb(upstream.body).pipe(res);
+  } catch (error) {
+    console.error("Could not stream latest betterUC jar", error);
+    if (!res.headersSent) {
+      text(res, 502, "Download is currently not available");
+    } else {
+      res.destroy(error);
+    }
+  }
+}
+
 async function handleApi(req, res, url) {
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
@@ -884,6 +1028,21 @@ async function handleApi(req, res, url) {
       github: GITHUB_RELEASES_URL,
       time: Date.now()
     });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/releases/latest") {
+    try {
+      json(res, 200, releaseResponse(await fetchLatestRelease(), req));
+    } catch (error) {
+      console.error("Could not load latest release", error);
+      json(res, 502, { ok: false, error: "Aktueller Download ist gerade nicht erreichbar." });
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/download/latest") {
+    await handleLatestJarDownload(req, res);
     return;
   }
 
@@ -1246,13 +1405,16 @@ async function serveStatic(req, res, url) {
   if (pathname === "/access") {
     pathname = "/access.html";
   }
+  if (pathname === "/download") {
+    pathname = "/download.html";
+  }
   if (pathname === "/impressum") {
     pathname = "/impressum.html";
   }
   if (pathname === "/datenschutz") {
     pathname = "/datenschutz.html";
   }
-  if (pathname === "/" || pathname === "/download" || pathname === "/updates") {
+  if (pathname === "/" || pathname === "/updates") {
     pathname = "/index.html";
   }
 
@@ -1296,6 +1458,11 @@ async function handleHttp(req, res) {
       ttlMs: PING_TTL_MS,
       time: Date.now()
     });
+    return;
+  }
+
+  if (url.pathname === "/download/latest.jar") {
+    await handleLatestJarDownload(req, res);
     return;
   }
 

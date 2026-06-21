@@ -1,10 +1,10 @@
 package com.betteruc.hud;
 
 import com.betteruc.config.BetterUCConfig;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 public class PaydayHud {
 
@@ -13,7 +13,7 @@ public class PaydayHud {
     private static long lastMinuteUpdateMs = 0L;
     private static boolean pausedByAfk = false;
     public static void register() {
-        HudRenderCallback.EVENT.register((drawContext, tickCounter) -> render(drawContext));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "payday"), (context, tickCounter) -> render(context));
     }
 
     public static void updateFromStats(int current, int total) {
@@ -53,8 +53,8 @@ public class PaydayHud {
         pausedByAfk = false;
     }
 
-    private static void render(DrawContext context) {
-        MinecraftClient client = MinecraftClient.getInstance();
+    private static void render(GuiGraphicsExtractor context) {
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         if (!BetterUCConfig.INSTANCE.showPaydayHud) return;
         if (currentMinutes < 0 || totalMinutes <= 0) return;
@@ -94,7 +94,7 @@ public class PaydayHud {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
                 ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.paydayHudCustomFont, displayText, 0, 0, BetterUCConfig.INSTANCE.paydayHudColor);
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, displayText, 0, 0, BetterUCConfig.INSTANCE.paydayHudColor);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.font, displayText, 0, 0, BetterUCConfig.INSTANCE.paydayHudColor);
             } else {
                 ModernHudRenderer.drawProgressModule(
                         context,

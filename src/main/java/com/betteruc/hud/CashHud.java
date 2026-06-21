@@ -1,11 +1,10 @@
 package com.betteruc.hud;
 
 import com.betteruc.config.BetterUCConfig;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
-
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
@@ -48,7 +47,7 @@ public class CashHud {
 
     public static void register() {
         restoreFromConfig();
-        HudRenderCallback.EVENT.register((drawContext, tickCounter) -> render(drawContext));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "cash"), (context, tickCounter) -> render(context));
     }
 
     public static void updateFromStatsLine(String raw) {
@@ -135,7 +134,7 @@ public class CashHud {
     }
 
     private static boolean isCurrentPlayer(String name) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client == null || client.player == null || name == null) return false;
         return name.trim().equalsIgnoreCase(client.player.getName().getString());
     }
@@ -157,8 +156,8 @@ public class CashHud {
         restoreFromConfig();
     }
 
-    private static void render(DrawContext context) {
-        MinecraftClient client = MinecraftClient.getInstance();
+    private static void render(GuiGraphicsExtractor context) {
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         if (!BetterUCConfig.INSTANCE.showCashHud) return;
         if (currentCash < 0) return;
@@ -188,7 +187,7 @@ public class CashHud {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
                 ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.cashHudCustomFont, displayText, 0, 0, BetterUCConfig.INSTANCE.cashHudColor);
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, displayText, 0, 0, BetterUCConfig.INSTANCE.cashHudColor);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.font, displayText, 0, 0, BetterUCConfig.INSTANCE.cashHudColor);
             } else {
                 ModernHudRenderer.drawModule(
                         context,

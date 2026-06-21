@@ -6,9 +6,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -26,7 +25,7 @@ public final class UserPanelClient {
     private UserPanelClient() {
     }
 
-    public static void registerPassword(MinecraftClient client, String password) {
+    public static void registerPassword(Minecraft client, String password) {
         if (client == null || client.player == null) return;
         String token = accessToken();
         if (token.isBlank()) {
@@ -73,7 +72,7 @@ public final class UserPanelClient {
                 }));
     }
 
-    static void uploadStats(MinecraftClient client, JsonObject stats) {
+    static void uploadStats(Minecraft client, JsonObject stats) {
         if (client == null || client.player == null || stats == null || stats.size() == 0) return;
         String token = accessToken();
         if (token.isBlank()) return;
@@ -101,7 +100,7 @@ public final class UserPanelClient {
                 });
     }
 
-    private static JsonObject baseIdentityPayload(MinecraftClient client) {
+    private static JsonObject baseIdentityPayload(Minecraft client) {
         JsonObject body = new JsonObject();
         body.addProperty("minecraftName", playerName(client));
         body.addProperty("minecraftUuid", playerUuid(client));
@@ -145,15 +144,15 @@ public final class UserPanelClient {
         return BetterUCConfig.INSTANCE.pingRelayToken == null ? "" : BetterUCConfig.INSTANCE.pingRelayToken.trim();
     }
 
-    private static String playerName(MinecraftClient client) {
+    private static String playerName(Minecraft client) {
         if (client == null || client.player == null) return "unknown";
         String name = client.player.getName().getString();
         return name == null || name.isBlank() ? "unknown" : name;
     }
 
-    private static String playerUuid(MinecraftClient client) {
-        if (client == null || client.player == null || client.player.getUuid() == null) return "";
-        return client.player.getUuid().toString();
+    private static String playerUuid(Minecraft client) {
+        if (client == null || client.player == null || client.player.getUUID() == null) return "";
+        return client.player.getUUID().toString();
     }
 
     private static String modVersion() {
@@ -187,9 +186,9 @@ public final class UserPanelClient {
         }
     }
 
-    private static void sendLocalMessage(MinecraftClient client, String message) {
+    private static void sendLocalMessage(Minecraft client, String message) {
         if (client != null && client.player != null) {
-            client.player.sendMessage(Text.literal("\u00A7b[betterUC]\u00A7r " + message), false);
+            client.player.sendSystemMessage(Component.literal("\u00A7b[betterUC]\u00A7r " + message));
         }
     }
 }

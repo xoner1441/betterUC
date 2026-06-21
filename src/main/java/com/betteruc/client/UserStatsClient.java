@@ -3,10 +3,9 @@ package com.betteruc.client;
 import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.CashHud;
 import com.google.gson.JsonObject;
-import net.minecraft.client.MinecraftClient;
-
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.minecraft.client.Minecraft;
 
 public final class UserStatsClient {
     private static final String STAT_PREFIX = "^\\s*[-\\u2010-\\u2015\\u2212]?\\s*";
@@ -44,7 +43,7 @@ public final class UserStatsClient {
         uploadQueued = false;
     }
 
-    public static void handleChatLine(MinecraftClient client, String raw) {
+    public static void handleChatLine(Minecraft client, String raw) {
         if (client == null || client.player == null || raw == null || raw.isBlank()) return;
 
         boolean changed = false;
@@ -124,7 +123,7 @@ public final class UserStatsClient {
         }
     }
 
-    private static void requestUpload(MinecraftClient client) {
+    private static void requestUpload(Minecraft client) {
         long now = System.currentTimeMillis();
         long waitMs = MIN_UPLOAD_INTERVAL_MS - (now - lastUploadMs);
         if (waitMs <= 0L) {
@@ -140,13 +139,13 @@ public final class UserStatsClient {
         });
     }
 
-    private static void uploadNow(MinecraftClient client) {
+    private static void uploadNow(Minecraft client) {
         if (client == null || client.player == null) return;
         lastUploadMs = System.currentTimeMillis();
         UserPanelClient.uploadStats(client, currentStatsJson());
     }
 
-    public static void uploadCurrentStats(MinecraftClient client) {
+    public static void uploadCurrentStats(Minecraft client) {
         uploadNow(client);
     }
 

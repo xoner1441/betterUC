@@ -20,12 +20,6 @@ import com.betteruc.hud.PaydayHud;
 import com.betteruc.hud.PlantageHud;
 import com.betteruc.parser.BlacklistParser;
 import com.betteruc.parser.StatsLineClassifier;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.hud.ChatHud;
-import net.minecraft.client.gui.hud.ChatHudLine;
-import net.minecraft.client.gui.hud.MessageIndicator;
-import net.minecraft.network.message.MessageSignatureData;
-import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -39,15 +33,21 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.ChatComponent;
+import net.minecraft.client.multiplayer.chat.GuiMessage;
+import net.minecraft.client.multiplayer.chat.GuiMessageTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MessageSignature;
 
-@Mixin(ChatHud.class)
+@Mixin(ChatComponent.class)
 public class ChatBlacklistMixin {
 
     @Shadow
-    private List<ChatHudLine> messages;
+    private List<GuiMessage> allMessages;
 
     @Shadow
-    private void refresh() {
+    private void refreshTrimmedMessages() {
     }
 
     private static final Pattern BLACK_MONEY_PATTERN = Pattern.compile("-\\s*Schwarzgeld:\\s*([0-9.]+)\\$", Pattern.CASE_INSENSITIVE);
@@ -94,28 +94,38 @@ public class ChatBlacklistMixin {
     private static final Map<String, String> tempEntryRests = new LinkedHashMap<>();
 
     @Inject(
-            method = "addMessage(Lnet/minecraft/text/Text;)V",
+            method = "addClientSystemMessage(Lnet/minecraft/network/chat/Component;)V",
             at = @At("HEAD"),
             cancellable = true,
             require = 0
     )
-    private void scanForBlacklistTextOnly(Text message, CallbackInfo ci) {
+    private void scanForBlacklistTextOnly(Component message, CallbackInfo ci) {
         scanForBlacklistInternal(message, ci);
     }
 
     @Inject(
-            method = "addMessage(Lnet/minecraft/text/Text;Lnet/minecraft/network/message/MessageSignatureData;Lnet/minecraft/client/gui/hud/MessageIndicator;)V",
+            method = "addServerSystemMessage(Lnet/minecraft/network/chat/Component;)V",
             at = @At("HEAD"),
             cancellable = true,
             require = 0
     )
-    private void scanForBlacklistWithSignature(Text message, MessageSignatureData signatureData, MessageIndicator indicator, CallbackInfo ci) {
+    private void scanForServerSystemMessage(Component message, CallbackInfo ci) {
         scanForBlacklistInternal(message, ci);
     }
 
-    private void scanForBlacklistInternal(Text message, CallbackInfo ci) {
+    @Inject(
+            method = "addPlayerMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/multiplayer/chat/GuiMessageTag;)V",
+            at = @At("HEAD"),
+            cancellable = true,
+            require = 0
+    )
+    private void scanForBlacklistWithSignature(Component message, MessageSignature signatureData, GuiMessageTag indicator, CallbackInfo ci) {
+        scanForBlacklistInternal(message, ci);
+    }
+
+    private void scanForBlacklistInternal(Component message, CallbackInfo ci) {
         if (addingTimestamp) return;
-        if (!ServerGate.isAllowedServer(MinecraftClient.getInstance())) return;
+        if (!ServerGate.isAllowedServer(Minecraft.getInstance())) return;
         BetterUCSuppressFlags.cleanupStaleSilentStatsState();
         if (capturingStats && !BetterUCSuppressFlags.suppressStatsOutput && !BetterUCSuppressFlags.activeSilentStatsCapture) {
             capturingStats = false;
@@ -123,11 +133,11 @@ public class ChatBlacklistMixin {
         }
 
         String raw = message.getString();
-        AutoDropDrinkClient.handleChatLine(MinecraftClient.getInstance(), raw);
-        AutoFisherClient.handleChatLine(MinecraftClient.getInstance(), raw);
-        CarFindTracker.handleIncomingChat(MinecraftClient.getInstance(), raw);
-        CommunicationDeviceTracker.handleChatLine(MinecraftClient.getInstance(), raw);
-        PlantageHud.handleChatMessage(MinecraftClient.getInstance(), raw);
+        AutoDropDrinkClient.handleChatLine(Minecraft.getInstance(), raw);
+        AutoFisherClient.handleChatLine(Minecraft.getInstance(), raw);
+        CarFindTracker.handleIncomingChat(Minecraft.getInstance(), raw);
+        CommunicationDeviceTracker.handleChatLine(Minecraft.getInstance(), raw);
+        PlantageHud.handleChatMessage(Minecraft.getInstance(), raw);
 
         if (BetterUCSuppressFlags.consumeBlacklistInfoLocalMessageBypass()) {
             appendTimestampIfConfigured(message, ci);
@@ -208,7 +218,7 @@ public class ChatBlacklistMixin {
     }
 
     private void requestSilentStatsRefreshOnAfkExit() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client == null) return;
         if (!ServerGate.isAllowedServer(client)) return;
         long now = System.currentTimeMillis();
@@ -246,7 +256,7 @@ public class ChatBlacklistMixin {
             PaydayHud.updateFromStats(current, total);
         }
 
-        UserStatsClient.handleChatLine(MinecraftClient.getInstance(), raw);
+        UserStatsClient.handleChatLine(Minecraft.getInstance(), raw);
     }
 
     private void updateCurrentFaction(String raw) {
@@ -254,7 +264,7 @@ public class ChatBlacklistMixin {
         Matcher factionMatcher = FACTION_STATS_PATTERN.matcher(raw.trim());
         if (!factionMatcher.find()) return;
         if (BetterUCConfig.updateCurrentPlayerFactionFromStats(factionMatcher.group(1))) {
-            PingRelayClient.refreshIdentity(MinecraftClient.getInstance());
+            PingRelayClient.refreshIdentity(Minecraft.getInstance());
         }
     }
 
@@ -369,7 +379,7 @@ public class ChatBlacklistMixin {
         );
     }
 
-    private boolean shouldForceHideStatsMessage(Text text) {
+    private boolean shouldForceHideStatsMessage(Component text) {
         if (text == null) return false;
         if (shouldForceHideStatsLine(text.getString())) return true;
         if (isSilentStatsBlankLine(text.getString())) return true;
@@ -514,7 +524,7 @@ public class ChatBlacklistMixin {
         if (BetterUCSuppressFlags.modBlCallback != null) {
             Runnable cb = BetterUCSuppressFlags.modBlCallback;
             BetterUCSuppressFlags.modBlCallback = null;
-            MinecraftClient.getInstance().execute(cb);
+            Minecraft.getInstance().execute(cb);
         }
     }
 
@@ -567,7 +577,7 @@ public class ChatBlacklistMixin {
             if (BetterUCSuppressFlags.modBlCallback != null) {
                 Runnable cb = BetterUCSuppressFlags.modBlCallback;
                 BetterUCSuppressFlags.modBlCallback = null;
-                MinecraftClient.getInstance().execute(cb);
+                Minecraft.getInstance().execute(cb);
             }
         }
         BetterUCSuppressFlags.clearBlacklistInfoLookup();
@@ -584,7 +594,7 @@ public class ChatBlacklistMixin {
         }
     }
 
-    private void appendTimestampIfConfigured(Text message, CallbackInfo ci) {
+    private void appendTimestampIfConfigured(Component message, CallbackInfo ci) {
         if (!BetterUCConfig.INSTANCE.chatTimestampsEnabled) return;
         String format = BetterUCConfig.INSTANCE.chatTimestampFormat;
         if (format == null || format.isEmpty()) return;
@@ -592,31 +602,31 @@ public class ChatBlacklistMixin {
         try {
             String timestamp = java.time.LocalTime.now()
                     .format(java.time.format.DateTimeFormatter.ofPattern(format));
-            Text newMessage = Text.literal("\u00A77" + timestamp + " ").append(message);
+            Component newMessage = Component.literal("\u00A77" + timestamp + " ").append(message);
             ci.cancel();
             addingTimestamp = true;
-            ((ChatHud) (Object) this).addMessage(newMessage);
+            ((ChatComponent) (Object) this).addClientSystemMessage(newMessage);
         } catch (Exception ignored) {
         } finally {
             addingTimestamp = false;
         }
     }
 
-    private void appendCustomMessages(List<Text> messages, CallbackInfo ci) {
+    private void appendCustomMessages(List<Component> messages, CallbackInfo ci) {
         ci.cancel();
         if (messages == null || messages.isEmpty()) return;
 
         addingTimestamp = true;
         try {
-            for (Text line : messages) {
-                ((ChatHud) (Object) this).addMessage(withTimestampIfEnabled(line));
+            for (Component line : messages) {
+                ((ChatComponent) (Object) this).addClientSystemMessage(withTimestampIfEnabled(line));
             }
         } finally {
             addingTimestamp = false;
         }
     }
 
-    private static Text withTimestampIfEnabled(Text base) {
+    private static Component withTimestampIfEnabled(Component base) {
         if (!BetterUCConfig.INSTANCE.chatTimestampsEnabled) return base;
         String format = BetterUCConfig.INSTANCE.chatTimestampFormat;
         if (format == null || format.isEmpty()) return base;
@@ -624,55 +634,55 @@ public class ChatBlacklistMixin {
         try {
             String timestamp = java.time.LocalTime.now()
                     .format(java.time.format.DateTimeFormatter.ofPattern(format));
-            return Text.literal("\u00A77" + timestamp + " ").append(base);
+            return Component.literal("\u00A77" + timestamp + " ").append(base);
         } catch (Exception ignored) {
             return base;
         }
     }
 
-    @Inject(method = "addMessage(Lnet/minecraft/client/gui/hud/ChatHudLine;)V", at = @At("HEAD"), cancellable = true, require = 0)
-    private void suppressStatsAtLineLevel(ChatHudLine line, CallbackInfo ci) {
+    @Inject(method = "addMessageToQueue(Lnet/minecraft/client/multiplayer/chat/GuiMessage;)V", at = @At("HEAD"), cancellable = true, require = 0)
+    private void suppressStatsAtLineLevel(GuiMessage line, CallbackInfo ci) {
         if (line == null) return;
-        Text content = line.content();
+        Component content = line.content();
         if (content == null) return;
         if (shouldSuppressSilentStatsLine(content)) {
             ci.cancel();
         }
     }
 
-    @Inject(method = "addVisibleMessage(Lnet/minecraft/client/gui/hud/ChatHudLine;)V", at = @At("HEAD"), cancellable = true, require = 0)
-    private void suppressStatsAtVisibleLineLevel(ChatHudLine line, CallbackInfo ci) {
+    @Inject(method = "addMessageToDisplayQueue(Lnet/minecraft/client/multiplayer/chat/GuiMessage;)V", at = @At("HEAD"), cancellable = true, require = 0)
+    private void suppressStatsAtVisibleLineLevel(GuiMessage line, CallbackInfo ci) {
         if (line == null) return;
-        Text content = line.content();
+        Component content = line.content();
         if (content == null) return;
         if (shouldSuppressSilentStatsLine(content)) {
             ci.cancel();
         }
     }
 
-    @Inject(method = "addMessage(Lnet/minecraft/client/gui/hud/ChatHudLine;)V", at = @At("TAIL"), require = 0)
-    private void extendMessageHistory(net.minecraft.client.gui.hud.ChatHudLine message, CallbackInfo ci) {
-        if (messages == null) return;
+    @Inject(method = "addMessageToQueue(Lnet/minecraft/client/multiplayer/chat/GuiMessage;)V", at = @At("TAIL"), require = 0)
+    private void extendMessageHistory(GuiMessage message, CallbackInfo ci) {
+        if (allMessages == null) return;
 
-        boolean removedStatsLine = messages.removeIf(this::isLingeringSilentStatsLine);
+        boolean removedStatsLine = allMessages.removeIf(this::isLingeringSilentStatsLine);
         if (removedStatsLine) {
             markStatsLineSuppressed();
-            refresh();
+            refreshTrimmedMessages();
         }
-        while (messages.size() > BetterUCConfig.INSTANCE.maxChatHistory) {
-            messages.remove(messages.size() - 1);
+        while (allMessages.size() > BetterUCConfig.INSTANCE.maxChatHistory) {
+            allMessages.remove(allMessages.size() - 1);
         }
     }
 
-    private boolean isLingeringSilentStatsLine(ChatHudLine line) {
+    private boolean isLingeringSilentStatsLine(GuiMessage line) {
         if (line == null) return false;
-        Text content = line.content();
+        Component content = line.content();
         if (content == null) return false;
         if (shouldSuppressSilentStatsLine(content)) return true;
         return isStatsHideWindowActive() && StatsLineClassifier.isKdStatsLine(content.getString());
     }
 
-    private boolean shouldSuppressSilentStatsLine(Text text) {
+    private boolean shouldSuppressSilentStatsLine(Component text) {
         if (text == null) return false;
         String raw = text.getString();
         if (shouldForceHideStatsMessage(text)) {

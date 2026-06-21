@@ -1,8 +1,7 @@
 package com.betteruc.client;
 
-import net.minecraft.client.MinecraftClient;
-
 import java.util.Locale;
+import net.minecraft.client.Minecraft;
 
 public final class AutoFisherClient {
     private static final long COMMAND_DELAY_MS = 250L;
@@ -16,7 +15,7 @@ public final class AutoFisherClient {
     private AutoFisherClient() {
     }
 
-    public static void handleChatLine(MinecraftClient client, String raw) {
+    public static void handleChatLine(Minecraft client, String raw) {
         String clean = key(raw);
         if (awaitingDropFishAtPier && clean.contains("du hast dein ziel erreicht")) {
             awaitingDropFishAtPier = false;
@@ -60,7 +59,7 @@ public final class AutoFisherClient {
         awaitingDropFishAtPier = false;
     }
 
-    private static void sendWithCooldown(MinecraftClient client, String command, CommandType type) {
+    private static void sendWithCooldown(Minecraft client, String command, CommandType type) {
         long now = System.currentTimeMillis();
         long lastSentAt = switch (type) {
             case FIND_SWARM -> lastFindSwarmAtMs;

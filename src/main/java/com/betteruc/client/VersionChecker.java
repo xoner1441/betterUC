@@ -7,12 +7,11 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -34,6 +33,8 @@ public final class VersionChecker {
     private static final String REPO = "betterUC";
     private static final String REPO_URL = "https://github.com/" + OWNER + "/" + REPO;
     private static final String LATEST_RELEASE_URL = REPO_URL + "/releases/latest";
+    private static final String PUBLIC_DOWNLOAD_URL = "https://betteruc.de/download";
+    private static final URI WEBSITE_RELEASE_API = URI.create("https://betteruc.de/api/releases/latest");
     private static final URI LATEST_RELEASE_API = URI.create("https://api.github.com/repos/" + OWNER + "/" + REPO + "/releases/latest");
     private static final URI RAW_GRADLE_PROPERTIES_MAIN = URI.create("https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/main/gradle.properties");
     private static final URI RAW_GRADLE_PROPERTIES_MASTER = URI.create("https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/master/gradle.properties");
@@ -56,7 +57,7 @@ public final class VersionChecker {
     private VersionChecker() {
     }
 
-    public static void checkOnJoin(MinecraftClient client) {
+    public static void checkOnJoin(Minecraft client) {
         if (client == null || notifiedThisSession || checkRunning) {
             return;
         }
@@ -90,7 +91,7 @@ public final class VersionChecker {
                         }
 
                         notifiedThisSession = true;
-                        client.player.sendMessage(buildUpdateMessage(currentVersion, latestVersion), false);
+                        client.player.sendSystemMessage(buildUpdateMessage(currentVersion, latestVersion));
                         if (BetterUCConfig.INSTANCE.autoUpdateEnabled && latestVersion.hasJarAsset()) {
                             installUpdate(client, latestVersion, false);
                         }
@@ -98,7 +99,7 @@ public final class VersionChecker {
                 });
     }
 
-    public static void installLatestUpdate(MinecraftClient client, boolean manual) {
+    public static void installLatestUpdate(Minecraft client, boolean manual) {
         if (client == null) {
             return;
         }
@@ -115,7 +116,7 @@ public final class VersionChecker {
         CompletableFuture.supplyAsync(() -> {
                     LatestVersion latestVersion = fetchLatestVersion();
                     if (latestVersion == null || latestVersion.version().isBlank()) {
-                        return InstallOutcome.message("\u00A7c[betterUC] Konnte keine aktuelle GitHub-Version finden.");
+                        return InstallOutcome.message("\u00A7c[betterUC] Konnte keine aktuelle betterUC-Version finden.");
                     }
 
                     String currentVersion = getCurrentVersion();
@@ -143,6 +144,11 @@ public final class VersionChecker {
     }
 
     private static LatestVersion fetchLatestVersion() {
+        Optional<LatestVersion> websiteRelease = fetchLatestWebsiteRelease();
+        if (websiteRelease.isPresent()) {
+            return websiteRelease.get();
+        }
+
         Optional<LatestVersion> release = fetchLatestRelease();
         if (release.isPresent()) {
             return release.get();
@@ -156,6 +162,50 @@ public final class VersionChecker {
         return fetchVersionFromGradleProperties(RAW_GRADLE_PROPERTIES_MASTER)
                 .map(version -> new LatestVersion(version, REPO_URL, "", ""))
                 .orElse(null);
+    }
+
+    private static Optional<LatestVersion> fetchLatestWebsiteRelease() {
+        String body = fetchText(WEBSITE_RELEASE_API).orElse("");
+        if (body.isBlank()) {
+            return Optional.empty();
+        }
+
+        try {
+            JsonElement root = JsonParser.parseString(body);
+            if (!root.isJsonObject()) {
+                return Optional.empty();
+            }
+
+            JsonObject object = root.getAsJsonObject();
+            boolean ok = !object.has("ok") || object.get("ok").getAsBoolean();
+            if (!ok) {
+                return Optional.empty();
+            }
+
+            String version = jsonString(object, "version");
+            if (version.isBlank()) {
+                version = jsonString(object, "tagName");
+            }
+            if (version.isBlank()) {
+                return Optional.empty();
+            }
+
+            String pageUrl = jsonString(object, "downloadPage");
+            if (pageUrl.isBlank()) {
+                pageUrl = PUBLIC_DOWNLOAD_URL;
+            }
+
+            String assetName = jsonString(object, "assetName");
+            String downloadUrl = jsonString(object, "downloadUrl");
+            if (!downloadUrl.isBlank() && !downloadUrl.toLowerCase(Locale.ROOT).endsWith(".jar")) {
+                downloadUrl = "";
+            }
+
+            return Optional.of(new LatestVersion(version, pageUrl, assetName, downloadUrl));
+        } catch (RuntimeException e) {
+            BetterUCMod.LOGGER.warn("Could not parse betterUC website release JSON", e);
+            return Optional.empty();
+        }
     }
 
     private static Optional<LatestVersion> fetchLatestRelease() {
@@ -290,7 +340,7 @@ public final class VersionChecker {
             return InstallOutcome.message("\u00A7e[betterUC] Update wurde bereits vorbereitet. Bitte Minecraft komplett schlie\u00DFen und neu starten.");
         }
         if (!latestVersion.hasJarAsset()) {
-            return InstallOutcome.message("\u00A7e[betterUC] Update verf\u00FCgbar, aber im GitHub-Release wurde keine betterUC-JAR gefunden.\n"
+            return InstallOutcome.message("\u00A7e[betterUC] Update verf\u00FCgbar, aber es wurde keine betterUC-JAR gefunden.\n"
                     + "\u00A77Download: \u00A7b" + latestVersion.url());
         }
 
@@ -346,7 +396,7 @@ public final class VersionChecker {
 
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             Files.deleteIfExists(downloadedJar);
-            throw new IOException("GitHub Download HTTP " + response.statusCode());
+            throw new IOException("Download HTTP " + response.statusCode());
         }
     }
 
@@ -525,24 +575,24 @@ public final class VersionChecker {
         return normalized.trim();
     }
 
-    private static Text buildUpdateMessage(String currentVersion, LatestVersion latestVersion) {
+    private static Component buildUpdateMessage(String currentVersion, LatestVersion latestVersion) {
         String normalizedCurrent = normalizeVersion(currentVersion);
         String normalizedLatest = normalizeVersion(latestVersion.version());
-        MutableText message = Text.literal("\u00A7e[betterUC] Update verf\u00FCgbar! \u00A77Du nutzt \u00A7c"
+        MutableComponent message = Component.literal("\u00A7e[betterUC] Update verf\u00FCgbar! \u00A77Du nutzt \u00A7c"
                 + normalizedCurrent + "\u00A77, aktuell ist \u00A7a" + normalizedLatest + "\u00A77.\n");
-        MutableText link = Text.literal("\u00A7b" + latestVersion.url())
+        MutableComponent link = Component.literal("\u00A7b" + latestVersion.url())
                 .setStyle(Style.EMPTY.withClickEvent(new ClickEvent.OpenUrl(URI.create(latestVersion.url()))));
 
-        message.append(Text.literal("\u00A77Download: ")).append(link);
+        message.append(Component.literal("\u00A77Download: ")).append(link);
         if (latestVersion.hasJarAsset()) {
-            MutableText command = Text.literal("\n\u00A7a[Auto installieren]")
+            MutableComponent command = Component.literal("\n\u00A7a[Auto installieren]")
                     .setStyle(Style.EMPTY.withClickEvent(new ClickEvent.RunCommand("/betterucupdate")));
-            message.append(Text.literal("\u00A77 ")).append(command);
+            message.append(Component.literal("\u00A77 ")).append(command);
         }
         return message;
     }
 
-    private static void installUpdate(MinecraftClient client, LatestVersion latestVersion, boolean manual) {
+    private static void installUpdate(Minecraft client, LatestVersion latestVersion, boolean manual) {
         if (client == null || latestVersion == null) {
             return;
         }
@@ -573,9 +623,9 @@ public final class VersionChecker {
                 });
     }
 
-    private static void sendLocalMessage(MinecraftClient client, String message) {
+    private static void sendLocalMessage(Minecraft client, String message) {
         if (client != null && client.player != null) {
-            client.player.sendMessage(Text.literal(message), false);
+            client.player.sendSystemMessage(Component.literal(message));
         }
     }
 

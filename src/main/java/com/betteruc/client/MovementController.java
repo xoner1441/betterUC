@@ -1,8 +1,8 @@
 package com.betteruc.client;
 
 import com.betteruc.config.BetterUCConfig;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
 
 public final class MovementController {
@@ -27,24 +27,24 @@ public final class MovementController {
         return baseFov * factor;
     }
 
-    public static void tick(MinecraftClient client) {
+    public static void tick(Minecraft client) {
         handleToggleSprint(client);
         tickZoom(client);
     }
 
-    public static void reset(MinecraftClient client) {
+    public static void reset(Minecraft client) {
         toggleSprintActive = false;
         toggleSprintWasActiveLastTick = false;
         toggleSprintHudActive = false;
         zoomProgress = 0.0f;
 
-        if (client != null && client.options != null && client.options.sprintKey != null) {
-            client.options.sprintKey.setPressed(false);
+        if (client != null && client.options != null && client.options.keySprint != null) {
+            client.options.keySprint.setDown(false);
         }
     }
 
-    private static void handleToggleSprint(MinecraftClient client) {
-        KeyBinding sprintKey = client.options.sprintKey;
+    private static void handleToggleSprint(Minecraft client) {
+        KeyMapping sprintKey = client.options.keySprint;
         if (sprintKey == null || sprintKey.isUnbound()) {
             toggleSprintActive = false;
             toggleSprintWasActiveLastTick = false;
@@ -52,8 +52,8 @@ public final class MovementController {
             return;
         }
 
-        while (sprintKey.wasPressed()) {
-            if (BetterUCConfig.INSTANCE.toggleSprintEnabled && client.currentScreen == null) {
+        while (sprintKey.consumeClick()) {
+            if (BetterUCConfig.INSTANCE.toggleSprintEnabled && client.screen == null) {
                 toggleSprintActive = !toggleSprintActive;
             }
         }
@@ -67,28 +67,28 @@ public final class MovementController {
 
         boolean shouldForceSprint = BetterUCConfig.INSTANCE.toggleSprintEnabled
                 && toggleSprintActive
-                && client.currentScreen == null
+                && client.screen == null
                 && client.player != null
                 && client.player.isAlive()
-                && client.player.getHungerManager().getFoodLevel() > 6
-                && !client.player.isSneaking();
+                && client.player.getFoodData().getFoodLevel() > 6
+                && !client.player.isShiftKeyDown();
 
         if (toggleSprintActive) {
-            sprintKey.setPressed(shouldForceSprint);
+            sprintKey.setDown(shouldForceSprint);
         } else if (toggleSprintWasActiveLastTick) {
-            sprintKey.setPressed(false);
+            sprintKey.setDown(false);
         }
 
         toggleSprintWasActiveLastTick = toggleSprintActive;
         toggleSprintHudActive = toggleSprintActive;
     }
 
-    private static void tickZoom(MinecraftClient client) {
+    private static void tickZoom(Minecraft client) {
         int keyCode = BetterUCConfig.INSTANCE.zoomKeyCode;
         boolean zoomDown = BetterUCConfig.INSTANCE.zoomEnabled
                 && keyCode > 0
-                && client.currentScreen == null
-                && GLFW.glfwGetKey(client.getWindow().getHandle(), keyCode) == GLFW.GLFW_PRESS;
+                && client.screen == null
+                && GLFW.glfwGetKey(client.getWindow().handle(), keyCode) == GLFW.GLFW_PRESS;
         zoomProgress = zoomDown ? 1.0f : 0.0f;
     }
 }

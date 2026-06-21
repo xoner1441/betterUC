@@ -1,15 +1,14 @@
 package com.betteruc.gui;
 
 import com.betteruc.ServerGate;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.text.Text;
-
 import java.util.List;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 public class CommandGui extends Screen {
 
@@ -41,7 +40,7 @@ public class CommandGui extends Screen {
     };
 
     public CommandGui() {
-        super(Text.literal("Command Menu"));
+        super(Component.literal("Command Menu"));
     }
 
     @Override
@@ -58,24 +57,24 @@ public class CommandGui extends Screen {
             int slotY = startY + 18 + row * SLOT_SIZE;
             final int index = i;
 
-            addDrawableChild(ButtonWidget.builder(Text.literal(""), button -> {
-                MinecraftClient client = MinecraftClient.getInstance();
+            addRenderableWidget(Button.builder(Component.literal(""), button -> {
+                Minecraft client = Minecraft.getInstance();
                 if (client.player != null) {
                     if (!ServerGate.isAllowedServer(client)) {
-                        client.player.sendMessage(Text.literal(
+                        client.player.sendSystemMessage(Component.literal(
                                 "\u00A7cBetterUCMod funktioniert nur auf: \u00A7f" + ServerGate.allowedServersLabel()
-                        ), false);
+                        ));
                         return;
                     }
-                    client.player.networkHandler.sendChatCommand(COMMANDS[index]);
-                    close();
+                    client.player.connection.sendCommand(COMMANDS[index]);
+                    onClose();
                 }
-            }).dimensions(slotX, slotY, SLOT_SIZE - 2, SLOT_SIZE - 2).build());
+            }).bounds(slotX, slotY, SLOT_SIZE - 2, SLOT_SIZE - 2).build());
         }
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         int guiWidth = guiWidth();
         int guiHeight = guiHeight();
         int startX = width / 2 - guiWidth / 2;
@@ -83,16 +82,16 @@ public class CommandGui extends Screen {
 
         context.fill(startX, startY, startX + guiWidth, startY + guiHeight, 0xCC1A1A1A);
         context.fill(startX, startY, startX + guiWidth, startY + 14, 0xCC2D2D2D);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("\u00A7l Navigation Menu"), width / 2, startY + 3, 0xFFFFFF);
+        context.centeredText(font, Component.literal("\u00A7l Navigation Menu"), width / 2, startY + 3, 0xFFFFFF);
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
 
         for (int i = 0; i < COMMANDS.length; i++) {
             int col = i % COLS;
             int row = i / COLS;
             int slotX = startX + 4 + col * SLOT_SIZE;
             int slotY = startY + 18 + row * SLOT_SIZE;
-            context.drawItem(new ItemStack(Items.FERN), slotX + 1, slotY + 1);
+            context.item(new ItemStack(Items.FERN), slotX + 1, slotY + 1);
         }
 
         for (int i = 0; i < COMMANDS.length; i++) {
@@ -103,9 +102,9 @@ public class CommandGui extends Screen {
 
             if (mouseX >= slotX && mouseX <= slotX + SLOT_SIZE - 2
                     && mouseY >= slotY && mouseY <= slotY + SLOT_SIZE - 2) {
-                context.drawTooltip(textRenderer, List.of(
-                        Text.literal("\u00A7e" + nameFor(i)),
-                        Text.literal("\u00A77/" + COMMANDS[i])
+                context.setComponentTooltipForNextFrame(font, List.of(
+                        Component.literal("\u00A7e" + nameFor(i)),
+                        Component.literal("\u00A77/" + COMMANDS[i])
                 ), mouseX, mouseY);
             }
         }
@@ -131,7 +130,7 @@ public class CommandGui extends Screen {
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 }

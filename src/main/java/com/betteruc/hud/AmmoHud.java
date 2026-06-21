@@ -1,10 +1,11 @@
 package com.betteruc.hud;
 
 import com.betteruc.config.BetterUCConfig;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.HashMap;
@@ -23,16 +24,16 @@ public class AmmoHud {
     private static int reserveAmmo = -1;
     private static String weaponName = "";
     private static long lastUpdateMs = 0L;
-    private static Text ammoText = Text.literal("");
-    private static Text weaponText = Text.literal("");
+    private static Component ammoText = Component.literal("");
+    private static Component weaponText = Component.literal("");
     private static boolean reloadKeyWasDown = false;
     private static final Map<String, Integer> observedMagazineSizes = new HashMap<>();
 
     public static void register() {
-        HudRenderCallback.EVENT.register((drawContext, tickCounter) -> render(drawContext));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "ammo"), (context, tickCounter) -> render(context));
     }
 
-    public static void updateFromOverlay(Text overlayMessage) {
+    public static void updateFromOverlay(Component overlayMessage) {
         if (overlayMessage == null) return;
 
         String raw = overlayMessage.getString();
@@ -54,17 +55,17 @@ public class AmmoHud {
         lastUpdateMs = System.currentTimeMillis();
     }
 
-    public static void tickReloadKey(MinecraftClient client) {
+    public static void tickReloadKey(Minecraft client) {
         if (client == null || client.player == null) {
             reloadKeyWasDown = false;
             return;
         }
-        if (client.currentScreen != null) {
+        if (client.screen != null) {
             reloadKeyWasDown = false;
             return;
         }
 
-        boolean qDown = GLFW.glfwGetKey(client.getWindow().getHandle(), GLFW.GLFW_KEY_Q) == GLFW.GLFW_PRESS;
+        boolean qDown = GLFW.glfwGetKey(client.getWindow().handle(), GLFW.GLFW_KEY_Q) == GLFW.GLFW_PRESS;
         if (qDown && !reloadKeyWasDown) {
             applyOptimisticReload();
         }
@@ -76,18 +77,18 @@ public class AmmoHud {
         reserveAmmo = -1;
         weaponName = "";
         lastUpdateMs = 0L;
-        ammoText = Text.literal("");
-        weaponText = Text.literal("");
+        ammoText = Component.literal("");
+        weaponText = Component.literal("");
         reloadKeyWasDown = false;
     }
 
-    private static void render(DrawContext context) {
+    private static void render(GuiGraphicsExtractor context) {
         if (!BetterUCConfig.INSTANCE.showAmmoHud) return;
         if (clipAmmo < 0 || reserveAmmo < 0) return;
         if (lastUpdateMs <= 0L) return;
         if (System.currentTimeMillis() - lastUpdateMs > DISPLAY_TIMEOUT_MS) return;
 
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
 
         int x = BetterUCConfig.INSTANCE.ammoHudX;
@@ -100,7 +101,7 @@ public class AmmoHud {
                 BetterUCConfig.INSTANCE.ammoHudPrefix,
                 ammoValue
         );
-        Text ammoDisplayText = Text.literal(ammoDisplay);
+        Component ammoDisplayText = Component.literal(ammoDisplay);
         String moduleLabel = BetterUCConfig.hudModuleLabel(
                 BetterUCConfig.INSTANCE.ammoHudPrefixEnabled,
                 BetterUCConfig.INSTANCE.ammoHudPrefix
@@ -114,14 +115,14 @@ public class AmmoHud {
                 BetterUCConfig.INSTANCE.ammoHudGradientColor,
                 () -> {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
-                ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.ammoHudCustomFont, ammoDisplayText, 0, 0, 0xFFFFAA33);
+                ModernHudRenderer.drawStyledText(context, client.font, style, BetterUCConfig.INSTANCE.ammoHudCustomFont, ammoDisplayText, 0, 0, 0xFFFFAA33);
                 if (!weaponName.isBlank()) {
-                    ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.ammoHudCustomFont, weaponText, 0, 11, 0xFF55FF55);
+                    ModernHudRenderer.drawStyledText(context, client.font, style, BetterUCConfig.INSTANCE.ammoHudCustomFont, weaponText, 0, 11, 0xFF55FF55);
                 }
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, ammoDisplayText, 0, 0, 0xFFFFAA33);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.font, ammoDisplayText, 0, 0, 0xFFFFAA33);
                 if (!weaponName.isBlank()) {
-                    ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, weaponText, 0, 10, 0xFF55FF55);
+                    ModernHudRenderer.drawHudTextWithShadow(context, client.font, weaponText, 0, 10, 0xFF55FF55);
                 }
             } else {
                 ModernHudRenderer.drawTwoLineModule(
@@ -206,7 +207,7 @@ public class AmmoHud {
     }
 
     private static void refreshDisplayText() {
-        ammoText = Text.literal(clipAmmo + "/" + reserveAmmo);
-        weaponText = weaponName.isBlank() ? Text.literal("") : Text.literal(weaponName);
+        ammoText = Component.literal(clipAmmo + "/" + reserveAmmo);
+        weaponText = weaponName.isBlank() ? Component.literal("") : Component.literal(weaponName);
     }
 }

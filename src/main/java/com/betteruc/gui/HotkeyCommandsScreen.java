@@ -1,16 +1,16 @@
 package com.betteruc.gui;
 
 import com.betteruc.config.BetterUCConfig;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.input.KeyInput;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.text.Text;
+import com.mojang.blaze3d.platform.InputConstants;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.network.chat.Component;
 
 public class HotkeyCommandsScreen extends Screen {
 
@@ -30,11 +30,11 @@ public class HotkeyCommandsScreen extends Screen {
     private final Screen parent;
     private int page = 0;
     private int capturingIndex = -1;
-    private ButtonWidget prevButton;
-    private ButtonWidget nextButton;
+    private Button prevButton;
+    private Button nextButton;
 
     public HotkeyCommandsScreen(Screen parent) {
-        super(Text.literal("Hotkey Commands"));
+        super(Component.literal("Hotkey Commands"));
         this.parent = parent;
     }
 
@@ -48,7 +48,7 @@ public class HotkeyCommandsScreen extends Screen {
     }
 
     private void rebuild() {
-        clearChildren();
+        clearWidgets();
         clampCurrentPage();
 
         int centerX = width / 2;
@@ -73,26 +73,26 @@ public class HotkeyCommandsScreen extends Screen {
     }
 
     private void addHeaderButtons(int centerX) {
-        addDrawableChild(ButtonWidget.builder(Text.literal("+ Add"), b -> {
+        addRenderableWidget(Button.builder(Component.literal("+ Add"), b -> {
             entries().add(new BetterUCConfig.HotkeyCommand(-1, ""));
             page = getMaxPage();
             rebuild();
-        }).dimensions(centerX - 150, HEADER_Y, 70, 20).build());
+        }).bounds(centerX - 150, HEADER_Y, 70, 20).build());
 
-        prevButton = addDrawableChild(ButtonWidget.builder(Text.literal("< Prev"), b -> {
+        prevButton = addRenderableWidget(Button.builder(Component.literal("< Prev"), b -> {
             if (page > 0) {
                 page--;
                 rebuild();
             }
-        }).dimensions(centerX - 35, HEADER_Y, 60, 20).build());
+        }).bounds(centerX - 35, HEADER_Y, 60, 20).build());
 
-        nextButton = addDrawableChild(ButtonWidget.builder(Text.literal("Next >"), b -> {
+        nextButton = addRenderableWidget(Button.builder(Component.literal("Next >"), b -> {
             int maxPage = getMaxPage();
             if (page < maxPage) {
                 page++;
                 rebuild();
             }
-        }).dimensions(centerX + 30, HEADER_Y, 60, 20).build());
+        }).bounds(centerX + 30, HEADER_Y, 60, 20).build());
 
         int maxPage = getMaxPage();
         prevButton.active = page > 0;
@@ -110,32 +110,32 @@ public class HotkeyCommandsScreen extends Screen {
     private void addRow(int centerX, int index, int rowY) {
         BetterUCConfig.HotkeyCommand entry = entries().get(index);
 
-        TextFieldWidget commandField = new TextFieldWidget(
-                textRenderer,
+        EditBox commandField = new EditBox(
+                font,
                 centerX + COMMAND_X_OFFSET,
                 rowY,
                 COMMAND_WIDTH,
                 20,
-                Text.literal("Command")
+                Component.literal("Command")
         );
         commandField.setMaxLength(256);
-        commandField.setText(entry.command == null ? "" : entry.command);
-        commandField.setChangedListener(text -> {
+        commandField.setValue(entry.command == null ? "" : entry.command);
+        commandField.setResponder(text -> {
             if (index < entries().size()) {
                 entries().get(index).command = text;
             }
         });
-        addDrawableChild(commandField);
+        addRenderableWidget(commandField);
 
-        addDrawableChild(ButtonWidget.builder(Text.literal(getKeyLabel(index)), b -> {
+        addRenderableWidget(Button.builder(Component.literal(getKeyLabel(index)), b -> {
             capturingIndex = index;
             rebuild();
-        }).dimensions(centerX + KEY_X_OFFSET, rowY, KEY_WIDTH, 20).build());
+        }).bounds(centerX + KEY_X_OFFSET, rowY, KEY_WIDTH, 20).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Del"), b -> {
+        addRenderableWidget(Button.builder(Component.literal("Del"), b -> {
             deleteEntry(index);
             rebuild();
-        }).dimensions(centerX + DELETE_X_OFFSET, rowY, DELETE_WIDTH, 20).build());
+        }).bounds(centerX + DELETE_X_OFFSET, rowY, DELETE_WIDTH, 20).build());
     }
 
     private void deleteEntry(int index) {
@@ -150,10 +150,10 @@ public class HotkeyCommandsScreen extends Screen {
     }
 
     private void addSaveBackButton(int centerX) {
-        addDrawableChild(ButtonWidget.builder(Text.literal("Save & Back"), b -> {
+        addRenderableWidget(Button.builder(Component.literal("Save & Back"), b -> {
             BetterUCConfig.save();
-            if (client != null) client.setScreen(parent);
-        }).dimensions(centerX - 80, height - 28, 160, 20).build());
+            if (minecraft != null) minecraft.setScreen(parent);
+        }).bounds(centerX - 80, height - 28, 160, 20).build());
     }
 
     private String getKeyLabel(int index) {
@@ -163,19 +163,19 @@ public class HotkeyCommandsScreen extends Screen {
         int code = entries().get(index).keyCode;
         if (code < 0) return "Key: none";
         try {
-            return "Key: " + InputUtil.Type.KEYSYM.createFromCode(code).getLocalizedText().getString();
+            return "Key: " + InputConstants.Type.KEYSYM.getOrCreate(code).getDisplayName().getString();
         } catch (Exception ignored) {
             return "Key: " + code;
         }
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
+    public boolean keyPressed(KeyEvent input) {
         if (capturingIndex < 0) {
             return super.keyPressed(input);
         }
 
-        int keyCode = input.getKeycode();
+        int keyCode = input.input();
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             capturingIndex = -1;
             rebuild();
@@ -196,35 +196,35 @@ public class HotkeyCommandsScreen extends Screen {
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         BetterUCConfig.save();
-        if (client != null) {
-            client.setScreen(parent);
+        if (minecraft != null) {
+            minecraft.setScreen(parent);
         }
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        super.extractRenderState(context, mouseX, mouseY, delta);
 
         int centerX = width / 2;
         int totalPages = Math.max(1, (entries().size() + ROWS_PER_PAGE - 1) / ROWS_PER_PAGE);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("Hotkey Commands"), centerX, 8, 0xFFFFFF);
-        context.drawCenteredTextWithShadow(
-                textRenderer,
-                Text.literal("Page " + (page + 1) + "/" + totalPages + " | Entries: " + entries().size()),
+        context.centeredText(font, Component.literal("Hotkey Commands"), centerX, 8, 0xFFFFFF);
+        context.centeredText(
+                font,
+                Component.literal("Page " + (page + 1) + "/" + totalPages + " | Entries: " + entries().size()),
                 centerX,
                 33,
                 0xAAAAAA
         );
-        context.drawTextWithShadow(textRenderer, Text.literal("Command"), centerX + COMMAND_X_OFFSET, 44, 0xAAAAAA);
-        context.drawTextWithShadow(textRenderer, Text.literal("Key"), centerX + KEY_X_OFFSET, 44, 0xAAAAAA);
-        context.drawTextWithShadow(textRenderer, Text.literal("Use /command or command"), centerX + COMMAND_X_OFFSET, height - ENTRY_HINT_Y_OFFSET, 0x777777);
+        context.text(font, Component.literal("Command"), centerX + COMMAND_X_OFFSET, 44, 0xAAAAAA);
+        context.text(font, Component.literal("Key"), centerX + KEY_X_OFFSET, 44, 0xAAAAAA);
+        context.text(font, Component.literal("Use /command or command"), centerX + COMMAND_X_OFFSET, height - ENTRY_HINT_Y_OFFSET, 0x777777);
 
         if (entries().isEmpty()) {
-            context.drawCenteredTextWithShadow(
-                    textRenderer,
-                    Text.literal("No hotkeys yet - click + Add"),
+            context.centeredText(
+                    font,
+                    Component.literal("No hotkeys yet - click + Add"),
                     centerX,
                     ROW_START_Y + 8,
                     0xAAAAAA
@@ -232,9 +232,9 @@ public class HotkeyCommandsScreen extends Screen {
         }
 
         if (capturingIndex >= 0) {
-            context.drawCenteredTextWithShadow(
-                    textRenderer,
-                    Text.literal("\u00A7ePress a key for this row (ESC = cancel)"),
+            context.centeredText(
+                    font,
+                    Component.literal("\u00A7ePress a key for this row (ESC = cancel)"),
                     centerX,
                     height - CAPTURE_HINT_Y_OFFSET,
                     0xFFFFFF
@@ -243,7 +243,7 @@ public class HotkeyCommandsScreen extends Screen {
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 }

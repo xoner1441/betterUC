@@ -1,14 +1,13 @@
 package com.betteruc.client;
 
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
 public final class ChatCustomizationFormatter {
     private static final long PENDING_TTL_MS = 30000L;
@@ -95,7 +94,7 @@ public final class ChatCustomizationFormatter {
         if (paySent.matches()) {
             return Result.replace(List.of(
                     payHeadline("Du", paySent.group(1)),
-                    amountDetail("-" + cleanAmount(paySent.group(2)) + "$", Formatting.RED)
+                    amountDetail("-" + cleanAmount(paySent.group(2)) + "$", ChatFormatting.RED)
             ));
         }
 
@@ -103,7 +102,7 @@ public final class ChatCustomizationFormatter {
         if (payReceived.matches()) {
             return Result.replace(List.of(
                     payHeadline(payReceived.group(1), "Du"),
-                    amountDetail("+" + cleanAmount(payReceived.group(2)) + "$", Formatting.GREEN)
+                    amountDetail("+" + cleanAmount(payReceived.group(2)) + "$", ChatFormatting.GREEN)
             ));
         }
         }
@@ -251,13 +250,13 @@ public final class ChatCustomizationFormatter {
         };
     }
 
-    private static Text headline(String action, String target) {
+    private static Component headline(String action, String target) {
         return action(action)
                 .append(separator(" ◆ "))
                 .append(name(target));
     }
 
-    private static Text headline(String action, String actor, String target) {
+    private static Component headline(String action, String actor, String target) {
         return action(action)
                 .append(separator(" ◆ "))
                 .append(name(actor))
@@ -265,24 +264,24 @@ public final class ChatCustomizationFormatter {
                 .append(name(target));
     }
 
-    private static Text detail(String reason, String suffix) {
-        MutableText text = Text.literal("» ").formatted(Formatting.GRAY)
-                .append(Text.literal(reason == null ? "" : reason.trim()).formatted(Formatting.BLUE));
+    private static Component detail(String reason, String suffix) {
+        MutableComponent text = Component.literal("» ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(reason == null ? "" : reason.trim()).withStyle(ChatFormatting.BLUE));
         if (suffix != null && !suffix.isBlank()) {
             text.append(separator(" | "))
-                    .append(Text.literal(suffix.trim()).formatted(Formatting.YELLOW));
+                    .append(Component.literal(suffix.trim()).withStyle(ChatFormatting.YELLOW));
         }
         return text;
     }
 
-    private static List<Text> messages(Text headline, List<Text> details) {
-        List<Text> messages = new ArrayList<>(1 + details.size());
+    private static List<Component> messages(Component headline, List<Component> details) {
+        List<Component> messages = new ArrayList<>(1 + details.size());
         messages.add(headline);
         messages.addAll(details);
         return messages;
     }
 
-    private static List<Text> reasonDetails(String reason, String suffix) {
+    private static List<Component> reasonDetails(String reason, String suffix) {
         String normalizedReason = normalizeReason(reason);
         if (suffix == null || suffix.isBlank()) {
             return List.of(detail(normalizedReason, ""));
@@ -303,17 +302,17 @@ public final class ChatCustomizationFormatter {
                 .replaceAll("(?i)\\bDrogenabgabe\\s*(5|10|15)\\s*g?\\b", "DA $1g");
     }
 
-    private static Text valueDetail(String value) {
-        return Text.literal("» ").formatted(Formatting.GRAY)
-                .append(Text.literal(value == null ? "" : value.trim()).formatted(Formatting.YELLOW));
+    private static Component valueDetail(String value) {
+        return Component.literal("» ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(value == null ? "" : value.trim()).withStyle(ChatFormatting.YELLOW));
     }
 
-    private static Text amountDetail(String amount, Formatting color) {
-        return Text.literal("\u00BB ").formatted(Formatting.GRAY)
-                .append(Text.literal(amount == null ? "" : amount.trim()).formatted(color, Formatting.BOLD));
+    private static Component amountDetail(String amount, ChatFormatting color) {
+        return Component.literal("\u00BB ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(amount == null ? "" : amount.trim()).withStyle(color, ChatFormatting.BOLD));
     }
 
-    private static Text payHeadline(String actor, String target) {
+    private static Component payHeadline(String actor, String target) {
         return action("PAY")
                 .append(separator(" \u25C6 "))
                 .append(payName(actor))
@@ -321,23 +320,23 @@ public final class ChatCustomizationFormatter {
                 .append(payName(target));
     }
 
-    private static Text supportHeadline(String action, String target) {
+    private static Component supportHeadline(String action, String target) {
         return action(action)
                 .append(separator(" \u25C6 "))
                 .append(supportName(target));
     }
 
-    private static Text supportDetail(String source, String location, String suffix) {
-        MutableText text = Text.literal("\u00BB ").formatted(Formatting.GRAY);
+    private static Component supportDetail(String source, String location, String suffix) {
+        MutableComponent text = Component.literal("\u00BB ").withStyle(ChatFormatting.GRAY);
         boolean hasSource = source != null && !source.isBlank();
         if (hasSource) {
-            text.append(Text.literal(source.trim()).formatted(Formatting.AQUA))
+            text.append(Component.literal(source.trim()).withStyle(ChatFormatting.AQUA))
                     .append(separator(" | "));
         }
-        text.append(Text.literal(location == null ? "" : location.trim()).formatted(Formatting.AQUA));
+        text.append(Component.literal(location == null ? "" : location.trim()).withStyle(ChatFormatting.AQUA));
         if (suffix != null && !suffix.isBlank()) {
             text.append(separator(" | "))
-                    .append(Text.literal(suffix.trim()).formatted(Formatting.YELLOW));
+                    .append(Component.literal(suffix.trim()).withStyle(ChatFormatting.YELLOW));
         }
         return text;
     }
@@ -368,25 +367,25 @@ public final class ChatCustomizationFormatter {
                 || normalized.equals("zivilist");
     }
 
-    private static MutableText action(String value) {
+    private static MutableComponent action(String value) {
         String label = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
-        return Text.literal(label).formatted(Formatting.RED);
+        return Component.literal(label).withStyle(ChatFormatting.RED);
     }
 
-    private static MutableText name(String value) {
-        return Text.literal(value == null ? "" : value.trim()).formatted(Formatting.BLUE);
+    private static MutableComponent name(String value) {
+        return Component.literal(value == null ? "" : value.trim()).withStyle(ChatFormatting.BLUE);
     }
 
-    private static MutableText supportName(String value) {
-        return Text.literal(value == null ? "" : value.trim()).formatted(Formatting.AQUA);
+    private static MutableComponent supportName(String value) {
+        return Component.literal(value == null ? "" : value.trim()).withStyle(ChatFormatting.AQUA);
     }
 
-    private static MutableText payName(String value) {
-        return Text.literal(value == null ? "" : value.trim()).formatted(Formatting.DARK_GREEN);
+    private static MutableComponent payName(String value) {
+        return Component.literal(value == null ? "" : value.trim()).withStyle(ChatFormatting.DARK_GREEN);
     }
 
-    private static MutableText separator(String value) {
-        return Text.literal(value).formatted(Formatting.DARK_GRAY);
+    private static MutableComponent separator(String value) {
+        return Component.literal(value).withStyle(ChatFormatting.DARK_GRAY);
     }
 
     private static String normalize(String raw) {
@@ -432,9 +431,9 @@ public final class ChatCustomizationFormatter {
 
     public static final class Result {
         private final boolean cancelOriginal;
-        private final List<Text> replacementMessages;
+        private final List<Component> replacementMessages;
 
-        private Result(boolean cancelOriginal, List<Text> replacementMessages) {
+        private Result(boolean cancelOriginal, List<Component> replacementMessages) {
             this.cancelOriginal = cancelOriginal;
             this.replacementMessages = replacementMessages == null ? List.of() : replacementMessages;
         }
@@ -443,7 +442,7 @@ public final class ChatCustomizationFormatter {
             return new Result(true, List.of());
         }
 
-        public static Result replace(List<Text> replacementMessages) {
+        public static Result replace(List<Component> replacementMessages) {
             return new Result(true, replacementMessages);
         }
 
@@ -451,7 +450,7 @@ public final class ChatCustomizationFormatter {
             return cancelOriginal;
         }
 
-        public List<Text> replacementMessages() {
+        public List<Component> replacementMessages() {
             return replacementMessages;
         }
     }

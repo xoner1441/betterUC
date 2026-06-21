@@ -2,13 +2,13 @@ package com.betteruc.hud;
 
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.config.BetterUCConfig;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import java.util.Comparator;
 import java.util.List;
 
@@ -26,12 +26,12 @@ public final class PingHud {
     }
 
     public static void register() {
-        HudRenderCallback.EVENT.register((drawContext, tickCounter) -> render(drawContext));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "ping"), (context, tickCounter) -> render(context));
     }
 
-    private static void render(DrawContext context) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player == null || client.world == null) return;
+    private static void render(GuiGraphicsExtractor context) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.player == null || client.level == null) return;
 
         renderCooldown(context, client);
         if (!BetterUCConfig.INSTANCE.showPingHud) return;
@@ -50,15 +50,15 @@ public final class PingHud {
         }
     }
 
-    private static void renderCooldown(DrawContext context, MinecraftClient client) {
+    private static void renderCooldown(GuiGraphicsExtractor context, Minecraft client) {
         long remainingMs = PingRelayClient.pingCooldownRemainingMs();
         int durationMs = PingRelayClient.pingCooldownDurationMs();
         if (remainingMs <= 0L || durationMs <= 0) return;
 
         int panelWidth = 128;
         int panelHeight = 34;
-        int screenW = client.getWindow().getScaledWidth();
-        int screenH = client.getWindow().getScaledHeight();
+        int screenW = client.getWindow().getGuiScaledWidth();
+        int screenH = client.getWindow().getGuiScaledHeight();
         double elapsedMs = Math.max(0.0D, durationMs - remainingMs);
         double slideIn = clamp01(elapsedMs / 170.0D);
         double slideOut = clamp01(remainingMs / 170.0D);
@@ -75,8 +75,8 @@ public final class PingHud {
 
         String label = "Ping Cooldown";
         String time = String.format(java.util.Locale.ROOT, "%.1fs", remainingMs / 1000.0D);
-        context.drawTextWithShadow(client.textRenderer, Text.literal(label), x + 10, y + 6, TEXT_PRIMARY);
-        context.drawTextWithShadow(client.textRenderer, Text.literal(time), x + panelWidth - 10 - client.textRenderer.getWidth(time), y + 6, TEXT_MUTED);
+        context.text(client.font, Component.literal(label), x + 10, y + 6, TEXT_PRIMARY);
+        context.text(client.font, Component.literal(time), x + panelWidth - 10 - client.font.width(time), y + 6, TEXT_MUTED);
 
         int barX = x + 10;
         int barY = y + 24;
@@ -90,19 +90,19 @@ public final class PingHud {
         return Math.min(MAX_VISIBLE_PING_DISTANCE, Math.max(0, BetterUCConfig.INSTANCE.pingRelayMaxDistance));
     }
 
-    private static void renderWorldMarker(DrawContext context, MinecraftClient client, PingRelayClient.PingMarker marker) {
+    private static void renderWorldMarker(GuiGraphicsExtractor context, Minecraft client, PingRelayClient.PingMarker marker) {
         long target = projectToScreen(client, marker);
         if (target == Long.MIN_VALUE) return;
         int targetX = unpackScreenX(target);
         int targetY = unpackScreenY(target);
 
-        int screenW = client.getWindow().getScaledWidth();
-        int screenH = client.getWindow().getScaledHeight();
+        int screenW = client.getWindow().getGuiScaledWidth();
+        int screenH = client.getWindow().getGuiScaledHeight();
 
         PingRelayClient.PingType pingType = PingRelayClient.PingType.fromId(marker.pingType());
         String title = pingType.label() + " | " + safe(marker.sender());
         String label = Math.round(distanceToPlayer(client, marker)) + "m";
-        int width = Math.max(64, Math.max(client.textRenderer.getWidth(title), client.textRenderer.getWidth(label)) + 20);
+        int width = Math.max(64, Math.max(client.font.width(title), client.font.width(label)) + 20);
         String style = BetterUCConfig.INSTANCE.pingHudStyle;
         String font = BetterUCConfig.INSTANCE.pingHudCustomFont;
         boolean modernStyle = BetterUCConfig.isModernHudStyle(style);
@@ -111,8 +111,8 @@ public final class PingHud {
         int scaledWidth = ModernHudRenderer.scaledSize(width, scale);
         int scaledHeight = ModernHudRenderer.scaledSize(height, scale);
         int markerGap = ModernHudRenderer.scaledSize(17, scale);
-        int x = MathHelper.clamp(targetX - scaledWidth / 2, 8, Math.max(8, screenW - scaledWidth - 8));
-        int y = MathHelper.clamp(targetY - scaledHeight - markerGap, 8, Math.max(8, screenH - scaledHeight - 8));
+        int x = Mth.clamp(targetX - scaledWidth / 2, 8, Math.max(8, screenW - scaledWidth - 8));
+        int y = Mth.clamp(targetY - scaledHeight - markerGap, 8, Math.max(8, screenH - scaledHeight - 8));
         int accent = color(marker);
 
         ModernHudRenderer.drawScaled(context, x, y, scale, () ->
@@ -129,8 +129,8 @@ public final class PingHud {
     }
 
     private static void drawTargetMarker(
-            DrawContext context,
-            MinecraftClient client,
+            GuiGraphicsExtractor context,
+            Minecraft client,
             int targetX,
             int targetY,
             int accent,
@@ -142,12 +142,12 @@ public final class PingHud {
 
         switch (pingType) {
             case DANGER -> {
-                context.drawCenteredTextWithShadow(client.textRenderer, Text.literal("!"), targetX, targetY - 18, accent);
+                context.centeredText(client.font, Component.literal("!"), targetX, targetY - 18, accent);
                 context.fill(targetX - cross, targetY, targetX + cross + 1, targetY + thickness, accent);
                 context.fill(targetX, targetY - cross, targetX + thickness, targetY + cross + 1, accent);
             }
             case GATHER -> {
-                context.drawCenteredTextWithShadow(client.textRenderer, Text.literal("v"), targetX, targetY - 18, accent);
+                context.centeredText(client.font, Component.literal("v"), targetX, targetY - 18, accent);
                 context.fill(targetX, targetY - cross - 2, targetX + thickness, targetY + cross + 1, accent);
                 context.fill(targetX - cross, targetY, targetX + cross + 1, targetY + thickness, accent);
             }
@@ -159,8 +159,8 @@ public final class PingHud {
     }
 
     private static void drawMarkerBody(
-            DrawContext context,
-            MinecraftClient client,
+            GuiGraphicsExtractor context,
+            Minecraft client,
             String style,
             String font,
             String title,
@@ -171,58 +171,58 @@ public final class PingHud {
     ) {
         if (BetterUCConfig.isModernHudStyle(style)) {
             ModernHudRenderer.drawPanel(context, 0, 0, width, height, accent);
-            context.drawCenteredTextWithShadow(client.textRenderer, Text.literal(title), width / 2, 6, accent);
-            context.drawCenteredTextWithShadow(client.textRenderer, Text.literal(label), width / 2, 18, TEXT_PRIMARY);
+            context.centeredText(client.font, Component.literal(title), width / 2, 6, accent);
+            context.centeredText(client.font, Component.literal(label), width / 2, 18, TEXT_PRIMARY);
             return;
         }
 
-        int titleX = (width - client.textRenderer.getWidth(title)) / 2;
-        int labelX = (width - client.textRenderer.getWidth(label)) / 2;
+        int titleX = (width - client.font.width(title)) / 2;
+        int labelX = (width - client.font.width(label)) / 2;
         if (BetterUCConfig.isStylizedHudStyle(style)) {
             ModernHudRenderer.drawStyledText(context, client, style, font, title, titleX, 0, accent);
             ModernHudRenderer.drawStyledText(context, client, style, font, label, labelX, 12, TEXT_PRIMARY);
             return;
         }
 
-        context.drawTextWithShadow(client.textRenderer, Text.literal(title), titleX, 0, accent);
-        context.drawTextWithShadow(client.textRenderer, Text.literal(label), labelX, 12, TEXT_PRIMARY);
+        context.text(client.font, Component.literal(title), titleX, 0, accent);
+        context.text(client.font, Component.literal(label), labelX, 12, TEXT_PRIMARY);
     }
 
-    private static double distanceToPlayer(MinecraftClient client, PingRelayClient.PingMarker marker) {
+    private static double distanceToPlayer(Minecraft client, PingRelayClient.PingMarker marker) {
         double dx = marker.x() - client.player.getX();
         double dy = marker.y() - client.player.getY();
         double dz = marker.z() - client.player.getZ();
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
-    private static long projectToScreen(MinecraftClient client, PingRelayClient.PingMarker marker) {
-        Vec3d target = new Vec3d(marker.x(), marker.y(), marker.z());
-        Vec3d cameraPos = client.gameRenderer.getCamera().getPos();
-        Vec3d toTarget = target.subtract(cameraPos);
-        if (toTarget.lengthSquared() < 0.0001D) return Long.MIN_VALUE;
+    private static long projectToScreen(Minecraft client, PingRelayClient.PingMarker marker) {
+        Vec3 target = new Vec3(marker.x(), marker.y(), marker.z());
+        Vec3 cameraPos = client.gameRenderer.getMainCamera().position();
+        Vec3 toTarget = target.subtract(cameraPos);
+        if (toTarget.lengthSqr() < 0.0001D) return Long.MIN_VALUE;
 
-        Vec3d cameraLook = Vec3d.fromPolar(client.gameRenderer.getCamera().getPitch(), client.gameRenderer.getCamera().getYaw());
-        if (toTarget.normalize().dotProduct(cameraLook.normalize()) <= 0.05D) {
+        Vec3 cameraLook = Vec3.directionFromRotation(client.gameRenderer.getMainCamera().xRot(), client.gameRenderer.getMainCamera().yRot());
+        if (toTarget.normalize().dot(cameraLook.normalize()) <= 0.05D) {
             return Long.MIN_VALUE;
         }
 
-        Vec3d look = client.player.getRotationVec(1.0F);
-        if (toTarget.normalize().dotProduct(look.normalize()) <= 0.05D) {
+        Vec3 look = client.player.getViewVector(1.0F);
+        if (toTarget.normalize().dot(look.normalize()) <= 0.05D) {
             return Long.MIN_VALUE;
         }
 
-        Vec3d projected = client.gameRenderer.project(target);
+        Vec3 projected = client.gameRenderer.projectPointToScreen(target);
         if (!Double.isFinite(projected.x) || !Double.isFinite(projected.y)) return Long.MIN_VALUE;
 
-        int screenW = client.getWindow().getScaledWidth();
-        int screenH = client.getWindow().getScaledHeight();
+        int screenW = client.getWindow().getGuiScaledWidth();
+        int screenH = client.getWindow().getGuiScaledHeight();
         int x = (int) Math.round((projected.x + 1.0D) * 0.5D * screenW);
         int y = (int) Math.round((1.0D - projected.y) * 0.5D * screenH);
 
         if (x < -32 || x > screenW + 32 || y < -32 || y > screenH + 32) {
             return Long.MIN_VALUE;
         }
-        return packScreenPoint(MathHelper.clamp(x, 0, screenW), MathHelper.clamp(y, 0, screenH));
+        return packScreenPoint(Mth.clamp(x, 0, screenW), Mth.clamp(y, 0, screenH));
     }
 
     private static long packScreenPoint(int x, int y) {
@@ -247,10 +247,10 @@ public final class PingHud {
         }
     }
 
-    private static String trimToWidth(MinecraftClient client, String text, int width) {
+    private static String trimToWidth(Minecraft client, String text, int width) {
         String safe = safe(text);
-        if (client.textRenderer.getWidth(safe) <= width) return safe;
-        while (safe.length() > 1 && client.textRenderer.getWidth(safe + "...") > width) {
+        if (client.font.width(safe) <= width) return safe;
+        while (safe.length() > 1 && client.font.width(safe + "...") > width) {
             safe = safe.substring(0, safe.length() - 1);
         }
         return safe + "...";

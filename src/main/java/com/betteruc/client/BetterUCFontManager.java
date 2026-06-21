@@ -4,16 +4,15 @@ import com.betteruc.BetterUCMod;
 import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.SharedConstants;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.resource.PackVersion;
-import net.minecraft.resource.ResourcePackManager;
-import net.minecraft.resource.ResourceType;
-import net.minecraft.text.Style;
-import net.minecraft.text.StyleSpriteSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FontDescription;
+import net.minecraft.network.chat.Style;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.metadata.pack.PackFormat;
+import net.minecraft.server.packs.repository.PackRepository;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
@@ -55,7 +54,7 @@ public final class BetterUCFontManager {
         rebuildPack();
     }
 
-    public static void tick(MinecraftClient client) {
+    public static void tick(Minecraft client) {
         if (attemptedAutoEnable) return;
         attemptedAutoEnable = true;
         if (!hasCustomFonts()) return;
@@ -109,39 +108,39 @@ public final class BetterUCFontManager {
         return options.get(0).id;
     }
 
-    public static Text applyCustomHudFont(Text text) {
+    public static Component applyCustomHudFont(Component text) {
         return applyCustomHudFont(text, BetterUCConfig.INSTANCE.customHudFont);
     }
 
-    public static Text applyCustomHudFont(Text text, String fontId) {
+    public static Component applyCustomHudFont(Component text, String fontId) {
         Identifier identifier = selectedFontIdentifier(fontId);
         if (identifier == null) {
             return text;
         }
-        return Text.literal(text == null ? "" : text.getString())
-                .setStyle(Style.EMPTY.withFont(new StyleSpriteSource.Font(identifier)));
+        return Component.literal(text == null ? "" : text.getString())
+                .setStyle(Style.EMPTY.withFont(new FontDescription.Resource(identifier)));
     }
 
     public static String sanitizeFontId(String fontId) {
         return sanitizeFontChoice(fontId, DEFAULT_FONT_ID);
     }
 
-    public static void rebuildAndReload(MinecraftClient client) {
+    public static void rebuildAndReload(Minecraft client) {
         rebuildPack();
         enablePack(client, true);
     }
 
-    public static void openFontsFolder(MinecraftClient client) {
+    public static void openFontsFolder(Minecraft client) {
         Path dir = getFontsDir();
         try {
-            Util.getOperatingSystem().open(dir);
+            Util.getPlatform().openPath(dir);
             return;
         } catch (Exception e) {
             BetterUCMod.LOGGER.warn("Could not open betterUC font folder {}", dir, e);
         }
 
         if (client != null && client.player != null) {
-            client.player.sendMessage(Text.literal("betterUC Fonts: " + dir), false);
+            client.player.sendSystemMessage(Component.literal("betterUC Fonts: " + dir));
         }
     }
 
@@ -191,24 +190,24 @@ public final class BetterUCFontManager {
         }
     }
 
-    private static void enablePack(MinecraftClient client, boolean forceReload) {
+    private static void enablePack(Minecraft client, boolean forceReload) {
         if (client == null) return;
-        ResourcePackManager manager = client.getResourcePackManager();
-        manager.scanPacks();
+        PackRepository manager = client.getResourcePackRepository();
+        manager.reload();
 
-        if (!manager.hasProfile(PACK_PROFILE_ID)) {
+        if (!manager.isAvailable(PACK_PROFILE_ID)) {
             BetterUCMod.LOGGER.warn("betterUC font resource pack profile {} is not available", PACK_PROFILE_ID);
             return;
         }
 
-        boolean enabled = manager.getEnabledIds().contains(PACK_PROFILE_ID);
-        if (!enabled && manager.enable(PACK_PROFILE_ID)) {
-            client.options.refreshResourcePacks(manager);
+        boolean enabled = manager.getSelectedIds().contains(PACK_PROFILE_ID);
+        if (!enabled && manager.addPack(PACK_PROFILE_ID)) {
+            client.options.updateResourcePacks(manager);
             return;
         }
 
         if (forceReload) {
-            client.reloadResources();
+            client.reloadResourcePacks();
         }
     }
 
@@ -223,7 +222,7 @@ public final class BetterUCFontManager {
             options.add(new FontOption(
                     NAMESPACE + ":" + source.idPath,
                     source.label,
-                    Identifier.of(NAMESPACE, source.idPath)
+                    Identifier.fromNamespaceAndPath(NAMESPACE, source.idPath)
             ));
         }
         fontOptions = List.copyOf(options);
@@ -343,10 +342,10 @@ public final class BetterUCFontManager {
     }
 
     private static String packMcmeta() {
-        int packVersion = SharedConstants.getGameVersion()
-                .packVersion(ResourceType.CLIENT_RESOURCES)
+        int packVersion = SharedConstants.getCurrentVersion()
+                .packVersion(PackType.CLIENT_RESOURCES)
                 .major();
-        int lastOldVersion = PackVersion.getLastOldPackVersion(ResourceType.CLIENT_RESOURCES);
+        int lastOldVersion = PackFormat.lastPreMinorVersion(PackType.CLIENT_RESOURCES);
         String supported = packVersion <= lastOldVersion
                 ? ",\n    \"supported_formats\": [" + packVersion + ", " + packVersion + "]"
                 : "";
@@ -409,7 +408,7 @@ public final class BetterUCFontManager {
     }
 
     public record FontOption(String id, String label, Identifier identifier) {
-        private static final FontOption DEFAULT = new FontOption(DEFAULT_FONT_ID, "Minecraft", Identifier.ofVanilla("default"));
+        private static final FontOption DEFAULT = new FontOption(DEFAULT_FONT_ID, "Minecraft", Identifier.withDefaultNamespace("default"));
     }
 
     private record FontSource(Path sourcePath, String label, String idPath, String resourceFileName) {

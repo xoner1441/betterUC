@@ -1,13 +1,12 @@
 package com.betteruc;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.PlayerListEntry;
-
 import java.lang.reflect.Method;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.PlayerInfo;
 
 public final class PlayerNameUtil {
 
@@ -38,11 +37,11 @@ public final class PlayerNameUtil {
         return "";
     }
 
-    public static Set<String> getOnlinePlayerNamesLowercase(MinecraftClient client) {
+    public static Set<String> getOnlinePlayerNamesLowercase(Minecraft client) {
         Set<String> onlineLower = new LinkedHashSet<>();
-        if (client == null || client.getNetworkHandler() == null) return onlineLower;
+        if (client == null || client.getConnection() == null) return onlineLower;
 
-        for (PlayerListEntry entry : client.getNetworkHandler().getPlayerList()) {
+        for (PlayerInfo entry : client.getConnection().getOnlinePlayers()) {
             if (entry == null) continue;
             String name = resolveProfileName(entry.getProfile());
             if (name != null && !name.isBlank()) {

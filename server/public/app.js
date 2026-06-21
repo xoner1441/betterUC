@@ -18,6 +18,12 @@ const panelUpdated = document.querySelector("#panelUpdated");
 const panelRefresh = document.querySelector("#panelRefresh");
 const panelAdmin = document.querySelector("#panelAdmin");
 const panelLogout = document.querySelector("#panelLogout");
+const downloadVersion = document.querySelector("#downloadVersion");
+const downloadFile = document.querySelector("#downloadFile");
+const downloadSize = document.querySelector("#downloadSize");
+const downloadHint = document.querySelector("#downloadHint");
+const latestDownloadButton = document.querySelector("#latestDownloadButton");
+const latestDownloadButtonPanel = document.querySelector("#latestDownloadButtonPanel");
 const PANEL_SESSION_KEY = "betteruc-panel-session";
 
 async function refreshStatus() {
@@ -30,6 +36,39 @@ async function refreshStatus() {
   } catch {
     if (statusLabel) statusLabel.textContent = "Relay wird vorbereitet";
     if (onlineInfo) onlineInfo.textContent = "Relay Status nicht erreichbar";
+  }
+}
+
+function formatBytes(value) {
+  const bytes = Number(value || 0);
+  if (!Number.isFinite(bytes) || bytes <= 0) return "unbekannt";
+  const units = ["B", "KB", "MB", "GB"];
+  let size = bytes;
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024;
+    unit += 1;
+  }
+  return `${size.toLocaleString("de-DE", { maximumFractionDigits: unit === 0 ? 0 : 1 })} ${units[unit]}`;
+}
+
+async function refreshDownloadInfo() {
+  if (!downloadVersion && !downloadFile && !downloadSize) return;
+  try {
+    const response = await fetch("/api/releases/latest", { cache: "no-store" });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || "Release nicht erreichbar");
+
+    const downloadUrl = data.downloadUrl || "/download/latest.jar";
+    if (downloadVersion) downloadVersion.textContent = data.version ? `v${data.version}` : "aktuell";
+    if (downloadFile) downloadFile.textContent = data.assetName || "betterUC.jar";
+    if (downloadSize) downloadSize.textContent = formatBytes(data.assetSize);
+    if (downloadHint) downloadHint.textContent = "Download bereit über betteruc.de.";
+    if (latestDownloadButton) latestDownloadButton.href = downloadUrl;
+    if (latestDownloadButtonPanel) latestDownloadButtonPanel.href = downloadUrl;
+  } catch (error) {
+    if (downloadVersion) downloadVersion.textContent = "nicht erreichbar";
+    if (downloadHint) downloadHint.textContent = error.message || "Download-Info konnte nicht geladen werden.";
   }
 }
 
@@ -288,6 +327,7 @@ panelLogout?.addEventListener("click", () => {
 });
 
 refreshStatus();
+refreshDownloadInfo();
 if (panelLoginForm || panelDashboard) {
   fetchPanelSession();
 }

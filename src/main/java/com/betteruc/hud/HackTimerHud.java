@@ -1,10 +1,11 @@
 package com.betteruc.hud;
 
 import com.betteruc.config.BetterUCConfig;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
 
 public class HackTimerHud {
 
@@ -12,10 +13,10 @@ public class HackTimerHud {
     private static long lastTick = 0;
     private static int cachedSeconds = -1;
     private static String cachedTextString = "";
-    private static Text cachedText = Text.literal("");
+    private static Component cachedText = Component.literal("");
 
     public static void register() {
-        HudRenderCallback.EVENT.register((drawContext, tickCounter) -> render(drawContext));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "hack_timer"), (context, tickCounter) -> render(context));
     }
 
     public static void start(int seconds) {
@@ -32,17 +33,17 @@ public class HackTimerHud {
         }
     }
 
-    private static void render(DrawContext context) {
+    private static void render(GuiGraphicsExtractor context) {
         if (secondsRemaining <= 0) return;
 
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
 
         int x = BetterUCConfig.INSTANCE.hackTimerX;
         int y = BetterUCConfig.INSTANCE.hackTimerY;
 
         String timerValue = getTimerValue();
-        Text text = getDisplayText(timerValue);
+        Component text = getDisplayText(timerValue);
         String moduleLabel = BetterUCConfig.hudModuleLabel(
                 BetterUCConfig.INSTANCE.hackTimerHudPrefixEnabled,
                 BetterUCConfig.INSTANCE.hackTimerHudPrefix
@@ -58,9 +59,9 @@ public class HackTimerHud {
                 BetterUCConfig.INSTANCE.hackTimerHudGradientColor,
                 () -> {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
-                ModernHudRenderer.drawStyledText(context, client.textRenderer, style, BetterUCConfig.INSTANCE.hackTimerHudCustomFont, text, 0, 0, accentColor);
+                ModernHudRenderer.drawStyledText(context, client.font, style, BetterUCConfig.INSTANCE.hackTimerHudCustomFont, text, 0, 0, accentColor);
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, text, 0, 0, accentColor);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.font, text, 0, 0, accentColor);
             } else {
                 ModernHudRenderer.drawModule(
                         context,
@@ -85,14 +86,14 @@ public class HackTimerHud {
         return cachedTextString;
     }
 
-    private static Text getDisplayText(String timerValue) {
+    private static Component getDisplayText(String timerValue) {
         String display = BetterUCConfig.prefixedHudText(
                 BetterUCConfig.INSTANCE.hackTimerHudPrefixEnabled,
                 BetterUCConfig.INSTANCE.hackTimerHudPrefix,
                 timerValue
         );
         if (!display.equals(cachedText.getString())) {
-            cachedText = Text.literal(display);
+            cachedText = Component.literal(display);
         }
         return cachedText;
     }

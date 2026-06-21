@@ -1,10 +1,9 @@
 package com.betteruc.parser;
 
-import net.minecraft.text.HoverEvent;
-import net.minecraft.text.Text;
-
 import java.util.Locale;
 import java.util.regex.Pattern;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
 
 public final class StatsLineClassifier {
 
@@ -103,7 +102,7 @@ public final class StatsLineClassifier {
         return inDashWindow && isDashStatTailLine(trimmed);
     }
 
-    public static boolean containsHoverSignal(Text text) {
+    public static boolean containsHoverSignal(Component text) {
         if (text == null) return false;
 
         String visible = normalize(text.getString());
@@ -114,7 +113,7 @@ public final class StatsLineClassifier {
         if (text.getStyle() != null) {
             HoverEvent hover = text.getStyle().getHoverEvent();
             if (hover instanceof HoverEvent.ShowText showText) {
-                Text hoverText = showText.value();
+                Component hoverText = showText.value();
                 String hoverRaw = hoverText == null ? "" : normalize(hoverText.getString());
                 if (HOVER_KEYWORD_PATTERN.matcher(hoverRaw).find()) {
                     return true;
@@ -122,7 +121,7 @@ public final class StatsLineClassifier {
             }
         }
 
-        for (Text sibling : text.getSiblings()) {
+        for (Component sibling : text.getSiblings()) {
             if (containsHoverSignal(sibling)) return true;
         }
         return false;

@@ -2,11 +2,10 @@ package com.betteruc.client;
 
 import com.betteruc.BetterUCMod;
 import com.betteruc.ServerGate;
-import net.minecraft.client.MinecraftClient;
-
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.minecraft.client.Minecraft;
 
 public final class CarFindTracker {
 
@@ -42,7 +41,7 @@ public final class CarFindTracker {
         BetterUCMod.LOGGER.info("Car-find: /car find erkannt, warte auf Koordinaten-Nachricht");
     }
 
-    public static void handleIncomingChat(MinecraftClient client, String raw) {
+    public static void handleIncomingChat(Minecraft client, String raw) {
         if (client == null || client.player == null) return;
         if (raw == null || raw.isBlank()) return;
         if (!ServerGate.isAllowedServer(client)) return;
@@ -111,7 +110,7 @@ public final class CarFindTracker {
         }
     }
 
-    private static void maybeSendNavi(MinecraftClient client, int x, int y, int z, long now) {
+    private static void maybeSendNavi(Minecraft client, int x, int y, int z, long now) {
         String key = x + "/" + y + "/" + z;
 
         if (key.equals(lastAutoNaviKey) && now - lastAutoNaviMs < AUTO_NAVI_DUPLICATE_WINDOW_MS) {

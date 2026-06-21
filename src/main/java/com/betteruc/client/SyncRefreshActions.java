@@ -3,15 +3,15 @@ package com.betteruc.client;
 import com.betteruc.BetterUCMod;
 import com.betteruc.BetterUCSuppressFlags;
 import com.betteruc.ServerGate;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 
 public final class SyncRefreshActions {
 
     private SyncRefreshActions() {
     }
 
-    public static void requestStatsRefresh(MinecraftClient client, boolean notify) {
+    public static void requestStatsRefresh(Minecraft client, boolean notify) {
         if (!canRefresh(client, notify)) return;
         BetterUCSuppressFlags.markSilentStatsRequest();
         ServerCommandUtil.send(client, "stats");
@@ -23,7 +23,7 @@ public final class SyncRefreshActions {
         }
     }
 
-    private static boolean canRefresh(MinecraftClient client, boolean notify) {
+    private static boolean canRefresh(Minecraft client, boolean notify) {
         if (client == null || client.player == null) return false;
         if (ServerGate.isAllowedServer(client)) return true;
         if (notify) {
@@ -32,9 +32,9 @@ public final class SyncRefreshActions {
         return false;
     }
 
-    private static void sendClientMessage(MinecraftClient client, String message) {
+    private static void sendClientMessage(Minecraft client, String message) {
         if (client != null && client.player != null) {
-            client.player.sendMessage(Text.literal(message), false);
+            client.player.sendSystemMessage(Component.literal(message));
         }
     }
 }

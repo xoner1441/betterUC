@@ -1,24 +1,23 @@
 package com.betteruc.mixin;
 
-import com.betteruc.BetterUCClient;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.GameRenderer;
+import com.betteruc.client.MovementController;
+import net.minecraft.client.Camera;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(GameRenderer.class)
+@Mixin(Camera.class)
 public class GameRendererZoomMixin {
 
     @Inject(
-            method = "getFov(Lnet/minecraft/client/render/Camera;FZ)F",
+            method = "getFov()F",
             at = @At("RETURN"),
             cancellable = true,
-            require = 0
+            require = 1
     )
-    private void applyZoomFloat(Camera camera, float tickDelta, boolean changingFov, CallbackInfoReturnable<Float> cir) {
+    private void applyZoomFloat(CallbackInfoReturnable<Float> cir) {
         float base = cir.getReturnValue();
-        cir.setReturnValue((float) BetterUCClient.applyZoomFov(base));
+        cir.setReturnValue((float) MovementController.applyZoomFov(base));
     }
 }

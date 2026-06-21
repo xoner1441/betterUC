@@ -2,10 +2,10 @@ package com.betteruc.hud;
 
 import com.betteruc.client.BetterUCFontManager;
 import com.betteruc.config.BetterUCConfig;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
 
 public final class ModernHudRenderer {
 
@@ -26,7 +26,7 @@ public final class ModernHudRenderer {
     }
 
     public static void drawScaled(
-            DrawContext context,
+            GuiGraphicsExtractor context,
             int x,
             int y,
             float scale,
@@ -36,20 +36,20 @@ public final class ModernHudRenderer {
 
         float safeScale = BetterUCConfig.normalizeHudScale(scale);
         RenderTransform previousTransform = ACTIVE_TRANSFORM.get();
-        context.getMatrices().pushMatrix();
+        context.pose().pushMatrix();
         try {
             ACTIVE_TRANSFORM.set(new RenderTransform(x, safeScale));
-            context.getMatrices().translate(x, y);
-            context.getMatrices().scale(safeScale, safeScale);
+            context.pose().translate(x, y);
+            context.pose().scale(safeScale, safeScale);
             drawAction.run();
         } finally {
             ACTIVE_TRANSFORM.set(previousTransform);
-            context.getMatrices().popMatrix();
+            context.pose().popMatrix();
         }
     }
 
     public static void drawScaledWithGradient(
-            DrawContext context,
+            GuiGraphicsExtractor context,
             int x,
             int y,
             float scale,
@@ -61,7 +61,7 @@ public final class ModernHudRenderer {
     }
 
     public static void drawScaledAround(
-            DrawContext context,
+            GuiGraphicsExtractor context,
             int x,
             int y,
             float scale,
@@ -71,21 +71,21 @@ public final class ModernHudRenderer {
 
         float safeScale = BetterUCConfig.normalizeHudScale(scale);
         RenderTransform previousTransform = ACTIVE_TRANSFORM.get();
-        context.getMatrices().pushMatrix();
+        context.pose().pushMatrix();
         try {
             ACTIVE_TRANSFORM.set(new RenderTransform(x * (1.0F - safeScale), safeScale));
-            context.getMatrices().translate(x, y);
-            context.getMatrices().scale(safeScale, safeScale);
-            context.getMatrices().translate(-x, -y);
+            context.pose().translate(x, y);
+            context.pose().scale(safeScale, safeScale);
+            context.pose().translate(-x, -y);
             drawAction.run();
         } finally {
             ACTIVE_TRANSFORM.set(previousTransform);
-            context.getMatrices().popMatrix();
+            context.pose().popMatrix();
         }
     }
 
     public static void drawScaledAroundWithGradient(
-            DrawContext context,
+            GuiGraphicsExtractor context,
             int x,
             int y,
             float scale,
@@ -121,35 +121,35 @@ public final class ModernHudRenderer {
     }
 
     public static void drawHudTextWithShadow(
-            DrawContext context,
-            TextRenderer renderer,
-            Text text,
+            GuiGraphicsExtractor context,
+            Font renderer,
+            Component text,
             int x,
             int y,
             int baseColor
     ) {
-        Text safeText = text == null ? Text.literal("") : text;
+        Component safeText = text == null ? Component.literal("") : text;
         if (!hudGradientEnabled()) {
-            context.drawTextWithShadow(renderer, safeText, x, y, withAlpha(baseColor, 0xFF));
+            context.text(renderer, safeText, x, y, withAlpha(baseColor, 0xFF));
             return;
         }
         drawTextLeftToRight(context, renderer, safeText, x, y, baseColor, true);
     }
 
     public static void drawHudTextWithShadow(
-            DrawContext context,
-            TextRenderer renderer,
+            GuiGraphicsExtractor context,
+            Font renderer,
             String text,
             int x,
             int y,
             int baseColor
     ) {
-        drawHudTextWithShadow(context, renderer, Text.literal(safe(text)), x, y, baseColor);
+        drawHudTextWithShadow(context, renderer, Component.literal(safe(text)), x, y, baseColor);
     }
 
     public static void drawModule(
-            DrawContext context,
-            MinecraftClient client,
+            GuiGraphicsExtractor context,
+            Minecraft client,
             int x,
             int y,
             String label,
@@ -160,8 +160,8 @@ public final class ModernHudRenderer {
     }
 
     public static void drawModule(
-            DrawContext context,
-            MinecraftClient client,
+            GuiGraphicsExtractor context,
+            Minecraft client,
             int x,
             int y,
             String label,
@@ -169,11 +169,11 @@ public final class ModernHudRenderer {
             int accentColor,
             int valueColor
     ) {
-        TextRenderer renderer = client.textRenderer;
+        Font renderer = client.font;
         String safeLabel = safe(label);
         String safeValue = safe(value);
-        int labelWidth = renderer.getWidth(safeLabel);
-        int valueWidth = renderer.getWidth(safeValue);
+        int labelWidth = renderer.width(safeLabel);
+        int valueWidth = renderer.width(safeValue);
         int gap = safeLabel.isEmpty() ? 0 : 5;
         int width = Math.max(MIN_MODULE_WIDTH, labelWidth + valueWidth + gap + 23);
         int height = 18;
@@ -187,18 +187,18 @@ public final class ModernHudRenderer {
                 int labelX = valueX - labelWidth - gap;
                 drawHudTextWithShadow(context, renderer, safeLabel, labelX, y + 5, accentColor);
             }
-            context.drawTextWithShadow(renderer, Text.literal(safeValue), valueX, y + 5, valueColor);
+            context.text(renderer, Component.literal(safeValue), valueX, y + 5, valueColor);
         } else {
             if (!safeLabel.isEmpty()) {
                 drawHudTextWithShadow(context, renderer, safeLabel, x + 8, y + 5, accentColor);
             }
-            context.drawTextWithShadow(renderer, Text.literal(safeValue), x + width - valueWidth - 7, y + 5, valueColor);
+            context.text(renderer, Component.literal(safeValue), x + width - valueWidth - 7, y + 5, valueColor);
         }
     }
 
     public static void drawTwoLineModule(
-            DrawContext context,
-            MinecraftClient client,
+            GuiGraphicsExtractor context,
+            Minecraft client,
             int x,
             int y,
             String label,
@@ -210,8 +210,8 @@ public final class ModernHudRenderer {
     }
 
     public static void drawTwoLineModule(
-            DrawContext context,
-            MinecraftClient client,
+            GuiGraphicsExtractor context,
+            Minecraft client,
             int x,
             int y,
             String label,
@@ -220,17 +220,17 @@ public final class ModernHudRenderer {
             int accentColor,
             int secondaryColor
     ) {
-        TextRenderer renderer = client.textRenderer;
+        Font renderer = client.font;
         String safeLabel = safe(label);
         String safePrimary = safe(primary);
         String safeSecondary = safe(secondary);
-        int labelWidth = renderer.getWidth(safeLabel);
-        int primaryWidth = renderer.getWidth(safePrimary);
+        int labelWidth = renderer.width(safeLabel);
+        int primaryWidth = renderer.width(safePrimary);
         int labelGap = safeLabel.isEmpty() ? 0 : 5;
         int width = Math.max(MIN_MODULE_WIDTH,
                 Math.max(
                         labelWidth + primaryWidth + labelGap + 23,
-                        renderer.getWidth(safeSecondary) + 16
+                        renderer.width(safeSecondary) + 16
                 ));
         int height = safeSecondary.isEmpty() ? 20 : 31;
         boolean rightAligned = isRightAligned(x, width);
@@ -242,30 +242,30 @@ public final class ModernHudRenderer {
                 int labelX = rightTextX - primaryWidth - labelWidth - labelGap;
                 drawHudTextWithShadow(context, renderer, safeLabel, labelX, y + 5, accentColor);
             }
-            context.drawTextWithShadow(renderer, Text.literal(safePrimary), rightTextX - primaryWidth, y + 5, TEXT_PRIMARY);
+            context.text(renderer, Component.literal(safePrimary), rightTextX - primaryWidth, y + 5, TEXT_PRIMARY);
             if (!safeSecondary.isEmpty()) {
-                context.drawTextWithShadow(renderer, Text.literal(safeSecondary), rightTextX - renderer.getWidth(safeSecondary), y + 17, secondaryColor);
+                context.text(renderer, Component.literal(safeSecondary), rightTextX - renderer.width(safeSecondary), y + 17, secondaryColor);
             }
         } else {
             if (!safeLabel.isEmpty()) {
                 drawHudTextWithShadow(context, renderer, safeLabel, x + 8, y + 5, accentColor);
             }
-            context.drawTextWithShadow(
+            context.text(
                     renderer,
-                    Text.literal(safePrimary),
-                    x + width - renderer.getWidth(safePrimary) - 7,
+                    Component.literal(safePrimary),
+                    x + width - renderer.width(safePrimary) - 7,
                     y + 5,
                     TEXT_PRIMARY
             );
             if (!safeSecondary.isEmpty()) {
-                context.drawTextWithShadow(renderer, Text.literal(safeSecondary), x + 8, y + 17, secondaryColor);
+                context.text(renderer, Component.literal(safeSecondary), x + 8, y + 17, secondaryColor);
             }
         }
     }
 
     public static void drawProgressModule(
-            DrawContext context,
-            MinecraftClient client,
+            GuiGraphicsExtractor context,
+            Minecraft client,
             int x,
             int y,
             String label,
@@ -273,11 +273,11 @@ public final class ModernHudRenderer {
             float progress,
             int accentColor
     ) {
-        TextRenderer renderer = client.textRenderer;
+        Font renderer = client.font;
         String safeLabel = safe(label);
         String safeValue = safe(value);
-        int labelWidth = renderer.getWidth(safeLabel);
-        int valueWidth = renderer.getWidth(safeValue);
+        int labelWidth = renderer.width(safeLabel);
+        int valueWidth = renderer.width(safeValue);
         int gap = safeLabel.isEmpty() ? 0 : 5;
         int width = Math.max(86, labelWidth + valueWidth + gap + 23);
         int height = 24;
@@ -290,14 +290,14 @@ public final class ModernHudRenderer {
                 int labelX = rightTextX - valueWidth - labelWidth - gap;
                 drawHudTextWithShadow(context, renderer, safeLabel, labelX, y + 5, accentColor);
             }
-            context.drawTextWithShadow(renderer, Text.literal(safeValue), rightTextX - valueWidth, y + 5, TEXT_PRIMARY);
+            context.text(renderer, Component.literal(safeValue), rightTextX - valueWidth, y + 5, TEXT_PRIMARY);
         } else {
             if (!safeLabel.isEmpty()) {
                 drawHudTextWithShadow(context, renderer, safeLabel, x + 8, y + 5, accentColor);
             }
-            context.drawTextWithShadow(
+            context.text(
                     renderer,
-                    Text.literal(safeValue),
+                    Component.literal(safeValue),
                     x + width - valueWidth - 7,
                     y + 5,
                     TEXT_PRIMARY
@@ -319,20 +319,20 @@ public final class ModernHudRenderer {
     }
 
     public static void drawStyledText(
-            DrawContext context,
-            MinecraftClient client,
+            GuiGraphicsExtractor context,
+            Minecraft client,
             String hudStyle,
             String text,
             int x,
             int y,
             int color
     ) {
-        drawStyledText(context, client.textRenderer, hudStyle, BetterUCConfig.INSTANCE.customHudFont, Text.literal(safe(text)), x, y, color);
+        drawStyledText(context, client.font, hudStyle, BetterUCConfig.INSTANCE.customHudFont, Component.literal(safe(text)), x, y, color);
     }
 
     public static void drawStyledText(
-            DrawContext context,
-            MinecraftClient client,
+            GuiGraphicsExtractor context,
+            Minecraft client,
             String hudStyle,
             String fontId,
             String text,
@@ -340,14 +340,14 @@ public final class ModernHudRenderer {
             int y,
             int color
     ) {
-        drawStyledText(context, client.textRenderer, hudStyle, fontId, Text.literal(safe(text)), x, y, color);
+        drawStyledText(context, client.font, hudStyle, fontId, Component.literal(safe(text)), x, y, color);
     }
 
     public static void drawStyledText(
-            DrawContext context,
-            TextRenderer renderer,
+            GuiGraphicsExtractor context,
+            Font renderer,
             String hudStyle,
-            Text text,
+            Component text,
             int x,
             int y,
             int color
@@ -356,11 +356,11 @@ public final class ModernHudRenderer {
     }
 
     public static void drawStyledText(
-            DrawContext context,
-            TextRenderer renderer,
+            GuiGraphicsExtractor context,
+            Font renderer,
             String hudStyle,
             String fontId,
-            Text text,
+            Component text,
             int x,
             int y,
             int color
@@ -373,50 +373,50 @@ public final class ModernHudRenderer {
     }
 
     public static void drawCartoonText(
-            DrawContext context,
-            MinecraftClient client,
+            GuiGraphicsExtractor context,
+            Minecraft client,
             String text,
             int x,
             int y,
             int color
     ) {
-        drawCartoonText(context, client.textRenderer, Text.literal(safe(text)), x, y, color);
+        drawCartoonText(context, client.font, Component.literal(safe(text)), x, y, color);
     }
 
     public static void drawCartoonText(
-            DrawContext context,
-            TextRenderer renderer,
-            Text text,
+            GuiGraphicsExtractor context,
+            Font renderer,
+            Component text,
             int x,
             int y,
             int color
     ) {
-        Text safeText = text == null ? Text.literal("") : text;
+        Component safeText = text == null ? Component.literal("") : text;
         drawOutlinedText(context, renderer, safeText, x, y, color);
     }
 
     private static void drawCustomText(
-            DrawContext context,
-            TextRenderer renderer,
+            GuiGraphicsExtractor context,
+            Font renderer,
             String fontId,
-            Text text,
+            Component text,
             int x,
             int y,
             int color
     ) {
-        Text safeText = BetterUCFontManager.applyCustomHudFont(text == null ? Text.literal("") : text, fontId);
+        Component safeText = BetterUCFontManager.applyCustomHudFont(text == null ? Component.literal("") : text, fontId);
         drawOutlinedText(context, renderer, safeText, x, y, color);
     }
 
     private static void drawOutlinedText(
-            DrawContext context,
-            TextRenderer renderer,
-            Text text,
+            GuiGraphicsExtractor context,
+            Font renderer,
+            Component text,
             int x,
             int y,
             int color
     ) {
-        Text safeText = text == null ? Text.literal("") : text;
+        Component safeText = text == null ? Component.literal("") : text;
         if (hudGradientEnabled()) {
             drawOutlinedTextLeftToRight(context, renderer, safeText, x, y, color);
             return;
@@ -425,20 +425,20 @@ public final class ModernHudRenderer {
         int outline = 0xFF24132E;
         int shadow = 0x99000000;
 
-        context.drawText(renderer, safeText, x + 2, y + 2, shadow, false);
-        context.drawText(renderer, safeText, x - 1, y, outline, false);
-        context.drawText(renderer, safeText, x + 1, y, outline, false);
-        context.drawText(renderer, safeText, x, y - 1, outline, false);
-        context.drawText(renderer, safeText, x, y + 1, outline, false);
-        context.drawText(renderer, safeText, x - 1, y - 1, outline, false);
-        context.drawText(renderer, safeText, x + 1, y - 1, outline, false);
-        context.drawText(renderer, safeText, x - 1, y + 1, outline, false);
-        context.drawText(renderer, safeText, x + 1, y + 1, outline, false);
-        context.drawText(renderer, safeText, x, y - 1, brighten(solidColor), false);
-        context.drawText(renderer, safeText, x, y, solidColor, false);
+        context.text(renderer, safeText, x + 2, y + 2, shadow, false);
+        context.text(renderer, safeText, x - 1, y, outline, false);
+        context.text(renderer, safeText, x + 1, y, outline, false);
+        context.text(renderer, safeText, x, y - 1, outline, false);
+        context.text(renderer, safeText, x, y + 1, outline, false);
+        context.text(renderer, safeText, x - 1, y - 1, outline, false);
+        context.text(renderer, safeText, x + 1, y - 1, outline, false);
+        context.text(renderer, safeText, x - 1, y + 1, outline, false);
+        context.text(renderer, safeText, x + 1, y + 1, outline, false);
+        context.text(renderer, safeText, x, y - 1, brighten(solidColor), false);
+        context.text(renderer, safeText, x, y, solidColor, false);
     }
 
-    public static void drawPanel(DrawContext context, int x, int y, int width, int height, int accentColor) {
+    public static void drawPanel(GuiGraphicsExtractor context, int x, int y, int width, int height, int accentColor) {
         int safeWidth = Math.max(8, width);
         int safeHeight = Math.max(8, height);
         boolean rightAligned = isRightAligned(x, safeWidth);
@@ -462,27 +462,27 @@ public final class ModernHudRenderer {
     }
 
     public static boolean isRightAligned(int x, int width) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client == null || client.getWindow() == null) return false;
         RenderTransform transform = ACTIVE_TRANSFORM.get();
         float safeWidth = Math.max(1, width) * transform.scale();
         float screenX = transform.originX() + (x * transform.scale());
-        return screenX + safeWidth / 2.0F >= client.getWindow().getScaledWidth() / 2.0F;
+        return screenX + safeWidth / 2.0F >= client.getWindow().getGuiScaledWidth() / 2.0F;
     }
 
-    private static void fillSoftRect(DrawContext context, int x, int y, int width, int height, int color) {
+    private static void fillSoftRect(GuiGraphicsExtractor context, int x, int y, int width, int height, int color) {
         context.fill(x + 1, y, x + width - 1, y + height, color);
         context.fill(x, y + 1, x + width, y + height - 1, color);
     }
 
-    private static void drawBorder(DrawContext context, int x, int y, int width, int height, int color) {
+    private static void drawBorder(GuiGraphicsExtractor context, int x, int y, int width, int height, int color) {
         context.fill(x + 1, y, x + width - 1, y + 1, color);
         context.fill(x + 1, y + height - 1, x + width - 1, y + height, color);
         context.fill(x, y + 1, x + 1, y + height - 1, color);
         context.fill(x + width - 1, y + 1, x + width, y + height - 1, color);
     }
 
-    private static void fillHorizontalGradient(DrawContext context, int x, int y, int width, int height, int baseColor, int alpha) {
+    private static void fillHorizontalGradient(GuiGraphicsExtractor context, int x, int y, int width, int height, int baseColor, int alpha) {
         int safeWidth = Math.max(1, width);
         for (int column = 0; column < safeWidth; column++) {
             float progress = safeWidth <= 1 ? 0.0F : column / (float) (safeWidth - 1);
@@ -491,56 +491,56 @@ public final class ModernHudRenderer {
     }
 
     private static void drawOutlinedTextLeftToRight(
-            DrawContext context,
-            TextRenderer renderer,
-            Text text,
+            GuiGraphicsExtractor context,
+            Font renderer,
+            Component text,
             int x,
             int y,
             int baseColor
     ) {
-        Text safeText = text == null ? Text.literal("") : text;
+        Component safeText = text == null ? Component.literal("") : text;
         int outline = 0xFF24132E;
         int shadow = 0x99000000;
 
-        context.drawText(renderer, safeText, x + 2, y + 2, shadow, false);
-        context.drawText(renderer, safeText, x - 1, y, outline, false);
-        context.drawText(renderer, safeText, x + 1, y, outline, false);
-        context.drawText(renderer, safeText, x, y - 1, outline, false);
-        context.drawText(renderer, safeText, x, y + 1, outline, false);
-        context.drawText(renderer, safeText, x - 1, y - 1, outline, false);
-        context.drawText(renderer, safeText, x + 1, y - 1, outline, false);
-        context.drawText(renderer, safeText, x - 1, y + 1, outline, false);
-        context.drawText(renderer, safeText, x + 1, y + 1, outline, false);
+        context.text(renderer, safeText, x + 2, y + 2, shadow, false);
+        context.text(renderer, safeText, x - 1, y, outline, false);
+        context.text(renderer, safeText, x + 1, y, outline, false);
+        context.text(renderer, safeText, x, y - 1, outline, false);
+        context.text(renderer, safeText, x, y + 1, outline, false);
+        context.text(renderer, safeText, x - 1, y - 1, outline, false);
+        context.text(renderer, safeText, x + 1, y - 1, outline, false);
+        context.text(renderer, safeText, x - 1, y + 1, outline, false);
+        context.text(renderer, safeText, x + 1, y + 1, outline, false);
         drawTextLeftToRight(context, renderer, safeText, x, y - 1, brighten(baseColor), false);
         drawTextLeftToRight(context, renderer, safeText, x, y, baseColor, false);
     }
 
     private static void drawTextLeftToRight(
-            DrawContext context,
-            TextRenderer renderer,
-            Text text,
+            GuiGraphicsExtractor context,
+            Font renderer,
+            Component text,
             int x,
             int y,
             int baseColor,
             boolean shadow
     ) {
-        Text safeText = text == null ? Text.literal("") : text;
+        Component safeText = text == null ? Component.literal("") : text;
         String raw = safeText.getString();
         if (raw.isEmpty()) return;
 
-        int totalWidth = Math.max(1, renderer.getWidth(safeText));
+        int totalWidth = Math.max(1, renderer.width(safeText));
         int currentX = x;
         for (int offset = 0; offset < raw.length(); ) {
             int codePoint = raw.codePointAt(offset);
             String part = new String(Character.toChars(codePoint));
-            Text partText = Text.literal(part).setStyle(safeText.getStyle());
-            int partWidth = Math.max(1, renderer.getWidth(partText));
+            Component partText = Component.literal(part).setStyle(safeText.getStyle());
+            int partWidth = Math.max(1, renderer.width(partText));
             float progress = totalWidth <= partWidth ? 0.0F : (currentX - x + partWidth / 2.0F) / (float) totalWidth;
             int color = hudGradientColor(baseColor, progress);
             if (shadow) {
-                context.drawTextWithShadow(renderer, partText, currentX, y, color);
+                context.text(renderer, partText, currentX, y, color);
             } else {
-                context.drawText(renderer, partText, currentX, y, color, false);
+                context.text(renderer, partText, currentX, y, color, false);
             }
             currentX += partWidth;
             offset += Character.charCount(codePoint);

@@ -2,15 +2,15 @@ package com.betteruc.mixin;
 
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.TabBadgeRenderState;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.ScreenRect;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.StyleSpriteSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FontDescription;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.FormattedCharSequence;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -18,10 +18,10 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(value = TextRenderer.class, priority = 50)
+@Mixin(value = Font.class, priority = 50)
 public abstract class TextRendererTabBadgeMixin {
     @Unique
-    private static final Identifier BUC_BADGE_FONT = Identifier.of("betteruc", "buc_badges");
+    private static final Identifier BUC_BADGE_FONT = Identifier.fromNamespaceAndPath("betteruc", "buc_badges");
     @Unique
     private static final String USER_BADGE = "\uE100";
     @Unique
@@ -36,7 +36,7 @@ public abstract class TextRendererTabBadgeMixin {
     private static boolean betteruc$preparingBadge;
 
     @Inject(
-            method = "prepare(Ljava/lang/String;FFIZI)Lnet/minecraft/client/font/TextRenderer$GlyphDrawable;",
+            method = "prepareText(Ljava/lang/String;FFIZI)Lnet/minecraft/client/gui/Font$PreparedText;",
             at = @At("RETURN"),
             cancellable = true
     )
@@ -47,34 +47,35 @@ public abstract class TextRendererTabBadgeMixin {
             int color,
             boolean shadow,
             int backgroundColor,
-            CallbackInfoReturnable<TextRenderer.GlyphDrawable> cir
+            CallbackInfoReturnable<Font.PreparedText> cir
     ) {
-        TextRenderer textRenderer = (TextRenderer) (Object) this;
-        betteruc$appendBadgeIfNeeded(textRenderer, cir, text, textRenderer.getWidth(text), x, y, shadow);
+        Font textRenderer = (Font) (Object) this;
+        betteruc$appendBadgeIfNeeded(textRenderer, cir, text, textRenderer.width(text), x, y, shadow);
     }
 
     @Inject(
-            method = "prepare(Lnet/minecraft/text/OrderedText;FFIZI)Lnet/minecraft/client/font/TextRenderer$GlyphDrawable;",
+            method = "prepareText(Lnet/minecraft/util/FormattedCharSequence;FFIZZI)Lnet/minecraft/client/gui/Font$PreparedText;",
             at = @At("RETURN"),
             cancellable = true
     )
     private void betteruc$prepareOrderedTextWithTabBadge(
-            OrderedText text,
+            FormattedCharSequence text,
             float x,
             float y,
             int color,
             boolean shadow,
+            boolean seeThrough,
             int backgroundColor,
-            CallbackInfoReturnable<TextRenderer.GlyphDrawable> cir
+            CallbackInfoReturnable<Font.PreparedText> cir
     ) {
-        TextRenderer textRenderer = (TextRenderer) (Object) this;
-        betteruc$appendBadgeIfNeeded(textRenderer, cir, betteruc$plainText(text), textRenderer.getWidth(text), x, y, shadow);
+        Font textRenderer = (Font) (Object) this;
+        betteruc$appendBadgeIfNeeded(textRenderer, cir, betteruc$plainText(text), textRenderer.width(text), x, y, shadow);
     }
 
     @Unique
     private static void betteruc$appendBadgeIfNeeded(
-            TextRenderer textRenderer,
-            CallbackInfoReturnable<TextRenderer.GlyphDrawable> cir,
+            Font textRenderer,
+            CallbackInfoReturnable<Font.PreparedText> cir,
             String renderedText,
             int textWidth,
             float x,
@@ -87,18 +88,19 @@ public abstract class TextRendererTabBadgeMixin {
         String role = PingRelayClient.tabBadgeRoleForRenderedText(renderedText);
         if (role.isBlank()) return;
 
-        TextRenderer.GlyphDrawable original = cir.getReturnValue();
+        Font.PreparedText original = cir.getReturnValue();
         if (original == null) return;
 
         betteruc$preparingBadge = true;
         try {
-            OrderedText badgeText = betteruc$badgeForRole(role).asOrderedText();
-            TextRenderer.GlyphDrawable badge = textRenderer.prepare(
+            FormattedCharSequence badgeText = betteruc$badgeForRole(role).getVisualOrderText();
+            Font.PreparedText badge = textRenderer.prepareText(
                     badgeText,
                     x + textWidth + 1.0F,
                     y,
                     0xFFFFFFFF,
                     shadow,
+                    false,
                     0
             );
             cir.setReturnValue(new betteruc$CompositeGlyphDrawable(original, badge));
@@ -109,13 +111,13 @@ public abstract class TextRendererTabBadgeMixin {
 
     @Unique
     private static boolean betteruc$isLikelyTabListText(float x, float y, int textWidth) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client == null || client.getWindow() == null) {
             return false;
         }
 
-        int scaledWidth = client.getWindow().getScaledWidth();
-        int scaledHeight = client.getWindow().getScaledHeight();
+        int scaledWidth = client.getWindow().getGuiScaledWidth();
+        int scaledHeight = client.getWindow().getGuiScaledHeight();
         if (scaledWidth <= 0 || scaledHeight <= 0 || textWidth <= 0) {
             return false;
         }
@@ -130,7 +132,7 @@ public abstract class TextRendererTabBadgeMixin {
     }
 
     @Unique
-    private static String betteruc$plainText(OrderedText text) {
+    private static String betteruc$plainText(FormattedCharSequence text) {
         if (text == null) return "";
         StringBuilder builder = new StringBuilder();
         text.accept((index, style, codePoint) -> {
@@ -141,7 +143,7 @@ public abstract class TextRendererTabBadgeMixin {
     }
 
     @Unique
-    private static MutableText betteruc$badgeForRole(String role) {
+    private static MutableComponent betteruc$badgeForRole(String role) {
         return switch (role) {
             case "admin" -> betteruc$badge(ADMIN_BADGE);
             case "helper" -> betteruc$badge(HELPER_BADGE);
@@ -152,37 +154,37 @@ public abstract class TextRendererTabBadgeMixin {
     }
 
     @Unique
-    private static MutableText betteruc$badge(String glyph) {
-        return Text.literal(glyph)
-                .formatted(Formatting.WHITE)
-                .styled(style -> style.withFont(new StyleSpriteSource.Font(BUC_BADGE_FONT)));
+    private static MutableComponent betteruc$badge(String glyph) {
+        return Component.literal(glyph)
+                .withStyle(ChatFormatting.WHITE)
+                .withStyle(style -> style.withFont(new FontDescription.Resource(BUC_BADGE_FONT)));
     }
 
     @Unique
     private record betteruc$CompositeGlyphDrawable(
-            TextRenderer.GlyphDrawable original,
-            TextRenderer.GlyphDrawable badge
-    ) implements TextRenderer.GlyphDrawable {
+            Font.PreparedText original,
+            Font.PreparedText badge
+    ) implements Font.PreparedText {
         @Override
-        public void draw(TextRenderer.GlyphDrawer glyphDrawer) {
-            original.draw(glyphDrawer);
-            badge.draw(glyphDrawer);
+        public void visit(Font.GlyphVisitor glyphDrawer) {
+            original.visit(glyphDrawer);
+            badge.visit(glyphDrawer);
         }
 
         @Nullable
         @Override
-        public ScreenRect getScreenRect() {
-            return betteruc$union(original.getScreenRect(), badge.getScreenRect());
+        public ScreenRectangle bounds() {
+            return betteruc$union(original.bounds(), badge.bounds());
         }
 
-        private static ScreenRect betteruc$union(@Nullable ScreenRect first, @Nullable ScreenRect second) {
+        private static ScreenRectangle betteruc$union(@Nullable ScreenRectangle first, @Nullable ScreenRectangle second) {
             if (first == null) return second;
             if (second == null) return first;
-            int left = Math.min(first.getLeft(), second.getLeft());
-            int top = Math.min(first.getTop(), second.getTop());
-            int right = Math.max(first.getRight(), second.getRight());
-            int bottom = Math.max(first.getBottom(), second.getBottom());
-            return new ScreenRect(left, top, right - left, bottom - top);
+            int left = Math.min(first.left(), second.left());
+            int top = Math.min(first.top(), second.top());
+            int right = Math.max(first.right(), second.right());
+            int bottom = Math.max(first.bottom(), second.bottom());
+            return new ScreenRectangle(left, top, right - left, bottom - top);
         }
     }
 }

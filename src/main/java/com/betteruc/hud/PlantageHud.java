@@ -1,11 +1,10 @@
 package com.betteruc.hud;
 
 import com.betteruc.config.BetterUCConfig;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
-
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import java.text.Normalizer;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -70,7 +69,7 @@ public class PlantageHud {
 
     public static void register() {
         restoreFromConfig();
-        HudRenderCallback.EVENT.register((drawContext, tickCounter) -> render(drawContext));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "plantage"), (context, tickCounter) -> render(context));
     }
 
     public static void clear() {
@@ -105,7 +104,7 @@ public class PlantageHud {
         }
     }
 
-    public static void handleChatMessage(MinecraftClient client, String raw) {
+    public static void handleChatMessage(Minecraft client, String raw) {
         if (client == null || client.player == null || raw == null || raw.isBlank()) return;
 
         long now = System.currentTimeMillis();
@@ -256,8 +255,8 @@ public class PlantageHud {
         BetterUCConfig.save();
     }
 
-    private static void render(DrawContext context) {
-        MinecraftClient client = MinecraftClient.getInstance();
+    private static void render(GuiGraphicsExtractor context) {
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         if (!BetterUCConfig.INSTANCE.showPlantTimerHud) return;
 
@@ -301,8 +300,8 @@ public class PlantageHud {
                 }
 
                 if (!BetterUCConfig.isModernHudStyle(style)) {
-                    ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, title, 0, currentY, state.type.color);
-                    ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, timers, 0, currentY + 10, 0xFFFFD866);
+                    ModernHudRenderer.drawHudTextWithShadow(context, client.font, title, 0, currentY, state.type.color);
+                    ModernHudRenderer.drawHudTextWithShadow(context, client.font, timers, 0, currentY + 10, 0xFFFFD866);
                     currentY += 24;
                     continue;
                 }

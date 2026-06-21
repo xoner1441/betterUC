@@ -2,19 +2,19 @@ package com.betteruc.hud;
 
 import com.betteruc.BetterUCClient;
 import com.betteruc.config.BetterUCConfig;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 public class ToggleSprintHud {
 
     public static void register() {
-        HudRenderCallback.EVENT.register((drawContext, tickCounter) -> render(drawContext));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "toggle_sprint"), (context, tickCounter) -> render(context));
     }
 
-    private static void render(DrawContext context) {
-        MinecraftClient client = MinecraftClient.getInstance();
+    private static void render(GuiGraphicsExtractor context) {
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         if (!BetterUCConfig.INSTANCE.toggleSprintEnabled) return;
 
@@ -45,7 +45,7 @@ public class ToggleSprintHud {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
                 ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.toggleSprintHudCustomFont, text, 0, 0, color);
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                ModernHudRenderer.drawHudTextWithShadow(context, client.textRenderer, text, 0, 0, color);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.font, text, 0, 0, color);
             } else {
                 ModernHudRenderer.drawModule(
                         context,

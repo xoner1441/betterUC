@@ -1,15 +1,14 @@
 package com.betteruc.gui;
 
 import com.betteruc.config.BetterUCConfig;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 public class BlacklistConfigScreen extends Screen {
 
@@ -19,12 +18,12 @@ public class BlacklistConfigScreen extends Screen {
     private static final int FIRST_Y = 65;
 
     private final Screen parent;
-    private final List<TextFieldWidget> killsFields = new ArrayList<>();
-    private final List<TextFieldWidget> priceFields = new ArrayList<>();
+    private final List<EditBox> killsFields = new ArrayList<>();
+    private final List<EditBox> priceFields = new ArrayList<>();
     private final List<String> reasonKeys = new ArrayList<>();
 
     public BlacklistConfigScreen(Screen parent) {
-        super(Text.literal("Blacklist Gründe"));
+        super(Component.literal("Blacklist Gründe"));
         this.parent = parent;
     }
 
@@ -51,49 +50,49 @@ public class BlacklistConfigScreen extends Screen {
             reasonKeys.add(entry.getKey());
             int fieldY = FIRST_Y + rowIndex * ROW_H;
 
-            ButtonWidget label = ButtonWidget.builder(Text.literal(entry.getKey()), btn -> {
-            }).dimensions(labelX(), fieldY, 140, FIELD_H).build();
+            Button label = Button.builder(Component.literal(entry.getKey()), btn -> {
+            }).bounds(labelX(), fieldY, 140, FIELD_H).build();
             label.active = false;
-            addDrawableChild(label);
+            addRenderableWidget(label);
 
-            TextFieldWidget kills = new TextFieldWidget(
-                    textRenderer, killsX(), fieldY, FIELD_W, FIELD_H, Text.literal("Kills"));
+            EditBox kills = new EditBox(
+                    font, killsX(), fieldY, FIELD_W, FIELD_H, Component.literal("Kills"));
             kills.setMaxLength(6);
-            kills.setText(String.valueOf(entry.getValue().kills));
-            addDrawableChild(kills);
+            kills.setValue(String.valueOf(entry.getValue().kills));
+            addRenderableWidget(kills);
             killsFields.add(kills);
 
-            TextFieldWidget price = new TextFieldWidget(
-                    textRenderer, priceX(), fieldY, FIELD_W, FIELD_H, Text.literal("Preis"));
+            EditBox price = new EditBox(
+                    font, priceX(), fieldY, FIELD_W, FIELD_H, Component.literal("Preis"));
             price.setMaxLength(8);
-            price.setText(String.valueOf(entry.getValue().price));
-            addDrawableChild(price);
+            price.setValue(String.valueOf(entry.getValue().price));
+            addRenderableWidget(price);
             priceFields.add(price);
 
             rowIndex++;
         }
 
         int headerY = FIRST_Y - ROW_H;
-        ButtonWidget hGrund = ButtonWidget.builder(Text.literal("\u00A77Grund"), b -> {
-        }).dimensions(labelX(), headerY, 140, FIELD_H).build();
+        Button hGrund = Button.builder(Component.literal("\u00A77Grund"), b -> {
+        }).bounds(labelX(), headerY, 140, FIELD_H).build();
         hGrund.active = false;
-        addDrawableChild(hGrund);
+        addRenderableWidget(hGrund);
 
-        ButtonWidget hKills = ButtonWidget.builder(Text.literal("\u00A7eKills"), b -> {
-        }).dimensions(killsX(), headerY, FIELD_W, FIELD_H).build();
+        Button hKills = Button.builder(Component.literal("\u00A7eKills"), b -> {
+        }).bounds(killsX(), headerY, FIELD_W, FIELD_H).build();
         hKills.active = false;
-        addDrawableChild(hKills);
+        addRenderableWidget(hKills);
 
-        ButtonWidget hPreis = ButtonWidget.builder(Text.literal("\u00A7aPreis $"), b -> {
-        }).dimensions(priceX(), headerY, FIELD_W, FIELD_H).build();
+        Button hPreis = Button.builder(Component.literal("\u00A7aPreis $"), b -> {
+        }).bounds(priceX(), headerY, FIELD_W, FIELD_H).build();
         hPreis.active = false;
-        addDrawableChild(hPreis);
+        addRenderableWidget(hPreis);
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("\u2714 Speichern & Zurück"), b -> {
+        addRenderableWidget(Button.builder(Component.literal("\u2714 Speichern & Zurück"), b -> {
             saveValues();
             BetterUCConfig.save();
-            if (client != null) client.setScreen(parent);
-        }).dimensions(width / 2 - 80, height - 28, 160, 20).build());
+            if (minecraft != null) minecraft.setScreen(parent);
+        }).bounds(width / 2 - 80, height - 28, 160, 20).build());
     }
 
     private void saveValues() {
@@ -101,23 +100,23 @@ public class BlacklistConfigScreen extends Screen {
             BetterUCConfig.BlacklistReason reason = BetterUCConfig.INSTANCE.blReasons.get(reasonKeys.get(i));
             if (reason == null) continue;
             try {
-                reason.kills = Integer.parseInt(killsFields.get(i).getText().trim());
+                reason.kills = Integer.parseInt(killsFields.get(i).getValue().trim());
             } catch (NumberFormatException ignored) {
             }
             try {
-                reason.price = Integer.parseInt(priceFields.get(i).getText().trim());
+                reason.price = Integer.parseInt(priceFields.get(i).getValue().trim());
             } catch (NumberFormatException ignored) {
             }
         }
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         context.fill(0, 0, width, height, 0xB0000000);
-        super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(
-                textRenderer,
-                Text.literal("\u00A7l\u2694 Blacklist Gründe"),
+        super.extractRenderState(context, mouseX, mouseY, delta);
+        context.centeredText(
+                font,
+                Component.literal("\u00A7l\u2694 Blacklist Gründe"),
                 width / 2,
                 10,
                 0xFFFFFF
@@ -125,7 +124,7 @@ public class BlacklistConfigScreen extends Screen {
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 }

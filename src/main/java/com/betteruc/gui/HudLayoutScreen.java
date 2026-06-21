@@ -3,19 +3,18 @@ package com.betteruc.gui;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.CashHud;
 import com.betteruc.hud.ModernHudRenderer;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 
 public class HudLayoutScreen extends Screen {
 
@@ -23,8 +22,8 @@ public class HudLayoutScreen extends Screen {
     private static final int TEXT_MUTED = 0xFF94A3B8;
     private static final int HANDLE_SIZE = 7;
     private static final int SNAP_DISTANCE = 8;
-    private static final int SNAP_GAP = 6;
-    private static final Identifier HEART_TEXTURE = Identifier.ofVanilla("hud/heart/full");
+    private static final int SNAP_GAP = 2;
+    private static final Identifier HEART_TEXTURE = Identifier.withDefaultNamespace("hud/heart/full");
 
     private final Screen parent;
     private HudModule draggingModule;
@@ -37,26 +36,26 @@ public class HudLayoutScreen extends Screen {
     private int dragOffsetY;
 
     public HudLayoutScreen(Screen parent) {
-        super(Text.literal("HUD Vorschau"));
+        super(Component.literal("HUD Vorschau"));
         this.parent = parent;
     }
 
     @Override
     protected void init() {
-        addDrawableChild(ButtonWidget.builder(Text.literal("Fertig"), b -> close())
-                .dimensions(width - 92, height - 28, 80, 20)
+        addRenderableWidget(Button.builder(Component.literal("Fertig"), b -> onClose())
+                .bounds(width - 92, height - 28, 80, 20)
                 .build());
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
-        context.drawTextWithShadow(textRenderer, Text.literal("HUD Vorschau"), 12, 12, TEXT_PRIMARY);
-        context.drawTextWithShadow(textRenderer, Text.literal("Aktive HUDs"), 12, 24, TEXT_MUTED);
+        context.text(font, Component.literal("HUD Vorschau"), 12, 12, TEXT_PRIMARY);
+        context.text(font, Component.literal("Aktive HUDs"), 12, 24, TEXT_MUTED);
 
         List<HudModule> modules = activeModules();
         if (modules.isEmpty()) {
-            context.drawCenteredTextWithShadow(textRenderer, Text.literal("Keine HUDs aktiv"), width / 2, height / 2, TEXT_MUTED);
+            context.centeredText(font, Component.literal("Keine HUDs aktiv"), width / 2, height / 2, TEXT_MUTED);
         }
 
         for (HudModule module : modules) {
@@ -68,11 +67,11 @@ public class HudLayoutScreen extends Screen {
             renderHudModule(context, module, bounds.x, bounds.y);
         }
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
     @Override
-    public boolean mouseClicked(Click event, boolean doubleClick) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (super.mouseClicked(event, doubleClick)) return true;
         if (event.button() != 0) return false;
 
@@ -102,7 +101,7 @@ public class HudLayoutScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(Click click, double offsetX, double offsetY) {
+    public boolean mouseDragged(MouseButtonEvent click, double offsetX, double offsetY) {
         if (resizingModule != null && click.button() == 0) {
             resizeSelectedModule(click.x(), click.y());
             return true;
@@ -123,7 +122,7 @@ public class HudLayoutScreen extends Screen {
     }
 
     @Override
-    public boolean mouseReleased(Click click) {
+    public boolean mouseReleased(MouseButtonEvent click) {
         if (resizingModule != null) {
             resizingModule = null;
             resizeHandle = null;
@@ -147,19 +146,19 @@ public class HudLayoutScreen extends Screen {
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         BetterUCConfig.save();
-        if (client != null) {
-            client.setScreen(parent);
+        if (minecraft != null) {
+            minecraft.setScreen(parent);
         }
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 
-    private void renderBackground(DrawContext context) {
+    private void renderBackground(GuiGraphicsExtractor context) {
         context.fill(0, 0, width, height, 0x88000000);
         for (int x = 0; x < width; x += 20) {
             context.fill(x, 0, x + 1, height, 0x1FFFFFFF);
@@ -311,23 +310,23 @@ public class HudLayoutScreen extends Screen {
     }
 
     private int widthFor(HudModule module) {
-        TextRenderer renderer = textRenderer;
+        Font renderer = font;
         return switch (module) {
             case HEALTH -> {
                 String style = BetterUCConfig.INSTANCE.healthHudStyle;
-                int textWidth = renderer.getWidth("10");
+                int textWidth = renderer.width("10");
                 yield BetterUCConfig.isModernHudStyle(style) ? Math.max(34, textWidth + 27) : 9 + 4 + textWidth;
             }
             case FPS -> singleLineWidth(hudLabel(module), "144", prefixedText(module, "144"), BetterUCConfig.INSTANCE.fpsHudStyle);
             case PAYDAY -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.paydayHudStyle)
                     ? progressWidth(hudLabel(module), "25/60 min")
-                    : renderer.getWidth(prefixedText(module, "25/60 Minuten")) + 4;
+                    : renderer.width(prefixedText(module, "25/60 Minuten")) + 4;
             case AMMO -> twoLineWidth(hudLabel(module), prefixedText(module, "20/96"), "TS19", BetterUCConfig.INSTANCE.ammoHudStyle);
             case BANK -> singleLineWidth(hudLabel(module), "88.375$", prefixedText(module, "88.375$"), BetterUCConfig.INSTANCE.bankHudStyle);
             case CASH -> singleLineWidth(hudLabel(module), previewCashValue(), prefixedText(module, previewCashValue()), BetterUCConfig.INSTANCE.cashHudStyle);
             case POTION -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.potionHudStyle)
                     ? 120
-                    : Math.max(renderer.getWidth("Stärke II"), renderer.getWidth("Speed")) + 4;
+                    : Math.max(renderer.width("Stärke II"), renderer.width("Speed")) + 4;
             case SPRINT -> singleLineWidth(hudLabel(module), "ON", prefixedText(module, "ON"), BetterUCConfig.INSTANCE.toggleSprintHudStyle);
             case HACK_TIMER -> singleLineWidth(hudLabel(module), "02:39", prefixedText(module, "02:39"), BetterUCConfig.INSTANCE.hackTimerHudStyle);
             case PLANT_TIMER -> twoLineWidth(hudLabel(module), prefixedText(module, "Plantage Pulver 7/10"), "Reif: 1:30:00 | Wasser: 20:00", BetterUCConfig.INSTANCE.plantTimerHudStyle);
@@ -341,16 +340,24 @@ public class HudLayoutScreen extends Screen {
             case AMMO -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.ammoHudStyle) ? 31 : 24;
             case POTION -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.potionHudStyle) ? 65 : 48;
             case PLANT_TIMER -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.plantTimerHudStyle) ? 31 : 24;
-            default -> 18;
+            case FPS -> singleLineHeight(BetterUCConfig.INSTANCE.fpsHudStyle);
+            case BANK -> singleLineHeight(BetterUCConfig.INSTANCE.bankHudStyle);
+            case CASH -> singleLineHeight(BetterUCConfig.INSTANCE.cashHudStyle);
+            case SPRINT -> singleLineHeight(BetterUCConfig.INSTANCE.toggleSprintHudStyle);
+            case HACK_TIMER -> singleLineHeight(BetterUCConfig.INSTANCE.hackTimerHudStyle);
         };
+    }
+
+    private int singleLineHeight(String style) {
+        return BetterUCConfig.isModernHudStyle(style) ? 18 : 12;
     }
 
     private int singleLineWidth(String label, String value, String text, String style) {
         if (BetterUCConfig.isModernHudStyle(style)) {
             int labelGap = label.isBlank() ? 0 : 5;
-            return Math.max(58, textRenderer.getWidth(label) + textRenderer.getWidth(value) + labelGap + 23);
+            return Math.max(58, font.width(label) + font.width(value) + labelGap + 23);
         }
-        return textRenderer.getWidth(text) + 4;
+        return font.width(text) + 4;
     }
 
     private int twoLineWidth(String label, String primary, String secondary, String style) {
@@ -359,22 +366,22 @@ public class HudLayoutScreen extends Screen {
             int labelGap = label.isBlank() ? 0 : 5;
             return Math.max(58,
                     Math.max(
-                            textRenderer.getWidth(label) + textRenderer.getWidth(modernPrimary) + labelGap + 23,
-                            textRenderer.getWidth(secondary) + 16
+                            font.width(label) + font.width(modernPrimary) + labelGap + 23,
+                            font.width(secondary) + 16
                     ));
         }
-        return Math.max(textRenderer.getWidth(primary), textRenderer.getWidth(secondary)) + 4;
+        return Math.max(font.width(primary), font.width(secondary)) + 4;
     }
 
     private int progressWidth(String label, String value) {
         int labelGap = label.isBlank() ? 0 : 5;
-        return Math.max(86, textRenderer.getWidth(label) + textRenderer.getWidth(value) + labelGap + 23);
+        return Math.max(86, font.width(label) + font.width(value) + labelGap + 23);
     }
 
-    private void renderHudModule(DrawContext context, HudModule module, int x, int y) {
-        MinecraftClient minecraft = MinecraftClient.getInstance();
+    private void renderHudModule(GuiGraphicsExtractor context, HudModule module, int x, int y) {
+        Minecraft minecraft = Minecraft.getInstance();
         String style = styleFor(module);
-        String font = fontFor(module);
+        String fontId = fontFor(module);
         boolean modernStyle = BetterUCConfig.isModernHudStyle(style);
         boolean stylizedStyle = BetterUCConfig.isStylizedHudStyle(style);
 
@@ -388,67 +395,67 @@ public class HudLayoutScreen extends Screen {
                 () -> {
             switch (module) {
             case HEALTH -> {
-                Text health = Text.literal("10");
+                Component health = Component.literal("10");
                 int textColor = BetterUCConfig.INSTANCE.healthHudTextColor;
                 int heartColor = BetterUCConfig.INSTANCE.healthHudHeartColor;
                 if (modernStyle) {
                     int moduleWidth = widthFor(module);
                     boolean rightAligned = ModernHudRenderer.isRightAligned(x, moduleWidth);
                     int heartX = rightAligned ? x + moduleWidth - 16 : x + 7;
-                    int textX = rightAligned ? heartX - minecraft.textRenderer.getWidth(health) - 4 : x + 19;
+                    int textX = rightAligned ? heartX - minecraft.font.width(health) - 4 : x + 19;
                     ModernHudRenderer.drawPanel(context, x, y, moduleWidth, 17, heartColor);
-                    context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, HEART_TEXTURE, heartX, y + 4, 9, 9, heartColor);
-                    ModernHudRenderer.drawHudTextWithShadow(context, minecraft.textRenderer, health, Math.max(x + 6, textX), y + 4, textColor);
+                    context.blitSprite(RenderPipelines.GUI_TEXTURED, HEART_TEXTURE, heartX, y + 4, 9, 9, heartColor);
+                    ModernHudRenderer.drawHudTextWithShadow(context, minecraft.font, health, Math.max(x + 6, textX), y + 4, textColor);
                     return;
                 }
-                context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, HEART_TEXTURE, x, y, 9, 9, heartColor);
+                context.blitSprite(RenderPipelines.GUI_TEXTURED, HEART_TEXTURE, x, y, 9, 9, heartColor);
                 if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft.textRenderer, style, font, health, x + 12, y, textColor);
+                    ModernHudRenderer.drawStyledText(context, minecraft.font, style, fontId, health, x + 12, y, textColor);
                 } else {
-                    ModernHudRenderer.drawHudTextWithShadow(context, minecraft.textRenderer, health, x + 11, y, textColor);
+                    ModernHudRenderer.drawHudTextWithShadow(context, minecraft.font, health, x + 11, y, textColor);
                 }
             }
-            case FPS -> renderSingleLine(context, minecraft, style, font, x, y, hudLabel(module), "144", prefixedText(module, "144"), BetterUCConfig.INSTANCE.fpsHudColor);
+            case FPS -> renderSingleLine(context, minecraft, style, fontId, x, y, hudLabel(module), "144", prefixedText(module, "144"), BetterUCConfig.INSTANCE.fpsHudColor);
             case PAYDAY -> {
                 if (modernStyle) {
                     ModernHudRenderer.drawProgressModule(context, minecraft, x, y, hudLabel(module), "25/60 min", 25.0F / 60.0F, BetterUCConfig.INSTANCE.paydayHudColor);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, prefixedText(module, "25/60 Minuten"), x, y, BetterUCConfig.INSTANCE.paydayHudColor);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, prefixedText(module, "25/60 Minuten"), x, y, BetterUCConfig.INSTANCE.paydayHudColor);
                 } else {
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, prefixedText(module, "25/60 Minuten"), x, y, BetterUCConfig.INSTANCE.paydayHudColor);
+                    ModernHudRenderer.drawHudTextWithShadow(context, minecraft.font, prefixedText(module, "25/60 Minuten"), x, y, BetterUCConfig.INSTANCE.paydayHudColor);
                 }
             }
-            case AMMO -> renderTwoLine(context, minecraft, style, font, x, y, hudLabel(module), prefixedText(module, "20/96"), "TS19", 0xFFFFAA33, 0xFF55FF55);
-            case BANK -> renderSingleLine(context, minecraft, style, font, x, y, hudLabel(module), "88.375$", prefixedText(module, "88.375$"), BetterUCConfig.INSTANCE.bankHudColor);
-            case CASH -> renderSingleLine(context, minecraft, style, font, x, y, hudLabel(module), previewCashValue(), prefixedText(module, previewCashValue()), BetterUCConfig.INSTANCE.cashHudColor);
+            case AMMO -> renderTwoLine(context, minecraft, style, fontId, x, y, hudLabel(module), prefixedText(module, "20/96"), "TS19", 0xFFFFAA33, 0xFF55FF55);
+            case BANK -> renderSingleLine(context, minecraft, style, fontId, x, y, hudLabel(module), "88.375$", prefixedText(module, "88.375$"), BetterUCConfig.INSTANCE.bankHudColor);
+            case CASH -> renderSingleLine(context, minecraft, style, fontId, x, y, hudLabel(module), previewCashValue(), prefixedText(module, previewCashValue()), BetterUCConfig.INSTANCE.cashHudColor);
             case POTION -> {
                 if (modernStyle) {
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, x, y, "EFFECT", "Stärke II", "1:26", 0xFF9328FF);
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, x, y + 33, "EFFECT", "Speed", "0:49", 0xFF7CAFC6);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Stärke II", x, y, 0xFF9328FF);
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "1:26", x, y + 11, ModernHudRenderer.TEXT_DIM);
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Speed", x, y + 25, 0xFF7CAFC6);
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "0:49", x, y + 36, ModernHudRenderer.TEXT_DIM);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "Stärke II", x, y, 0xFF9328FF);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "1:26", x, y + 11, ModernHudRenderer.TEXT_DIM);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "Speed", x, y + 25, 0xFF7CAFC6);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "0:49", x, y + 36, ModernHudRenderer.TEXT_DIM);
                 } else {
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "Stärke II", x, y, 0xFF9328FF);
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "1:26", x, y + 10, ModernHudRenderer.TEXT_DIM);
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "Speed", x, y + 24, 0xFF7CAFC6);
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "0:49", x, y + 34, ModernHudRenderer.TEXT_DIM);
+                    ModernHudRenderer.drawHudTextWithShadow(context, minecraft.font, "Stärke II", x, y, 0xFF9328FF);
+                    ModernHudRenderer.drawHudTextWithShadow(context, minecraft.font, "1:26", x, y + 10, ModernHudRenderer.TEXT_DIM);
+                    ModernHudRenderer.drawHudTextWithShadow(context, minecraft.font, "Speed", x, y + 24, 0xFF7CAFC6);
+                    ModernHudRenderer.drawHudTextWithShadow(context, minecraft.font, "0:49", x, y + 34, ModernHudRenderer.TEXT_DIM);
                 }
             }
-            case SPRINT -> renderSingleLine(context, minecraft, style, font, x, y, hudLabel(module), "ON", prefixedText(module, "ON"), BetterUCConfig.INSTANCE.toggleSprintHudColor);
-            case HACK_TIMER -> renderSingleLine(context, minecraft, style, font, x, y, hudLabel(module), "02:39", prefixedText(module, "02:39"), 0xFF60A5FA);
-            case PLANT_TIMER -> renderTwoLine(context, minecraft, style, font, x, y, hudLabel(module), prefixedText(module, "Plantage Pulver 7/10"), "Reif: 1:30:00 | Wasser: 20:00", 0xFF6CF27D, 0xFFFFD866);
+            case SPRINT -> renderSingleLine(context, minecraft, style, fontId, x, y, hudLabel(module), "ON", prefixedText(module, "ON"), BetterUCConfig.INSTANCE.toggleSprintHudColor);
+            case HACK_TIMER -> renderSingleLine(context, minecraft, style, fontId, x, y, hudLabel(module), "02:39", prefixedText(module, "02:39"), 0xFF60A5FA);
+            case PLANT_TIMER -> renderTwoLine(context, minecraft, style, fontId, x, y, hudLabel(module), prefixedText(module, "Plantage Pulver 7/10"), "Reif: 1:30:00 | Wasser: 20:00", 0xFF6CF27D, 0xFFFFD866);
             }
         });
     }
 
     private void renderSingleLine(
-            DrawContext context,
-            MinecraftClient minecraft,
+            GuiGraphicsExtractor context,
+            Minecraft minecraft,
             String style,
-            String font,
+            String fontId,
             int x,
             int y,
             String label,
@@ -459,17 +466,17 @@ public class HudLayoutScreen extends Screen {
         if (BetterUCConfig.isModernHudStyle(style)) {
             ModernHudRenderer.drawModule(context, minecraft, x, y, label, value, color);
         } else if (BetterUCConfig.isStylizedHudStyle(style)) {
-            ModernHudRenderer.drawStyledText(context, minecraft, style, font, text, x, y, color);
+            ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, text, x, y, color);
         } else {
-            ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, text, x, y, color);
+            ModernHudRenderer.drawHudTextWithShadow(context, minecraft.font, text, x, y, color);
         }
     }
 
     private void renderTwoLine(
-            DrawContext context,
-            MinecraftClient minecraft,
+            GuiGraphicsExtractor context,
+            Minecraft minecraft,
             String style,
-            String font,
+            String fontId,
             int x,
             int y,
             String label,
@@ -481,11 +488,11 @@ public class HudLayoutScreen extends Screen {
         if (BetterUCConfig.isModernHudStyle(style)) {
             ModernHudRenderer.drawTwoLineModule(context, minecraft, x, y, label, stripPrefixValue(label, primary), secondary, primaryColor, secondaryColor);
         } else if (BetterUCConfig.isStylizedHudStyle(style)) {
-            ModernHudRenderer.drawStyledText(context, minecraft, style, font, primary, x, y, primaryColor);
-            ModernHudRenderer.drawStyledText(context, minecraft, style, font, secondary, x, y + 11, secondaryColor);
+            ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, primary, x, y, primaryColor);
+            ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, secondary, x, y + 11, secondaryColor);
         } else {
-            ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, primary, x, y, primaryColor);
-            ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, secondary, x, y + 10, secondaryColor);
+            ModernHudRenderer.drawHudTextWithShadow(context, minecraft.font, primary, x, y, primaryColor);
+            ModernHudRenderer.drawHudTextWithShadow(context, minecraft.font, secondary, x, y + 10, secondaryColor);
         }
     }
 
@@ -721,18 +728,20 @@ public class HudLayoutScreen extends Screen {
                 && mouseY >= centerY - half && mouseY <= centerY + half;
     }
 
-    private void drawDragBounds(DrawContext context, HudModule module, Bounds bounds, boolean active, ResizeHandle hoveredHandle) {
+    private void drawDragBounds(GuiGraphicsExtractor context, HudModule module, Bounds bounds, boolean active, ResizeHandle hoveredHandle) {
         int borderColor = active ? module.accent : 0x668899AA;
         context.fill(bounds.x - 3, bounds.y - 3, bounds.x + bounds.width + 3, bounds.y + bounds.height + 3, active ? 0x22000000 : 0x12000000);
         drawBorder(context, bounds.x - 3, bounds.y - 3, bounds.width + 6, bounds.height + 6, borderColor);
-        String label = String.format(Locale.ROOT, "%s %d%%", module.label, Math.round(getScale(module) * 100.0F));
-        context.drawTextWithShadow(textRenderer, Text.literal(label), bounds.x, Math.max(0, bounds.y - 12), borderColor | 0xFF000000);
+        if (active) {
+            String label = String.format(Locale.ROOT, "%s %d%%", module.label, Math.round(getScale(module) * 100.0F));
+            context.text(font, Component.literal(label), bounds.x, Math.max(0, bounds.y - 12), borderColor | 0xFF000000);
+        }
         if (active) {
             drawResizeHandles(context, bounds, module.accent, hoveredHandle);
         }
     }
 
-    private void drawResizeHandles(DrawContext context, Bounds bounds, int color, ResizeHandle hoveredHandle) {
+    private void drawResizeHandles(GuiGraphicsExtractor context, Bounds bounds, int color, ResizeHandle hoveredHandle) {
         int midX = bounds.x + bounds.width / 2;
         int midY = bounds.y + bounds.height / 2;
         int right = bounds.right();
@@ -748,14 +757,14 @@ public class HudLayoutScreen extends Screen {
         drawHandle(context, right, bottom, color, hoveredHandle == ResizeHandle.BOTTOM_RIGHT);
     }
 
-    private void drawHandle(DrawContext context, int centerX, int centerY, int color, boolean hovered) {
+    private void drawHandle(GuiGraphicsExtractor context, int centerX, int centerY, int color, boolean hovered) {
         int half = HANDLE_SIZE / 2;
         int fill = hovered ? 0xFFFFFFFF : 0xFFE2E8F0;
         context.fill(centerX - half - 1, centerY - half - 1, centerX + half + 2, centerY + half + 2, color);
         context.fill(centerX - half, centerY - half, centerX + half + 1, centerY + half + 1, fill);
     }
 
-    private void drawBorder(DrawContext context, int x, int y, int w, int h, int color) {
+    private void drawBorder(GuiGraphicsExtractor context, int x, int y, int w, int h, int color) {
         context.fill(x, y, x + w, y + 1, color);
         context.fill(x, y + h - 1, x + w, y + h, color);
         context.fill(x, y, x + 1, y + h, color);

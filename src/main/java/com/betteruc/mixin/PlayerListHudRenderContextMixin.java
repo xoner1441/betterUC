@@ -1,40 +1,40 @@
 package com.betteruc.mixin;
 
 import com.betteruc.client.TabBadgeRenderState;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.hud.PlayerListHud;
-import net.minecraft.scoreboard.Scoreboard;
-import net.minecraft.scoreboard.ScoreboardObjective;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.PlayerTabOverlay;
+import net.minecraft.world.scores.Objective;
+import net.minecraft.world.scores.Scoreboard;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(PlayerListHud.class)
+@Mixin(PlayerTabOverlay.class)
 public abstract class PlayerListHudRenderContextMixin {
     @Inject(
-            method = "render(Lnet/minecraft/client/gui/DrawContext;ILnet/minecraft/scoreboard/Scoreboard;Lnet/minecraft/scoreboard/ScoreboardObjective;)V",
+            method = "extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;ILnet/minecraft/world/scores/Scoreboard;Lnet/minecraft/world/scores/Objective;)V",
             at = @At("HEAD")
     )
     private void betteruc$beginPlayerListRender(
-            DrawContext context,
+            GuiGraphicsExtractor context,
             int scaledWindowWidth,
             Scoreboard scoreboard,
-            ScoreboardObjective objective,
+            Objective objective,
             CallbackInfo ci
     ) {
         TabBadgeRenderState.beginPlayerListRender();
     }
 
     @Inject(
-            method = "render(Lnet/minecraft/client/gui/DrawContext;ILnet/minecraft/scoreboard/Scoreboard;Lnet/minecraft/scoreboard/ScoreboardObjective;)V",
+            method = "extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;ILnet/minecraft/world/scores/Scoreboard;Lnet/minecraft/world/scores/Objective;)V",
             at = @At("RETURN")
     )
     private void betteruc$endPlayerListRender(
-            DrawContext context,
+            GuiGraphicsExtractor context,
             int scaledWindowWidth,
             Scoreboard scoreboard,
-            ScoreboardObjective objective,
+            Objective objective,
             CallbackInfo ci
     ) {
         TabBadgeRenderState.endPlayerListRender();

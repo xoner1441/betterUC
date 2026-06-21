@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version '1.11.7'
+    id 'net.fabricmc.fabric-loom' version '1.17.11'
     id 'maven-publish'
 }
 
@@ -12,10 +12,10 @@ base {
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
     testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
 processResources {
@@ -24,7 +24,7 @@ processResources {
     filesMatching("fabric.mod.json") { expand "version": project.version }
 }
 
-def targetJavaVersion = 21
+def targetJavaVersion = 25
 tasks.withType(JavaCompile).configureEach {
     it.options.encoding = "UTF-8"
     if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
@@ -79,10 +79,10 @@ def isMinecraftRunning = {
 
 tasks.register("copyModToMinecraftMods", Copy) {
     group = "build"
-    description = "Copies the remapped mod jar into the local Minecraft mods folder."
+    description = "Copies the mod jar into the local Minecraft mods folder."
 
-    dependsOn tasks.named("remapJar")
-    from(tasks.named("remapJar").flatMap { it.archiveFile })
+    dependsOn tasks.named("jar")
+    from(tasks.named("jar").flatMap { it.archiveFile })
     into(minecraftModsDir.map { file(it) })
 
     doFirst {
@@ -98,7 +98,7 @@ tasks.register("copyModToMinecraftMods", Copy) {
             throw new GradleException("Could not create Minecraft mods directory: ${targetDir}")
         }
 
-        def currentJar = tasks.named("remapJar").get().archiveFile.get().asFile.name
+        def currentJar = tasks.named("jar").get().archiveFile.get().asFile.name
         def archiveBase = project.base.archivesName.get()
         targetDir.eachFile { jarFile ->
             if (!jarFile.name.endsWith(".jar")) return
@@ -122,7 +122,7 @@ tasks.register("copyModToMinecraftMods", Copy) {
     }
 
     doLast {
-        def copiedJar = file("${minecraftModsDir.get()}/${tasks.named("remapJar").get().archiveFile.get().asFile.name}")
+        def copiedJar = file("${minecraftModsDir.get()}/${tasks.named("jar").get().archiveFile.get().asFile.name}")
         try {
             def zip = new java.util.zip.ZipFile(copiedJar)
             try {

@@ -12,19 +12,19 @@ import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.CashHud;
 import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.ModernHudRenderer;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.gui.widget.SliderWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.input.KeyInput;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.text.Text;
 import net.minecraft.util.Util;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.AbstractSliderButton;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 import java.net.URI;
@@ -118,7 +118,7 @@ public class BetterUCScreen extends Screen {
     private int detailContentHeight = 0;
 
     public BetterUCScreen() {
-        super(Text.literal("betterUC"));
+        super(Component.literal("betterUC"));
     }
 
     @Override
@@ -135,13 +135,13 @@ public class BetterUCScreen extends Screen {
         detailControls.clear();
         detailContentHeight = 0;
         addDetailControls();
-        addDrawableChild(ButtonWidget.builder(Text.literal("HUD Vorschau"), b -> openScreen(new HudLayoutScreen(this)))
-                .dimensions(mainX() + 12, mainY() + mainH() - 28, 118, BUTTON_H)
+        addRenderableWidget(Button.builder(Component.literal("HUD Vorschau"), b -> openScreen(new HudLayoutScreen(this)))
+                .bounds(mainX() + 12, mainY() + mainH() - 28, 118, BUTTON_H)
                 .build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Speichern & Schließen"), b -> {
+        addRenderableWidget(Button.builder(Component.literal("Speichern & Schließen"), b -> {
             saveConfig();
-            close();
-        }).dimensions(mainX() + mainW() - 150, mainY() + mainH() - 28, 138, BUTTON_H).build());
+            onClose();
+        }).bounds(mainX() + mainW() - 150, mainY() + mainH() - 28, 138, BUTTON_H).build());
     }
 
     private void addDetailControls() {
@@ -229,7 +229,7 @@ public class BetterUCScreen extends Screen {
             case AUTO_STATS -> {
                 y = addToggle(x, y, controlW, "Auto-Stats Join", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled,
                         () -> BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled = !BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
-                y = addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(client, true));
+                y = addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(minecraft, true));
             }
             case CHAT -> {
                 y = addToggle(x, y, controlW, "WPS/HQ Customizations", BetterUCConfig.INSTANCE.chatCustomizationEnabled,
@@ -243,7 +243,7 @@ public class BetterUCScreen extends Screen {
             case CONNECTION -> y = addConnectionControls(x, y, controlW);
             case BLACKLIST -> {
                 y = addButton(x, y, controlW, "Blacklist Gründe", b -> openScreen(new BlacklistConfigScreen(this)));
-                y = addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(client, true));
+                y = addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(minecraft, true));
             }
             case PING -> {
                 y = addPingControls(x, y, controlW);
@@ -254,7 +254,7 @@ public class BetterUCScreen extends Screen {
             case UPDATES -> {
                 y = addToggle(x, y, controlW, "Auto-Updater", BetterUCConfig.INSTANCE.autoUpdateEnabled,
                         () -> BetterUCConfig.INSTANCE.autoUpdateEnabled = !BetterUCConfig.INSTANCE.autoUpdateEnabled);
-                y = addButton(x, y, controlW, "Update installieren", b -> VersionChecker.installLatestUpdate(client, true));
+                y = addButton(x, y, controlW, "Update installieren", b -> VersionChecker.installLatestUpdate(minecraft, true));
             }
         }
 
@@ -282,14 +282,14 @@ public class BetterUCScreen extends Screen {
         y = addButton(x, y, width, "Font: " + BetterUCFontManager.selectedFontLabel(getHudFont(module)), b -> {
             setHudFont(module, BetterUCFontManager.nextCustomFontId(getHudFont(module)));
             saveConfig();
-            BetterUCFontManager.rebuildAndReload(client);
+            BetterUCFontManager.rebuildAndReload(minecraft);
             refreshWidgets();
         });
         y = addButton(x, y, width, "Fonts neu laden", b -> {
-            BetterUCFontManager.rebuildAndReload(client);
+            BetterUCFontManager.rebuildAndReload(minecraft);
             refreshWidgets();
         });
-        return addButton(x, y, width, "Font Ordner", b -> BetterUCFontManager.openFontsFolder(client));
+        return addButton(x, y, width, "Font Ordner", b -> BetterUCFontManager.openFontsFolder(minecraft));
     }
 
     private int addPingControls(int x, int y, int width) {
@@ -327,7 +327,7 @@ public class BetterUCScreen extends Screen {
                 color -> BetterUCConfig.INSTANCE.pingDangerColor = "#" + hex(color));
         y = addColorButton(x, y, width, "Sammeln Farbe", parseHexColor(BetterUCConfig.INSTANCE.pingGatherColor, 0xFF22C55E),
                 color -> BetterUCConfig.INSTANCE.pingGatherColor = "#" + hex(color));
-        return addButton(x, y, width, "Ping testen", b -> PingRelayClient.sendPingAtCrosshair(client, PingRelayClient.PingType.NORMAL));
+        return addButton(x, y, width, "Ping testen", b -> PingRelayClient.sendPingAtCrosshair(minecraft, PingRelayClient.PingType.NORMAL));
     }
 
     private int addConnectionControls(int x, int y, int width) {
@@ -342,11 +342,11 @@ public class BetterUCScreen extends Screen {
         y = addInfo(x, y, width, "Version", MOD_VERSION);
         y = addTextField(x, y, width, "Access Code", BetterUCConfig.INSTANCE.pingRelayToken, 160,
                 value -> BetterUCConfig.INSTANCE.pingRelayToken = value.trim());
-        y = addButton(x, y, width, "Access Code holen", b -> Util.getOperatingSystem().open(URI.create("https://betteruc.de/access")));
+        y = addButton(x, y, width, "Access Code holen", b -> Util.getPlatform().openUri(URI.create("https://betteruc.de/access")));
         y = addButton(x, y, width, "Stats neu senden", b -> {
-            UserStatsClient.uploadCurrentStats(client);
-            if (client != null && client.player != null) {
-                client.player.sendMessage(Text.literal("[betterUC] Stats werden ans Userpanel gesendet."), false);
+            UserStatsClient.uploadCurrentStats(minecraft);
+            if (minecraft != null && minecraft.player != null) {
+                minecraft.player.sendSystemMessage(Component.literal("[betterUC] Stats werden ans Userpanel gesendet."));
             }
         });
         y = addTextField(x, y, width, "Ping Gruppe", BetterUCConfig.INSTANCE.pingRelayChannel, 32,
@@ -362,7 +362,7 @@ public class BetterUCScreen extends Screen {
         return addButton(x, y, width, "Neu verbinden", b -> {
             saveConfig();
             PingRelayClient.onDisconnect();
-            PingRelayClient.tick(client);
+            PingRelayClient.tick(minecraft);
             refreshWidgets();
         });
     }
@@ -373,16 +373,16 @@ public class BetterUCScreen extends Screen {
         return addButton(x, y, width, "Invite kopieren", b -> copyDiscordInvite());
     }
 
-    private int addButton(int x, int y, int width, String label, ButtonWidget.PressAction action) {
-        addScrollableControl(ButtonWidget.builder(Text.literal(label), action)
-                .dimensions(x, y, width, BUTTON_H)
+    private int addButton(int x, int y, int width, String label, Button.OnPress action) {
+        addScrollableControl(Button.builder(Component.literal(label), action)
+                .bounds(x, y, width, BUTTON_H)
                 .build());
         return y + 24;
     }
 
     private int addInfo(int x, int y, int width, String label, String value) {
-        ButtonWidget widget = ButtonWidget.builder(Text.literal(label + ": " + value), b -> {
-        }).dimensions(x, y, width, BUTTON_H).build();
+        Button widget = Button.builder(Component.literal(label + ": " + value), b -> {
+        }).bounds(x, y, width, BUTTON_H).build();
         widget.active = false;
         addScrollableControl(widget);
         return y + 24;
@@ -425,17 +425,17 @@ public class BetterUCScreen extends Screen {
     private int addIntSlider(int x, int y, int width, String label, int current, int max, IntConsumer setter) {
         int safeMax = Math.max(1, max);
         int safeCurrent = clamp(current, 0, safeMax);
-        addScrollableControl(new SliderWidget(
+        addScrollableControl(new AbstractSliderButton(
                 x,
                 y,
                 width,
                 BUTTON_H,
-                Text.literal(label + ": " + safeCurrent),
+                Component.literal(label + ": " + safeCurrent),
                 safeCurrent / (double) safeMax
         ) {
             @Override
             protected void updateMessage() {
-                setMessage(Text.literal(label + ": " + sliderIntValue(value, safeMax)));
+                setMessage(Component.literal(label + ": " + sliderIntValue(value, safeMax)));
             }
 
             @Override
@@ -459,17 +459,17 @@ public class BetterUCScreen extends Screen {
         int safeMin = Math.max(0, min);
         int safeMax = Math.max(safeMin + 1, max);
         int safeCurrent = clamp(current, safeMin, safeMax);
-        addScrollableControl(new SliderWidget(
+        addScrollableControl(new AbstractSliderButton(
                 x,
                 y,
                 width,
                 BUTTON_H,
-                Text.literal(label + ": " + safeCurrent),
+                Component.literal(label + ": " + safeCurrent),
                 (safeCurrent - safeMin) / (double) (safeMax - safeMin)
         ) {
             @Override
             protected void updateMessage() {
-                setMessage(Text.literal(label + ": " + sliderRangeIntValue(value, safeMin, safeMax)));
+                setMessage(Component.literal(label + ": " + sliderRangeIntValue(value, safeMin, safeMax)));
             }
 
             @Override
@@ -491,17 +491,17 @@ public class BetterUCScreen extends Screen {
             DoubleConsumer setter
     ) {
         double normalized = clamp01((current - min) / Math.max(0.0001, max - min));
-        addScrollableControl(new SliderWidget(
+        addScrollableControl(new AbstractSliderButton(
                 x,
                 y,
                 width,
                 BUTTON_H,
-                Text.literal(label + ": " + percent(current)),
+                Component.literal(label + ": " + percent(current)),
                 normalized
         ) {
             @Override
             protected void updateMessage() {
-                setMessage(Text.literal(label + ": " + percent(sliderDoubleValue(value, min, max))));
+                setMessage(Component.literal(label + ": " + percent(sliderDoubleValue(value, min, max))));
             }
 
             @Override
@@ -513,55 +513,55 @@ public class BetterUCScreen extends Screen {
     }
 
     private int addTimestampField(int x, int y, int width) {
-        TextFieldWidget timestampField = new TextFieldWidget(
-                textRenderer,
+        EditBox timestampField = new EditBox(
+                font,
                 x,
                 y,
                 width,
                 BUTTON_H,
-                Text.literal("Timestamp Format")
+                Component.literal("Timestamp Format")
         );
         timestampField.setMaxLength(32);
-        timestampField.setText(BetterUCConfig.INSTANCE.chatTimestampFormat);
-        timestampField.setChangedListener(text -> BetterUCConfig.INSTANCE.chatTimestampFormat = text);
-        textFieldFlushers.add(() -> BetterUCConfig.INSTANCE.chatTimestampFormat = timestampField.getText());
+        timestampField.setValue(BetterUCConfig.INSTANCE.chatTimestampFormat);
+        timestampField.setResponder(text -> BetterUCConfig.INSTANCE.chatTimestampFormat = text);
+        textFieldFlushers.add(() -> BetterUCConfig.INSTANCE.chatTimestampFormat = timestampField.getValue());
         addScrollableControl(timestampField);
         return y + 24;
     }
 
     private int addTextField(int x, int y, int width, String label, String current, int maxLength, Consumer<String> setter) {
-        TextFieldWidget field = new TextFieldWidget(
-                textRenderer,
+        EditBox field = new EditBox(
+                font,
                 x,
                 y,
                 width,
                 BUTTON_H,
-                Text.literal(label)
+                Component.literal(label)
         );
         field.setMaxLength(maxLength);
-        field.setPlaceholder(Text.literal(label));
-        field.setText(current == null ? "" : current);
-        field.setChangedListener(setter::accept);
-        textFieldFlushers.add(() -> setter.accept(field.getText()));
+        field.setHint(Component.literal(label));
+        field.setValue(current == null ? "" : current);
+        field.setResponder(setter::accept);
+        textFieldFlushers.add(() -> setter.accept(field.getValue()));
         addScrollableControl(field);
         return y + 24;
     }
 
-    private <T extends ClickableWidget> T addScrollableControl(T widget) {
-        addDrawableChild(widget);
+    private <T extends AbstractWidget> T addScrollableControl(T widget) {
+        addRenderableWidget(widget);
         detailControls.add(new ScrollableControl(widget, widget.getY()));
         return widget;
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         context.fill(0, 0, width, height, 0x66000000);
         renderFrame(context, mouseX, mouseY);
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
         renderZoomCaptureHint(context);
     }
 
-    private void renderFrame(DrawContext context, int mouseX, int mouseY) {
+    private void renderFrame(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         int x = mainX();
         int y = mainY();
         int w = mainW();
@@ -575,16 +575,16 @@ public class BetterUCScreen extends Screen {
         String title = "betterUC";
         int titleX = x + 14;
         int titleY = y + 11;
-        context.drawTextWithShadow(textRenderer, Text.literal(title), titleX, titleY, TEXT_PRIMARY);
-        context.drawTextWithShadow(textRenderer, Text.literal("v" + MOD_VERSION),
-                titleX + textRenderer.getWidth(title) + 7, titleY, TEXT_MUTED);
+        context.text(font, Component.literal(title), titleX, titleY, TEXT_PRIMARY);
+        context.text(font, Component.literal("v" + MOD_VERSION),
+                titleX + font.width(title) + 7, titleY, TEXT_MUTED);
 
         renderCategoryTabs(context, mouseX, mouseY);
         renderModuleList(context, mouseX, mouseY);
         renderDetailPanel(context, mouseX, mouseY);
     }
 
-    private void renderCategoryTabs(DrawContext context, int mouseX, int mouseY) {
+    private void renderCategoryTabs(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         int x = mainX() + 10;
         int y = mainY() + 42;
         int tabW = Math.max(38, (sidebarW() - 20) / Category.values().length);
@@ -595,13 +595,13 @@ public class BetterUCScreen extends Screen {
             int color = selected ? withAlpha(category.accent, 0xCC) : hovered ? 0x80404A59 : 0x50333C49;
             drawSoftRect(context, x, y, tabW - 3, 18, color);
             drawBorder(context, x, y, tabW - 3, 18, selected ? withAlpha(category.accent, 0xFF) : 0x50333C49);
-            context.drawCenteredTextWithShadow(textRenderer, Text.literal(category.label), x + (tabW - 3) / 2, y + 5,
+            context.centeredText(font, Component.literal(category.label), x + (tabW - 3) / 2, y + 5,
                     selected ? TEXT_PRIMARY : TEXT_SOFT);
             x += tabW;
         }
     }
 
-    private void renderModuleList(DrawContext context, int mouseX, int mouseY) {
+    private void renderModuleList(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         int x = mainX() + 10;
         int y = moduleListY();
         int w = sidebarW() - 20;
@@ -614,17 +614,17 @@ public class BetterUCScreen extends Screen {
             drawSoftRect(context, x, y, w, MODULE_H, bg);
             context.fill(x + 2, y + 2, x + 4, y + MODULE_H - 2,
                     selected ? withAlpha(module.accent, 0xFF) : withAlpha(module.accent, 0x99));
-            context.drawTextWithShadow(textRenderer, Text.literal(module.label), x + 8, y + 4,
+            context.text(font, Component.literal(module.label), x + 8, y + 4,
                     selected ? TEXT_PRIMARY : TEXT_SOFT);
 
             String state = module.hasToggle() ? (isEnabled(module) ? "ON" : "OFF") : "SET";
             int stateColor = module.hasToggle() && !isEnabled(module) ? TEXT_MUTED : withAlpha(module.accent, 0xFF);
-            context.drawTextWithShadow(textRenderer, Text.literal(state), x + w - textRenderer.getWidth(state) - 6, y + 4, stateColor);
+            context.text(font, Component.literal(state), x + w - font.width(state) - 6, y + 4, stateColor);
             y += MODULE_H + MODULE_GAP;
         }
     }
 
-    private void renderDetailPanel(DrawContext context, int mouseX, int mouseY) {
+    private void renderDetailPanel(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         int x = detailX();
         int y = detailY();
         int w = detailW();
@@ -633,8 +633,8 @@ public class BetterUCScreen extends Screen {
         drawBorder(context, x, y, w, h, 0x70333C49);
         context.fill(x + 2, y + 2, x + 4, y + h - 2, withAlpha(selectedModule.accent, 0xEE));
 
-        context.drawTextWithShadow(textRenderer, Text.literal(selectedModule.label), x + 14, y + 12, TEXT_PRIMARY);
-        context.drawTextWithShadow(textRenderer, Text.literal(selectedModule.description), x + 14, y + 25, TEXT_MUTED);
+        context.text(font, Component.literal(selectedModule.label), x + 14, y + 12, TEXT_PRIMARY);
+        context.text(font, Component.literal(selectedModule.description), x + 14, y + 25, TEXT_MUTED);
         renderSelectedStatus(context, x + 14, y + 39);
         if (selectedModule == ModuleOption.UPDATES) {
             renderUpdates(context, x + 14, y + 58, w - 28, h - 72);
@@ -644,7 +644,7 @@ public class BetterUCScreen extends Screen {
         renderDetailScrollbar(context);
     }
 
-    private void renderDetailScrollbar(DrawContext context) {
+    private void renderDetailScrollbar(GuiGraphicsExtractor context) {
         int maxScroll = maxDetailScroll();
         if (maxScroll <= 0) return;
 
@@ -661,16 +661,16 @@ public class BetterUCScreen extends Screen {
         context.fill(trackX, thumbY, trackX + 3, thumbY + thumbH, withAlpha(selectedModule.accent, 0xDD));
     }
 
-    private void renderSelectedStatus(DrawContext context, int x, int y) {
+    private void renderSelectedStatus(GuiGraphicsExtractor context, int x, int y) {
         if (selectedModule == ModuleOption.UPDATES) {
-            context.drawTextWithShadow(textRenderer, Text.literal("Version " + MOD_VERSION), x, y, 0xFF86EFAC);
+            context.text(font, Component.literal("Version " + MOD_VERSION), x, y, 0xFF86EFAC);
             return;
         }
 
         if (selectedModule == ModuleOption.BLACKLIST) {
-            context.drawTextWithShadow(
-                    textRenderer,
-                    Text.literal("Einträge: " + BetterUCConfig.INSTANCE.chatBlacklistPlayers.size()
+            context.text(
+                    font,
+                    Component.literal("Einträge: " + BetterUCConfig.INSTANCE.chatBlacklistPlayers.size()
                             + " | Sync " + syncAge(BetterUCConfig.INSTANCE.lastBlacklistSyncMs)),
                     x,
                     y,
@@ -680,9 +680,9 @@ public class BetterUCScreen extends Screen {
         }
 
         if (selectedModule == ModuleOption.CONNECTION) {
-            context.drawTextWithShadow(
-                    textRenderer,
-                    Text.literal("Verbindung: " + PingRelayClient.statusLabel()),
+            context.text(
+                    font,
+                    Component.literal("Verbindung: " + PingRelayClient.statusLabel()),
                     x,
                     y,
                     PingRelayClient.isConnected() ? 0xFF86EFAC : TEXT_MUTED
@@ -691,26 +691,26 @@ public class BetterUCScreen extends Screen {
         }
 
         if (selectedModule.hasToggle()) {
-            context.drawTextWithShadow(
-                    textRenderer,
-                    Text.literal(isEnabled(selectedModule) ? "Status: aktiv" : "Status: aus"),
+            context.text(
+                    font,
+                    Component.literal(isEnabled(selectedModule) ? "Status: aktiv" : "Status: aus"),
                     x,
                     y,
                     isEnabled(selectedModule) ? 0xFF86EFAC : TEXT_MUTED
             );
         } else {
-            context.drawTextWithShadow(textRenderer, Text.literal("Modul-Einstellungen"), x, y, TEXT_SOFT);
+            context.text(font, Component.literal("Modul-Einstellungen"), x, y, TEXT_SOFT);
         }
     }
 
-    private void renderPreview(DrawContext context, int x, int y) {
-        MinecraftClient minecraft = MinecraftClient.getInstance();
+    private void renderPreview(GuiGraphicsExtractor context, int x, int y) {
+        Minecraft minecraft = Minecraft.getInstance();
         int previewX = Math.min(x, detailX() + detailW() - 150);
         int previewY = y;
 
-        context.drawTextWithShadow(textRenderer, Text.literal("Preview"), previewX, previewY - 14, TEXT_MUTED);
+        context.text(font, Component.literal("Preview"), previewX, previewY - 14, TEXT_MUTED);
         String style = getHudStyle(selectedModule);
-        String font = getHudFont(selectedModule);
+        String fontId = getHudFont(selectedModule);
         boolean modernStyle = BetterUCConfig.isModernHudStyle(style);
         boolean stylizedStyle = BetterUCConfig.isStylizedHudStyle(style);
         ModernHudRenderer.withHudGradient(getHudGradientEnabled(selectedModule), getHudGradientColor(selectedModule), () -> {
@@ -718,22 +718,22 @@ public class BetterUCScreen extends Screen {
             case HEALTH -> {
                 if (modernStyle) {
                     ModernHudRenderer.drawPanel(context, previewX, previewY, 38, 17, BetterUCConfig.INSTANCE.healthHudHeartColor);
-                    context.drawGuiTexture(
-                            net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED,
-                            net.minecraft.util.Identifier.ofVanilla("hud/heart/full"),
+                    context.blitSprite(
+                            net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
+                            net.minecraft.resources.Identifier.withDefaultNamespace("hud/heart/full"),
                             previewX + 7,
                             previewY + 4,
                             9,
                             9,
                             BetterUCConfig.INSTANCE.healthHudHeartColor
                     );
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "10", previewX + 19, previewY + 4,
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, "10", previewX + 19, previewY + 4,
                             BetterUCConfig.INSTANCE.healthHudTextColor);
                     return;
                 }
-                context.drawGuiTexture(
-                        net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED,
-                        net.minecraft.util.Identifier.ofVanilla("hud/heart/full"),
+                context.blitSprite(
+                        net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
+                        net.minecraft.resources.Identifier.withDefaultNamespace("hud/heart/full"),
                         previewX,
                         previewY,
                         9,
@@ -741,11 +741,11 @@ public class BetterUCScreen extends Screen {
                         BetterUCConfig.INSTANCE.healthHudHeartColor
                 );
                 if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, textRenderer, style, font, Text.literal("10"), previewX + 12, previewY,
+                    ModernHudRenderer.drawStyledText(context, this.font, style, fontId, Component.literal("10"), previewX + 12, previewY,
                             BetterUCConfig.INSTANCE.healthHudTextColor);
                     return;
                 }
-                ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "10", previewX + 11, previewY,
+                ModernHudRenderer.drawHudTextWithShadow(context, this.font, "10", previewX + 11, previewY,
                         BetterUCConfig.INSTANCE.healthHudTextColor);
             }
             case FPS -> {
@@ -753,10 +753,10 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, hudPreviewLabel(ModuleOption.FPS), "144",
                             BetterUCConfig.INSTANCE.fpsHudColor);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, hudPreviewText(ModuleOption.FPS, "144"), previewX, previewY,
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, hudPreviewText(ModuleOption.FPS, "144"), previewX, previewY,
                             BetterUCConfig.INSTANCE.fpsHudColor);
                 } else {
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, hudPreviewText(ModuleOption.FPS, "144"), previewX, previewY,
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, hudPreviewText(ModuleOption.FPS, "144"), previewX, previewY,
                             BetterUCConfig.INSTANCE.fpsHudColor);
                 }
             }
@@ -765,10 +765,10 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawProgressModule(context, minecraft, previewX, previewY, hudPreviewLabel(ModuleOption.PAYDAY),
                             "25/60 min", 25.0F / 60.0F, BetterUCConfig.INSTANCE.paydayHudColor);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, hudPreviewText(ModuleOption.PAYDAY, "25/60 Minuten"), previewX, previewY,
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, hudPreviewText(ModuleOption.PAYDAY, "25/60 Minuten"), previewX, previewY,
                             BetterUCConfig.INSTANCE.paydayHudColor);
                 } else {
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, hudPreviewText(ModuleOption.PAYDAY, "25/60 Minuten"), previewX, previewY,
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, hudPreviewText(ModuleOption.PAYDAY, "25/60 Minuten"), previewX, previewY,
                             BetterUCConfig.INSTANCE.paydayHudColor);
                 }
             }
@@ -777,11 +777,11 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY, hudPreviewLabel(ModuleOption.AMMO), "20/96",
                             "TS19", 0xFFFFAA33, 0xFF7CFF8A);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, hudPreviewText(ModuleOption.AMMO, "20/96"), previewX, previewY, 0xFFFFAA33);
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "TS19", previewX, previewY + 11, 0xFF55FF55);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, hudPreviewText(ModuleOption.AMMO, "20/96"), previewX, previewY, 0xFFFFAA33);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "TS19", previewX, previewY + 11, 0xFF55FF55);
                 } else {
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, hudPreviewText(ModuleOption.AMMO, "20/96"), previewX, previewY, 0xFFFFAA33);
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "TS19", previewX, previewY + 10, 0xFF55FF55);
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, hudPreviewText(ModuleOption.AMMO, "20/96"), previewX, previewY, 0xFFFFAA33);
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, "TS19", previewX, previewY + 10, 0xFF55FF55);
                 }
             }
             case BANK -> {
@@ -789,10 +789,10 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, hudPreviewLabel(ModuleOption.BANK),
                             previewBankValue(), BetterUCConfig.INSTANCE.bankHudColor);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, hudPreviewText(ModuleOption.BANK, previewBankValue()), previewX, previewY,
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, hudPreviewText(ModuleOption.BANK, previewBankValue()), previewX, previewY,
                             BetterUCConfig.INSTANCE.bankHudColor);
                 } else {
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, hudPreviewText(ModuleOption.BANK, previewBankValue()), previewX, previewY,
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, hudPreviewText(ModuleOption.BANK, previewBankValue()), previewX, previewY,
                             BetterUCConfig.INSTANCE.bankHudColor);
                 }
             }
@@ -801,10 +801,10 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, hudPreviewLabel(ModuleOption.CASH),
                             previewCashValue(), BetterUCConfig.INSTANCE.cashHudColor);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, hudPreviewText(ModuleOption.CASH, previewCashValue()), previewX, previewY,
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, hudPreviewText(ModuleOption.CASH, previewCashValue()), previewX, previewY,
                             BetterUCConfig.INSTANCE.cashHudColor);
                 } else {
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, hudPreviewText(ModuleOption.CASH, previewCashValue()), previewX, previewY,
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, hudPreviewText(ModuleOption.CASH, previewCashValue()), previewX, previewY,
                             BetterUCConfig.INSTANCE.cashHudColor);
                 }
             }
@@ -815,15 +815,15 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY + 33, "EFFECT", "Speed",
                             "0:49", 0xFF7CAFC6);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Stärke II", previewX, previewY, 0xFF9328FF);
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "1:26", previewX, previewY + 11, TEXT_MUTED);
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Speed", previewX, previewY + 25, 0xFF7CAFC6);
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "0:49", previewX, previewY + 36, TEXT_MUTED);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "Stärke II", previewX, previewY, 0xFF9328FF);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "1:26", previewX, previewY + 11, TEXT_MUTED);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "Speed", previewX, previewY + 25, 0xFF7CAFC6);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "0:49", previewX, previewY + 36, TEXT_MUTED);
                 } else {
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "Stärke II", previewX, previewY, 0xFF9328FF);
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "1:26", previewX, previewY + 10, TEXT_MUTED);
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "Speed", previewX, previewY + 24, 0xFF7CAFC6);
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "0:49", previewX, previewY + 34, TEXT_MUTED);
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, "Stärke II", previewX, previewY, 0xFF9328FF);
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, "1:26", previewX, previewY + 10, TEXT_MUTED);
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, "Speed", previewX, previewY + 24, 0xFF7CAFC6);
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, "0:49", previewX, previewY + 34, TEXT_MUTED);
                 }
             }
             case SPRINT -> {
@@ -831,10 +831,10 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, hudPreviewLabel(ModuleOption.SPRINT), "ON",
                             BetterUCConfig.INSTANCE.toggleSprintHudColor);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, hudPreviewText(ModuleOption.SPRINT, "ON"), previewX, previewY,
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, hudPreviewText(ModuleOption.SPRINT, "ON"), previewX, previewY,
                             BetterUCConfig.INSTANCE.toggleSprintHudColor);
                 } else {
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, hudPreviewText(ModuleOption.SPRINT, "ON"), previewX, previewY,
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, hudPreviewText(ModuleOption.SPRINT, "ON"), previewX, previewY,
                             BetterUCConfig.INSTANCE.toggleSprintHudColor);
                 }
             }
@@ -845,9 +845,9 @@ public class BetterUCScreen extends Screen {
                 if (modernStyle) {
                     ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, hudPreviewLabel(ModuleOption.HACK_TIMER), time, 0xFF60A5FA);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, hudPreviewText(ModuleOption.HACK_TIMER, time), previewX, previewY, 0xFF60A5FA);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, hudPreviewText(ModuleOption.HACK_TIMER, time), previewX, previewY, 0xFF60A5FA);
                 } else {
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, hudPreviewText(ModuleOption.HACK_TIMER, time), previewX, previewY, 0xFF60A5FA);
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, hudPreviewText(ModuleOption.HACK_TIMER, time), previewX, previewY, 0xFF60A5FA);
                 }
             }
             case PLANT_TIMER -> {
@@ -856,11 +856,11 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY, hudPreviewLabel(ModuleOption.PLANT_TIMER),
                             plantValue, "Reif: 1:30:00 | Wasser: 20:00", 0xFF6CF27D, 0xFFFFD866);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, hudPreviewText(ModuleOption.PLANT_TIMER, plantValue), previewX, previewY, 0xFF6CF27D);
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, font, "Reif: 1:30:00 | Wasser: 20:00", previewX, previewY + 11, 0xFFFFD866);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, hudPreviewText(ModuleOption.PLANT_TIMER, plantValue), previewX, previewY, 0xFF6CF27D);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "Reif: 1:30:00 | Wasser: 20:00", previewX, previewY + 11, 0xFFFFD866);
                 } else {
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, hudPreviewText(ModuleOption.PLANT_TIMER, plantValue), previewX, previewY, 0xFF6CF27D);
-                    ModernHudRenderer.drawHudTextWithShadow(context, textRenderer, "Reif: 1:30:00 | Wasser: 20:00", previewX, previewY + 10, 0xFFFFD866);
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, hudPreviewText(ModuleOption.PLANT_TIMER, plantValue), previewX, previewY, 0xFF6CF27D);
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, "Reif: 1:30:00 | Wasser: 20:00", previewX, previewY + 10, 0xFFFFD866);
                 }
             }
             case ZOOM -> drawMiniInfo(context, previewX, previewY, "Zoom", zoomKeyLabel(), BetterUCConfig.INSTANCE.zoomEnabled);
@@ -885,7 +885,7 @@ public class BetterUCScreen extends Screen {
         });
     }
 
-    private void renderUpdates(DrawContext context, int x, int y, int width, int height) {
+    private void renderUpdates(GuiGraphicsExtractor context, int x, int y, int width, int height) {
         int maxY = y + height;
         if (width < 420) {
             int currentY = y;
@@ -910,8 +910,8 @@ public class BetterUCScreen extends Screen {
         }
     }
 
-    private int drawUpdateSection(DrawContext context, UpdateSection section, int x, int y, int width, int maxY) {
-        context.drawTextWithShadow(textRenderer, Text.literal(section.title), x, y, withAlpha(selectedModule.accent, 0xFF));
+    private int drawUpdateSection(GuiGraphicsExtractor context, UpdateSection section, int x, int y, int width, int maxY) {
+        context.text(font, Component.literal(section.title), x, y, withAlpha(selectedModule.accent, 0xFF));
 
         int lineY = y + 16;
         for (String line : section.lines) {
@@ -921,16 +921,16 @@ public class BetterUCScreen extends Screen {
         return lineY + 10;
     }
 
-    private int drawWrappedUpdateLine(DrawContext context, String line, int x, int y, int maxWidth) {
+    private int drawWrappedUpdateLine(GuiGraphicsExtractor context, String line, int x, int y, int maxWidth) {
         String prefix = "- ";
         String remaining = line;
         boolean firstLine = true;
         int currentY = y;
         while (!remaining.isEmpty()) {
             String usedPrefix = firstLine ? prefix : "  ";
-            int availableWidth = Math.max(20, maxWidth - textRenderer.getWidth(usedPrefix));
+            int availableWidth = Math.max(20, maxWidth - font.width(usedPrefix));
             String part = takeFittingText(remaining, availableWidth);
-            context.drawTextWithShadow(textRenderer, Text.literal(usedPrefix + part), x, currentY, firstLine ? TEXT_SOFT : TEXT_MUTED);
+            context.text(font, Component.literal(usedPrefix + part), x, currentY, firstLine ? TEXT_SOFT : TEXT_MUTED);
             remaining = remaining.substring(part.length()).trim();
             currentY += 11;
             firstLine = false;
@@ -938,14 +938,14 @@ public class BetterUCScreen extends Screen {
         return currentY + 1;
     }
 
-    private void drawMiniInfo(DrawContext context, int x, int y, String label, String value, boolean active) {
-        int w = Math.max(110, Math.max(textRenderer.getWidth(label), textRenderer.getWidth(value)) + 22);
+    private void drawMiniInfo(GuiGraphicsExtractor context, int x, int y, String label, String value, boolean active) {
+        int w = Math.max(110, Math.max(font.width(label), font.width(value)) + 22);
         ModernHudRenderer.drawPanel(context, x, y, w, 38, active ? selectedModule.accent : 0xFF64748B);
-        context.drawTextWithShadow(textRenderer, Text.literal(label), x + 10, y + 8, withAlpha(selectedModule.accent, 0xFF));
-        context.drawTextWithShadow(textRenderer, Text.literal(value), x + 10, y + 20, TEXT_PRIMARY);
+        context.text(font, Component.literal(label), x + 10, y + 8, withAlpha(selectedModule.accent, 0xFF));
+        context.text(font, Component.literal(value), x + 10, y + 20, TEXT_PRIMARY);
     }
 
-    private void renderZoomCaptureHint(DrawContext context) {
+    private void renderZoomCaptureHint(GuiGraphicsExtractor context) {
         if (!capturingZoomKey) return;
         int w = Math.min(320, width - 28);
         int h = 58;
@@ -953,8 +953,8 @@ public class BetterUCScreen extends Screen {
         int y = height / 2 - h / 2;
         drawSoftRect(context, x, y, w, h, 0xF0101318);
         drawBorder(context, x, y, w, h, withAlpha(ModuleOption.ZOOM.accent, 0xFF));
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("Drücke eine Taste für Zoom"), width / 2, y + 17, TEXT_PRIMARY);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("ESC = Abbrechen"), width / 2, y + 33, TEXT_MUTED);
+        context.centeredText(font, Component.literal("Drücke eine Taste für Zoom"), width / 2, y + 17, TEXT_PRIMARY);
+        context.centeredText(font, Component.literal("ESC = Abbrechen"), width / 2, y + 33, TEXT_MUTED);
     }
 
     @Override
@@ -970,7 +970,7 @@ public class BetterUCScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(Click event, boolean doubleClick) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (super.mouseClicked(event, doubleClick)) return true;
         if (event.button() != 0) return false;
 
@@ -998,8 +998,8 @@ public class BetterUCScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        int keyCode = input.getKeycode();
+    public boolean keyPressed(KeyEvent input) {
+        int keyCode = input.input();
         if (!capturingZoomKey) {
             return super.keyPressed(input);
         }
@@ -1024,7 +1024,7 @@ public class BetterUCScreen extends Screen {
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 
@@ -1299,7 +1299,7 @@ public class BetterUCScreen extends Screen {
         int code = BetterUCConfig.INSTANCE.zoomKeyCode;
         if (code <= 0) return "Zoom Taste: none";
         try {
-            return "Zoom Taste: " + InputUtil.Type.KEYSYM.createFromCode(code).getLocalizedText().getString();
+            return "Zoom Taste: " + InputConstants.Type.KEYSYM.getOrCreate(code).getDisplayName().getString();
         } catch (Exception ignored) {
             return "Zoom Taste: " + code;
         }
@@ -1322,20 +1322,20 @@ public class BetterUCScreen extends Screen {
     }
 
     private String currentPlayerName() {
-        if (client == null || client.player == null) return "nicht erkannt";
-        String name = client.player.getName().getString();
+        if (minecraft == null || minecraft.player == null) return "nicht erkannt";
+        String name = minecraft.player.getName().getString();
         return name == null || name.isBlank() ? "nicht erkannt" : name;
     }
 
     private String currentServerLabel() {
-        String server = PingRelayClient.currentServerId(client);
+        String server = PingRelayClient.currentServerId(minecraft);
         return server == null || server.isBlank() ? "nicht erkannt" : server;
     }
 
     private void openDiscordInvite() {
         String invite = safeDiscordInvite();
         try {
-            Util.getOperatingSystem().open(URI.create(invite));
+            Util.getPlatform().openUri(URI.create(invite));
         } catch (Exception e) {
             BetterUCMod.LOGGER.warn("Could not open betterUC Discord invite {}", invite, e);
             copyDiscordInvite();
@@ -1344,10 +1344,10 @@ public class BetterUCScreen extends Screen {
 
     private void copyDiscordInvite() {
         String invite = safeDiscordInvite();
-        if (client != null) {
-            client.keyboard.setClipboard(invite);
-            if (client.player != null) {
-                client.player.sendMessage(Text.literal("[betterUC] Discord-Invite kopiert: " + invite), false);
+        if (minecraft != null) {
+            minecraft.keyboardHandler.setClipboard(invite);
+            if (minecraft.player != null) {
+                minecraft.player.sendSystemMessage(Component.literal("[betterUC] Discord-Invite kopiert: " + invite));
             }
         }
     }
@@ -1357,7 +1357,7 @@ public class BetterUCScreen extends Screen {
     }
 
     private String takeFittingText(String text, int maxWidth) {
-        if (textRenderer.getWidth(text) <= maxWidth) return text;
+        if (font.width(text) <= maxWidth) return text;
 
         int lastSpace = -1;
         for (int i = 1; i <= text.length(); i++) {
@@ -1366,7 +1366,7 @@ public class BetterUCScreen extends Screen {
                 lastSpace = i - 1;
             }
             String candidate = text.substring(0, i).trim();
-            if (textRenderer.getWidth(candidate) > maxWidth) {
+            if (font.width(candidate) > maxWidth) {
                 if (lastSpace > 0) {
                     return text.substring(0, lastSpace).trim();
                 }
@@ -1386,8 +1386,8 @@ public class BetterUCScreen extends Screen {
     }
 
     private void openScreen(Screen screen) {
-        if (client != null) {
-            client.setScreen(screen);
+        if (minecraft != null) {
+            minecraft.setScreen(screen);
         }
     }
 
@@ -1402,7 +1402,7 @@ public class BetterUCScreen extends Screen {
         int bottom = detailControlsBottom();
 
         for (ScrollableControl control : detailControls) {
-            ClickableWidget widget = control.widget();
+            AbstractWidget widget = control.widget();
             int y = control.baseY() - detailScrollOffset;
             widget.setY(y);
 
@@ -1441,7 +1441,7 @@ public class BetterUCScreen extends Screen {
         if (flushTextFields) {
             flushTextFields();
         }
-        clearChildren();
+        clearWidgets();
         rebuildingWidgets = true;
         try {
             init();
@@ -1502,12 +1502,12 @@ public class BetterUCScreen extends Screen {
         return mainY() + 66;
     }
 
-    private void drawSoftRect(DrawContext context, int x, int y, int width, int height, int color) {
+    private void drawSoftRect(GuiGraphicsExtractor context, int x, int y, int width, int height, int color) {
         context.fill(x + 1, y, x + width - 1, y + height, color);
         context.fill(x, y + 1, x + width, y + height - 1, color);
     }
 
-    private void drawBorder(DrawContext context, int x, int y, int width, int height, int color) {
+    private void drawBorder(GuiGraphicsExtractor context, int x, int y, int width, int height, int color) {
         context.fill(x + 1, y, x + width - 1, y + 1, color);
         context.fill(x + 1, y + height - 1, x + width - 1, y + height, color);
         context.fill(x, y + 1, x + 1, y + height - 1, color);
@@ -1625,7 +1625,7 @@ public class BetterUCScreen extends Screen {
         }
     }
 
-    private record ScrollableControl(ClickableWidget widget, int baseY) {
+    private record ScrollableControl(AbstractWidget widget, int baseY) {
     }
 
     private record UpdateSection(String title, String[] lines) {

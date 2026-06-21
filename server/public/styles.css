@@ -107,6 +107,10 @@ main {
   min-height: calc(100vh - 92px);
 }
 
+.slim-hero {
+  min-height: 560px;
+}
+
 .eyebrow,
 .section-label,
 .panel-kicker {
@@ -337,6 +341,10 @@ h3 {
   padding: 22px;
 }
 
+.download-card {
+  align-self: center;
+}
+
 .release-head {
   align-items: baseline;
   border-bottom: 1px solid var(--line);
@@ -456,6 +464,10 @@ h3 {
   gap: 12px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 24px;
+}
+
+.compact-command-grid {
+  grid-template-columns: 1fr;
 }
 
 .command-grid article {

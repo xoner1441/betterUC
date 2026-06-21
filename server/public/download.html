@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>betterUC Download</title>
+  <meta name="description" content="betterUC direkt ueber betteruc.de herunterladen.">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="betterUC Startseite">
+      <span class="brand-mark">bU</span>
+      <span>betterUC</span>
+    </a>
+    <nav class="nav">
+      <a href="/download">Download</a>
+      <a href="/#updates">Updates</a>
+      <a href="/#features">Features</a>
+      <a href="/#discord">Discord</a>
+      <a href="/access">Access</a>
+      <a href="/panel">Userpanel</a>
+      <a href="https://github.com/xoner1441/betterUC/releases" rel="noreferrer">GitHub</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero slim-hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Download</p>
+        <h1>betterUC laden</h1>
+        <p class="lead">Lade die aktuelle Mod direkt über betteruc.de herunter. Nach dem Download die Jar in deinen Fabric-Mods-Ordner legen und Minecraft neu starten.</p>
+        <div class="hero-actions">
+          <a id="latestDownloadButton" class="button primary" href="/download/latest.jar">Neueste Version herunterladen</a>
+          <a class="button secondary" href="/#updates">Updates ansehen</a>
+        </div>
+      </div>
+
+      <div class="release-panel download-card">
+        <div class="release-head">
+          <p class="panel-kicker">Aktueller Release</p>
+          <strong id="downloadVersion">wird geladen</strong>
+        </div>
+        <div class="release-meta">
+          <span>Datei</span><b id="downloadFile">betterUC.jar</b>
+          <span>Größe</span><b id="downloadSize">wird geladen</b>
+          <span>Quelle</span><b>betteruc.de</b>
+        </div>
+        <a id="latestDownloadButtonPanel" class="button primary full" href="/download/latest.jar">Jar herunterladen</a>
+        <p id="downloadHint" class="quiet">Die Datei wird über den betterUC-Server ausgeliefert.</p>
+      </div>
+    </section>
+
+    <section class="section two-column">
+      <div>
+        <p class="section-label">Installation</p>
+        <h2>So nutzt du die Jar</h2>
+        <div class="command-grid compact-command-grid">
+          <article>
+            <code>1</code>
+            <div>
+              <h3>Fabric 26.1.2 starten</h3>
+              <p>Nutze die passende Fabric-Installation für die aktuelle UnicaCity-Version.</p>
+            </div>
+          </article>
+          <article>
+            <code>2</code>
+            <div>
+              <h3>Jar in den Mods-Ordner legen</h3>
+              <p>Die Datei gehört in den Mods-Ordner deiner Fabric-Installation.</p>
+            </div>
+          </article>
+          <article>
+            <code>3</code>
+            <div>
+              <h3>Minecraft neu starten</h3>
+              <p>Updates greifen erst nach einem vollständigen Neustart.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="tool-panel">
+        <p class="section-label">Auto-Updater</p>
+        <h2>Ingame aktualisieren</h2>
+        <p>Wenn betterUC eine neue Version erkennt, kannst du das Update direkt im Chat vorbereiten. Die neue Jar wird heruntergeladen und ersetzt die alte Datei, sobald Minecraft geschlossen wurde.</p>
+        <p class="quiet">Der Auto-Updater verwendet ebenfalls die betterUC-Downloadstrecke.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>betterUC</span>
+    <span class="footer-links">
+      <a href="/impressum">Impressum</a>
+      <a href="/datenschutz">Datenschutz</a>
+    </span>
+  </footer>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>

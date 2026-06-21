@@ -9,20 +9,19 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.network.ServerInfo;
-import net.minecraft.entity.Entity;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.Vec3d;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -68,10 +67,10 @@ public final class PingRelayClient {
     private PingRelayClient() {
     }
 
-    public static void tick(MinecraftClient client) {
+    public static void tick(Minecraft client) {
         cleanupExpired();
 
-        if (client == null || client.player == null || client.getNetworkHandler() == null) {
+        if (client == null || client.player == null || client.getConnection() == null) {
             disconnect();
             return;
         }
@@ -102,7 +101,7 @@ public final class PingRelayClient {
         connect(client);
     }
 
-    public static void onJoin(MinecraftClient client) {
+    public static void onJoin(Minecraft client) {
         synchronized (LOCK) {
             ACTIVE_PINGS.clear();
             ONLINE_PLAYERS.clear();
@@ -121,13 +120,13 @@ public final class PingRelayClient {
         }
     }
 
-    public static boolean sendPingAtCrosshair(MinecraftClient client) {
+    public static boolean sendPingAtCrosshair(Minecraft client) {
         return sendPingAtCrosshair(client, PingType.NORMAL);
     }
 
-    public static boolean sendPingAtCrosshair(MinecraftClient client, PingType pingType) {
+    public static boolean sendPingAtCrosshair(Minecraft client, PingType pingType) {
         PingType safeType = pingType == null ? PingType.NORMAL : pingType;
-        if (client == null || client.player == null || client.world == null) return false;
+        if (client == null || client.player == null || client.level == null) return false;
         if (!CommunicationDeviceTracker.canPing()) {
             sendLocalMessage(client, CommunicationDeviceTracker.blockMessage());
             return false;
@@ -220,7 +219,7 @@ public final class PingRelayClient {
         return Math.max(0L, lastPingSentMs + cooldownMs - System.currentTimeMillis());
     }
 
-    public static void refreshIdentity(MinecraftClient client) {
+    public static void refreshIdentity(Minecraft client) {
         WebSocket socket = webSocket;
         if (!connected || socket == null || client == null || client.player == null) return;
         try {
@@ -237,26 +236,26 @@ public final class PingRelayClient {
         }
     }
 
-    public static boolean hasBetterUCBadge(PlayerListEntry entry) {
+    public static boolean hasBetterUCBadge(PlayerInfo entry) {
         return findRelayPlayer(entry) != null;
     }
 
-    public static boolean hasAdminBadge(PlayerListEntry entry) {
+    public static boolean hasAdminBadge(PlayerInfo entry) {
         RelayPlayer player = findRelayPlayer(entry);
         return player != null && "admin".equals(player.role());
     }
 
-    public static boolean hasVipBadge(PlayerListEntry entry) {
+    public static boolean hasVipBadge(PlayerInfo entry) {
         RelayPlayer player = findRelayPlayer(entry);
         return player != null && "vip".equals(player.role());
     }
 
-    public static boolean hasPartnerBadge(PlayerListEntry entry) {
+    public static boolean hasPartnerBadge(PlayerInfo entry) {
         RelayPlayer player = findRelayPlayer(entry);
         return player != null && "partner".equals(player.role());
     }
 
-    public static boolean hasHelperBadge(PlayerListEntry entry) {
+    public static boolean hasHelperBadge(PlayerInfo entry) {
         RelayPlayer player = findRelayPlayer(entry);
         return player != null && "helper".equals(player.role());
     }
@@ -273,7 +272,7 @@ public final class PingRelayClient {
         };
     }
 
-    public static void showOnlineCommandList(MinecraftClient client) {
+    public static void showOnlineCommandList(Minecraft client) {
         if (client == null || client.player == null) return;
         if (!connected) {
             sendLocalMessage(client, "Online-Liste nicht verfuegbar: Relay ist nicht verbunden.");
@@ -351,7 +350,7 @@ public final class PingRelayClient {
             }
         }
 
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client != null && client.player != null
                 && looksLikeTabListName(normalizedText, playerName(client).toLowerCase(Locale.ROOT))) {
             RelayPlayer localPlayer = findRelayPlayer(playerName(client), playerUuid(client));
@@ -412,13 +411,13 @@ public final class PingRelayClient {
         return player != null && "helper".equals(player.role());
     }
 
-    public static String currentServerId(MinecraftClient client) {
+    public static String currentServerId(Minecraft client) {
         if (client == null) return "singleplayer";
-        ServerInfo info = client.getCurrentServerEntry();
-        if (info != null && info.address != null && !info.address.isBlank()) {
-            return normalizeServerId(info.address);
+        ServerData info = client.getCurrentServer();
+        if (info != null && info.ip != null && !info.ip.isBlank()) {
+            return normalizeServerId(info.ip);
         }
-        if (client.isInSingleplayer()) return "singleplayer";
+        if (client.isLocalServer()) return "singleplayer";
         return "unknown";
     }
 
@@ -431,16 +430,16 @@ public final class PingRelayClient {
                 .replaceFirst(":\\d+$", "");
     }
 
-    public static String currentDimension(MinecraftClient client) {
-        if (client == null || client.world == null) return "unknown";
-        return client.world.getRegistryKey().getValue().toString();
+    public static String currentDimension(Minecraft client) {
+        if (client == null || client.level == null) return "unknown";
+        return client.level.dimension().identifier().toString();
     }
 
-    private static void connect(MinecraftClient client) {
+    private static void connect(Minecraft client) {
         connect(client, false);
     }
 
-    private static void connect(MinecraftClient client, boolean fallbackAttempt) {
+    private static void connect(Minecraft client, boolean fallbackAttempt) {
         URI uri = relayUri(client, fallbackAttempt);
         if (uri == null) {
             status = "Server ungültig";
@@ -485,7 +484,7 @@ public final class PingRelayClient {
                 });
     }
 
-    private static URI relayUri(MinecraftClient client, boolean fallbackAttempt) {
+    private static URI relayUri(Minecraft client, boolean fallbackAttempt) {
         try {
             String raw = fallbackAttempt ? FALLBACK_RELAY_URL : BetterUCConfig.INSTANCE.pingRelayUrl.trim();
             if (raw.startsWith("http://")) raw = "ws://" + raw.substring("http://".length());
@@ -523,7 +522,7 @@ public final class PingRelayClient {
                 || raw.equals("wss://ping.betteruc.de/ws");
     }
 
-    private static void sendHello(WebSocket socket, MinecraftClient client) {
+    private static void sendHello(WebSocket socket, Minecraft client) {
         if (socket == null || client == null || client.player == null) return;
         JsonObject hello = new JsonObject();
         hello.addProperty("type", "hello");
@@ -536,7 +535,7 @@ public final class PingRelayClient {
         socket.sendText(GSON.toJson(hello), true);
     }
 
-    private static void handleMessage(MinecraftClient client, String raw) {
+    private static void handleMessage(Minecraft client, String raw) {
         try {
             JsonObject json = JsonParser.parseString(raw).getAsJsonObject();
             String type = stringValue(json, "type", "");
@@ -594,24 +593,24 @@ public final class PingRelayClient {
         }
     }
 
-    private static PingTarget targetFromCrosshair(MinecraftClient client) {
-        HitResult hit = client.crosshairTarget;
+    private static PingTarget targetFromCrosshair(Minecraft client) {
+        HitResult hit = client.hitResult;
         if (hit instanceof EntityHitResult entityHit) {
             Entity entity = entityHit.getEntity();
-            return new PingTarget(entityHit.getPos(), entity.getName().getString());
+            return new PingTarget(entityHit.getLocation(), entity.getName().getString());
         }
 
-        HitResult longHit = client.player.raycast(PING_RAYCAST_DISTANCE, 1.0F, false);
+        HitResult longHit = client.player.pick(PING_RAYCAST_DISTANCE, 1.0F, false);
         if (longHit instanceof BlockHitResult blockHit && blockHit.getType() != HitResult.Type.MISS) {
-            return new PingTarget(blockHit.getPos(), "Block");
+            return new PingTarget(blockHit.getLocation(), "Block");
         }
 
-        Vec3d fallback = client.player.getEyePos().add(client.player.getRotationVec(1.0F).multiply(PING_RAYCAST_DISTANCE));
+        Vec3 fallback = client.player.getEyePosition().add(client.player.getViewVector(1.0F).scale(PING_RAYCAST_DISTANCE));
         return new PingTarget(fallback, "Position");
     }
 
-    private static boolean shouldAcceptMarker(MinecraftClient client, PingMarker marker) {
-        if (client == null || client.player == null || client.world == null || marker == null) return false;
+    private static boolean shouldAcceptMarker(Minecraft client, PingMarker marker) {
+        if (client == null || client.player == null || client.level == null || marker == null) return false;
         if (!sameDimension(currentDimension(client), marker.dimension())) return false;
         return distanceToPlayer(client, marker) <= effectiveReceiveDistance();
     }
@@ -620,14 +619,14 @@ public final class PingRelayClient {
         return Math.min(MAX_RECEIVE_PING_DISTANCE, Math.max(0, BetterUCConfig.INSTANCE.pingRelayMaxDistance));
     }
 
-    private static double distanceToPlayer(MinecraftClient client, PingMarker marker) {
+    private static double distanceToPlayer(Minecraft client, PingMarker marker) {
         double dx = marker.x() - client.player.getX();
         double dy = marker.y() - client.player.getY();
         double dz = marker.z() - client.player.getZ();
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
-    private static boolean isOwnMarker(MinecraftClient client, PingMarker marker) {
+    private static boolean isOwnMarker(Minecraft client, PingMarker marker) {
         return client != null
                 && client.player != null
                 && marker != null
@@ -721,7 +720,7 @@ public final class PingRelayClient {
         }
     }
 
-    private static void refreshOnlinePlayersFromApi(MinecraftClient client) {
+    private static void refreshOnlinePlayersFromApi(Minecraft client) {
         if (!connected || client == null || client.player == null || onlinePlayersRefreshInFlight) return;
         long now = System.currentTimeMillis();
         if (now - lastOnlinePlayersRefreshMs < ONLINE_PLAYERS_REFRESH_MS) return;
@@ -819,38 +818,38 @@ public final class PingRelayClient {
         return entries;
     }
 
-    private static void renderOnlineList(MinecraftClient client, List<OnlineListEntry> entries) {
-        MutableText header = Text.literal("[betterUC] ").formatted(Formatting.GRAY)
-                .append(Text.literal("Online Mod-User: ").formatted(Formatting.AQUA))
-                .append(Text.literal(String.valueOf(entries.size())).formatted(Formatting.WHITE, Formatting.BOLD));
+    private static void renderOnlineList(Minecraft client, List<OnlineListEntry> entries) {
+        MutableComponent header = Component.literal("[betterUC] ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal("Online Mod-User: ").withStyle(ChatFormatting.AQUA))
+                .append(Component.literal(String.valueOf(entries.size())).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD));
         sendText(client, header);
 
-        sendText(client, Text.literal("User | Fraktion | Mod-Version").formatted(Formatting.DARK_GRAY));
+        sendText(client, Component.literal("User | Fraktion | Mod-Version").withStyle(ChatFormatting.DARK_GRAY));
         if (entries.isEmpty()) {
-            sendText(client, Text.literal("Keine verbundenen Mod-User gefunden.").formatted(Formatting.GRAY));
+            sendText(client, Component.literal("Keine verbundenen Mod-User gefunden.").withStyle(ChatFormatting.GRAY));
             return;
         }
 
         for (OnlineListEntry entry : entries) {
             String faction = entry.faction().isBlank() ? "unbekannt" : entry.faction();
             String version = versionLabel(entry.version());
-            MutableText line = Text.literal("- ").formatted(Formatting.DARK_GRAY)
-                    .append(Text.literal(entry.name()).formatted(roleFormatting(entry.role())))
-                    .append(Text.literal(" | ").formatted(Formatting.DARK_GRAY))
-                    .append(Text.literal(faction).formatted(Formatting.AQUA))
-                    .append(Text.literal(" | ").formatted(Formatting.DARK_GRAY))
-                    .append(Text.literal(version).formatted(Formatting.GRAY));
+            MutableComponent line = Component.literal("- ").withStyle(ChatFormatting.DARK_GRAY)
+                    .append(Component.literal(entry.name()).withStyle(roleFormatting(entry.role())))
+                    .append(Component.literal(" | ").withStyle(ChatFormatting.DARK_GRAY))
+                    .append(Component.literal(faction).withStyle(ChatFormatting.AQUA))
+                    .append(Component.literal(" | ").withStyle(ChatFormatting.DARK_GRAY))
+                    .append(Component.literal(version).withStyle(ChatFormatting.GRAY));
             sendText(client, line);
         }
     }
 
-    private static Formatting roleFormatting(String role) {
+    private static ChatFormatting roleFormatting(String role) {
         return switch (cleanRole(role)) {
-            case "admin" -> Formatting.RED;
-            case "helper" -> Formatting.YELLOW;
-            case "partner" -> Formatting.AQUA;
-            case "vip" -> Formatting.DARK_PURPLE;
-            default -> Formatting.WHITE;
+            case "admin" -> ChatFormatting.RED;
+            case "helper" -> ChatFormatting.YELLOW;
+            case "partner" -> ChatFormatting.AQUA;
+            case "vip" -> ChatFormatting.DARK_PURPLE;
+            default -> ChatFormatting.WHITE;
         };
     }
 
@@ -884,7 +883,7 @@ public final class PingRelayClient {
         return BetterUCConfig.INSTANCE.pingRelayToken == null ? "" : BetterUCConfig.INSTANCE.pingRelayToken.trim();
     }
 
-    private static RelayPlayer findRelayPlayer(PlayerListEntry entry) {
+    private static RelayPlayer findRelayPlayer(PlayerInfo entry) {
         if (entry == null) return null;
         String name = PlayerNameUtil.resolveProfileName(entry.getProfile());
         String uuid = PlayerNameUtil.resolveProfileUuid(entry.getProfile());
@@ -916,7 +915,7 @@ public final class PingRelayClient {
                 }
             }
         }
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (connected && client != null && client.player != null
                 && normalizedName.equals(playerName(client).toLowerCase(Locale.ROOT))) {
             return new RelayPlayer(normalizedName, playerUuid(client), cleanRole(role), priorityForRole(role));
@@ -963,15 +962,15 @@ public final class PingRelayClient {
         return raw.replaceAll("[^A-Za-z0-9_-]", "").toLowerCase(Locale.ROOT);
     }
 
-    private static String playerName(MinecraftClient client) {
+    private static String playerName(Minecraft client) {
         if (client == null || client.player == null) return "unknown";
         String name = client.player.getName().getString();
         return name == null || name.isBlank() ? "unknown" : name;
     }
 
-    private static String playerUuid(MinecraftClient client) {
-        if (client == null || client.player == null || client.player.getUuid() == null) return "";
-        return client.player.getUuid().toString();
+    private static String playerUuid(Minecraft client) {
+        if (client == null || client.player == null || client.player.getUUID() == null) return "";
+        return client.player.getUUID().toString();
     }
 
     private static String modVersion() {
@@ -996,7 +995,7 @@ public final class PingRelayClient {
         return remainingMs + "ms";
     }
 
-    private static void playPingSound(MinecraftClient client, PingType type) {
+    private static void playPingSound(Minecraft client, PingType type) {
         if (!BetterUCConfig.INSTANCE.pingSoundEnabled || client == null || client.player == null) return;
         float pitch = switch (type == null ? PingType.NORMAL : type) {
             case DANGER -> 0.75F;
@@ -1006,7 +1005,7 @@ public final class PingRelayClient {
         client.player.playSound(PingSound.fromId(BetterUCConfig.INSTANCE.pingSoundId).sound(), 0.45F, pitch);
     }
 
-    private static void playPingSelectionSound(MinecraftClient client, PingType type) {
+    private static void playPingSelectionSound(Minecraft client, PingType type) {
         if (!BetterUCConfig.INSTANCE.pingSoundEnabled || client == null || client.player == null) return;
         float pitch = switch (type == null ? PingType.NORMAL : type) {
             case DANGER -> 0.95F;
@@ -1040,15 +1039,15 @@ public final class PingRelayClient {
         }
     }
 
-    private static void sendLocalMessage(MinecraftClient client, String message) {
+    private static void sendLocalMessage(Minecraft client, String message) {
         if (client != null && client.player != null) {
-            client.player.sendMessage(Text.literal("[betterUC] " + message), false);
+            client.player.sendSystemMessage(Component.literal("[betterUC] " + message));
         }
     }
 
-    private static void sendText(MinecraftClient client, Text message) {
+    private static void sendText(Minecraft client, Component message) {
         if (client != null && client.player != null && message != null) {
-            client.player.sendMessage(message, false);
+            client.player.sendSystemMessage(message);
         }
     }
 
@@ -1067,7 +1066,7 @@ public final class PingRelayClient {
     ) {
     }
 
-    private record PingTarget(Vec3d pos, String label) {
+    private record PingTarget(Vec3 pos, String label) {
     }
 
     private record RelayPlayer(String nameLower, String uuid, String role, long priority) {
@@ -1107,12 +1106,12 @@ public final class PingRelayClient {
     }
 
     private enum PingSound {
-        PLING("pling", "Pling", SoundEvents.BLOCK_NOTE_BLOCK_PLING.value()),
-        BELL("bell", "Glocke", SoundEvents.BLOCK_NOTE_BLOCK_BELL.value()),
-        CHIME("chime", "Chime", SoundEvents.BLOCK_NOTE_BLOCK_CHIME.value()),
-        BIT("bit", "Bit", SoundEvents.BLOCK_NOTE_BLOCK_BIT.value()),
-        BANJO("banjo", "Banjo", SoundEvents.BLOCK_NOTE_BLOCK_BANJO.value()),
-        COWBELL("cowbell", "Cowbell", SoundEvents.BLOCK_NOTE_BLOCK_COW_BELL.value());
+        PLING("pling", "Pling", SoundEvents.NOTE_BLOCK_PLING.value()),
+        BELL("bell", "Glocke", SoundEvents.NOTE_BLOCK_BELL.value()),
+        CHIME("chime", "Chime", SoundEvents.NOTE_BLOCK_CHIME.value()),
+        BIT("bit", "Bit", SoundEvents.NOTE_BLOCK_BIT.value()),
+        BANJO("banjo", "Banjo", SoundEvents.NOTE_BLOCK_BANJO.value()),
+        COWBELL("cowbell", "Cowbell", SoundEvents.NOTE_BLOCK_COW_BELL.value());
 
         private final String id;
         private final String label;
@@ -1146,9 +1145,9 @@ public final class PingRelayClient {
     }
 
     private static final class RelayListener implements WebSocket.Listener {
-        private final MinecraftClient client;
+        private final Minecraft client;
 
-        private RelayListener(MinecraftClient client) {
+        private RelayListener(Minecraft client) {
             this.client = client;
         }
 

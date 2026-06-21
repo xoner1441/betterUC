@@ -1,11 +1,11 @@
 package com.betteruc.gui;
 
 import com.betteruc.config.BetterUCConfig;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.SliderWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.AbstractSliderButton;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 public class ColorPickerScreen extends Screen {
 
@@ -34,7 +34,7 @@ public class ColorPickerScreen extends Screen {
             ColorApplyTarget applyTarget,
             boolean forceOpaqueAlpha
     ) {
-        super(Text.literal(title));
+        super(Component.literal(title));
         this.parent = parent;
         this.headingText = headingText;
         this.applyTarget = applyTarget;
@@ -49,10 +49,10 @@ public class ColorPickerScreen extends Screen {
         int cx = width / 2;
         int cy = height / 2;
 
-        SliderWidget rSlider = new SliderWidget(cx - 100, cy - 38, 200, 20, Text.literal("Rot: " + r), r / 255.0) {
+        AbstractSliderButton rSlider = new AbstractSliderButton(cx - 100, cy - 38, 200, 20, Component.literal("Rot: " + r), r / 255.0) {
             @Override
             protected void updateMessage() {
-                setMessage(Text.literal("Rot: " + (int) (value * 255)));
+                setMessage(Component.literal("Rot: " + (int) (value * 255)));
             }
 
             @Override
@@ -60,10 +60,10 @@ public class ColorPickerScreen extends Screen {
                 r = (int) (value * 255);
             }
         };
-        SliderWidget gSlider = new SliderWidget(cx - 100, cy - 13, 200, 20, Text.literal("Gruen: " + g), g / 255.0) {
+        AbstractSliderButton gSlider = new AbstractSliderButton(cx - 100, cy - 13, 200, 20, Component.literal("Gruen: " + g), g / 255.0) {
             @Override
             protected void updateMessage() {
-                setMessage(Text.literal("Gruen: " + (int) (value * 255)));
+                setMessage(Component.literal("Gruen: " + (int) (value * 255)));
             }
 
             @Override
@@ -71,10 +71,10 @@ public class ColorPickerScreen extends Screen {
                 g = (int) (value * 255);
             }
         };
-        SliderWidget bSlider = new SliderWidget(cx - 100, cy + 12, 200, 20, Text.literal("Blau: " + b), b / 255.0) {
+        AbstractSliderButton bSlider = new AbstractSliderButton(cx - 100, cy + 12, 200, 20, Component.literal("Blau: " + b), b / 255.0) {
             @Override
             protected void updateMessage() {
-                setMessage(Text.literal("Blau: " + (int) (value * 255)));
+                setMessage(Component.literal("Blau: " + (int) (value * 255)));
             }
 
             @Override
@@ -83,51 +83,51 @@ public class ColorPickerScreen extends Screen {
             }
         };
 
-        addDrawableChild(rSlider);
-        addDrawableChild(gSlider);
-        addDrawableChild(bSlider);
+        addRenderableWidget(rSlider);
+        addRenderableWidget(gSlider);
+        addRenderableWidget(bSlider);
 
         int[] presets = {0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 0xFF00FF, 0x00FFFF, 0xFFFFFF, 0xFFA500};
         for (int i = 0; i < presets.length; i++) {
             final int color = presets[i];
             int px = cx - 80 + (i * 22);
-            addDrawableChild(ButtonWidget.builder(Text.literal(" "), btn -> applyPreset(color))
-                    .dimensions(px, cy + 37, 18, 18).build());
+            addRenderableWidget(Button.builder(Component.literal(" "), btn -> applyPreset(color))
+                    .bounds(px, cy + 37, 18, 18).build());
         }
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("\u2714 Uebernehmen"), widget -> {
+        addRenderableWidget(Button.builder(Component.literal("\u2714 Uebernehmen"), widget -> {
             int color = (r << 16) | (g << 8) | b;
             if (forceOpaqueAlpha) {
                 color |= 0xFF000000;
             }
             applyTarget.apply(color);
             BetterUCConfig.save();
-            if (client != null) client.setScreen(parent);
-        }).dimensions(cx - 80, cy + 62, 160, 20).build());
+            if (minecraft != null) minecraft.setScreen(parent);
+        }).bounds(cx - 80, cy + 62, 160, 20).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Abbrechen"), widget -> {
-            if (client != null) client.setScreen(parent);
-        }).dimensions(cx - 40, cy + 87, 80, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Abbrechen"), widget -> {
+            if (minecraft != null) minecraft.setScreen(parent);
+        }).bounds(cx - 40, cy + 87, 80, 20).build());
     }
 
     private void applyPreset(int color) {
         r = (color >> 16) & 0xFF;
         g = (color >> 8) & 0xFF;
         b = color & 0xFF;
-        clearChildren();
+        clearWidgets();
         init();
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        super.extractRenderState(context, mouseX, mouseY, delta);
 
         int cx = width / 2;
         int cy = height / 2;
 
-        context.drawCenteredTextWithShadow(
-                textRenderer,
-                Text.literal(headingText),
+        context.centeredText(
+                font,
+                Component.literal(headingText),
                 cx,
                 cy - 85,
                 0xFFFFFF
@@ -136,9 +136,9 @@ public class ColorPickerScreen extends Screen {
         int previewColor = (r << 16) | (g << 8) | b;
         context.fill(cx - 31, cy - 69, cx + 31, cy - 53, 0xFF444444);
         context.fill(cx - 30, cy - 68, cx + 30, cy - 54, 0xFF000000 | previewColor);
-        context.drawCenteredTextWithShadow(
-                textRenderer,
-                Text.literal(String.format("#%02X%02X%02X", r, g, b)),
+        context.centeredText(
+                font,
+                Component.literal(String.format("#%02X%02X%02X", r, g, b)),
                 cx,
                 cy - 50,
                 0xAAAAAA
@@ -152,7 +152,7 @@ public class ColorPickerScreen extends Screen {
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 }

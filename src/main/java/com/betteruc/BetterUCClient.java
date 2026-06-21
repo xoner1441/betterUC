@@ -1,5 +1,6 @@
 package com.betteruc;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -33,22 +34,21 @@ import com.betteruc.hud.PlantageHud;
 import com.betteruc.hud.PotionEffectsHud;
 import com.betteruc.hud.ToggleSprintHud;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.TitleScreen;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -72,23 +72,23 @@ public class BetterUCClient implements ClientModInitializer {
     private static final long BLINFO_CACHE_MAX_AGE_MS = 20_000L;
     private static final long BLINFO_TIMEOUT_MS = 5000L;
     private static final long PING_WHEEL_HOLD_MS = 250L;
-    private static final KeyBinding.Category BETTERUC_KEY_CATEGORY =
-            KeyBinding.Category.create(Identifier.of("betteruc", "controls"));
-    private static final KeyBinding SETTINGS_KEY = new KeyBinding(
+    private static final KeyMapping.Category BETTERUC_KEY_CATEGORY =
+            KeyMapping.Category.register(Identifier.fromNamespaceAndPath("betteruc", "controls"));
+    private static final KeyMapping SETTINGS_KEY = new KeyMapping(
             "key.betteruc.settings",
-            InputUtil.Type.KEYSYM,
+            InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_N,
             BETTERUC_KEY_CATEGORY
     );
-    private static final KeyBinding COMMANDS_KEY = new KeyBinding(
+    private static final KeyMapping COMMANDS_KEY = new KeyMapping(
             "key.betteruc.commands",
-            InputUtil.Type.KEYSYM,
+            InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_M,
             BETTERUC_KEY_CATEGORY
     );
-    private static final KeyBinding PING_KEY = new KeyBinding(
+    private static final KeyMapping PING_KEY = new KeyMapping(
             "key.betteruc.ping",
-            InputUtil.Type.MOUSE,
+            InputConstants.Type.MOUSE,
             GLFW.GLFW_MOUSE_BUTTON_3,
             BETTERUC_KEY_CATEGORY
     );
@@ -126,15 +126,15 @@ public class BetterUCClient implements ClientModInitializer {
         return Math.max(MIN_PRICE, Math.min(value, MAX_PRICE));
     }
 
-    private boolean ensureAllowedServerForManualCommand(MinecraftClient client) {
+    private boolean ensureAllowedServerForManualCommand(Minecraft client) {
         return ServerCommandUtil.ensureAllowedServerForManualCommand(client);
     }
 
-    private boolean sendServerCommand(MinecraftClient client, String command) {
+    private boolean sendServerCommand(Minecraft client, String command) {
         return sendServerCommand(client, command, false);
     }
 
-    private boolean sendServerCommand(MinecraftClient client, String command, boolean notifyIfBlocked) {
+    private boolean sendServerCommand(Minecraft client, String command, boolean notifyIfBlocked) {
         return ServerCommandUtil.send(client, command, notifyIfBlocked);
     }
 
@@ -150,7 +150,7 @@ public class BetterUCClient implements ClientModInitializer {
     public void onInitializeClient() {
         BetterUCConfig.load();
         BetterUCFontManager.initialize();
-        registerKeyBindings();
+        registerKeyMappings();
         registerHudElements();
         registerConnectionEvents();
         registerClientCommands();
@@ -158,10 +158,10 @@ public class BetterUCClient implements ClientModInitializer {
         registerTickEvents();
     }
 
-    private void registerKeyBindings() {
-        KeyBindingHelper.registerKeyBinding(SETTINGS_KEY);
-        KeyBindingHelper.registerKeyBinding(COMMANDS_KEY);
-        KeyBindingHelper.registerKeyBinding(PING_KEY);
+    private void registerKeyMappings() {
+        KeyMappingHelper.registerKeyMapping(SETTINGS_KEY);
+        KeyMappingHelper.registerKeyMapping(COMMANDS_KEY);
+        KeyMappingHelper.registerKeyMapping(PING_KEY);
     }
 
     private void registerMessageEvents() {
@@ -211,7 +211,7 @@ public class BetterUCClient implements ClientModInitializer {
     private void registerClientCommands() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             SuggestionProvider<FabricClientCommandSource> playerSuggestions =
-                    (ctx, builder) -> CommandSource.suggestMatching(collectSuggestedPlayerNames(), builder);
+                    (ctx, builder) -> SharedSuggestionProvider.suggest(collectSuggestedPlayerNames(), builder);
             SuggestionProvider<FabricClientCommandSource> reasonSuggestions =
                     (ctx, builder) -> {
                         BetterUCConfig.INSTANCE.blReasons.keySet().forEach(builder::suggest);
@@ -238,10 +238,10 @@ public class BetterUCClient implements ClientModInitializer {
 
     private LinkedHashSet<String> collectSuggestedPlayerNames() {
         LinkedHashSet<String> names = new LinkedHashSet<>();
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
 
-        if (client.getNetworkHandler() != null) {
-            for (PlayerListEntry entry : client.getNetworkHandler().getPlayerList()) {
+        if (client.getConnection() != null) {
+            for (PlayerInfo entry : client.getConnection().getOnlinePlayers()) {
                 String name = PlayerNameUtil.resolveProfileName(entry.getProfile());
                 if (name != null && !name.isEmpty()) {
                     names.add(name);
@@ -254,11 +254,11 @@ public class BetterUCClient implements ClientModInitializer {
     }
 
     private void registerUserPanelCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
-        dispatcher.register(ClientCommandManager.literal("register")
-                .then(ClientCommandManager.argument("passwort", StringArgumentType.greedyString())
+        dispatcher.register(ClientCommands.literal("register")
+                .then(ClientCommands.argument("passwort", StringArgumentType.greedyString())
                         .executes(context -> {
                             UserPanelClient.registerPassword(
-                                    MinecraftClient.getInstance(),
+                                    Minecraft.getInstance(),
                                     StringArgumentType.getString(context, "passwort")
                             );
                             return 1;
@@ -266,18 +266,18 @@ public class BetterUCClient implements ClientModInitializer {
     }
 
     private void registerUpdateCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
-        dispatcher.register(ClientCommandManager.literal("betterucupdate")
+        dispatcher.register(ClientCommands.literal("betterucupdate")
                 .executes(context -> {
-                    VersionChecker.installLatestUpdate(MinecraftClient.getInstance(), true);
+                    VersionChecker.installLatestUpdate(Minecraft.getInstance(), true);
                     return 1;
                 }));
     }
 
     private void registerBankShortcutCommands(CommandDispatcher<FabricClientCommandSource> dispatcher) {
-        dispatcher.register(ClientCommandManager.literal("abbuchen")
-                .then(ClientCommandManager.argument("betrag", StringArgumentType.word())
+        dispatcher.register(ClientCommands.literal("abbuchen")
+                .then(ClientCommands.argument("betrag", StringArgumentType.word())
                         .executes(context -> {
-                            MinecraftClient client = MinecraftClient.getInstance();
+                            Minecraft client = Minecraft.getInstance();
                             if (client.player == null) return 0;
                             if (!ensureAllowedServerForManualCommand(client)) return 0;
 
@@ -288,17 +288,17 @@ public class BetterUCClient implements ClientModInitializer {
     }
 
     private void registerAutoDropDrinkCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
-        dispatcher.register(ClientCommandManager.literal("adropdrink")
+        dispatcher.register(ClientCommands.literal("adropdrink")
                 .executes(context -> {
-                    AutoDropDrinkClient.start(MinecraftClient.getInstance());
+                    AutoDropDrinkClient.start(Minecraft.getInstance());
                     return 1;
                 }));
     }
 
     private void registerBetterUcOnlineCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
-        dispatcher.register(ClientCommandManager.literal("buonline")
+        dispatcher.register(ClientCommands.literal("buonline")
                 .executes(context -> {
-                    PingRelayClient.showOnlineCommandList(MinecraftClient.getInstance());
+                    PingRelayClient.showOnlineCommandList(Minecraft.getInstance());
                     return 1;
                 }));
     }
@@ -309,13 +309,13 @@ public class BetterUCClient implements ClientModInitializer {
             SuggestionProvider<FabricClientCommandSource> reasonSuggestions
     ) {
         for (String commandName : new String[]{"blset", "setbl"}) {
-            dispatcher.register(ClientCommandManager.literal(commandName)
-                    .then(ClientCommandManager.argument("spieler", StringArgumentType.word())
+            dispatcher.register(ClientCommands.literal(commandName)
+                    .then(ClientCommands.argument("spieler", StringArgumentType.word())
                             .suggests(playerSuggestions)
-                            .then(ClientCommandManager.argument("grund", StringArgumentType.word())
+                            .then(ClientCommands.argument("grund", StringArgumentType.word())
                                     .suggests(reasonSuggestions)
                                     .executes(context -> {
-                                        MinecraftClient client = MinecraftClient.getInstance();
+                                        Minecraft client = Minecraft.getInstance();
                                         if (client.player == null) return 0;
                                         if (!ensureAllowedServerForManualCommand(client)) return 0;
 
@@ -323,11 +323,11 @@ public class BetterUCClient implements ClientModInitializer {
                                         String grundInput = StringArgumentType.getString(context, "grund");
                                         MatchedReason matched = findBlacklistReason(grundInput);
                                         if (matched == null) {
-                                            client.player.sendMessage(Text.literal(
+                                            client.player.sendSystemMessage(Component.literal(
                                                     "\u00A7cUnbekannter Grund: \u00A7f" + grundInput
                                                             + " \u00A77| Verfuegbar: \u00A7f"
                                                             + String.join(", ", BetterUCConfig.INSTANCE.blReasons.keySet())
-                                            ), false);
+                                            ));
                                             return 0;
                                         }
 
@@ -338,12 +338,12 @@ public class BetterUCClient implements ClientModInitializer {
 
                                         sendServerCommand(client, cmd);
                                         applyLocalBlacklistUpsert(spieler, cappedKills, cappedPrice, matched.key);
-                                        client.player.sendMessage(Text.literal(
+                                        client.player.sendSystemMessage(Component.literal(
                                                 "\u00A7a[OK] BL: \u00A7f" + spieler
                                                         + " \u00A77| \u00A7e" + cappedKills + " Kills"
                                                         + " \u00A77| \u00A7a" + cappedPrice + "$"
                                                         + " \u00A77| \u00A7f" + matched.key
-                                        ), false);
+                                        ));
                                         return 1;
                                     }))));
         }
@@ -354,13 +354,13 @@ public class BetterUCClient implements ClientModInitializer {
             SuggestionProvider<FabricClientCommandSource> playerSuggestions,
             SuggestionProvider<FabricClientCommandSource> modBlReasonSuggestions
     ) {
-        dispatcher.register(ClientCommandManager.literal("modbl")
-                .then(ClientCommandManager.argument("spieler", StringArgumentType.word())
+        dispatcher.register(ClientCommands.literal("modbl")
+                .then(ClientCommands.argument("spieler", StringArgumentType.word())
                         .suggests(playerSuggestions)
-                        .then(ClientCommandManager.argument("neuergrund", StringArgumentType.word())
+                        .then(ClientCommands.argument("neuergrund", StringArgumentType.word())
                                 .suggests(modBlReasonSuggestions)
                                 .executes(context -> {
-                                    MinecraftClient client = MinecraftClient.getInstance();
+                                    Minecraft client = Minecraft.getInstance();
                                     if (client.player == null) return 0;
 
                                     String spieler = StringArgumentType.getString(context, "spieler");
@@ -373,11 +373,11 @@ public class BetterUCClient implements ClientModInitializer {
             CommandDispatcher<FabricClientCommandSource> dispatcher,
             SuggestionProvider<FabricClientCommandSource> playerSuggestions
     ) {
-        dispatcher.register(ClientCommandManager.literal("blinfo")
-                .then(ClientCommandManager.argument("spieler", StringArgumentType.word())
+        dispatcher.register(ClientCommands.literal("blinfo")
+                .then(ClientCommands.argument("spieler", StringArgumentType.word())
                         .suggests(playerSuggestions)
                         .executes(context -> {
-                            MinecraftClient client = MinecraftClient.getInstance();
+                            Minecraft client = Minecraft.getInstance();
                             if (client.player == null) return 0;
 
                             String spieler = StringArgumentType.getString(context, "spieler");
@@ -389,10 +389,10 @@ public class BetterUCClient implements ClientModInitializer {
             CommandDispatcher<FabricClientCommandSource> dispatcher,
             SuggestionProvider<FabricClientCommandSource> playerSuggestions
     ) {
-        dispatcher.register(ClientCommandManager.literal("setrp")
-                .then(ClientCommandManager.argument("spieler", StringArgumentType.word())
+        dispatcher.register(ClientCommands.literal("setrp")
+                .then(ClientCommands.argument("spieler", StringArgumentType.word())
                         .suggests(playerSuggestions)
-                        .then(ClientCommandManager.argument("stufe", IntegerArgumentType.integer(1, 3))
+                        .then(ClientCommands.argument("stufe", IntegerArgumentType.integer(1, 3))
                                 .suggests((ctx, builder) -> {
                                     builder.suggest(1);
                                     builder.suggest(2);
@@ -400,7 +400,7 @@ public class BetterUCClient implements ClientModInitializer {
                                     return builder.buildFuture();
                                 })
                                 .executes(context -> {
-                                    MinecraftClient client = MinecraftClient.getInstance();
+                                    Minecraft client = Minecraft.getInstance();
                                     if (client.player == null) return 0;
 
                                     String spieler = StringArgumentType.getString(context, "spieler");
@@ -409,12 +409,12 @@ public class BetterUCClient implements ClientModInitializer {
                                 }))));
     }
 
-    private int executeBlacklistInfo(MinecraftClient client, String spieler) {
+    private int executeBlacklistInfo(Minecraft client, String spieler) {
         if (client.player == null) return 0;
         if (!ensureAllowedServerForManualCommand(client)) return 0;
 
         if (!isValidPlayerName(spieler)) {
-            client.player.sendMessage(Text.literal("\u00A7cUngueltiger Spielername: \u00A7f" + spieler), false);
+            client.player.sendSystemMessage(Component.literal("\u00A7cUngueltiger Spielername: \u00A7f" + spieler));
             return 0;
         }
 
@@ -424,9 +424,9 @@ public class BetterUCClient implements ClientModInitializer {
             return 1;
         }
 
-        client.player.sendMessage(Text.literal(
+        client.player.sendSystemMessage(Component.literal(
                 "\u00A77Suche Blacklist-Eintrag für \u00A7f" + requestedName + "\u00A77..."
-        ), false);
+        ));
 
         BetterUCSuppressFlags.beginBlacklistInfoLookup(requestedName);
         BetterUCSuppressFlags.suppressModBlOutput = true;
@@ -437,7 +437,7 @@ public class BetterUCClient implements ClientModInitializer {
         return 1;
     }
 
-    private int executeModBl(MinecraftClient client, String spieler, String neuerGrund) {
+    private int executeModBl(Minecraft client, String spieler, String neuerGrund) {
         if (client.player == null) return 0;
         if (!ensureAllowedServerForManualCommand(client)) return 0;
 
@@ -446,17 +446,17 @@ public class BetterUCClient implements ClientModInitializer {
         if (!isVogelfreiFlag) {
             matched = findBlacklistReason(neuerGrund);
             if (matched == null) {
-                client.player.sendMessage(Text.literal(
+                client.player.sendSystemMessage(Component.literal(
                         "\u00A7cUnbekannter Grund: \u00A7f" + neuerGrund
                                 + " \u00A77| Verfuegbar: \u00A7f"
                                 + String.join(", ", BetterUCConfig.INSTANCE.blReasons.keySet()) + ", Vogelfrei"
-                ), false);
+                ));
                 return 0;
             }
         }
 
         MatchedReason finalMatched = matched;
-        client.player.sendMessage(Text.literal("\u00A77Lade Blacklist für \u00A7f" + spieler + "\u00A77..."), false);
+        client.player.sendSystemMessage(Component.literal("\u00A77Lade Blacklist für \u00A7f" + spieler + "\u00A77..."));
 
         BetterUCSuppressFlags.suppressModBlOutput = true;
         BetterUCSuppressFlags.modBlCallback = () -> applyModBlFromLoadedData(client, spieler, isVogelfreiFlag, finalMatched);
@@ -466,17 +466,17 @@ public class BetterUCClient implements ClientModInitializer {
         return 1;
     }
 
-    private int executeSetRp(MinecraftClient client, String spieler, int stufe) {
+    private int executeSetRp(Minecraft client, String spieler, int stufe) {
         if (client.player == null) return 0;
         if (!ensureAllowedServerForManualCommand(client)) return 0;
         if (stufe < 1 || stufe > 3) {
-            client.player.sendMessage(Text.literal("\u00A7cRP-Stufe muss zwischen 1 und 3 liegen!"), false);
+            client.player.sendSystemMessage(Component.literal("\u00A7cRP-Stufe muss zwischen 1 und 3 liegen!"));
             return 0;
         }
 
-        client.player.sendMessage(Text.literal(
+        client.player.sendSystemMessage(Component.literal(
                 "\u00A77Lade Blacklist für \u00A7f" + spieler + "\u00A77 (RP " + stufe + "/3)..."
-        ), false);
+        ));
 
         BetterUCSuppressFlags.suppressModBlOutput = true;
         BetterUCSuppressFlags.modBlCallback = () -> applySetRpFromLoadedData(client, spieler, stufe);
@@ -486,13 +486,13 @@ public class BetterUCClient implements ClientModInitializer {
         return 1;
     }
 
-    private void applySetRpFromLoadedData(MinecraftClient client, String spieler, int stufe) {
+    private void applySetRpFromLoadedData(Minecraft client, String spieler, int stufe) {
         if (client.player == null) return;
 
         String altGrund = BetterUCConfig.INSTANCE.blacklistReasons.get(spieler);
         int[] altStats = BetterUCConfig.INSTANCE.blacklistStats.get(spieler);
         if (altGrund == null || altStats == null) {
-            client.player.sendMessage(Text.literal("\u00A7c" + spieler + " ist nicht auf der Blacklist!"), false);
+            client.player.sendSystemMessage(Component.literal("\u00A7c" + spieler + " ist nicht auf der Blacklist!"));
             return;
         }
 
@@ -529,7 +529,7 @@ public class BetterUCClient implements ClientModInitializer {
     }
 
     private void applyModBlFromLoadedData(
-            MinecraftClient client,
+            Minecraft client,
             String spieler,
             boolean isVogelfreiFlag,
             MatchedReason matched
@@ -539,7 +539,7 @@ public class BetterUCClient implements ClientModInitializer {
         String altGrund = BetterUCConfig.INSTANCE.blacklistReasons.get(spieler);
         int[] altStats = BetterUCConfig.INSTANCE.blacklistStats.get(spieler);
         if (altGrund == null || altStats == null) {
-            client.player.sendMessage(Text.literal("\u00A7c" + spieler + " ist nicht auf der Blacklist!"), false);
+            client.player.sendSystemMessage(Component.literal("\u00A7c" + spieler + " ist nicht auf der Blacklist!"));
             return;
         }
 
@@ -578,7 +578,7 @@ public class BetterUCClient implements ClientModInitializer {
             String altGrund,
             boolean isVogelfreiFlag,
             String newReasonKey,
-            MinecraftClient client
+            Minecraft client
     ) {
         LinkedHashSet<String> grundTeile = extractReasonPartsWithoutRpAndVogelfrei(altGrund);
         String rpStageToken = extractRpStageToken(altGrund);
@@ -587,7 +587,7 @@ public class BetterUCClient implements ClientModInitializer {
         if (isVogelfreiFlag) {
             if (altHatVogelfrei) {
                 if (client.player != null) {
-                    client.player.sendMessage(Text.literal("\u00A7e" + spieler + " hat bereits (Vogelfrei)!"), false);
+                    client.player.sendSystemMessage(Component.literal("\u00A7e" + spieler + " hat bereits (Vogelfrei)!"));
                 }
             }
             return formatBlacklistReason(grundTeile, rpStageToken, true);
@@ -642,7 +642,7 @@ public class BetterUCClient implements ClientModInitializer {
     }
 
     private void sendUpdatedBlacklistEntry(
-            MinecraftClient client,
+            Minecraft client,
             String spieler,
             String altGrund,
             int[] altStats,
@@ -659,16 +659,16 @@ public class BetterUCClient implements ClientModInitializer {
         sendServerCommand(client, cmd);
         applyLocalBlacklistUpsert(spieler, finalKills, finalPreis, kombinierterGrund);
         BetterUCSuppressFlags.clearPendingModBlReadd(spieler);
-        client.player.sendMessage(Text.literal(
+        client.player.sendSystemMessage(Component.literal(
                 "\u00A7a[OK] BL-Mod: \u00A7f" + spieler
                         + "\n\u00A77Alt: \u00A7e" + altStats[0] + " Kills \u00A77| \u00A7a" + altStats[1] + "$ \u00A77| \u00A7f" + altGrund
                         + "\n\u00A77Neu: \u00A7e" + finalKills + " Kills \u00A77| \u00A7a" + finalPreis + "$ \u00A77| \u00A7f" + kombinierterGrund
-        ), false);
+        ));
         BetterUCMod.LOGGER.info("modbl: /{}", cmd);
     }
 
     private void sendSetRpUpdatedEntry(
-            MinecraftClient client,
+            Minecraft client,
             String spieler,
             String altGrund,
             int[] altStats,
@@ -684,23 +684,23 @@ public class BetterUCClient implements ClientModInitializer {
         applyLocalBlacklistUpsert(spieler, finalKills, finalPreis, neuerGrund);
         BetterUCSuppressFlags.clearPendingModBlReadd(spieler);
 
-        client.player.sendMessage(Text.literal(
+        client.player.sendSystemMessage(Component.literal(
                 "\u00A7a[OK] RP-Set: \u00A7f" + spieler
                         + "\n\u00A77Alt: \u00A7e" + altStats[0] + " Kills \u00A77| \u00A7a" + altStats[1] + "$ \u00A77| \u00A7f" + altGrund
                         + "\n\u00A77Neu: \u00A7e" + finalKills + " Kills \u00A77| \u00A7a" + finalPreis + "$ \u00A77| \u00A7f" + neuerGrund
-        ), false);
+        ));
         BetterUCMod.LOGGER.info("setrp: /{}", cmd);
     }
 
-    private void showBlacklistInfoFromLoadedData(MinecraftClient client, String spieler) {
+    private void showBlacklistInfoFromLoadedData(Minecraft client, String spieler) {
         if (client.player == null) return;
 
         String storedName = findStoredBlacklistName(spieler);
         if (storedName == null) {
             BetterUCSuppressFlags.clearBlacklistInfoLookup();
-            client.player.sendMessage(Text.literal(
+            client.player.sendSystemMessage(Component.literal(
                     "\u00A7cKein Blacklist-Eintrag für \u00A7f" + spieler + "\u00A7c gefunden."
-            ), false);
+            ));
             return;
         }
 
@@ -710,7 +710,7 @@ public class BetterUCClient implements ClientModInitializer {
         }
         BetterUCSuppressFlags.clearBlacklistInfoLookup();
         BetterUCSuppressFlags.markNextBlacklistInfoLocalMessageBypass();
-        client.player.sendMessage(buildBlacklistInfoText(storedName, rest), false);
+        client.player.sendSystemMessage(buildBlacklistInfoText(storedName, rest));
     }
 
     private boolean isFreshBlacklistCacheAvailable() {
@@ -760,14 +760,14 @@ public class BetterUCClient implements ClientModInitializer {
         return "";
     }
 
-    private Text buildBlacklistInfoText(String name, String rest) {
-        MutableText line = Text.literal("\u00A77\u00BB \u00A7a" + name);
+    private Component buildBlacklistInfoText(String name, String rest) {
+        MutableComponent line = Component.literal("\u00A77\u00BB \u00A7a" + name);
         if (rest == null || rest.isBlank()) return line;
 
         for (String segment : rest.split("\\|", -1)) {
             String cleaned = segment.trim();
             if (!cleaned.isEmpty()) {
-                line.append(Text.literal(" \u00A77| \u00A7a" + cleaned));
+                line.append(Component.literal(" \u00A77| \u00A7a" + cleaned));
             }
         }
         return line;
@@ -826,11 +826,11 @@ public class BetterUCClient implements ClientModInitializer {
         return name == null ? "" : name.trim().toLowerCase(Locale.ROOT);
     }
 
-    private void startBlacklistLoadTimeoutFallback(MinecraftClient client, String label) {
+    private void startBlacklistLoadTimeoutFallback(Minecraft client, String label) {
         startBlacklistLoadTimeoutFallback(client, label, 1500L);
     }
 
-    private void startBlacklistLoadTimeoutFallback(MinecraftClient client, String label, long delayMs) {
+    private void startBlacklistLoadTimeoutFallback(Minecraft client, String label, long delayMs) {
         runDelayedOnClient(client, delayMs, () -> {
             if (BetterUCSuppressFlags.modBlCallback == null) return;
             BetterUCMod.LOGGER.info("{}: Blacklist-Load Timeout-Fallback ausgeloest", label);
@@ -934,7 +934,7 @@ public class BetterUCClient implements ClientModInitializer {
         return parts;
     }
 
-    private void runDelayedOnClient(MinecraftClient client, long delayMs, Runnable task) {
+    private void runDelayedOnClient(Minecraft client, long delayMs, Runnable task) {
         ClientScheduler.runDelayedOnClient(client, delayMs, task);
     }
 
@@ -957,9 +957,9 @@ public class BetterUCClient implements ClientModInitializer {
         });
     }
 
-    private void maybeOpenWelcomeChangelog(MinecraftClient client) {
+    private void maybeOpenWelcomeChangelog(Minecraft client) {
         if (welcomeChangelogChecked || client == null) return;
-        if (!(client.currentScreen instanceof TitleScreen)) return;
+        if (!(client.screen instanceof TitleScreen)) return;
 
         String currentVersion = currentModVersion();
         if (BetterUCConfig.hasSeenWelcomeChangelog(currentVersion)) {
@@ -969,7 +969,7 @@ public class BetterUCClient implements ClientModInitializer {
 
         welcomeChangelogChecked = true;
         BetterUCConfig.markWelcomeChangelogSeen(currentVersion);
-        client.setScreen(new ChangelogScreen(client.currentScreen, true));
+        client.setScreen(new ChangelogScreen(client.screen, true));
     }
 
     private static String currentModVersion() {
@@ -979,7 +979,7 @@ public class BetterUCClient implements ClientModInitializer {
                 .orElse("dev");
     }
 
-    private void tickStatsOnJoin(MinecraftClient client) {
+    private void tickStatsOnJoin(Minecraft client) {
         if (!ServerGate.isAllowedServer(client)) return;
         if (statsOnJoinDelay == 0) {
             if (!ServerCommandUtil.isAutomaticSendReady(client)) return;
@@ -995,30 +995,30 @@ public class BetterUCClient implements ClientModInitializer {
         }
     }
 
-    private void handleScreenHotkeys(MinecraftClient client) {
-        while (SETTINGS_KEY.wasPressed()) {
-            if (client.currentScreen == null) {
+    private void handleScreenHotkeys(Minecraft client) {
+        while (SETTINGS_KEY.consumeClick()) {
+            if (client.screen == null) {
                 client.setScreen(new BetterUCScreen());
             }
         }
 
-        while (COMMANDS_KEY.wasPressed()) {
-            if (client.currentScreen == null) {
+        while (COMMANDS_KEY.consumeClick()) {
+            if (client.screen == null) {
                 client.setScreen(new CommandGui());
             }
         }
     }
 
-    private void handlePingHotkey(MinecraftClient client) {
+    private void handlePingHotkey(Minecraft client) {
         boolean queuedPress = false;
-        while (PING_KEY.wasPressed()) {
+        while (PING_KEY.consumeClick()) {
             queuedPress = true;
         }
 
-        if (client.currentScreen instanceof PingWheelScreen) return;
+        if (client.screen instanceof PingWheelScreen) return;
 
-        boolean down = PING_KEY.isPressed();
-        if (client.currentScreen != null) {
+        boolean down = PING_KEY.isDown();
+        if (client.screen != null) {
             pingKeyWasDown = down;
             pingWheelOpenedForPress = false;
             return;
@@ -1060,8 +1060,8 @@ public class BetterUCClient implements ClientModInitializer {
         pingWheelOpenedForPress = false;
     }
 
-    private void handleConfiguredHotkeys(MinecraftClient client) {
-        if (client.player == null || client.currentScreen != null) return;
+    private void handleConfiguredHotkeys(Minecraft client) {
+        if (client.player == null || client.screen != null) return;
 
         List<BetterUCConfig.HotkeyCommand> hotkeys = BetterUCConfig.INSTANCE.hotkeyCommands;
         if (hotkeys == null || hotkeys.isEmpty()) {
@@ -1079,7 +1079,7 @@ public class BetterUCClient implements ClientModInitializer {
             if (command.isEmpty()) continue;
 
             activeHotkeyKeys.add(keyCode);
-            boolean isDown = GLFW.glfwGetKey(client.getWindow().getHandle(), keyCode) == GLFW.GLFW_PRESS;
+            boolean isDown = GLFW.glfwGetKey(client.getWindow().handle(), keyCode) == GLFW.GLFW_PRESS;
             boolean wasDown = hotkeyPressedState.getOrDefault(keyCode, false);
 
             if (isDown && !wasDown) {
@@ -1094,7 +1094,7 @@ public class BetterUCClient implements ClientModInitializer {
         hotkeyPressedState.keySet().removeIf(k -> !activeHotkeyKeys.contains(k));
     }
 
-    private void resetRuntimeState(MinecraftClient client) {
+    private void resetRuntimeState(Minecraft client) {
         BetterUCConfig.clearChatBlacklistRuntime();
         statsOnJoinDelay = -1;
         hotkeyPressedState.clear();

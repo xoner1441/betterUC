@@ -29,6 +29,7 @@ const UPDATE_CHANNEL_NAME = clean(process.env.DISCORD_UPDATE_CHANNEL_NAME) || "u
 const RELEASE_REPO = clean(process.env.DISCORD_RELEASE_REPO) || "xoner1441/betterUC";
 const RELEASE_CHECK_MS = Math.max(5 * 60 * 1000, Number(process.env.DISCORD_RELEASE_CHECK_MS || 15 * 60 * 1000));
 const ANNOUNCE_EXISTING_RELEASE = String(process.env.DISCORD_ANNOUNCE_EXISTING_RELEASE || "false").toLowerCase() === "true";
+const PUBLIC_DOWNLOAD_URL = clean(process.env.PUBLIC_DOWNLOAD_URL) || "https://betteruc.de/download";
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 const BOT_STATE_FILE = process.env.DISCORD_BOT_STATE_FILE || path.join(DATA_DIR, "discord-bot-state.json");
 
@@ -175,10 +176,10 @@ function buildCommands() {
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
       .addSubcommand(subcommand => subcommand
         .setName("check")
-        .setDescription("Prueft, ob ein neues GitHub-Release existiert."))
+        .setDescription("Prueft, ob ein neues betterUC-Release existiert."))
       .addSubcommand(subcommand => subcommand
         .setName("post_latest")
-        .setDescription("Postet das aktuelle GitHub-Release erneut in den Update-Channel.")),
+        .setDescription("Postet das aktuelle betterUC-Release erneut in den Update-Channel.")),
     new SlashCommandBuilder()
       .setName("code")
       .setDescription("Access-Codes ueber Discord verwalten.")
@@ -291,7 +292,7 @@ function trimText(value, maxLength = 900) {
 
 function releaseEmbed(release) {
   const tag = display(release.tag_name || release.name, "neues Release");
-  const url = release.html_url || `https://github.com/${RELEASE_REPO}/releases`;
+  const url = PUBLIC_DOWNLOAD_URL;
   const body = trimText(release.body || "Keine Release Notes hinterlegt.");
   return new EmbedBuilder()
     .setTitle(`betterUC ${tag} ist verfügbar`)

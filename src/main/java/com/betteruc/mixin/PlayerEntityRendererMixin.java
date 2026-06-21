@@ -2,24 +2,24 @@ package com.betteruc.mixin;
 
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.config.BetterUCConfig;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.render.command.OrderedRenderCommandQueue;
-import net.minecraft.client.render.entity.PlayerEntityRenderer;
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
-import net.minecraft.client.render.state.CameraRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.player.AvatarRenderer;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(PlayerEntityRenderer.class)
+@Mixin(AvatarRenderer.class)
 public class PlayerEntityRendererMixin {
     private static final double BETTERUC_LABEL_MAX_DISTANCE_SQ = 48.0D * 48.0D;
     private static final float BETTERUC_LABEL_SCALE = 0.65F;
@@ -28,28 +28,28 @@ public class PlayerEntityRendererMixin {
     private static final boolean UNIQUE_CLIENT_LOADED = detectUniqueClient();
 
     @Inject(
-            method = "renderLabelIfPresent(Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;Lnet/minecraft/client/render/state/CameraRenderState;)V",
+            method = "submitNameDisplay(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
             at = @At("TAIL")
     )
     private void betteruc$renderRoleLabel(
-            PlayerEntityRenderState state,
-            MatrixStack matrices,
-            OrderedRenderCommandQueue queue,
+            AvatarRenderState state,
+            PoseStack matrices,
+            SubmitNodeCollector queue,
             CameraRenderState cameraState,
             CallbackInfo ci
     ) {
         if (!BetterUCConfig.INSTANCE.showRoleHolograms) return;
-        if (state == null || state.nameLabelPos == null) return;
-        if (state.squaredDistanceToCamera > BETTERUC_LABEL_MAX_DISTANCE_SQ) return;
+        if (state == null || state.nameTagAttachment == null) return;
+        if (state.distanceToCameraSq > BETTERUC_LABEL_MAX_DISTANCE_SQ) return;
 
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client == null || client.world == null) return;
+        Minecraft client = Minecraft.getInstance();
+        if (client == null || client.level == null) return;
 
-        Entity entity = client.world.getEntityById(state.id);
+        Entity entity = client.level.getEntity(state.id);
         if (entity == null) return;
 
         String name = entity.getName().getString();
-        String uuid = entity.getUuidAsString();
+        String uuid = entity.getStringUUID();
         String label = PingRelayClient.roleNameTagForPlayer(name, uuid);
         if (label.isBlank()) return;
 
@@ -57,40 +57,40 @@ public class PlayerEntityRendererMixin {
         boolean helper = PingRelayClient.isHelperPlayer(name, uuid);
         boolean partner = PingRelayClient.isPartnerPlayer(name, uuid);
         boolean vip = PingRelayClient.isVipPlayer(name, uuid);
-        Text text = Text.literal("betterUC ").formatted(Formatting.GRAY)
-                .append(Text.literal(label).formatted(roleColor(admin, helper, partner, vip), Formatting.BOLD));
+        Component text = Component.literal("betterUC ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(label).withStyle(roleColor(admin, helper, partner, vip), ChatFormatting.BOLD));
 
-        TextRenderer textRenderer = client.textRenderer;
-        Vec3d pos = state.nameLabelPos;
-        double labelY = pos.y + 0.5D + BETTERUC_LABEL_WORLD_OFFSET + uniqueClientStackOffset() + (state.extraEars ? 0.25D : 0.0D);
+        Font textRenderer = client.font;
+        Vec3 pos = state.nameTagAttachment;
+        double labelY = pos.y + 0.5D + BETTERUC_LABEL_WORLD_OFFSET + uniqueClientStackOffset() + (state.showExtraEars ? 0.25D : 0.0D);
         float scale = 0.025F * BETTERUC_LABEL_SCALE;
-        float x = -textRenderer.getWidth(text) / 2.0F;
+        float x = -textRenderer.width(text) / 2.0F;
 
-        matrices.push();
+        matrices.pushPose();
         matrices.translate(pos.x, labelY, pos.z);
-        matrices.multiply(cameraState.orientation);
+        matrices.mulPose(cameraState.orientation);
         matrices.scale(scale, -scale, scale);
         queue.submitText(
                 matrices,
                 x,
                 0.0F,
-                text.asOrderedText(),
+                text.getVisualOrderText(),
                 false,
-                TextRenderer.TextLayerType.NORMAL,
-                state.light,
+                Font.DisplayMode.NORMAL,
+                state.lightCoords,
                 0xFFFFFFFF,
                 0,
                 0
         );
-        matrices.pop();
+        matrices.popPose();
     }
 
-    private static Formatting roleColor(boolean admin, boolean helper, boolean partner, boolean vip) {
-        if (admin) return Formatting.RED;
-        if (helper) return Formatting.YELLOW;
-        if (partner) return Formatting.AQUA;
-        if (vip) return Formatting.DARK_PURPLE;
-        return Formatting.WHITE;
+    private static ChatFormatting roleColor(boolean admin, boolean helper, boolean partner, boolean vip) {
+        if (admin) return ChatFormatting.RED;
+        if (helper) return ChatFormatting.YELLOW;
+        if (partner) return ChatFormatting.AQUA;
+        if (vip) return ChatFormatting.DARK_PURPLE;
+        return ChatFormatting.WHITE;
     }
 
     private static double uniqueClientStackOffset() {

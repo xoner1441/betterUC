@@ -1,10 +1,9 @@
 package com.betteruc.client;
 
-import net.minecraft.client.MinecraftClient;
-
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.minecraft.client.Minecraft;
 
 public final class CommunicationDeviceTracker {
     private static final Pattern BATTERY_PERCENT_PATTERN = Pattern.compile("(\\d{1,3})\\s*%");
@@ -24,7 +23,7 @@ public final class CommunicationDeviceTracker {
         lastReason = "";
     }
 
-    public static void handleChatLine(MinecraftClient client, String raw) {
+    public static void handleChatLine(Minecraft client, String raw) {
         if (raw == null || raw.isBlank()) return;
         String line = normalize(raw);
         String ownName = normalize(playerName(client));
@@ -147,7 +146,7 @@ public final class CommunicationDeviceTracker {
                 .trim();
     }
 
-    private static String playerName(MinecraftClient client) {
+    private static String playerName(Minecraft client) {
         if (client == null || client.player == null) return "";
         String name = client.player.getName().getString();
         return name == null ? "" : name;

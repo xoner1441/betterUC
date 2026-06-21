@@ -1,10 +1,9 @@
 package com.betteruc;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ServerInfo;
-
 import java.util.Locale;
 import java.util.Set;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ServerData;
 
 public final class ServerGate {
 
@@ -17,11 +16,11 @@ public final class ServerGate {
     private ServerGate() {
     }
 
-    public static boolean isAllowedServer(MinecraftClient client) {
-        if (client == null || client.getNetworkHandler() == null) return false;
-        ServerInfo info = client.getCurrentServerEntry();
-        if (info == null || info.address == null || info.address.isBlank()) return false;
-        return isAllowedAddress(info.address);
+    public static boolean isAllowedServer(Minecraft client) {
+        if (client == null || client.getConnection() == null) return false;
+        ServerData info = client.getCurrentServer();
+        if (info == null || info.ip == null || info.ip.isBlank()) return false;
+        return isAllowedAddress(info.ip);
     }
 
     public static boolean isAllowedAddress(String rawAddress) {

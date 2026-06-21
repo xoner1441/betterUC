@@ -1,9 +1,9 @@
 package com.betteruc.gui;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 public class ChangelogScreen extends Screen {
 
@@ -65,7 +65,7 @@ public class ChangelogScreen extends Screen {
                             "HUD-Positionen und Größen können in der HUD Vorschau angepasst werden",
                             "Zoom und Auto-Stats Join direkt im Settings-HUD schaltbar",
                             "Build kopiert die Mod-JAR automatisch in den Minecraft-Mods-Ordner",
-                            "Update Notify zeigt neue GitHub-Versionen direkt im Chat und kann Updates automatisch vorbereiten",
+                            "Update Notify zeigt neue betterUC-Versionen direkt im Chat und kann Updates automatisch vorbereiten",
                             "Ping Relay sendet private Markierungen an andere betterUC-Nutzer",
                             "Pingrad mit Normal-, Gefahr- und Sammeln-Pings",
                             "Eigene Pingfarben, Ping-Soundauswahl und Cooldown gegen Spam",
@@ -141,7 +141,7 @@ public class ChangelogScreen extends Screen {
     }
 
     public ChangelogScreen(Screen parent, boolean welcomeMode) {
-        super(Text.literal(welcomeMode ? "betterUC Willkommen" : "betterUC Features"));
+        super(Component.literal(welcomeMode ? "betterUC Willkommen" : "betterUC Features"));
         this.parent = parent;
         this.welcomeMode = welcomeMode;
     }
@@ -151,36 +151,36 @@ public class ChangelogScreen extends Screen {
         int centerX = width / 2;
         int navY = height - 54;
 
-        ButtonWidget previousButton = ButtonWidget.builder(Text.literal("<"), b -> {
+        Button previousButton = Button.builder(Component.literal("<"), b -> {
             if (pageIndex > 0) {
                 pageIndex--;
                 refreshWidgets();
             }
-        }).dimensions(centerX - BUTTON_W / 2 - 28, navY, 24, BUTTON_H).build();
+        }).bounds(centerX - BUTTON_W / 2 - 28, navY, 24, BUTTON_H).build();
         previousButton.active = pageIndex > 0;
-        addDrawableChild(previousButton);
+        addRenderableWidget(previousButton);
 
-        ButtonWidget nextButton = ButtonWidget.builder(Text.literal(">"), b -> {
+        Button nextButton = Button.builder(Component.literal(">"), b -> {
             if (pageIndex < PAGES.length - 1) {
                 pageIndex++;
                 refreshWidgets();
             }
-        }).dimensions(centerX + BUTTON_W / 2 + 4, navY, 24, BUTTON_H).build();
+        }).bounds(centerX + BUTTON_W / 2 + 4, navY, 24, BUTTON_H).build();
         nextButton.active = pageIndex < PAGES.length - 1;
-        addDrawableChild(nextButton);
+        addRenderableWidget(nextButton);
 
         String closeLabel = welcomeMode ? "Verstanden" : "Zurück";
-        addDrawableChild(ButtonWidget.builder(Text.literal(closeLabel), b -> {
-            if (client != null) {
-                client.setScreen(parent);
+        addRenderableWidget(Button.builder(Component.literal(closeLabel), b -> {
+            if (minecraft != null) {
+                minecraft.setScreen(parent);
             }
-        }).dimensions(centerX - BUTTON_W / 2, height - 30, BUTTON_W, BUTTON_H).build());
+        }).bounds(centerX - BUTTON_W / 2, height - 30, BUTTON_W, BUTTON_H).build());
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         if (welcomeMode && parent != null) {
-            parent.render(context, mouseX, mouseY, delta);
+            parent.extractRenderState(context, mouseX, mouseY, delta);
         } else {
             context.fill(0, 0, width, height, 0xD0000000);
         }
@@ -195,16 +195,16 @@ public class ChangelogScreen extends Screen {
         context.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xF010151C);
         drawBorder(context, panelX, panelY, panelWidth, panelHeight, 0xFF38BDF8);
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
 
         Page page = PAGES[pageIndex];
         String heading = welcomeMode ? "Willkommen bei betterUC" : "betterUC Changelog & Features";
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal(heading), width / 2, panelY + 12, 0xFFFFFFFF);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal(page.title), width / 2, panelY + 30, 0xFF38BDF8);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal(page.subtitle), width / 2, panelY + 44, 0xFFBBBBBB);
-        context.drawCenteredTextWithShadow(
-                textRenderer,
-                Text.literal("Seite " + (pageIndex + 1) + "/" + PAGES.length),
+        context.centeredText(font, Component.literal(heading), width / 2, panelY + 12, 0xFFFFFFFF);
+        context.centeredText(font, Component.literal(page.title), width / 2, panelY + 30, 0xFF38BDF8);
+        context.centeredText(font, Component.literal(page.subtitle), width / 2, panelY + 44, 0xFFBBBBBB);
+        context.centeredText(
+                font,
+                Component.literal("Seite " + (pageIndex + 1) + "/" + PAGES.length),
                 width / 2,
                 height - 49,
                 0xFFAAAAAA
@@ -220,16 +220,16 @@ public class ChangelogScreen extends Screen {
         }
     }
 
-    private int drawWrappedBullet(DrawContext context, String line, int x, int y, int maxWidth) {
+    private int drawWrappedBullet(GuiGraphicsExtractor context, String line, int x, int y, int maxWidth) {
         String bullet = "- ";
         String remaining = line;
         boolean firstLine = true;
         int currentY = y;
         while (!remaining.isEmpty()) {
             String prefix = firstLine ? bullet : "  ";
-            int availableWidth = maxWidth - textRenderer.getWidth(prefix);
+            int availableWidth = maxWidth - font.width(prefix);
             String part = takeFittingText(remaining, availableWidth);
-            context.drawTextWithShadow(textRenderer, Text.literal(prefix + part), x, currentY, 0xFFE6E6E6);
+            context.text(font, Component.literal(prefix + part), x, currentY, 0xFFE6E6E6);
             remaining = remaining.substring(part.length()).trim();
             currentY += 12;
             firstLine = false;
@@ -238,7 +238,7 @@ public class ChangelogScreen extends Screen {
     }
 
     private String takeFittingText(String text, int maxWidth) {
-        if (textRenderer.getWidth(text) <= maxWidth) return text;
+        if (font.width(text) <= maxWidth) return text;
 
         int lastSpace = -1;
         for (int i = 1; i <= text.length(); i++) {
@@ -247,7 +247,7 @@ public class ChangelogScreen extends Screen {
                 lastSpace = i - 1;
             }
             String candidate = text.substring(0, i).trim();
-            if (textRenderer.getWidth(candidate) > maxWidth) {
+            if (font.width(candidate) > maxWidth) {
                 if (lastSpace > 0) {
                     return text.substring(0, lastSpace).trim();
                 }
@@ -258,11 +258,11 @@ public class ChangelogScreen extends Screen {
     }
 
     private void refreshWidgets() {
-        clearChildren();
+        clearWidgets();
         init();
     }
 
-    private void drawBorder(DrawContext context, int x, int y, int w, int h, int color) {
+    private void drawBorder(GuiGraphicsExtractor context, int x, int y, int w, int h, int color) {
         context.fill(x, y, x + w, y + 1, color);
         context.fill(x, y + h - 1, x + w, y + h, color);
         context.fill(x, y, x + 1, y + h, color);
@@ -270,14 +270,14 @@ public class ChangelogScreen extends Screen {
     }
 
     @Override
-    public void close() {
-        if (client != null) {
-            client.setScreen(parent);
+    public void onClose() {
+        if (minecraft != null) {
+            minecraft.setScreen(parent);
         }
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 

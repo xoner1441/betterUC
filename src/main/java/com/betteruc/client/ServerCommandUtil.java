@@ -1,8 +1,8 @@
 package com.betteruc.client;
 
 import com.betteruc.ServerGate;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 
 public final class ServerCommandUtil {
 
@@ -16,7 +16,7 @@ public final class ServerCommandUtil {
     private ServerCommandUtil() {
     }
 
-    public static void markJoined(MinecraftClient client) {
+    public static void markJoined(Minecraft client) {
         joinedAllowedServerAtMs = client == null ? 0L : System.currentTimeMillis();
         lastAutomaticCommandMs = 0L;
     }
@@ -26,38 +26,38 @@ public final class ServerCommandUtil {
         lastAutomaticCommandMs = 0L;
     }
 
-    public static boolean ensureAllowedServerForManualCommand(MinecraftClient client) {
+    public static boolean ensureAllowedServerForManualCommand(Minecraft client) {
         if (ServerGate.isAllowedServer(client)) return true;
         if (client != null && client.player != null) {
-            client.player.sendMessage(Text.literal(DOMAIN_LOCK_MESSAGE), false);
+            client.player.sendSystemMessage(Component.literal(DOMAIN_LOCK_MESSAGE));
         }
         return false;
     }
 
-    public static boolean send(MinecraftClient client, String command) {
+    public static boolean send(Minecraft client, String command) {
         return send(client, command, false);
     }
 
-    public static boolean send(MinecraftClient client, String command, boolean notifyIfBlocked) {
+    public static boolean send(Minecraft client, String command, boolean notifyIfBlocked) {
         if (client == null || client.player == null || command == null || command.isBlank()) return false;
         if (!ServerGate.isAllowedServer(client)) {
             if (notifyIfBlocked) {
-                client.player.sendMessage(Text.literal(DOMAIN_LOCK_MESSAGE), false);
+                client.player.sendSystemMessage(Component.literal(DOMAIN_LOCK_MESSAGE));
             }
             return false;
         }
-        client.player.networkHandler.sendChatCommand(command);
+        client.player.connection.sendCommand(command);
         return true;
     }
 
-    public static boolean isAutomaticSendReady(MinecraftClient client) {
+    public static boolean isAutomaticSendReady(Minecraft client) {
         if (client == null || client.player == null || commandJoinGraceRemainingMs(client) > 0L) return false;
         if (!ServerGate.isAllowedServer(client)) return false;
         long now = System.currentTimeMillis();
         return now - lastAutomaticCommandMs >= AUTOMATIC_COMMAND_MIN_GAP_MS;
     }
 
-    public static boolean sendAutomatic(MinecraftClient client, String command) {
+    public static boolean sendAutomatic(Minecraft client, String command) {
         if (!isAutomaticSendReady(client)) return false;
         boolean sent = send(client, command, false);
         if (sent) {
@@ -66,7 +66,7 @@ public final class ServerCommandUtil {
         return sent;
     }
 
-    private static long commandJoinGraceRemainingMs(MinecraftClient client) {
+    private static long commandJoinGraceRemainingMs(Minecraft client) {
         if (!ServerGate.isAllowedServer(client)) return AUTOMATIC_COMMAND_JOIN_GRACE_MS;
         if (joinedAllowedServerAtMs <= 0L) {
             joinedAllowedServerAtMs = System.currentTimeMillis();
