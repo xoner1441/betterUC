@@ -375,6 +375,58 @@ h3 {
   text-align: right;
 }
 
+.install-panel {
+  max-width: 680px;
+}
+
+.install-steps {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.install-step {
+  align-items: start;
+  background: rgba(21, 27, 26, 0.72);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--cyan);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 46px minmax(0, 1fr);
+  padding: 18px 20px;
+}
+
+.install-step:nth-child(2) {
+  border-left-color: var(--green);
+}
+
+.install-step:nth-child(3) {
+  border-left-color: var(--amber);
+}
+
+.step-number {
+  align-items: center;
+  background: #071312;
+  border: 1px solid var(--line);
+  color: var(--green);
+  display: inline-flex;
+  font-weight: 900;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.install-step h3 {
+  font-size: 18px;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.install-step p {
+  color: var(--muted);
+  margin: 0;
+}
+
 .feature-grid {
   display: grid;
   gap: 16px;
@@ -1089,5 +1141,9 @@ select:focus {
 
   .command-grid article {
     grid-template-columns: 1fr;
+  }
+
+  .install-step {
+    grid-template-columns: 38px minmax(0, 1fr);
   }
 }

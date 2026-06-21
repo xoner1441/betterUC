@@ -912,12 +912,15 @@ async function fetchLatestRelease() {
     return latestReleaseCache.release;
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 7000);
   const response = await fetch(GITHUB_LATEST_RELEASE_API, {
+    signal: controller.signal,
     headers: {
       "Accept": "application/vnd.github+json",
       "User-Agent": "betterUC-download-page"
     }
-  });
+  }).finally(() => clearTimeout(timeout));
   if (!response.ok) {
     throw new Error(`GitHub release API HTTP ${response.status}`);
   }

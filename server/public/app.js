@@ -54,8 +54,13 @@ function formatBytes(value) {
 
 async function refreshDownloadInfo() {
   if (!downloadVersion && !downloadFile && !downloadSize) return;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 6000);
   try {
-    const response = await fetch("/api/releases/latest", { cache: "no-store" });
+    const response = await fetch("/api/releases/latest", {
+      cache: "no-store",
+      signal: controller.signal
+    });
     const data = await response.json();
     if (!response.ok || !data.ok) throw new Error(data.error || "Release nicht erreichbar");
 
@@ -67,8 +72,14 @@ async function refreshDownloadInfo() {
     if (latestDownloadButton) latestDownloadButton.href = downloadUrl;
     if (latestDownloadButtonPanel) latestDownloadButtonPanel.href = downloadUrl;
   } catch (error) {
-    if (downloadVersion) downloadVersion.textContent = "nicht erreichbar";
-    if (downloadHint) downloadHint.textContent = error.message || "Download-Info konnte nicht geladen werden.";
+    if (downloadVersion) downloadVersion.textContent = "aktuelle Version";
+    if (downloadFile) downloadFile.textContent = "betterUC.jar";
+    if (downloadSize) downloadSize.textContent = "beim Download";
+    if (downloadHint) downloadHint.textContent = "Versionsdetails konnten gerade nicht geladen werden. Der Download-Link bleibt nutzbar.";
+    if (latestDownloadButton) latestDownloadButton.href = "/download/latest.jar";
+    if (latestDownloadButtonPanel) latestDownloadButtonPanel.href = "/download/latest.jar";
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
