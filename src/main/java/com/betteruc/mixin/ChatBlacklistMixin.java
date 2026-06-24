@@ -59,6 +59,7 @@ public class ChatBlacklistMixin {
             "^\\s*[-\\u2010-\\u2015\\u2212]?\\s*Fraktion\\s*:\\s*(.+)$",
             Pattern.CASE_INSENSITIVE
     );
+    private static final Pattern CHAT_TIMESTAMP_PATTERN = Pattern.compile("^\\s*\\d{1,2}:\\d{2}:\\d{2}\\s+");
     private static final Pattern PAYDAY_HEADER_PATTERN = Pattern.compile(
             "^\\s*[-=]+\\s*PayDay\\s*[-=]+\\s*$",
             Pattern.CASE_INSENSITIVE
@@ -261,11 +262,18 @@ public class ChatBlacklistMixin {
 
     private void updateCurrentFaction(String raw) {
         if (raw == null || raw.isBlank()) return;
-        Matcher factionMatcher = FACTION_STATS_PATTERN.matcher(raw.trim());
+        Matcher factionMatcher = FACTION_STATS_PATTERN.matcher(cleanStatsLine(raw));
         if (!factionMatcher.find()) return;
         if (BetterUCConfig.updateCurrentPlayerFactionFromStats(factionMatcher.group(1))) {
             PingRelayClient.refreshIdentity(Minecraft.getInstance());
         }
+    }
+
+    private String cleanStatsLine(String raw) {
+        String cleaned = raw == null ? "" : raw.replaceAll("(?i)\\u00A7[0-9A-FK-OR]", "");
+        cleaned = CHAT_TIMESTAMP_PATTERN.matcher(cleaned).replaceFirst("");
+        cleaned = cleaned.replaceFirst("^\\s*[»>]+\\s*", "");
+        return cleaned.trim();
     }
 
     private int parseStatMoneyValue(String raw) {

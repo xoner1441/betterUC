@@ -9,6 +9,8 @@ import net.minecraft.client.Minecraft;
 
 public final class UserStatsClient {
     private static final String STAT_PREFIX = "^\\s*[-\\u2010-\\u2015\\u2212]?\\s*";
+    private static final Pattern CHAT_TIMESTAMP_PATTERN = Pattern.compile("^\\s*\\d{1,2}:\\d{2}:\\d{2}\\s+");
+    private static final Pattern TEXT_FORMATTING_PATTERN = Pattern.compile("(?i)\\u00A7[0-9A-FK-OR]");
     private static final Pattern HOUSE_PATTERN = Pattern.compile(STAT_PREFIX + "Haus\\s*:?\\s*(.+)$", Pattern.CASE_INSENSITIVE);
     private static final Pattern FACTION_PATTERN = Pattern.compile(STAT_PREFIX + "Fraktion\\s*:?\\s*(.+)$", Pattern.CASE_INSENSITIVE);
     private static final Pattern WARNS_PATTERN = Pattern.compile(STAT_PREFIX + "Verwarnungen\\s*:?\\s*(.+)$", Pattern.CASE_INSENSITIVE);
@@ -59,7 +61,7 @@ public final class UserStatsClient {
             changed = true;
         }
 
-        String trimmed = raw.trim();
+        String trimmed = cleanStatsLine(raw);
         Matcher matcher = HOUSE_PATTERN.matcher(trimmed);
         if (matcher.find()) {
             String value = cleanText(matcher.group(1));
@@ -169,6 +171,14 @@ public final class UserStatsClient {
     private static String cleanText(String raw) {
         if (raw == null) return "";
         return raw.replaceAll("[^\\p{L}\\p{N}_ .,:/+()\\-]", "").trim();
+    }
+
+    private static String cleanStatsLine(String raw) {
+        if (raw == null) return "";
+        String cleaned = TEXT_FORMATTING_PATTERN.matcher(raw).replaceAll("");
+        cleaned = CHAT_TIMESTAMP_PATTERN.matcher(cleaned).replaceFirst("");
+        cleaned = cleaned.replaceFirst("^\\s*[»>]+\\s*", "");
+        return cleaned.trim();
     }
 
     private static Integer parseNumber(String raw) {

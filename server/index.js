@@ -316,6 +316,37 @@ function rolePriority(role) {
   return 50;
 }
 
+function normalizeFactionKey(value) {
+  const folded = String(value || "")
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  if (!folded) return "";
+
+  if (folded === "kartell" || folded === "calderon kartell" || folded.startsWith("calderon kartell ")) return "kartell";
+  if (folded === "zivilist" || folded === "zivi" || folded === "ziv") return "zivilist";
+  if (folded === "rettungsdienst" || folded === "retungsdienst" || folded === "medic") return "medic";
+  if (folded === "la cosa nostra" || folded === "lcn") return "lcn";
+  if (folded === "westside ballas" || folded === "ballas") return "ballas";
+  if (folded === "soldner" || folded === "soeldner") return "soeldner";
+  if (folded === "ordo absolutus" || folded === "ordo") return "ordo";
+  if (folded === "kerzakov" || folded === "kerzakov familie" || folded === "kerzakov family" || folded === "kf" || folded === "k f") return "kerzakov";
+  if (folded === "f b i") return "fbi";
+  return folded;
+}
+
+function effectiveClientFaction(client) {
+  const live = cleanSmallLabel(client && client.faction || "", "");
+  if (live) return live;
+
+  const account = client && client.account;
+  if (!account) return "";
+  const stats = publicStats(account);
+  return stats.factionDisplay || account.faction || "";
+}
+
 function publicStats(account) {
   const stats = account && account.stats && typeof account.stats === "object" ? account.stats : {};
   return {
@@ -824,7 +855,7 @@ function onlinePlayersForResponse() {
     uuid: client.uuid,
     server: client.server,
     channel: client.channel,
-    faction: (client.account && client.account.faction) || client.faction || "",
+    faction: effectiveClientFaction(client),
     version: client.version || (client.account && client.account.lastVersion) || "",
     role: client.role,
     priority: client.priority,
@@ -1500,9 +1531,11 @@ function sameAudience(sender, target, payload) {
 
   const scope = cleanChannel(payload.scope || "channel");
   if (scope === "faction") {
-    return Boolean(sender.faction)
-      && Boolean(target.faction)
-      && sender.faction.toLowerCase() === target.faction.toLowerCase();
+    const senderFaction = normalizeFactionKey(effectiveClientFaction(sender));
+    const targetFaction = normalizeFactionKey(effectiveClientFaction(target));
+    return Boolean(senderFaction)
+      && Boolean(targetFaction)
+      && senderFaction === targetFaction;
   }
   if (scope === "global") {
     return true;

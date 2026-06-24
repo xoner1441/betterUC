@@ -12,7 +12,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CashHud {
+    private static final long SIGNED_DELTA_DEDUP_WINDOW_MS = 3500L;
     private static final Pattern TEXT_FORMATTING_PATTERN = Pattern.compile("\\u00A7.");
+    private static final Pattern CHAT_TIMESTAMP_PATTERN = Pattern.compile("^\\s*\\d{1,2}:\\d{2}:\\d{2}\\s+");
     private static final Pattern CASH_STATS_PATTERN = Pattern.compile(
             "^\\s*[-\\u2010-\\u2015\\u2212]?\\s*Geld\\s*:?\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$",
             Pattern.CASE_INSENSITIVE
@@ -44,6 +46,9 @@ public class CashHud {
     private static final DecimalFormat MONEY_FORMAT = createMoneyFormat();
 
     private static int currentCash = -1;
+    private static int lastSemanticDeltaAmount = -1;
+    private static char lastSemanticDeltaSign = '\0';
+    private static long lastSemanticDeltaMs = 0L;
 
     public static void register() {
         restoreFromConfig();
@@ -52,13 +57,14 @@ public class CashHud {
 
     public static void updateFromStatsLine(String raw) {
         if (raw == null || raw.isBlank()) return;
-        raw = stripFormatting(raw);
+        raw = stripChatPrefix(stripFormatting(raw));
 
         Matcher factionDepositMatcher = FACTION_BANK_DEPOSIT_PATTERN.matcher(raw);
         if (factionDepositMatcher.find() && isCurrentPlayer(factionDepositMatcher.group(1))) {
             Integer parsed = parseMoneyValue(factionDepositMatcher.group(2));
             if (parsed != null) {
                 subtractCashAndPersist(parsed);
+                recordSemanticDelta('-', parsed);
             }
             return;
         }
@@ -68,6 +74,7 @@ public class CashHud {
             Integer parsed = parseMoneyValue(factionWithdrawMatcher.group(2));
             if (parsed != null) {
                 addCashAndPersist(parsed);
+                recordSemanticDelta('+', parsed);
             }
             return;
         }
@@ -77,6 +84,7 @@ public class CashHud {
             Integer parsed = parseMoneyValue(moneySentMatcher.group(2));
             if (parsed != null) {
                 subtractCashAndPersist(parsed);
+                recordSemanticDelta('-', parsed);
             }
             return;
         }
@@ -86,6 +94,7 @@ public class CashHud {
             Integer parsed = parseMoneyValue(moneyReceivedMatcher.group(2));
             if (parsed != null) {
                 addCashAndPersist(parsed);
+                recordSemanticDelta('+', parsed);
             }
             return;
         }
@@ -94,7 +103,9 @@ public class CashHud {
         if (payoutMatcher.find()) {
             Integer parsed = parseMoneyValue(payoutMatcher.group(1));
             if (parsed != null) {
-                addCashAndPersist(Math.abs(parsed));
+                int amount = Math.abs(parsed);
+                addCashAndPersist(amount);
+                recordSemanticDelta('+', amount);
             }
             return;
         }
@@ -103,7 +114,9 @@ public class CashHud {
         if (depositMatcher.find()) {
             Integer parsed = parseMoneyValue(depositMatcher.group(1));
             if (parsed != null) {
-                subtractCashAndPersist(Math.abs(parsed));
+                int amount = Math.abs(parsed);
+                subtractCashAndPersist(amount);
+                recordSemanticDelta('-', amount);
             }
             return;
         }
@@ -112,7 +125,11 @@ public class CashHud {
         if (signedDeltaMatcher.find()) {
             Integer parsed = parseMoneyValue(signedDeltaMatcher.group(2));
             if (parsed != null) {
-                if ("+".equals(signedDeltaMatcher.group(1))) {
+                char sign = signedDeltaMatcher.group(1).charAt(0);
+                if (isDuplicateSemanticDelta(sign, parsed)) {
+                    return;
+                }
+                if (sign == '+') {
                     addCashAndPersist(parsed);
                 } else {
                     subtractCashAndPersist(parsed);
@@ -129,6 +146,10 @@ public class CashHud {
 
         Integer parsed = parseMoneyValue(matcher.group(1));
         if (parsed != null) {
+            if (currentCash >= 0 && currentCash != parsed) {
+                int amount = Math.abs(parsed - currentCash);
+                recordSemanticDelta(parsed > currentCash ? '+' : '-', amount);
+            }
             setCashAndPersist(Math.max(0, parsed));
         }
     }
@@ -141,6 +162,13 @@ public class CashHud {
 
     private static String stripFormatting(String raw) {
         return TEXT_FORMATTING_PATTERN.matcher(raw).replaceAll("");
+    }
+
+    private static String stripChatPrefix(String raw) {
+        if (raw == null) return "";
+        String cleaned = CHAT_TIMESTAMP_PATTERN.matcher(raw).replaceFirst("");
+        cleaned = cleaned.replaceFirst("^\\s*[»>]+\\s*", "");
+        return cleaned.trim();
     }
 
     public static int getCurrentCash() {
@@ -236,6 +264,22 @@ public class CashHud {
     private static void subtractCashAndPersist(int amount) {
         if (amount <= 0 || currentCash < 0) return;
         setCashAndPersist(Math.max(0, currentCash - amount));
+    }
+
+    private static void recordSemanticDelta(char sign, int amount) {
+        if (amount <= 0) return;
+        lastSemanticDeltaSign = sign;
+        lastSemanticDeltaAmount = amount;
+        lastSemanticDeltaMs = System.currentTimeMillis();
+    }
+
+    private static boolean isDuplicateSemanticDelta(char sign, int amount) {
+        if (amount <= 0) return false;
+        long age = System.currentTimeMillis() - lastSemanticDeltaMs;
+        return age >= 0L
+                && age <= SIGNED_DELTA_DEDUP_WINDOW_MS
+                && lastSemanticDeltaSign == sign
+                && lastSemanticDeltaAmount == amount;
     }
 
     private static DecimalFormat createMoneyFormat() {

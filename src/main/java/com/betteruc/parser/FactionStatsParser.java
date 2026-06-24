@@ -31,7 +31,11 @@ public final class FactionStatsParser {
         int bestLength = 0;
         for (KnownFaction faction : KNOWN_FACTIONS) {
             String label = fold(faction.label());
-            if (folded.equals(label) || folded.startsWith(label + " ") || folded.contains(" " + label + " ")) {
+            if (folded.equals(label)
+                    || folded.startsWith(label + " ")
+                    || folded.contains(" " + label + " ")
+                    || folded.contains(" " + label)
+                    || folded.contains(label + " ")) {
                 if (label.length() > bestLength) {
                     bestQuery = faction.query();
                     bestLength = label.length();
