@@ -2,9 +2,7 @@ package com.betteruc.hud;
 
 import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
-import net.minecraft.resources.Identifier;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.Holder;
@@ -63,7 +61,7 @@ public class PotionEffectsHud {
             int currentY = 0;
             for (MobEffectInstance effect : ACTIVE_EFFECTS) {
                 Holder<MobEffect> entry = effect.getEffect();
-                Identifier effectIcon = Gui.getMobEffectSprite(entry);
+                Identifier effectIcon = effectIcon(entry);
                 int accentColor = 0xFF000000 | entry.value().getColor();
                 Component effectName = buildEffectName(effect);
                 Component durationText = MobEffectUtil.formatDuration(effect, 1.0F, tickRate);
@@ -119,5 +117,11 @@ public class PotionEffectsHud {
             name.append(CommonComponents.SPACE).append(Component.translatable("enchantment.level." + (amplifier + 1)));
         }
         return name;
+    }
+
+    private static Identifier effectIcon(Holder<MobEffect> entry) {
+        return entry.unwrapKey()
+                .map(key -> key.identifier().withPrefix("mob_effect/"))
+                .orElse(Identifier.withDefaultNamespace("mob_effect/speed"));
     }
 }

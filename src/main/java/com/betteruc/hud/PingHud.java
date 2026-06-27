@@ -197,11 +197,11 @@ public final class PingHud {
 
     private static long projectToScreen(Minecraft client, PingRelayClient.PingMarker marker) {
         Vec3 target = new Vec3(marker.x(), marker.y(), marker.z());
-        Vec3 cameraPos = client.gameRenderer.getMainCamera().position();
+        Vec3 cameraPos = client.gameRenderer.mainCamera().position();
         Vec3 toTarget = target.subtract(cameraPos);
         if (toTarget.lengthSqr() < 0.0001D) return Long.MIN_VALUE;
 
-        Vec3 cameraLook = Vec3.directionFromRotation(client.gameRenderer.getMainCamera().xRot(), client.gameRenderer.getMainCamera().yRot());
+        Vec3 cameraLook = Vec3.directionFromRotation(client.gameRenderer.mainCamera().xRot(), client.gameRenderer.mainCamera().yRot());
         if (toTarget.normalize().dot(cameraLook.normalize()) <= 0.05D) {
             return Long.MIN_VALUE;
         }

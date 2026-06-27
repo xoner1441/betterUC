@@ -149,7 +149,7 @@ public class HudLayoutScreen extends Screen {
     public void onClose() {
         BetterUCConfig.save();
         if (minecraft != null) {
-            minecraft.setScreen(parent);
+            minecraft.gui.setScreen(parent);
         }
     }
 

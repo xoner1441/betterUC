@@ -152,7 +152,7 @@ public class HotkeyCommandsScreen extends Screen {
     private void addSaveBackButton(int centerX) {
         addRenderableWidget(Button.builder(Component.literal("Save & Back"), b -> {
             BetterUCConfig.save();
-            if (minecraft != null) minecraft.setScreen(parent);
+            if (minecraft != null) minecraft.gui.setScreen(parent);
         }).bounds(centerX - 80, height - 28, 160, 20).build());
     }
 
@@ -199,7 +199,7 @@ public class HotkeyCommandsScreen extends Screen {
     public void onClose() {
         BetterUCConfig.save();
         if (minecraft != null) {
-            minecraft.setScreen(parent);
+            minecraft.gui.setScreen(parent);
         }
     }
 

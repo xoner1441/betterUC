@@ -91,7 +91,7 @@ public class BlacklistConfigScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("\u2714 Speichern & Zurück"), b -> {
             saveValues();
             BetterUCConfig.save();
-            if (minecraft != null) minecraft.setScreen(parent);
+            if (minecraft != null) minecraft.gui.setScreen(parent);
         }).bounds(width / 2 - 80, height - 28, 160, 20).build());
     }
 

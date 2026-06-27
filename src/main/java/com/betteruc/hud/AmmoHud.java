@@ -60,7 +60,7 @@ public class AmmoHud {
             reloadKeyWasDown = false;
             return;
         }
-        if (client.screen != null) {
+        if (client.gui.screen() != null) {
             reloadKeyWasDown = false;
             return;
         }

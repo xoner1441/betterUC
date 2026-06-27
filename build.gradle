@@ -10,6 +10,11 @@ base {
     archivesName = project.archives_base_name
 }
 
+def betterucBuildDir = providers.gradleProperty("betterucBuildDir")
+if (betterucBuildDir.present) {
+    layout.buildDirectory.set(file(betterucBuildDir.get()))
+}
+
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"

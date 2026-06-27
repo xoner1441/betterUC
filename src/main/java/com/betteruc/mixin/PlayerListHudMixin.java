@@ -51,8 +51,7 @@ public abstract class PlayerListHudMixin {
         if (minecraft == null || minecraft.font == null || minecraft.getConnection() == null) return;
 
         Font textRenderer = minecraft.font;
-        boolean showAvatars = minecraft.isLocalServer()
-                || minecraft.getConnection().getConnection().isEncrypted();
+        boolean showAvatars = true;
         int textX = x + (showAvatars ? 9 : 0);
         int badgeX = textX + textRenderer.width(getNameForDisplay(entry)) + 1;
         int maxBadgeX = x + width - 12 - textRenderer.width(badge);

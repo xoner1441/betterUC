@@ -12,7 +12,6 @@ import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.CashHud;
 import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.ModernHudRenderer;
-import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
@@ -22,10 +21,8 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -112,7 +109,6 @@ public class BetterUCScreen extends Screen {
     private ModuleOption selectedModule = ModuleOption.FPS;
     private final List<ScrollableControl> detailControls = new ArrayList<>();
     private final List<Runnable> textFieldFlushers = new ArrayList<>();
-    private boolean capturingZoomKey = false;
     private boolean rebuildingWidgets = false;
     private int detailScrollOffset = 0;
     private int detailContentHeight = 0;
@@ -215,16 +211,6 @@ public class BetterUCScreen extends Screen {
                     y = addToggle(x, y, controlW, "Plant HUD", BetterUCConfig.INSTANCE.showPlantTimerHud,
                             () -> BetterUCConfig.INSTANCE.showPlantTimerHud = !BetterUCConfig.INSTANCE.showPlantTimerHud);
                 }
-            }
-            case ZOOM -> {
-                y = addToggle(x, y, controlW, "Zoom", BetterUCConfig.INSTANCE.zoomEnabled,
-                        () -> BetterUCConfig.INSTANCE.zoomEnabled = !BetterUCConfig.INSTANCE.zoomEnabled);
-                y = addButton(x, y, controlW, zoomKeyLabel(), b -> {
-                    capturingZoomKey = true;
-                    refreshWidgets();
-                });
-                y = addDoubleSlider(x, y, controlW, "Zoom FOV", BetterUCConfig.INSTANCE.zoomFovMultiplier, 0.05, 0.80,
-                        value -> BetterUCConfig.INSTANCE.zoomFovMultiplier = (float) value);
             }
             case AUTO_STATS -> {
                 y = addToggle(x, y, controlW, "Auto-Stats Join", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled,
@@ -558,7 +544,6 @@ public class BetterUCScreen extends Screen {
         context.fill(0, 0, width, height, 0x66000000);
         renderFrame(context, mouseX, mouseY);
         super.extractRenderState(context, mouseX, mouseY, delta);
-        renderZoomCaptureHint(context);
     }
 
     private void renderFrame(GuiGraphicsExtractor context, int mouseX, int mouseY) {
@@ -863,7 +848,6 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawHudTextWithShadow(context, this.font, "Reif: 1:30:00 | Wasser: 20:00", previewX, previewY + 10, 0xFFFFD866);
                 }
             }
-            case ZOOM -> drawMiniInfo(context, previewX, previewY, "Zoom", zoomKeyLabel(), BetterUCConfig.INSTANCE.zoomEnabled);
             case AUTO_STATS -> drawMiniInfo(context, previewX, previewY, "Auto-Stats", "Join /stats", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
             case CHAT -> drawMiniInfo(context, previewX, previewY, "Chat",
                     BetterUCConfig.INSTANCE.chatTimestampsEnabled ? BetterUCConfig.INSTANCE.chatTimestampFormat : "AUS",
@@ -945,18 +929,6 @@ public class BetterUCScreen extends Screen {
         context.text(font, Component.literal(value), x + 10, y + 20, TEXT_PRIMARY);
     }
 
-    private void renderZoomCaptureHint(GuiGraphicsExtractor context) {
-        if (!capturingZoomKey) return;
-        int w = Math.min(320, width - 28);
-        int h = 58;
-        int x = width / 2 - w / 2;
-        int y = height / 2 - h / 2;
-        drawSoftRect(context, x, y, w, h, 0xF0101318);
-        drawBorder(context, x, y, w, h, withAlpha(ModuleOption.ZOOM.accent, 0xFF));
-        context.centeredText(font, Component.literal("Drücke eine Taste für Zoom"), width / 2, y + 17, TEXT_PRIMARY);
-        context.centeredText(font, Component.literal("ESC = Abbrechen"), width / 2, y + 33, TEXT_MUTED);
-    }
-
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         if (selectedModule != ModuleOption.UPDATES
@@ -995,26 +967,6 @@ public class BetterUCScreen extends Screen {
             return true;
         }
         return false;
-    }
-
-    @Override
-    public boolean keyPressed(KeyEvent input) {
-        int keyCode = input.input();
-        if (!capturingZoomKey) {
-            return super.keyPressed(input);
-        }
-
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            capturingZoomKey = false;
-            refreshWidgets();
-            return true;
-        }
-
-        BetterUCConfig.INSTANCE.zoomKeyCode = keyCode;
-        saveConfig();
-        capturingZoomKey = false;
-        refreshWidgets();
-        return true;
     }
 
     @Override
@@ -1069,7 +1021,6 @@ public class BetterUCScreen extends Screen {
             case POTION -> BetterUCConfig.INSTANCE.showPotionEffectsHud;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintEnabled;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.showPlantTimerHud;
-            case ZOOM -> BetterUCConfig.INSTANCE.zoomEnabled;
             case AUTO_STATS -> BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled;
             case PING -> BetterUCConfig.INSTANCE.pingRelayEnabled;
             default -> true;
@@ -1294,17 +1245,6 @@ public class BetterUCScreen extends Screen {
         return live >= 0 ? CashHud.formatMoney(live) + "$" : CashHud.formatMoney(1278) + "$";
     }
 
-    private String zoomKeyLabel() {
-        if (capturingZoomKey) return "Zoom Taste: ...";
-        int code = BetterUCConfig.INSTANCE.zoomKeyCode;
-        if (code <= 0) return "Zoom Taste: none";
-        try {
-            return "Zoom Taste: " + InputConstants.Type.KEYSYM.getOrCreate(code).getDisplayName().getString();
-        } catch (Exception ignored) {
-            return "Zoom Taste: " + code;
-        }
-    }
-
     private String pingScopeLabel() {
         return "Ping Ziel: " + ("faction".equals(BetterUCConfig.INSTANCE.pingRelayScope) ? "Fraktion" : "Global");
     }
@@ -1387,7 +1327,7 @@ public class BetterUCScreen extends Screen {
 
     private void openScreen(Screen screen) {
         if (minecraft != null) {
-            minecraft.setScreen(screen);
+            minecraft.gui.setScreen(screen);
         }
     }
 
@@ -1590,7 +1530,6 @@ public class BetterUCScreen extends Screen {
         HACK_TIMER(Category.HUD, "Hack Timer", "Timer-Position", 0xFF60A5FA, false),
         PLANT_TIMER(Category.HUD, "Plant Timer", "Plantage-Timer", 0xFF6CF27D, true),
 
-        ZOOM(Category.GAMEPLAY, "Zoom", "Taste und FOV", 0xFFA78BFA, true),
         AUTO_STATS(Category.GAMEPLAY, "Auto Stats", "Automatisches /stats", 0xFF34D399, true),
         CHAT(Category.GAMEPLAY, "Chat", "Zeitstempel & Customization", 0xFF38BDF8, false),
         CONNECTION(Category.GAMEPLAY, "Verbindung", "Account & Relay", 0xFF38BDF8, false),

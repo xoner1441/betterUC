@@ -142,10 +142,6 @@ public class BetterUCClient implements ClientModInitializer {
         return MovementController.isToggleSprintHudActive();
     }
 
-    public static double applyZoomFov(double baseFov) {
-        return MovementController.applyZoomFov(baseFov);
-    }
-
     @Override
     public void onInitializeClient() {
         BetterUCConfig.load();
@@ -959,7 +955,7 @@ public class BetterUCClient implements ClientModInitializer {
 
     private void maybeOpenWelcomeChangelog(Minecraft client) {
         if (welcomeChangelogChecked || client == null) return;
-        if (!(client.screen instanceof TitleScreen)) return;
+        if (!(client.gui.screen() instanceof TitleScreen)) return;
 
         String currentVersion = currentModVersion();
         if (BetterUCConfig.hasSeenWelcomeChangelog(currentVersion)) {
@@ -969,7 +965,7 @@ public class BetterUCClient implements ClientModInitializer {
 
         welcomeChangelogChecked = true;
         BetterUCConfig.markWelcomeChangelogSeen(currentVersion);
-        client.setScreen(new ChangelogScreen(client.screen, true));
+        client.gui.setScreen(new ChangelogScreen(client.gui.screen(), true));
     }
 
     private static String currentModVersion() {
@@ -997,14 +993,14 @@ public class BetterUCClient implements ClientModInitializer {
 
     private void handleScreenHotkeys(Minecraft client) {
         while (SETTINGS_KEY.consumeClick()) {
-            if (client.screen == null) {
-                client.setScreen(new BetterUCScreen());
+            if (client.gui.screen() == null) {
+                client.gui.setScreen(new BetterUCScreen());
             }
         }
 
         while (COMMANDS_KEY.consumeClick()) {
-            if (client.screen == null) {
-                client.setScreen(new CommandGui());
+            if (client.gui.screen() == null) {
+                client.gui.setScreen(new CommandGui());
             }
         }
     }
@@ -1015,10 +1011,10 @@ public class BetterUCClient implements ClientModInitializer {
             queuedPress = true;
         }
 
-        if (client.screen instanceof PingWheelScreen) return;
+        if (client.gui.screen() instanceof PingWheelScreen) return;
 
         boolean down = PING_KEY.isDown();
-        if (client.screen != null) {
+        if (client.gui.screen() != null) {
             pingKeyWasDown = down;
             pingWheelOpenedForPress = false;
             return;
@@ -1040,7 +1036,7 @@ public class BetterUCClient implements ClientModInitializer {
 
         if (down) {
             if (!pingWheelOpenedForPress && now - pingKeyDownAtMs >= PING_WHEEL_HOLD_MS) {
-                client.setScreen(new PingWheelScreen(PING_KEY));
+                client.gui.setScreen(new PingWheelScreen(PING_KEY));
                 pingWheelOpenedForPress = true;
             }
             return;
@@ -1061,7 +1057,7 @@ public class BetterUCClient implements ClientModInitializer {
     }
 
     private void handleConfiguredHotkeys(Minecraft client) {
-        if (client.player == null || client.screen != null) return;
+        if (client.player == null || client.gui.screen() != null) return;
 
         List<BetterUCConfig.HotkeyCommand> hotkeys = BetterUCConfig.INSTANCE.hotkeyCommands;
         if (hotkeys == null || hotkeys.isEmpty()) {

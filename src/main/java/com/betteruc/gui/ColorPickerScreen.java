@@ -102,11 +102,11 @@ public class ColorPickerScreen extends Screen {
             }
             applyTarget.apply(color);
             BetterUCConfig.save();
-            if (minecraft != null) minecraft.setScreen(parent);
+            if (minecraft != null) minecraft.gui.setScreen(parent);
         }).bounds(cx - 80, cy + 62, 160, 20).build());
 
         addRenderableWidget(Button.builder(Component.literal("Abbrechen"), widget -> {
-            if (minecraft != null) minecraft.setScreen(parent);
+            if (minecraft != null) minecraft.gui.setScreen(parent);
         }).bounds(cx - 40, cy + 87, 80, 20).build());
     }
 

@@ -125,7 +125,7 @@ public class PingWheelScreen extends Screen {
             PingRelayClient.sendPingAtCrosshair(minecraft, selected);
         }
         if (minecraft != null) {
-            minecraft.setScreen(null);
+            minecraft.gui.setScreen(null);
         }
         return selected != null;
     }

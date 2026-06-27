@@ -63,7 +63,7 @@ public class ChangelogScreen extends Screen {
                             "Plant-Timer für eigene Plantagen mit Wasser- und Düngerzeiten",
                             "Payday-, Bank-, Bargeld-, Ammo-, FPS-, Herz- und ToggleSprint-HUDs",
                             "HUD-Positionen und Größen können in der HUD Vorschau angepasst werden",
-                            "Zoom und Auto-Stats Join direkt im Settings-HUD schaltbar",
+                            "Auto-Stats Join direkt im Settings-HUD schaltbar",
                             "Build kopiert die Mod-JAR automatisch in den Minecraft-Mods-Ordner",
                             "Update Notify zeigt neue betterUC-Versionen direkt im Chat und kann Updates automatisch vorbereiten",
                             "Ping Relay sendet private Markierungen an andere betterUC-Nutzer",
@@ -108,7 +108,6 @@ public class ChangelogScreen extends Screen {
                     "Alltag im Spiel",
                     new String[]{
                             "Hotkey Commands: eigene Befehle auf Tasten legen",
-                            "Zoom-Taste frei wählbar, Zoom reagiert sofort",
                             "/car find Koordinaten werden automatisch ins Navi übernommen",
                             "Chat-Zeitstempel und größere Chat-Historie",
                             "/adropdrink sendet /dropdrink automatisch anhand des Lieferjunge-Scoreboards",
@@ -172,7 +171,7 @@ public class ChangelogScreen extends Screen {
         String closeLabel = welcomeMode ? "Verstanden" : "Zurück";
         addRenderableWidget(Button.builder(Component.literal(closeLabel), b -> {
             if (minecraft != null) {
-                minecraft.setScreen(parent);
+                minecraft.gui.setScreen(parent);
             }
         }).bounds(centerX - BUTTON_W / 2, height - 30, BUTTON_W, BUTTON_H).build());
     }
@@ -272,7 +271,7 @@ public class ChangelogScreen extends Screen {
     @Override
     public void onClose() {
         if (minecraft != null) {
-            minecraft.setScreen(parent);
+            minecraft.gui.setScreen(parent);
         }
     }
 

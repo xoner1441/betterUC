@@ -238,9 +238,6 @@ public class BetterUCConfig {
     public boolean showPotionEffectsHud = true;
     public boolean showPlantTimerHud = true;
     public boolean toggleSprintEnabled = false;
-    public boolean zoomEnabled = true;
-    public int zoomKeyCode = 67; // GLFW_KEY_C
-    public float zoomFovMultiplier = 0.25f;
     public boolean autoStatsOnJoinEnabled = true;
     public Map<String, PlantTimerState> plantTimerStates = new LinkedHashMap<>();
 
@@ -1039,10 +1036,6 @@ public class BetterUCConfig {
             ensureRuntimeCollections();
             if (INSTANCE.hotkeyCommands == null)         INSTANCE.hotkeyCommands = new ArrayList<>();
             if (INSTANCE.trackedFactionQueries == null)  INSTANCE.trackedFactionQueries = defaultTrackedFactionQueries();
-            if (INSTANCE.zoomKeyCode <= 0) INSTANCE.zoomKeyCode = 67;
-            if (INSTANCE.zoomFovMultiplier <= 0.0f || INSTANCE.zoomFovMultiplier > 1.0f) {
-                INSTANCE.zoomFovMultiplier = 0.25f;
-            }
             if (INSTANCE.ammoHudX == 0 && INSTANCE.ammoHudY == 0) {
                 INSTANCE.ammoHudX = 10;
                 INSTANCE.ammoHudY = 82;
