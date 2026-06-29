@@ -198,7 +198,7 @@ public final class VersionChecker {
 
             String assetName = jsonString(object, "assetName");
             String downloadUrl = jsonString(object, "downloadUrl");
-            if (!downloadUrl.isBlank() && !downloadUrl.toLowerCase(Locale.ROOT).endsWith(".jar")) {
+            if (!downloadUrl.isBlank() && !looksLikeJarDownloadUrl(downloadUrl)) {
                 downloadUrl = "";
             }
 
@@ -313,6 +313,18 @@ public final class VersionChecker {
                 && !lower.contains("sources")
                 && !lower.contains("dev")
                 && !lower.contains("-all");
+    }
+
+    private static boolean looksLikeJarDownloadUrl(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+
+        try {
+            return URI.create(value).getPath().toLowerCase(Locale.ROOT).endsWith(".jar");
+        } catch (RuntimeException e) {
+            return value.toLowerCase(Locale.ROOT).contains(".jar");
+        }
     }
 
     private static URI websiteReleaseApi() {

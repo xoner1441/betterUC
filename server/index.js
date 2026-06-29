@@ -931,9 +931,24 @@ function cleanReleaseTarget(value, fallback = "mc26.x") {
 }
 
 function releaseTargetFromRequest(url) {
+  const pathname = String(url && url.pathname || "").toLowerCase();
+  if (pathname.includes("mc1.21.10") || pathname.includes("mc1_21_10")) {
+    return "mc1.21.10";
+  }
+  if (pathname.includes("mc26")) {
+    return "mc26.x";
+  }
+
   const explicit = url.searchParams.get("target") || url.searchParams.get("platform");
   if (explicit) return cleanReleaseTarget(explicit);
   return releaseTargetForMinecraftVersion(url.searchParams.get("mc") || url.searchParams.get("minecraft") || "");
+}
+
+function releaseDownloadPathForTarget(target) {
+  const cleanedTarget = cleanReleaseTarget(target);
+  return cleanedTarget === "mc1.21.10"
+    ? "/download/latest-mc1.21.10.jar"
+    : "/download/latest-mc26.x.jar";
 }
 
 function isBetterUcJarAsset(name, url) {
@@ -991,7 +1006,7 @@ function releaseAvailableTargets(release) {
 function releaseResponse(release, req, target = "mc26.x") {
   const cleanedTarget = cleanReleaseTarget(target);
   const asset = releaseAssetForTarget(release, cleanedTarget);
-  const downloadPath = `/download/latest.jar?target=${encodeURIComponent(cleanedTarget)}`;
+  const downloadPath = releaseDownloadPathForTarget(cleanedTarget);
   return {
     ok: true,
     version: normalizeReleaseVersion(release.tagName),
@@ -1577,7 +1592,7 @@ async function handleHttp(req, res) {
     return;
   }
 
-  if (url.pathname === "/download/latest.jar") {
+  if (/^\/download\/latest(?:-(?:mc26\.x|mc1\.21\.10))?\.jar$/i.test(url.pathname)) {
     await handleLatestJarDownload(req, res);
     return;
   }

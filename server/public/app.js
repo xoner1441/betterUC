@@ -262,7 +262,9 @@ function updateDownloadModalState(releaseInfo = null) {
     return;
   }
 
-  const downloadUrl = `/download/latest.jar?target=${encodeURIComponent(selectedDownloadVersion.target)}&mc=${encodeURIComponent(selectedDownloadVersion.minecraft)}`;
+  const downloadUrl = selectedDownloadVersion.target === "mc1.21.10"
+    ? "/download/latest-mc1.21.10.jar"
+    : "/download/latest-mc26.x.jar";
   if (label) label.textContent = `Game version: ${selectedDownloadVersion.label}`;
   if (result) result.hidden = false;
   if (button) button.href = releaseInfo?.downloadUrl || downloadUrl;
