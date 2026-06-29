@@ -1,5 +1,6 @@
 package com.betteruc.hud;
 
+import com.betteruc.client.ClientCompat;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -196,12 +197,15 @@ public final class PingHud {
     }
 
     private static long projectToScreen(Minecraft client, PingRelayClient.PingMarker marker) {
+        net.minecraft.client.Camera camera = ClientCompat.mainCamera(client);
+        if (camera == null) return Long.MIN_VALUE;
+
         Vec3 target = new Vec3(marker.x(), marker.y(), marker.z());
-        Vec3 cameraPos = client.gameRenderer.mainCamera().position();
+        Vec3 cameraPos = camera.position();
         Vec3 toTarget = target.subtract(cameraPos);
         if (toTarget.lengthSqr() < 0.0001D) return Long.MIN_VALUE;
 
-        Vec3 cameraLook = Vec3.directionFromRotation(client.gameRenderer.mainCamera().xRot(), client.gameRenderer.mainCamera().yRot());
+        Vec3 cameraLook = Vec3.directionFromRotation(camera.xRot(), camera.yRot());
         if (toTarget.normalize().dot(cameraLook.normalize()) <= 0.05D) {
             return Long.MIN_VALUE;
         }

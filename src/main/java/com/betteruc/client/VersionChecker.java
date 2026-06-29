@@ -17,6 +17,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -165,7 +166,7 @@ public final class VersionChecker {
     }
 
     private static Optional<LatestVersion> fetchLatestWebsiteRelease() {
-        String body = fetchText(WEBSITE_RELEASE_API).orElse("");
+        String body = fetchText(websiteReleaseApi()).orElse("");
         if (body.isBlank()) {
             return Optional.empty();
         }
@@ -246,8 +247,9 @@ public final class VersionChecker {
                 url = LATEST_RELEASE_URL;
             }
 
-            String assetName = "";
-            String assetUrl = "";
+            String releaseTarget = preferredReleaseTarget();
+            JsonObject selectedAsset = null;
+            JsonObject unversionedFallback = null;
             JsonArray assets = object.has("assets") && object.get("assets").isJsonArray()
                     ? object.getAsJsonArray("assets")
                     : new JsonArray();
@@ -259,13 +261,26 @@ public final class VersionChecker {
                 JsonObject asset = assetElement.getAsJsonObject();
                 String name = jsonString(asset, "name");
                 String downloadUrl = jsonString(asset, "browser_download_url");
-                if (isBetterUcJarAsset(name, downloadUrl)) {
-                    assetName = name;
-                    assetUrl = downloadUrl;
+                if (!isBetterUcJarAsset(name, downloadUrl)) {
+                    continue;
+                }
+
+                String assetValue = assetTargetValue(name, downloadUrl);
+                if (matchesReleaseTarget(assetValue, releaseTarget)) {
+                    selectedAsset = asset;
                     break;
+                }
+                if (!hasReleaseTargetMarker(assetValue) && unversionedFallback == null) {
+                    unversionedFallback = asset;
                 }
             }
 
+            if (selectedAsset == null) {
+                selectedAsset = unversionedFallback;
+            }
+
+            String assetName = selectedAsset == null ? "" : jsonString(selectedAsset, "name");
+            String assetUrl = selectedAsset == null ? "" : jsonString(selectedAsset, "browser_download_url");
             return Optional.of(new LatestVersion(tagName, url, assetName, assetUrl));
         } catch (RuntimeException e) {
             BetterUCMod.LOGGER.warn("Could not parse betterUC latest release JSON", e);
@@ -298,6 +313,66 @@ public final class VersionChecker {
                 && !lower.contains("sources")
                 && !lower.contains("dev")
                 && !lower.contains("-all");
+    }
+
+    private static URI websiteReleaseApi() {
+        String minecraftVersion = getMinecraftVersion();
+        String query = "target=" + urlEncode(preferredReleaseTarget())
+                + "&mc=" + urlEncode(minecraftVersion);
+        return URI.create(WEBSITE_RELEASE_API + "?" + query);
+    }
+
+    private static String preferredReleaseTarget() {
+        String minecraftVersion = getMinecraftVersion().toLowerCase(Locale.ROOT);
+        if (minecraftVersion.startsWith("1.21.10")) {
+            return "mc1.21.10";
+        }
+        if (minecraftVersion.startsWith("26.")) {
+            return "mc26.x";
+        }
+        return "mc26.x";
+    }
+
+    private static String getMinecraftVersion() {
+        return FabricLoader.getInstance()
+                .getModContainer("minecraft")
+                .map(container -> container.getMetadata().getVersion().getFriendlyString())
+                .orElse("");
+    }
+
+    private static String urlEncode(String value) {
+        return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
+    }
+
+    private static String assetTargetValue(String name, String downloadUrl) {
+        return ((name == null ? "" : name) + " " + (downloadUrl == null ? "" : downloadUrl))
+                .toLowerCase(Locale.ROOT);
+    }
+
+    private static boolean matchesReleaseTarget(String lowerValue, String target) {
+        String value = lowerValue == null ? "" : lowerValue.toLowerCase(Locale.ROOT);
+        String cleanedTarget = target == null ? "" : target.toLowerCase(Locale.ROOT);
+        if ("mc1.21.10".equals(cleanedTarget)) {
+            return value.contains("mc1.21.10")
+                    || value.contains("mc1_21_10")
+                    || value.contains("1.21.10");
+        }
+        if ("mc26.x".equals(cleanedTarget)) {
+            return value.contains("mc26.x")
+                    || value.contains("mc26x")
+                    || value.contains("mc26-")
+                    || value.contains("mc26_")
+                    || (value.contains("mc26") && !value.contains("mc1.21") && !value.contains("1.21.10"));
+        }
+        return false;
+    }
+
+    private static boolean hasReleaseTargetMarker(String lowerValue) {
+        String value = lowerValue == null ? "" : lowerValue.toLowerCase(Locale.ROOT);
+        return value.contains("mc26")
+                || value.contains("mc1.21")
+                || value.contains("mc1_21")
+                || value.contains("1.21.10");
     }
 
     private static Optional<String> fetchVersionFromGradleProperties(URI uri) {

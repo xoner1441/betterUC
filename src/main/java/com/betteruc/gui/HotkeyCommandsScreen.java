@@ -1,5 +1,6 @@
 package com.betteruc.gui;
 
+import com.betteruc.client.ClientCompat;
 import com.betteruc.config.BetterUCConfig;
 import com.mojang.blaze3d.platform.InputConstants;
 import org.lwjgl.glfw.GLFW;
@@ -152,7 +153,7 @@ public class HotkeyCommandsScreen extends Screen {
     private void addSaveBackButton(int centerX) {
         addRenderableWidget(Button.builder(Component.literal("Save & Back"), b -> {
             BetterUCConfig.save();
-            if (minecraft != null) minecraft.gui.setScreen(parent);
+            if (minecraft != null) ClientCompat.setScreen(minecraft, parent);
         }).bounds(centerX - 80, height - 28, 160, 20).build());
     }
 
@@ -199,7 +200,7 @@ public class HotkeyCommandsScreen extends Screen {
     public void onClose() {
         BetterUCConfig.save();
         if (minecraft != null) {
-            minecraft.gui.setScreen(parent);
+            ClientCompat.setScreen(minecraft, parent);
         }
     }
 

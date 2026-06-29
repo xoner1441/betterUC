@@ -1,5 +1,6 @@
 package com.betteruc.gui;
 
+import com.betteruc.client.ClientCompat;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -18,7 +19,15 @@ public class ChangelogScreen extends Screen {
                             "/adropdrink gibt Lieferanten-Getraenke automatisch im 2,5s-Takt ab",
                             "Auto-Dropdrink stoppt, wenn du nicht in der Kneipe bist",
                             "Fischer-Automation sucht, faengt und gibt Fisch am Steg ab",
+                            "Winzer-Automation leert alle Trauben-Fenster automatisch",
+                            "Gaertner-Automation gibt Blumen ab und sammelt verwelkte Buesche",
                             "Lieferjunge-Scoreboard wird genauer ausgelesen",
+                            "Multi-Version-Build erstellt JARs fuer 26.2, 26.1.2 und 1.21.10",
+                            "Website-Download und Auto-Updater waehlen die passende JAR fuer deine Minecraft-Version",
+                            "1.21.10-Kompatibilitaet fuer Chat, HUDs, Fonts und Tab-Badges verbessert",
+                            "Zoom-Feature entfernt, weil es nicht mehr genutzt wird",
+                            "Bargeld-HUD verhindert doppelte Abbuchungs-Erkennung",
+                            "Fraktionstracking funktioniert wieder mit aktuellen /stats-Zeilen",
                             "WPS/HQ-Chatformat wirkt jetzt ruhiger und einheitlicher",
                             "Labels wie gesucht, getoetet, inhaftiert und veraendert sind klein und nicht mehr fett",
                             "Formatierte Chatzeilen nutzen nun den Trenner ◆",
@@ -112,6 +121,8 @@ public class ChangelogScreen extends Screen {
                             "Chat-Zeitstempel und größere Chat-Historie",
                             "/adropdrink sendet /dropdrink automatisch anhand des Lieferjunge-Scoreboards",
                             "Fischer-Jobhinweise starten /findschwarm, /catchfish und /dropfish automatisch",
+                            "Winzer-Fenster sammeln automatisch alle Trauben ein",
+                            "Gaertner-Hinweise geben Blumen ab und sammeln verwelkte Buesche",
                             "Ping-Taste ist in den Minecraft-Keybinds frei einstellbar",
                             "/register <passwort> verbindet deinen Ingame-Account mit dem Userpanel",
                             "/buonline zeigt Helpern und Admins online Mod-User"
@@ -171,7 +182,7 @@ public class ChangelogScreen extends Screen {
         String closeLabel = welcomeMode ? "Verstanden" : "Zurück";
         addRenderableWidget(Button.builder(Component.literal(closeLabel), b -> {
             if (minecraft != null) {
-                minecraft.gui.setScreen(parent);
+                ClientCompat.setScreen(minecraft, parent);
             }
         }).bounds(centerX - BUTTON_W / 2, height - 30, BUTTON_W, BUTTON_H).build());
     }
@@ -271,7 +282,7 @@ public class ChangelogScreen extends Screen {
     @Override
     public void onClose() {
         if (minecraft != null) {
-            minecraft.gui.setScreen(parent);
+            ClientCompat.setScreen(minecraft, parent);
         }
     }
 

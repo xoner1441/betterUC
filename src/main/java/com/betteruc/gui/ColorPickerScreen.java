@@ -1,5 +1,6 @@
 package com.betteruc.gui;
 
+import com.betteruc.client.ClientCompat;
 import com.betteruc.config.BetterUCConfig;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractSliderButton;
@@ -102,11 +103,11 @@ public class ColorPickerScreen extends Screen {
             }
             applyTarget.apply(color);
             BetterUCConfig.save();
-            if (minecraft != null) minecraft.gui.setScreen(parent);
+            if (minecraft != null) ClientCompat.setScreen(minecraft, parent);
         }).bounds(cx - 80, cy + 62, 160, 20).build());
 
         addRenderableWidget(Button.builder(Component.literal("Abbrechen"), widget -> {
-            if (minecraft != null) minecraft.gui.setScreen(parent);
+            if (minecraft != null) ClientCompat.setScreen(minecraft, parent);
         }).bounds(cx - 40, cy + 87, 80, 20).build());
     }
 

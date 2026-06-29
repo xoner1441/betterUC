@@ -912,6 +912,30 @@ function normalizeReleaseVersion(value) {
   return String(value || "").trim().replace(/^v/i, "");
 }
 
+function releaseTargetForMinecraftVersion(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (raw.startsWith("1.21.10")) return "mc1.21.10";
+  if (raw.startsWith("26.")) return "mc26.x";
+  return "mc26.x";
+}
+
+function cleanReleaseTarget(value, fallback = "mc26.x") {
+  const raw = String(value || "").trim().toLowerCase();
+  if (raw === "mc1.21.10" || raw === "mc1_21_10" || raw === "1.21.10" || raw === "legacy") {
+    return "mc1.21.10";
+  }
+  if (raw === "mc26.x" || raw === "mc26x" || raw === "26" || raw === "26.x" || raw.startsWith("26.")) {
+    return "mc26.x";
+  }
+  return fallback;
+}
+
+function releaseTargetFromRequest(url) {
+  const explicit = url.searchParams.get("target") || url.searchParams.get("platform");
+  if (explicit) return cleanReleaseTarget(explicit);
+  return releaseTargetForMinecraftVersion(url.searchParams.get("mc") || url.searchParams.get("minecraft") || "");
+}
+
 function isBetterUcJarAsset(name, url) {
   const value = `${name || ""} ${url || ""}`.toLowerCase();
   return value.includes("betteruc")
@@ -921,7 +945,53 @@ function isBetterUcJarAsset(name, url) {
     && !value.includes("-all");
 }
 
-function releaseResponse(release, req) {
+function releaseAssetValue(asset) {
+  return `${asset && asset.name || ""} ${asset && asset.url || ""}`.toLowerCase();
+}
+
+function releaseAssetMatchesTarget(asset, target) {
+  const value = releaseAssetValue(asset);
+  const cleanedTarget = cleanReleaseTarget(target);
+  if (cleanedTarget === "mc1.21.10") {
+    return value.includes("mc1.21.10") || value.includes("mc1_21_10") || value.includes("1.21.10");
+  }
+  return value.includes("mc26.x")
+    || value.includes("mc26x")
+    || value.includes("mc26-")
+    || value.includes("mc26_")
+    || (value.includes("mc26") && !value.includes("mc1.21") && !value.includes("1.21.10"));
+}
+
+function releaseAssetHasTargetMarker(asset) {
+  const value = releaseAssetValue(asset);
+  return value.includes("mc26")
+    || value.includes("mc1.21")
+    || value.includes("mc1_21")
+    || value.includes("1.21.10");
+}
+
+function releaseAssetForTarget(release, target) {
+  const assets = Array.isArray(release && release.assets) ? release.assets : [];
+  const cleanedTarget = cleanReleaseTarget(target);
+  return assets.find(asset => releaseAssetMatchesTarget(asset, cleanedTarget))
+    || assets.find(asset => !releaseAssetHasTargetMarker(asset))
+    || null;
+}
+
+function releaseAvailableTargets(release) {
+  const assets = Array.isArray(release && release.assets) ? release.assets : [];
+  const targets = new Set();
+  for (const asset of assets) {
+    if (releaseAssetMatchesTarget(asset, "mc26.x")) targets.add("mc26.x");
+    if (releaseAssetMatchesTarget(asset, "mc1.21.10")) targets.add("mc1.21.10");
+  }
+  return [...targets];
+}
+
+function releaseResponse(release, req, target = "mc26.x") {
+  const cleanedTarget = cleanReleaseTarget(target);
+  const asset = releaseAssetForTarget(release, cleanedTarget);
+  const downloadPath = `/download/latest.jar?target=${encodeURIComponent(cleanedTarget)}`;
   return {
     ok: true,
     version: normalizeReleaseVersion(release.tagName),
@@ -931,9 +1001,11 @@ function releaseResponse(release, req) {
     publishedAt: release.publishedAt || null,
     htmlUrl: release.htmlUrl || GITHUB_RELEASES_URL,
     downloadPage: absolutePublicUrl(req, "/download"),
-    downloadUrl: absolutePublicUrl(req, "/download/latest.jar"),
-    assetName: release.assetName || "",
-    assetSize: release.assetSize || 0
+    downloadUrl: asset ? absolutePublicUrl(req, downloadPath) : "",
+    target: cleanedTarget,
+    availableTargets: releaseAvailableTargets(release),
+    assetName: asset ? asset.name : "",
+    assetSize: asset ? asset.size : 0
   };
 }
 
@@ -958,16 +1030,24 @@ async function fetchLatestRelease() {
 
   const data = await response.json();
   const assets = Array.isArray(data.assets) ? data.assets : [];
-  const jarAsset = assets.find(asset => isBetterUcJarAsset(asset.name, asset.browser_download_url));
+  const jarAssets = assets
+    .filter(asset => isBetterUcJarAsset(asset.name, asset.browser_download_url))
+    .map(asset => ({
+      name: String(asset.name || ""),
+      url: String(asset.browser_download_url || ""),
+      size: Number(asset.size || 0)
+    }));
+  const defaultAsset = releaseAssetForTarget({ assets: jarAssets }, "mc26.x");
   const release = {
     tagName: String(data.tag_name || data.name || "").trim(),
     name: String(data.name || data.tag_name || "").trim(),
     body: String(data.body || ""),
     publishedAt: data.published_at || null,
     htmlUrl: String(data.html_url || GITHUB_RELEASES_URL),
-    assetName: jarAsset ? String(jarAsset.name || "") : "",
-    assetUrl: jarAsset ? String(jarAsset.browser_download_url || "") : "",
-    assetSize: jarAsset ? Number(jarAsset.size || 0) : 0
+    assets: jarAssets,
+    assetName: defaultAsset ? defaultAsset.name : "",
+    assetUrl: defaultAsset ? defaultAsset.url : "",
+    assetSize: defaultAsset ? defaultAsset.size : 0
   };
 
   if (!release.tagName) {
@@ -993,7 +1073,9 @@ async function handleLatestJarDownload(req, res) {
     return;
   }
 
-  if (!release.assetUrl) {
+  const target = releaseTargetFromRequest(new URL(req.url || "/", `http://${req.headers.host || "localhost"}`));
+  const asset = releaseAssetForTarget(release, target);
+  if (!asset || !asset.url) {
     text(res, 404, "No betterUC jar asset found in latest release");
     return;
   }
@@ -1001,7 +1083,7 @@ async function handleLatestJarDownload(req, res) {
   if (req.method === "HEAD") {
     res.writeHead(200, {
       "content-type": "application/java-archive",
-      "content-disposition": `attachment; filename="${release.assetName || `betterUC-${normalizeReleaseVersion(release.tagName)}.jar`}"`,
+      "content-disposition": `attachment; filename="${asset.name || `betterUC-${normalizeReleaseVersion(release.tagName)}.jar`}"`,
       "cache-control": "no-cache"
     });
     res.end();
@@ -1009,7 +1091,7 @@ async function handleLatestJarDownload(req, res) {
   }
 
   try {
-    const upstream = await fetch(release.assetUrl, {
+    const upstream = await fetch(asset.url, {
       headers: { "User-Agent": "betterUC-download-proxy" }
     });
     if (!upstream.ok || !upstream.body) {
@@ -1018,7 +1100,7 @@ async function handleLatestJarDownload(req, res) {
 
     const headers = {
       "content-type": upstream.headers.get("content-type") || "application/java-archive",
-      "content-disposition": `attachment; filename="${release.assetName || `betterUC-${normalizeReleaseVersion(release.tagName)}.jar`}"`,
+      "content-disposition": `attachment; filename="${asset.name || `betterUC-${normalizeReleaseVersion(release.tagName)}.jar`}"`,
       "cache-control": "no-cache"
     };
     const length = upstream.headers.get("content-length");
@@ -1067,7 +1149,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/releases/latest") {
     try {
-      json(res, 200, releaseResponse(await fetchLatestRelease(), req));
+      json(res, 200, releaseResponse(await fetchLatestRelease(), req, releaseTargetFromRequest(url)));
     } catch (error) {
       console.error("Could not load latest release", error);
       json(res, 502, { ok: false, error: "Aktueller Download ist gerade nicht erreichbar." });

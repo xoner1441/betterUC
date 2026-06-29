@@ -1,5 +1,6 @@
 package com.betteruc.hud;
 
+import com.betteruc.client.ClientCompat;
 import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.resources.Identifier;
@@ -60,7 +61,7 @@ public class AmmoHud {
             reloadKeyWasDown = false;
             return;
         }
-        if (client.gui.screen() != null) {
+        if (ClientCompat.hasScreen(client)) {
             reloadKeyWasDown = false;
             return;
         }

@@ -1,5 +1,6 @@
 package com.betteruc.gui;
 
+import com.betteruc.client.ClientCompat;
 import com.betteruc.config.BetterUCConfig;
 import java.util.ArrayList;
 import java.util.List;
@@ -91,7 +92,7 @@ public class BlacklistConfigScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("\u2714 Speichern & Zurück"), b -> {
             saveValues();
             BetterUCConfig.save();
-            if (minecraft != null) minecraft.gui.setScreen(parent);
+            if (minecraft != null) ClientCompat.setScreen(minecraft, parent);
         }).bounds(width / 2 - 80, height - 28, 160, 20).build());
     }
 

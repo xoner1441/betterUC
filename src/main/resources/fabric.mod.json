@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "betteruc",
-  "version": "1.2.3",
+  "version": "${version}",
   "name": "betterUC",
   "description": "betterUC quality-of-life mod for blacklist tools, HUD and utilities.",
   "authors": ["FABI1441"],
@@ -16,6 +16,6 @@
     "fabricloader": "${loader_dependency}",
     "fabric-api": "*",
     "minecraft": "${minecraft_dependency}",
-    "java": ">=25"
+    "java": "${java_dependency}"
   }
 }

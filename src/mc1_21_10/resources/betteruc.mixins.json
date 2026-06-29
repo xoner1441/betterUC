@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "com.betteruc.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "ChatBlacklistMixin",
+    "InGameHudAmmoMixin",
+    "PlayerEntityRendererMixin",
+    "PlayerListHudRenderContextMixin",
+    "TextRendererTabBadgeMixin"
+  ],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

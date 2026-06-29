@@ -2,6 +2,7 @@ package com.betteruc.gui;
 
 import com.betteruc.BetterUCMod;
 import com.betteruc.client.BetterUCFontManager;
+import com.betteruc.client.ClientCompat;
 import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.SyncRefreshActions;
@@ -52,8 +53,16 @@ public class BetterUCScreen extends Screen {
             new UpdateSection("Neu in 1.2.3", new String[]{
                     "/adropdrink gibt Lieferanten-Getraenke automatisch im 2,5s-Takt ab",
                     "Auto-Dropdrink stoppt, wenn du nicht in der Kneipe bist",
+                    "Winzer-Automation leert alle Trauben-Fenster automatisch",
+                    "Gaertner-Automation gibt Blumen ab und sammelt verwelkte Buesche",
                     "Fischer-Automation sucht, fängt und gibt Fisch am Steg ab",
                     "Lieferjunge-Scoreboard wird genauer ausgelesen",
+                    "Multi-Version-Build erstellt JARs fuer 26.2, 26.1.2 und 1.21.10",
+                    "Website-Download und Auto-Updater waehlen die passende JAR fuer deine Minecraft-Version",
+                    "1.21.10-Kompatibilitaet fuer Chat, HUDs, Fonts und Tab-Badges verbessert",
+                    "Zoom-Feature entfernt, weil es nicht mehr genutzt wird",
+                    "Bargeld-HUD verhindert doppelte Abbuchungs-Erkennung",
+                    "Fraktionstracking funktioniert wieder mit aktuellen /stats-Zeilen",
                     "WPS/HQ-Chatformat wirkt jetzt ruhiger und einheitlicher",
                     "Labels sind klein geschrieben und nicht mehr fett",
                     "Formatierte Chatzeilen nutzen nun den Trenner ◆",
@@ -95,6 +104,8 @@ public class BetterUCScreen extends Screen {
                     "/blinfo <spieler> zeigt gespeicherte Blacklist-Infos",
                     "/setrp <spieler> <1-3> setzt die RP-Stufe",
                     "/adropdrink sendet /dropdrink automatisch anhand des Lieferjunge-Scoreboards",
+                    "Winzer-Fenster sammeln automatisch alle Trauben ein",
+                    "Gaertner-Hinweise geben Blumen ab und sammeln verwelkte Buesche",
                     "/buonline zeigt Helpern und Admins online Mod-User"
             }),
             new UpdateSection("Komfort", new String[]{
@@ -1327,7 +1338,7 @@ public class BetterUCScreen extends Screen {
 
     private void openScreen(Screen screen) {
         if (minecraft != null) {
-            minecraft.gui.setScreen(screen);
+            ClientCompat.setScreen(minecraft, screen);
         }
     }
 

@@ -1,5 +1,6 @@
 package com.betteruc.gui;
 
+import com.betteruc.client.ClientCompat;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.config.BetterUCConfig;
 import net.minecraft.client.KeyMapping;
@@ -125,7 +126,7 @@ public class PingWheelScreen extends Screen {
             PingRelayClient.sendPingAtCrosshair(minecraft, selected);
         }
         if (minecraft != null) {
-            minecraft.gui.setScreen(null);
+            ClientCompat.setScreen(minecraft, null);
         }
         return selected != null;
     }

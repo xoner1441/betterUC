@@ -1,4 +1,16 @@
 pluginManagement {
+    def loomVersion = providers.gradleProperty("loom_version").orElse("1.17.11").get()
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == 'net.fabricmc.fabric-loom' || requested.id.id == 'fabric-loom') {
+                useModule("net.fabricmc:fabric-loom:${loomVersion}")
+            }
+        }
+    }
+    plugins {
+        id 'net.fabricmc.fabric-loom' version loomVersion
+        id 'fabric-loom' version loomVersion
+    }
     repositories {
         maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
         mavenCentral()

@@ -1,5 +1,6 @@
 package com.betteruc.gui;
 
+import com.betteruc.client.ClientCompat;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.CashHud;
 import com.betteruc.hud.ModernHudRenderer;
@@ -149,7 +150,7 @@ public class HudLayoutScreen extends Screen {
     public void onClose() {
         BetterUCConfig.save();
         if (minecraft != null) {
-            minecraft.gui.setScreen(parent);
+            ClientCompat.setScreen(minecraft, parent);
         }
     }
 

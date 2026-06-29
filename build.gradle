@@ -1,5 +1,5 @@
 plugins {
-    id 'net.fabricmc.fabric-loom' version '1.17.11'
+    id 'net.fabricmc.fabric-loom'
     id 'maven-publish'
 }
 
@@ -15,10 +15,46 @@ if (betterucBuildDir.present) {
     layout.buildDirectory.set(file(betterucBuildDir.get()))
 }
 
+def betterucVariantSourceSet = (project.findProperty("betterucVariantSourceSet") ?: "").toString().trim()
+def betterucUseLegacyGeneratedSources = (project.findProperty("betterucUseLegacyGeneratedSources") ?: "false").toString().equalsIgnoreCase("true")
+def betterucLegacyGeneratedJavaDir = layout.buildDirectory.dir("generated/sources/betterucLegacy/java")
+
+sourceSets {
+    main {
+        if (betterucUseLegacyGeneratedSources) {
+            java.setSrcDirs([betterucLegacyGeneratedJavaDir])
+        } else if (!betterucVariantSourceSet.isBlank()) {
+            def variantJavaDir = file("src/${betterucVariantSourceSet}/java")
+            if (variantJavaDir.exists()) {
+                java.srcDir variantJavaDir
+            }
+        }
+
+        if (!betterucVariantSourceSet.isBlank()) {
+            def variantResourcesDir = file("src/${betterucVariantSourceSet}/resources")
+            if (variantResourcesDir.exists()) {
+                resources.srcDir variantResourcesDir
+            }
+        }
+    }
+}
+
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    def fabricApiModules = (project.findProperty("fabric_api_modules") ?: "")
+            .toString()
+            .split(",")
+            .collect { it.trim() }
+            .findAll { !it.isBlank() }
+    if (fabricApiModules.isEmpty()) {
+        implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    } else {
+        fabricApiModules.each { moduleCoordinate ->
+            compileOnly moduleCoordinate
+            modCompileClasspath moduleCoordinate
+        }
+    }
     testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
@@ -27,17 +63,19 @@ processResources {
     inputs.property "version", project.version
     inputs.property "minecraft_dependency", project.findProperty("minecraft_dependency") ?: "~${project.minecraft_version}"
     inputs.property "loader_dependency", project.findProperty("loader_dependency") ?: ">=${project.loader_version}"
+    inputs.property "java_dependency", project.findProperty("java_dependency") ?: ">=${project.findProperty("target_java_version") ?: "25"}"
     filteringCharset "UTF-8"
     filesMatching("fabric.mod.json") {
         expand(
                 "version": project.version,
                 "minecraft_dependency": project.findProperty("minecraft_dependency") ?: "~${project.minecraft_version}",
-                "loader_dependency": project.findProperty("loader_dependency") ?: ">=${project.loader_version}"
+                "loader_dependency": project.findProperty("loader_dependency") ?: ">=${project.loader_version}",
+                "java_dependency": project.findProperty("java_dependency") ?: ">=${project.findProperty("target_java_version") ?: "25"}"
         )
     }
 }
 
-def targetJavaVersion = 25
+def targetJavaVersion = (project.findProperty("target_java_version") ?: "25") as int
 tasks.withType(JavaCompile).configureEach {
     it.options.encoding = "UTF-8"
     if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
@@ -55,10 +93,386 @@ java {
 
 jar {
     from("LICENSE") { rename { "${it}_${project.base.archivesName.get()}" } }
+    def classifier = project.findProperty("modArchiveClassifier") ?: ""
+    if (!classifier.toString().isBlank()) {
+        archiveClassifier = classifier.toString()
+    }
 }
 
 test {
     useJUnitPlatform()
+}
+
+def replaceLegacyMethodCalls = { String input, String methodName, String replacementName, String extraArgument ->
+    String needle = methodName + "("
+    StringBuilder output = new StringBuilder(input.length() + 256)
+    int cursor = 0
+
+    while (cursor < input.length()) {
+        int methodStart = input.indexOf(needle, cursor)
+        if (methodStart < 0) {
+            output.append(input, cursor, input.length())
+            break
+        }
+
+        int argsStart = methodStart + needle.length()
+        int index = argsStart
+        int depth = 1
+        boolean inString = false
+        boolean inChar = false
+        boolean escaped = false
+
+        while (index < input.length() && depth > 0) {
+            char ch = input.charAt(index)
+            if (escaped) {
+                escaped = false
+            } else if (ch == '\\' as char) {
+                escaped = inString || inChar
+            } else if (inString) {
+                if (ch == '"' as char) inString = false
+            } else if (inChar) {
+                if (ch == '\'' as char) inChar = false
+            } else if (ch == '"' as char) {
+                inString = true
+            } else if (ch == '\'' as char) {
+                inChar = true
+            } else if (ch == '(' as char) {
+                depth++
+            } else if (ch == ')' as char) {
+                depth--
+            }
+            index++
+        }
+
+        if (depth != 0) {
+            output.append(input, cursor, input.length())
+            break
+        }
+
+        output.append(input, cursor, methodStart)
+        output.append(replacementName).append("(")
+        output.append(input, argsStart, index - 1)
+        if (extraArgument != null && !extraArgument.isBlank()) {
+            output.append(extraArgument)
+        }
+        output.append(")")
+        cursor = index
+    }
+
+    output.toString()
+}
+
+def transformLegacyJavaSource = { String source ->
+    def text = source
+
+    def simpleReplacements = [
+            "com.mojang.blaze3d.platform.InputConstants"                       : "net.minecraft.client.util.InputUtil",
+            "InputConstants.Type."                                             : "InputUtil.Type.",
+            "net.fabricmc.fabric.api.client.command.v2.ClientCommands"         : "net.fabricmc.fabric.api.client.command.v2.ClientCommandManager",
+            "ClientCommands."                                                  : "ClientCommandManager.",
+            "net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper"    : "net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper",
+            "KeyMappingHelper."                                                : "KeyBindingHelper.",
+            "KeyBindingHelper.registerKeyMapping"                              : "KeyBindingHelper.registerKeyBinding",
+            "net.minecraft.client.KeyMapping"                                  : "net.minecraft.client.option.KeyBinding",
+            "KeyMapping.Category"                                              : "KeyBinding.Category",
+            "KeyBinding.Category.register"                                      : "KeyBinding.Category.create",
+            "new KeyMapping("                                                  : "new KeyBinding(",
+            "KeyMapping "                                                      : "KeyBinding ",
+            "KeyMapping."                                                      : "KeyBinding.",
+            "net.minecraft.client.Minecraft"                                   : "net.minecraft.client.MinecraftClient",
+            "net.minecraft.client.Camera"                                      : "net.minecraft.client.render.Camera",
+            "Minecraft.getInstance()"                                          : "MinecraftClient.getInstance()",
+            "Minecraft "                                                       : "MinecraftClient ",
+            ".getConnection()"                                                 : ".getNetworkHandler()",
+            ".getOnlinePlayers()"                                              : ".getPlayerList()",
+            ".consumeClick()"                                                  : ".wasPressed()",
+            ".isDown()"                                                        : ".isPressed()",
+            ".handle()"                                                        : ".getHandle()",
+            ".setDown("                                                        : ".setPressed(",
+            ".gameMode"                                                        : ".interactionManager",
+            ".level"                                                           : ".world",
+            "client.font"                                                      : "client.textRenderer",
+            "minecraft.font"                                                   : "minecraft.textRenderer",
+            ".keySprint"                                                       : ".sprintKey",
+            "net.minecraft.client.gui.screens.inventory.MenuAccess"            : "net.minecraft.client.gui.screen.ingame.HandledScreen",
+            "MenuAccess"                                                       : "HandledScreen",
+            "net.minecraft.client.gui.screens.TitleScreen"                     : "net.minecraft.client.gui.screen.TitleScreen",
+            "net.minecraft.client.gui.screens.Screen"                          : "net.minecraft.client.gui.screen.Screen",
+            "net.minecraft.client.gui.components.AbstractSliderButton"         : "net.minecraft.client.gui.widget.SliderWidget",
+            "net.minecraft.client.gui.components.AbstractWidget"               : "net.minecraft.client.gui.widget.ClickableWidget",
+            "net.minecraft.client.gui.components.Button"                       : "net.minecraft.client.gui.widget.ButtonWidget",
+            "net.minecraft.client.gui.components.EditBox"                      : "net.minecraft.client.gui.widget.TextFieldWidget",
+            "AbstractSliderButton"                                             : "SliderWidget",
+            "AbstractWidget"                                                   : "ClickableWidget",
+            "Button.Builder"                                                   : "ButtonWidget.Builder",
+            "Button.builder"                                                   : "ButtonWidget.builder",
+            "Button.OnPress"                                                   : "ButtonWidget.PressAction",
+            "Button "                                                          : "ButtonWidget ",
+            "EditBox "                                                         : "TextFieldWidget ",
+            "EditBox"                                                          : "TextFieldWidget",
+            "net.minecraft.client.gui.GuiGraphicsExtractor"                    : "net.minecraft.client.gui.DrawContext",
+            "GuiGraphicsExtractor"                                             : "DrawContext",
+            "net.minecraft.client.multiplayer.PlayerInfo"                      : "net.minecraft.client.network.PlayerListEntry",
+            "net.minecraft.client.multiplayer.ServerData"                      : "net.minecraft.client.network.ServerInfo",
+            "PlayerInfo "                                                      : "PlayerListEntry ",
+            "ServerData "                                                      : "ServerInfo ",
+            "net.minecraft.commands.SharedSuggestionProvider"                  : "net.minecraft.command.CommandSource",
+            "SharedSuggestionProvider.matchesSubStr"                           : "CommandSource.shouldSuggest",
+            "SharedSuggestionProvider.suggest"                                 : "CommandSource.suggestMatching",
+            "net.minecraft.network.chat.MutableComponent"                      : "net.minecraft.text.MutableText",
+            "MutableComponent "                                                : "MutableText ",
+            "net.minecraft.network.chat.Component"                             : "net.minecraft.text.Text",
+            "Component.literal"                                                : "Text.literal",
+            "Component.translatable"                                           : "Text.translatable",
+            "Component.empty"                                                  : "Text.empty",
+            "Component "                                                       : "Text ",
+            "net.minecraft.network.chat.Style"                                 : "net.minecraft.text.Style",
+            "net.minecraft.network.chat.ClickEvent"                            : "net.minecraft.text.ClickEvent",
+            "net.minecraft.network.chat.HoverEvent"                            : "net.minecraft.text.HoverEvent",
+            "net.minecraft.network.chat.CommonComponents"                      : "net.minecraft.screen.ScreenTexts",
+            "net.minecraft.network.chat.FontDescription"                       : "net.minecraft.util.Identifier",
+            "net.minecraft.resources.Identifier"                               : "net.minecraft.util.Identifier",
+            "Identifier.fromNamespaceAndPath"                                  : "Identifier.of",
+            "Identifier.withDefaultNamespace"                                  : "Identifier.ofVanilla",
+            "new FontDescription.Resource("                                    : "",
+            "net.minecraft.core.registries.BuiltInRegistries"                  : "net.minecraft.registry.Registries",
+            "net.minecraft.core.Holder"                                        : "net.minecraft.registry.entry.RegistryEntry",
+            "Holder<"                                                           : "RegistryEntry<",
+            "BuiltInRegistries.ITEM.getKey"                                    : "Registries.ITEM.getId",
+            "net.minecraft.world.inventory.AbstractContainerMenu"              : "net.minecraft.screen.ScreenHandler",
+            "AbstractContainerMenu"                                            : "ScreenHandler",
+            "net.minecraft.world.inventory.ContainerInput"                     : "net.minecraft.screen.slot.SlotActionType",
+            "ContainerInput.PICKUP"                                            : "SlotActionType.PICKUP",
+            "net.minecraft.world.inventory.Slot"                               : "net.minecraft.screen.slot.Slot",
+            "net.minecraft.world.item.ItemStack"                               : "net.minecraft.item.ItemStack",
+            "net.minecraft.world.item.Items"                                   : "net.minecraft.item.Items",
+            "net.minecraft.world.entity.player.Player"                         : "net.minecraft.entity.player.PlayerEntity",
+            "net.minecraft.world.entity.Entity"                                : "net.minecraft.entity.Entity",
+            "Player "                                                          : "PlayerEntity ",
+            "net.minecraft.world.scores.DisplaySlot"                           : "net.minecraft.scoreboard.ScoreboardDisplaySlot",
+            "DisplaySlot.SIDEBAR"                                              : "ScoreboardDisplaySlot.SIDEBAR",
+            "net.minecraft.world.scores.Objective"                             : "net.minecraft.scoreboard.ScoreboardObjective",
+            "Objective "                                                       : "ScoreboardObjective ",
+            "net.minecraft.world.scores.PlayerScoreEntry"                      : "net.minecraft.scoreboard.ScoreboardEntry",
+            "PlayerScoreEntry"                                                 : "ScoreboardEntry",
+            "net.minecraft.world.scores.Scoreboard"                            : "net.minecraft.scoreboard.Scoreboard",
+            "net.minecraft.network.chat.numbers.NumberFormat"                  : "net.minecraft.scoreboard.number.NumberFormat",
+            "net.minecraft.network.chat.numbers.StyledFormat"                  : "net.minecraft.scoreboard.number.StyledNumberFormat",
+            "StyledFormat.SIDEBAR_DEFAULT"                                     : "StyledNumberFormat.SIDEBAR_DEFAULT",
+            "net.minecraft.ChatFormatting"                                     : "net.minecraft.util.Formatting",
+            "ChatFormatting."                                                  : "Formatting.",
+            "net.minecraft.util.Mth"                                           : "net.minecraft.util.math.MathHelper",
+            "Mth."                                                             : "MathHelper.",
+            "net.minecraft.world.phys.Vec3"                                    : "net.minecraft.util.math.Vec3d",
+            "net.minecraft.world.phys.BlockHitResult"                          : "net.minecraft.util.hit.BlockHitResult",
+            "net.minecraft.world.phys.EntityHitResult"                         : "net.minecraft.util.hit.EntityHitResult",
+            "net.minecraft.world.phys.HitResult"                               : "net.minecraft.util.hit.HitResult",
+            "Vec3 "                                                            : "Vec3d ",
+            "net.minecraft.sounds.SoundEvent"                                  : "net.minecraft.sound.SoundEvent",
+            "net.minecraft.sounds.SoundEvents"                                 : "net.minecraft.sound.SoundEvents",
+            "net.minecraft.world.effect.MobEffectInstance"                     : "net.minecraft.entity.effect.StatusEffectInstance",
+            "net.minecraft.world.effect.MobEffectUtil"                         : "net.minecraft.entity.effect.StatusEffectUtil",
+            "net.minecraft.world.effect.MobEffect"                             : "net.minecraft.entity.effect.StatusEffect",
+            "MobEffectInstance"                                                : "StatusEffectInstance",
+            "MobEffectUtil"                                                     : "StatusEffectUtil",
+            "MobEffect"                                                         : "StatusEffect",
+            "net.minecraft.client.gui.Font"                                    : "net.minecraft.client.font.TextRenderer",
+            "Font.class"                                                       : "TextRenderer.class",
+            "net.minecraft.client.gui.components.ChatComponent"                : "net.minecraft.client.gui.hud.ChatHud",
+            "ChatComponent"                                                     : "ChatHud",
+            "net.minecraft.client.gui.components.PlayerTabOverlay"             : "net.minecraft.client.gui.hud.PlayerListHud",
+            "PlayerTabOverlay"                                                  : "PlayerListHud",
+            "net.minecraft.client.multiplayer.chat.GuiMessageTag"              : "net.minecraft.client.gui.hud.MessageIndicator",
+            "net.minecraft.client.multiplayer.chat.GuiMessage"                 : "net.minecraft.client.gui.hud.ChatHudLine",
+            "GuiMessageTag"                                                     : "MessageIndicator",
+            "GuiMessage"                                                        : "ChatHudLine",
+            "net.minecraft.network.chat.MessageSignature"                      : "net.minecraft.network.message.MessageSignatureData",
+            "MessageSignature"                                                  : "MessageSignatureData",
+            "net.minecraft.client.gui.navigation.ScreenRectangle"              : "net.minecraft.client.gui.ScreenRect",
+            "ScreenRectangle"                                                   : "ScreenRect",
+            "net.minecraft.util.FormattedCharSequence"                         : "net.minecraft.text.OrderedText",
+            "FormattedCharSequence"                                             : "OrderedText",
+            "com.mojang.blaze3d.vertex.PoseStack"                              : "net.minecraft.client.util.math.MatrixStack",
+            "PoseStack"                                                         : "MatrixStack",
+            "net.minecraft.client.renderer."                                   : "net.minecraft.client.render.",
+            "net.minecraft.client.renderer.RenderPipelines"                    : "net.minecraft.client.render.RenderPipelines",
+            "net.minecraft.client.render.RenderPipelines"                      : "net.minecraft.client.gl.RenderPipelines",
+            "client.gameMode.handleContainerInput"                             : "client.interactionManager.clickSlot",
+            ".containerId"                                                     : ".syncId",
+            ".getMenu()"                                                       : ".getScreenHandler()",
+            ".hasItem()"                                                       : ".hasStack()",
+            ".getItem()"                                                       : ".getStack()",
+            ".getTitle()"                                                      : ".getTitle()",
+            ".getStringUUID()"                                                 : ".getUuidAsString()",
+            ".getCurrentServer()"                                              : ".getCurrentServerEntry()",
+            ".isLocalServer()"                                                 : ".isInSingleplayer()",
+            ".ip"                                                              : ".address",
+            ".hitResult"                                                       : ".crosshairTarget",
+            ".getLocation()"                                                   : ".getPos()",
+            ".pick("                                                           : ".raycast(",
+            ".getEyePosition()"                                                : ".getEyePos()",
+            ".getViewVector("                                                  : ".getRotationVec(",
+            ".getFoodData()"                                                   : ".getHungerManager()",
+            ".getUUID()"                                                       : ".getUuid()",
+            ".isShiftKeyDown()"                                                : ".isSneaking()",
+            ".getVisualOrderText()"                                            : ".asOrderedText()",
+            ".width("                                                          : ".getWidth(",
+            ".getGuiScaledWidth()"                                             : ".getScaledWidth()",
+            ".getGuiScaledHeight()"                                            : ".getScaledHeight()",
+            ".getDisplayObjective("                                            : ".getObjectiveForSlot(",
+            ".listPlayerScores("                                               : ".getScoreboardEntries(",
+            ".numberFormatOrDefault("                                          : ".getNumberFormatOr(",
+            ".isHidden()"                                                      : ".hidden()",
+            ".ownerName()"                                                     : ".name()",
+            ".formatValue("                                                    : ".formatted(",
+            ".value()"                                                         : ".value()",
+            ".container"                                                       : ".inventory",
+            ".bounds("                                                         : ".dimensions(",
+            ".setValue("                                                       : ".setText(",
+            ".setResponder("                                                   : ".setChangedListener(",
+            ".setHint("                                                        : ".setPlaceholder(",
+            "addRenderableWidget("                                             : "addDrawableChild(",
+            "onClose()"                                                        : "close()",
+            "Util.getPlatform().openUri"                                       : "Util.getOperatingSystem().open",
+            "extractRenderState("                                              : "render(",
+            "centeredText("                                                    : "drawCenteredTextWithShadow(",
+            "blitSprite("                                                      : "drawGuiTexture(",
+            "context.item("                                                    : "context.drawItem(",
+            "clearWidgets()"                                                   : "clearChildren()",
+            "isPauseScreen()"                                                  : "shouldPause()",
+            "setComponentTooltipForNextFrame("                                 : "drawTooltip(",
+            "InputUtil.Type.KEYSYM.getOrCreate("                               : "InputUtil.Type.KEYSYM.createFromCode(",
+            "context.pose()"                                                   : "context.getMatrices()",
+            "pingKey.matches(input)"                                           : "pingKey.matchesKey(input)",
+            "client.player.getActiveEffects()"                                 : "client.player.getStatusEffects()",
+            "client.world == null ? 20.0F : client.world.tickRateManager().tickrate()" : "20.0F",
+            "effect.getEffect()"                                               : "effect.getEffectType()",
+            "effect.getEffectType().value().getDisplayName()"                   : "effect.getEffectType().value().getName()",
+            "StatusEffectUtil.formatDuration("                                 : "StatusEffectUtil.getDurationText(",
+            "entry.value().getDisplayName()"                                   : "entry.value().getName()",
+            "CommonComponents.SPACE"                                           : "ScreenTexts.SPACE",
+            "enchantment.world."                                               : "enchantment.level.",
+            ".unwrapKey()"                                                     : ".getKey()",
+            "key.identifier()"                                                 : "key.getValue()",
+            ".withPrefix("                                                     : ".withPrefixedPath(",
+            "camera.position()"                                                : "camera.getPos()",
+            ".lengthSqr()"                                                     : ".lengthSquared()",
+            "Vec3.directionFromRotation"                                       : "Vec3d.fromPolar",
+            "new Vec3("                                                        : "new Vec3d(",
+            ".xRot()"                                                          : ".getPitch()",
+            ".yRot()"                                                          : ".getYaw()",
+            ".dot("                                                            : ".dotProduct(",
+            "client.gameRenderer.projectPointToScreen("                        : "client.gameRenderer.project(",
+            "addClientSystemMessage("                                         : "addMessage(",
+            "SoundEvents.NOTE_BLOCK_PLING"                                     : "SoundEvents.BLOCK_NOTE_BLOCK_PLING",
+            "SoundEvents.NOTE_BLOCK_BELL"                                      : "SoundEvents.BLOCK_NOTE_BLOCK_BELL",
+            "SoundEvents.NOTE_BLOCK_CHIME"                                     : "SoundEvents.BLOCK_NOTE_BLOCK_CHIME",
+            "SoundEvents.NOTE_BLOCK_BIT"                                       : "SoundEvents.BLOCK_NOTE_BLOCK_BIT",
+            "SoundEvents.NOTE_BLOCK_BANJO"                                     : "SoundEvents.BLOCK_NOTE_BLOCK_BANJO",
+            "SoundEvents.NOTE_BLOCK_COW_BELL"                                  : "SoundEvents.BLOCK_NOTE_BLOCK_COW_BELL",
+            "client.player.connection.sendCommand("                            : "client.player.networkHandler.sendChatCommand(",
+            "minecraft.keyboardHandler.setClipboard("                          : "minecraft.keyboard.setClipboard(",
+            "client.keyboardHandler.setClipboard("                             : "client.keyboard.setClipboard("
+    ]
+
+    simpleReplacements.each { from, to ->
+        text = text.replace(from, to)
+    }
+
+    text = text.replace("RelayPlayerEntity", "RelayPlayer")
+    text = text.replace("localPlayerEntity", "localPlayer")
+    text = text.replace("MessageSignatureDataData", "MessageSignatureData")
+    text = text.replace("StyledNumberFormat.SIDEBAR_DEFAULT", "StyledNumberFormat.EMPTY")
+    text = text.replace(".idOf(", ".indexOf(")
+    text = text.replaceAll(/\bFont\b/, "TextRenderer")
+    text = text.replaceAll(/\bComponent\b/, "Text")
+    text = text.replaceAll(/\bChatFormatting\b/, "Formatting")
+    text = text.replaceAll(/\.withStyle\((Formatting\.[^)]+)\)/, ".formatted(\$1)")
+    text = text.replaceAll(/\.withStyle\((Formatting\.[^,]+),\s*(Formatting\.[^)]+)\)/, ".formatted(\$1, \$2)")
+    text = text.replace(".withStyle(color, Formatting.BOLD)", ".formatted(color, Formatting.BOLD)")
+    text = text.replace(".withStyle(roleFormatting(entry.role()))", ".formatted(roleFormatting(entry.role()))")
+    text = text.replace(".withStyle(style -> style.withFont(BUC_BADGE_FONT))", ".styled(style -> style.withFont(BUC_BADGE_FONT))")
+    text = text.replace(".styled(style -> style.withFont(BUC_BADGE_FONT))", ".styled(style -> style.withFont(new net.minecraft.text.StyleSpriteSource.Font(BUC_BADGE_FONT)))")
+    text = text.replaceAll(/\b([a-z][A-Za-z0-9_]*)ButtonWidget\b/, "\$1Button")
+    text = text.replace("timestampField.getValue()", "timestampField.getText()")
+    text = text.replace("field.getValue()", "field.getText()")
+    text = text.replace("killsFields.get(i).getValue()", "killsFields.get(i).getText()")
+    text = text.replace("priceFields.get(i).getValue()", "priceFields.get(i).getText()")
+    text = replaceLegacyMethodCalls(text, "sendSystemMessage", "sendMessage", ", false")
+    text = text.replace("InputUtil.Type.KEYSYM.createFromCode(code).getDisplayName()", "InputUtil.Type.KEYSYM.createFromCode(code).getLocalizedText()")
+    text = text.replace("getRotationVec(1.0F).scale(", "getRotationVec(1.0F).multiply(")
+    text = text.replace(".styled(style -> style.withFont(new net.minecraft.text.StyleSpriteSource.Font(BUC_BADGE_FONT))))", ".styled(style -> style.withFont(new net.minecraft.text.StyleSpriteSource.Font(BUC_BADGE_FONT)))")
+    text = text.replace("Lnet/minecraft/network/chat/Text;", "Lnet/minecraft/text/Text;")
+    text = text.replace("Lnet/minecraft/network/chat/MessageSignatureData;", "Lnet/minecraft/network/message/MessageSignatureData;")
+    text = text.replace("Lnet/minecraft/client/multiplayer/chat/MessageIndicator;", "Lnet/minecraft/client/gui/hud/MessageIndicator;")
+    text = text.replace("Lnet/minecraft/client/multiplayer/chat/ChatHudLine;", "Lnet/minecraft/client/gui/hud/ChatHudLine;")
+    text = text.replace("addClientSystemMessage(Lnet/minecraft/text/Text;)V", "addMessage(Lnet/minecraft/text/Text;)V")
+    text = text.replace("addServerSystemMessage(Lnet/minecraft/text/Text;)V", "addMessage(Lnet/minecraft/text/Text;)V")
+    text = text.replace("addPlayerMessage(Lnet/minecraft/text/Text;Lnet/minecraft/network/message/MessageSignatureData;Lnet/minecraft/client/gui/hud/MessageIndicator;)V", "addMessage(Lnet/minecraft/text/Text;Lnet/minecraft/network/message/MessageSignatureData;Lnet/minecraft/client/gui/hud/MessageIndicator;)V")
+    text = text.replace("addPlayerMessage(Lnet/minecraft/text/Text;Lnet/minecraft/network/chat/MessageSignatureData;Lnet/minecraft/client/multiplayer/chat/MessageIndicator;)V", "addMessage(Lnet/minecraft/text/Text;Lnet/minecraft/network/message/MessageSignatureData;Lnet/minecraft/client/gui/hud/MessageIndicator;)V")
+    text = text.replace("net.minecraft.client.input.MouseButtonEvent", "net.minecraft.client.gui.Click")
+    text = text.replace("MouseButtonEvent", "Click")
+    text = text.replace("net.minecraft.client.input.KeyEvent", "net.minecraft.client.input.KeyInput")
+    text = text.replace("KeyEvent", "KeyInput")
+    text = text.replace("input.input()", "input.key()")
+    text = text.replaceAll(/\.withFont\(([^()]+)\)\)/, ".withFont(\$1)")
+    text = text.replaceAll(/context\.text\(([^;]+),\s*false\);/, "context.drawText(\$1, false);")
+    text = text.replaceAll(/context\.text\(([^;]+)\);/, "context.drawTextWithShadow(\$1);")
+    text = text.replaceAll(/\.handleContainerInput\(([^,]+),\s*([^,]+),\s*([^,]+),\s*SlotActionType\.PICKUP,\s*([^)]+)\)/, ".clickSlot(\$1, \$2, \$3, SlotActionType.PICKUP, \$4)")
+    text = text.replace("Registries.ITEM.getId(stack.getStack())", "Registries.ITEM.getId(stack.getItem())")
+    text = text.replace(".index", ".id")
+    text = text.replace(".idOf(", ".indexOf(")
+    if (text.contains("extends Screen")) {
+        text = text.replaceAll(/(?<!\.)\bminecraft\b/, "client")
+        text = text.replace("this.font", "this.textRenderer")
+        text = text.replaceAll(/(?<!\.)\bfont\b/, "textRenderer")
+    }
+    text = text.replace("renderBackground(context);", "renderInGameBackground(context);")
+    text = text.replace("client.world.dimension().identifier().toString()", "client.world.getRegistryKey().getValue().toString()")
+    if (text.contains("class ChatBlacklistMixin")) {
+        text = text.replace("import org.spongepowered.asm.mixin.Shadow;\n", "")
+        text = text.replace("method = \"addMessageToQueue(Lnet/minecraft/client/gui/hud/ChatHudLine;)V\"", "method = \"addMessage(Lnet/minecraft/client/gui/hud/ChatHudLine;)V\"")
+        text = text.replace("method = \"addMessageToDisplayQueue(Lnet/minecraft/client/gui/hud/ChatHudLine;)V\"", "method = \"addVisibleMessage(Lnet/minecraft/client/gui/hud/ChatHudLine;)V\"")
+        text = text.replaceAll(/(?s)\s*@Shadow\s+private List<ChatHudLine> allMessages;\s+@Shadow\s+private void refreshTrimmedMessages\(\) \{\s*\}\s+/, "\n\n")
+        text = text.replaceAll(/(?s)\n\s*@Inject\(method = "addMessage\(Lnet\/minecraft\/client\/gui\/hud\/ChatHudLine;\)V", at = @At\("TAIL"\), require = 0\)\s+private void extendMessageHistory\(ChatHudLine message, CallbackInfo ci\) \{.*?\n\s*\}\s+\n\s*private boolean isLingeringSilentStatsLine/, "\n    private boolean isLingeringSilentStatsLine")
+    }
+    return text
+}
+
+tasks.register("generateMc1_21_10Sources") {
+    group = "multi-version"
+    description = "Generates the Minecraft 1.21.10/Yarn compatibility source tree from the shared 26.x sources."
+    inputs.dir file("src/main/java")
+    inputs.file file("build.gradle")
+    outputs.dir betterucLegacyGeneratedJavaDir
+
+    doLast {
+        def outputDir = betterucLegacyGeneratedJavaDir.get().asFile
+        delete outputDir
+        outputDir.mkdirs()
+
+        fileTree("src/main/java").matching { include "**/*.java" }.each { sourceFile ->
+            def relative = projectDir.toPath().relativize(sourceFile.toPath()).toString()
+                    .replace("src\\main\\java\\", "")
+                    .replace("src/main/java/", "")
+            def overrideFile = file("src/mc1_21_10/java/${relative}")
+            if (overrideFile.exists()) {
+                return
+            }
+            def targetFile = new File(outputDir, relative)
+            targetFile.parentFile.mkdirs()
+            targetFile.setText(transformLegacyJavaSource(sourceFile.getText("UTF-8")), "UTF-8")
+        }
+    }
+}
+
+if (betterucUseLegacyGeneratedSources) {
+    tasks.named("compileJava") {
+        dependsOn tasks.named("generateMc1_21_10Sources")
+    }
+    tasks.named("sourcesJar") {
+        dependsOn tasks.named("generateMc1_21_10Sources")
+    }
 }
 
 def minecraftModsDir = providers.gradleProperty("minecraftModsDir")
@@ -163,6 +577,183 @@ tasks.register("copyModToMinecraftMods", Copy) {
     }
 }
 
-tasks.named("build") {
-    dependsOn tasks.named("copyModToMinecraftMods")
+def copyToMinecraftMods = providers.gradleProperty("copyToMinecraftMods")
+        .map { it.equalsIgnoreCase("true") }
+        .orElse(true)
+
+if (copyToMinecraftMods.get()) {
+    tasks.named("build") {
+        dependsOn tasks.named("copyModToMinecraftMods")
+    }
+}
+
+def minecraftBuildVariants = [
+        [
+                id                  : "mc26_2",
+                taskName            : "buildMc26_2",
+                description         : "Builds betterUC for Minecraft 26.2 and copies it into the 26.2 mods folder.",
+                minecraftVersion    : "26.2",
+                minecraftDependency : ">=26.1.2 <26.3",
+                fabricVersion       : "0.153.0+26.2",
+                loaderVersion       : "0.19.3",
+                loaderDependency    : ">=0.19.3",
+                targetJavaVersion   : "25",
+                javaDependency      : ">=25",
+                archiveClassifier   : "mc26.2",
+                variantSourceSet    : "mc26",
+                modsDir             : "C:/Users/huhns/AppData/Roaming/.minecraft/installations/fabric-loader-26.2/mods"
+        ],
+        [
+                id                  : "mc26_1_2",
+                taskName            : "buildMc26_1_2",
+                description         : "Builds betterUC for Minecraft 26.1.2 and copies it into the 26.1.2 mods folder.",
+                minecraftVersion    : "26.1.2",
+                minecraftDependency : ">=26.1.2 <26.3",
+                fabricVersion       : "0.152.1+26.1.2",
+                loaderVersion       : "0.19.3",
+                loaderDependency    : ">=0.19.3",
+                targetJavaVersion   : "25",
+                javaDependency      : ">=25",
+                archiveClassifier   : "mc26.x",
+                variantSourceSet    : "mc26",
+                modsDir             : "C:/Users/huhns/AppData/Roaming/.minecraft/installations/fabric-loader-26.1.2/mods"
+        ],
+        [
+                id                  : "mc1_21_10",
+                taskName            : "buildMc1_21_10",
+                description         : "Builds betterUC for Minecraft 1.21.10 and copies it into the 1.21.10 mods folder.",
+                minecraftVersion    : "1.21.10",
+                minecraftDependency : "~1.21.10",
+                fabricVersion       : "0.138.4+1.21.10",
+                loaderVersion       : "0.19.3",
+                loaderDependency    : ">=0.19.3",
+                targetJavaVersion   : "21",
+                javaDependency      : ">=21",
+                archiveClassifier   : "mc1.21.10",
+                variantSourceSet    : "mc1_21_10",
+                useLegacyGeneratedSources: true,
+                legacyBuildProjectDir: "gradle/mc1_21_10",
+                yarnMappings        : "1.21.10+build.3",
+                modsDir             : "C:/Users/huhns/AppData/Roaming/.minecraft/installations/fabric-loader-1.21.10/mods",
+                fabricApiModules    : [
+                        "net.fabricmc.fabric-api:fabric-api-base:1.0.0+14b92d896f",
+                        "net.fabricmc.fabric-api:fabric-command-api-v2:2.4.0+c0ab2d5d6f",
+                        "net.fabricmc.fabric-api:fabric-key-binding-api-v1:1.1.1+b3ba9c486f",
+                        "net.fabricmc.fabric-api:fabric-lifecycle-events-v1:2.6.9+33df5e6e6f",
+                        "net.fabricmc.fabric-api:fabric-message-api-v1:6.1.7+3154c1c86f",
+                        "net.fabricmc.fabric-api:fabric-networking-api-v1:5.1.0+b095d8db6f",
+                        "net.fabricmc.fabric-api:fabric-rendering-v1:16.2.0+bee81f016f"
+                ].join(",")
+        ]
+]
+
+def variantProjectProperties = { variant ->
+    [
+            "loom_version"         : project.findProperty("loom_version") ?: "1.17.11",
+            "mod_version"          : project.version,
+            "maven_group"          : project.group,
+            "archives_base_name"   : project.base.archivesName.get(),
+            "minecraft_version"    : variant.minecraftVersion,
+            "minecraft_dependency" : variant.minecraftDependency,
+            "fabric_version"       : variant.fabricVersion,
+            "yarn_mappings"        : variant.yarnMappings ?: "",
+            "loader_version"       : variant.loaderVersion,
+            "loader_dependency"    : variant.loaderDependency,
+            "target_java_version"  : variant.targetJavaVersion,
+            "java_dependency"      : variant.javaDependency,
+            "minecraftModsDir"     : variant.modsDir,
+            "betterucBuildDir"     : layout.buildDirectory.dir("versions/${variant.id}").get().asFile.absolutePath,
+            "modArchiveClassifier" : variant.archiveClassifier,
+            "fabric_api_modules"   : variant.fabricApiModules ?: "",
+            "betterucVariantSourceSet": variant.variantSourceSet ?: "",
+            "betterucUseLegacyGeneratedSources": (variant.useLegacyGeneratedSources ?: false).toString(),
+            "betterucLegacyGeneratedJavaDir": betterucLegacyGeneratedJavaDir.get().asFile.absolutePath,
+            "copyToMinecraftMods"  : "true"
+    ]
+}
+
+minecraftBuildVariants.each { variant ->
+    if (variant.legacyBuildProjectDir) {
+        tasks.register(variant.taskName, Exec) {
+            group = "multi-version"
+            description = variant.description
+            workingDir projectDir
+            if (variant.useLegacyGeneratedSources) {
+                dependsOn tasks.named("generateMc1_21_10Sources")
+            }
+
+            def props = variantProjectProperties(variant).collect { key, value -> "-P${key}=${value}" }
+            commandLine([file("gradlew.bat").absolutePath, "--project-dir", variant.legacyBuildProjectDir, "clean", "build", "--no-daemon", "-PbetterucRootDir=${projectDir.absolutePath}"] + props)
+        }
+    } else {
+        tasks.register(variant.taskName, GradleBuild) {
+            group = "multi-version"
+            description = variant.description
+            buildName = variant.id
+            dir = projectDir
+            tasks = ["clean", "build"]
+
+            startParameter.projectProperties.putAll(gradle.startParameter.projectProperties)
+            startParameter.projectProperties.putAll(variantProjectProperties(variant))
+        }
+    }
+}
+
+tasks.register("buildAllModernMinecraftVersions") {
+    group = "multi-version"
+    description = "Builds the currently supported 26.x betterUC jars."
+    dependsOn "buildMc26_1_2", "buildMc26_2"
+}
+
+tasks.register("buildMc26_x") {
+    group = "multi-version"
+    description = "Builds the release jar for Minecraft 26.1.2 through 26.2."
+    dependsOn "buildMc26_1_2"
+}
+
+tasks.register("buildReleaseJars") {
+    group = "multi-version"
+    description = "Builds the release jars that should be uploaded to GitHub."
+    dependsOn "buildMc26_x", "buildMc1_21_10"
+    doLast {
+        def releaseDir = layout.buildDirectory.dir("release").get().asFile
+        if (!releaseDir.exists() && !releaseDir.mkdirs()) {
+            throw new GradleException("Could not create release directory: ${releaseDir}")
+        }
+
+        def modernJar = layout.buildDirectory
+                .file("versions/mc26_1_2/libs/${project.base.archivesName.get()}-${project.version}-mc26.x.jar")
+                .get()
+                .asFile
+        if (!modernJar.isFile()) {
+            throw new GradleException("Modern release jar was not built: ${modernJar}")
+        }
+        def legacyJar = layout.buildDirectory
+                .file("versions/mc1_21_10/libs/${project.base.archivesName.get()}-${project.version}-mc1.21.10.jar")
+                .get()
+                .asFile
+        if (!legacyJar.isFile()) {
+            throw new GradleException("Legacy 1.21.10 release jar was not built: ${legacyJar}")
+        }
+
+        copy {
+            from modernJar, legacyJar
+            into releaseDir
+        }
+
+        logger.lifecycle("Release jar ready: ${new File(releaseDir, modernJar.name)}")
+        logger.lifecycle("Release jar ready: ${new File(releaseDir, legacyJar.name)}")
+    }
+}
+
+tasks.register("buildAllMinecraftVersions") {
+    group = "multi-version"
+    description = "Builds every supported betterUC jar."
+    dependsOn "buildAllModernMinecraftVersions", "buildMc1_21_10"
+}
+
+tasks.register("buildAllConfiguredMinecraftVersions") {
+    group = "multi-version"
+    description = "Attempts every configured target, including the experimental legacy 1.21.10 build."
+    dependsOn minecraftBuildVariants.collect { it.taskName }
 }

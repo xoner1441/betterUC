@@ -1,0 +1,224 @@
+buildscript {
+    def loomVersion = project.findProperty("loom_version") ?: "1.17.11"
+    repositories {
+        maven { name = "Fabric"; url = "https://maven.fabricmc.net/" }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath "net.fabricmc:fabric-loom:${loomVersion}"
+    }
+}
+
+apply plugin: "fabric-loom"
+apply plugin: "maven-publish"
+
+def betterucRootDir = providers.gradleProperty("betterucRootDir")
+        .map { file(it) }
+        .orElse(file("../.."))
+        .get()
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+def betterucBuildDir = providers.gradleProperty("betterucBuildDir")
+if (betterucBuildDir.present) {
+    layout.buildDirectory.set(file(betterucBuildDir.get()))
+}
+
+def generatedJavaDir = providers.gradleProperty("betterucLegacyGeneratedJavaDir")
+        .map { file(it) }
+        .orElse(file("${betterucRootDir}/build/generated/sources/betterucLegacy/java"))
+
+sourceSets {
+    main {
+        java.setSrcDirs([generatedJavaDir.get()])
+        def overrideJavaDir = file("${betterucRootDir}/src/mc1_21_10/java")
+        if (overrideJavaDir.exists()) {
+            java.srcDir overrideJavaDir
+        }
+
+        resources.setSrcDirs([])
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+processResources {
+    from(file("${betterucRootDir}/src/main/resources")) {
+        exclude "betteruc.mixins.json"
+    }
+    def overrideResourcesDir = file("${betterucRootDir}/src/mc1_21_10/resources")
+    if (overrideResourcesDir.exists()) {
+        from(overrideResourcesDir)
+    }
+
+    inputs.property "version", project.version
+    inputs.property "minecraft_dependency", project.findProperty("minecraft_dependency") ?: "~${project.minecraft_version}"
+    inputs.property "loader_dependency", project.findProperty("loader_dependency") ?: ">=${project.loader_version}"
+    inputs.property "java_dependency", project.findProperty("java_dependency") ?: ">=21"
+    filteringCharset "UTF-8"
+    filesMatching("fabric.mod.json") {
+        expand(
+                "version": project.version,
+                "minecraft_dependency": project.findProperty("minecraft_dependency") ?: "~${project.minecraft_version}",
+                "loader_dependency": project.findProperty("loader_dependency") ?: ">=${project.loader_version}",
+                "java_dependency": project.findProperty("java_dependency") ?: ">=21"
+        )
+    }
+}
+
+def targetJavaVersion = (project.findProperty("target_java_version") ?: "21") as int
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
+        it.options.release = targetJavaVersion
+    }
+}
+
+java {
+    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+    if (JavaVersion.current() < javaVersion) {
+        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+    }
+    withSourcesJar()
+}
+
+jar {
+    from(file("${betterucRootDir}/LICENSE")) { rename { "${it}_${project.base.archivesName.get()}" } }
+    archiveClassifier = "dev"
+}
+
+remapJar {
+    def classifier = project.findProperty("modArchiveClassifier") ?: ""
+    archiveClassifier = classifier.toString()
+}
+
+test {
+    useJUnitPlatform()
+}
+
+def minecraftModsDir = providers.gradleProperty("minecraftModsDir")
+        .orElse(providers.environmentVariable("MINECRAFT_MODS_DIR"))
+        .orElse(providers.environmentVariable("APPDATA").map { "${it}/.minecraft/mods" })
+        .orElse("${betterucRootDir}/run/mods")
+
+def isMinecraftRunning = {
+    def stream = ProcessHandle.allProcesses()
+    try {
+        def iterator = stream.iterator()
+        while (iterator.hasNext()) {
+            def processInfo = iterator.next().info()
+            def command = processInfo.command().orElse("").toLowerCase(java.util.Locale.ROOT)
+            if (!command.contains("java")) continue
+
+            def commandLine = processInfo.commandLine().orElse("").toLowerCase(java.util.Locale.ROOT)
+            if (commandLine.contains("knotclient")
+                    || commandLine.contains("net.minecraft.client.main.main")
+                    || commandLine.contains("fabric-loader")) {
+                return true
+            }
+        }
+        return false
+    } catch (Exception ignored) {
+        return false
+    } finally {
+        stream.close()
+    }
+}
+
+tasks.register("copyModToMinecraftMods", Copy) {
+    group = "build"
+    description = "Copies the remapped legacy mod jar into the local Minecraft mods folder."
+
+    dependsOn tasks.named("remapJar")
+    from(tasks.named("remapJar").flatMap { it.archiveFile })
+    into(minecraftModsDir.map { file(it) })
+
+    doFirst {
+        if (isMinecraftRunning()) {
+            throw new GradleException(
+                    "Minecraft appears to be running. Refusing to overwrite files in mods/ while the game is open " +
+                            "because this can corrupt live class loading. Close Minecraft and rerun the build."
+            )
+        }
+
+        def targetDir = file(minecraftModsDir.get())
+        if (!targetDir.exists() && !targetDir.mkdirs()) {
+            throw new GradleException("Could not create Minecraft mods directory: ${targetDir}")
+        }
+
+        def currentJar = tasks.named("remapJar").get().archiveFile.get().asFile.name
+        def archiveBase = project.base.archivesName.get()
+        targetDir.eachFile { jarFile ->
+            if (!jarFile.name.endsWith(".jar")) return
+
+            def lowerName = jarFile.name.toLowerCase()
+            def staleModJar = jarFile.name.startsWith("${archiveBase}-")
+                    || lowerName.startsWith("betteruc-")
+            if (!staleModJar || jarFile.name == currentJar || lowerName.endsWith("-sources.jar")) return
+
+            try {
+                if (jarFile.delete()) {
+                    logger.lifecycle("Removed stale mod jar ${jarFile.name}")
+                } else {
+                    logger.warn("Could not remove stale mod jar ${jarFile}; it may be in use.")
+                }
+            } catch (Exception ignored) {
+                logger.warn("Could not remove stale mod jar ${jarFile}; it may be in use.")
+            }
+        }
+        logger.lifecycle("Copying ${currentJar} to ${targetDir}")
+    }
+
+    doLast {
+        def copiedJar = file("${minecraftModsDir.get()}/${tasks.named("remapJar").get().archiveFile.get().asFile.name}")
+        try {
+            def zip = new java.util.zip.ZipFile(copiedJar)
+            try {
+                def entries = zip.entries()
+                byte[] buffer = new byte[8192]
+                while (entries.hasMoreElements()) {
+                    def entry = entries.nextElement()
+                    if (!entry.isDirectory()) {
+                        def input = zip.getInputStream(entry)
+                        try {
+                            while (input.read(buffer) != -1) {
+                                // Read every entry so corrupt local ZIP headers fail during the build.
+                            }
+                        } finally {
+                            input.close()
+                        }
+                    }
+                }
+            } finally {
+                zip.close()
+            }
+        } catch (Exception ex) {
+            throw new GradleException("Copied mod jar is unreadable or corrupted: ${copiedJar}", ex)
+        }
+    }
+}
+
+def copyToMinecraftMods = providers.gradleProperty("copyToMinecraftMods")
+        .map { it.equalsIgnoreCase("true") }
+        .orElse(true)
+
+if (copyToMinecraftMods.get()) {
+    tasks.named("build") {
+        dependsOn tasks.named("copyModToMinecraftMods")
+    }
+}

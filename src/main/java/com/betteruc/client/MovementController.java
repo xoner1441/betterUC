@@ -41,7 +41,7 @@ public final class MovementController {
         }
 
         while (sprintKey.consumeClick()) {
-            if (BetterUCConfig.INSTANCE.toggleSprintEnabled && client.gui.screen() == null) {
+            if (BetterUCConfig.INSTANCE.toggleSprintEnabled && !ClientCompat.hasScreen(client)) {
                 toggleSprintActive = !toggleSprintActive;
             }
         }
@@ -55,7 +55,7 @@ public final class MovementController {
 
         boolean shouldForceSprint = BetterUCConfig.INSTANCE.toggleSprintEnabled
                 && toggleSprintActive
-                && client.gui.screen() == null
+                && !ClientCompat.hasScreen(client)
                 && client.player != null
                 && client.player.isAlive()
                 && client.player.getFoodData().getFoodLevel() > 6

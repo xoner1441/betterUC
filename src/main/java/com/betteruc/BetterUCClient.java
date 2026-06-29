@@ -7,7 +7,10 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.betteruc.client.AutoDropDrinkClient;
 import com.betteruc.client.AutoFisherClient;
+import com.betteruc.client.AutoGaertnerClient;
+import com.betteruc.client.AutoWinzerClient;
 import com.betteruc.client.CarFindTracker;
+import com.betteruc.client.ClientCompat;
 import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.BetterUCFontManager;
 import com.betteruc.client.CommunicationDeviceTracker;
@@ -945,6 +948,8 @@ public class BetterUCClient implements ClientModInitializer {
             AmmoHud.tickReloadKey(client);
             PingRelayClient.tick(client);
             AutoDropDrinkClient.tick(client);
+            AutoGaertnerClient.tick(client);
+            AutoWinzerClient.tick(client);
             tickStatsOnJoin(client);
             handleConfiguredHotkeys(client);
             MovementController.tick(client);
@@ -955,7 +960,7 @@ public class BetterUCClient implements ClientModInitializer {
 
     private void maybeOpenWelcomeChangelog(Minecraft client) {
         if (welcomeChangelogChecked || client == null) return;
-        if (!(client.gui.screen() instanceof TitleScreen)) return;
+        if (!(ClientCompat.currentScreen(client) instanceof TitleScreen)) return;
 
         String currentVersion = currentModVersion();
         if (BetterUCConfig.hasSeenWelcomeChangelog(currentVersion)) {
@@ -965,7 +970,7 @@ public class BetterUCClient implements ClientModInitializer {
 
         welcomeChangelogChecked = true;
         BetterUCConfig.markWelcomeChangelogSeen(currentVersion);
-        client.gui.setScreen(new ChangelogScreen(client.gui.screen(), true));
+        ClientCompat.setScreen(client, new ChangelogScreen(ClientCompat.currentScreen(client), true));
     }
 
     private static String currentModVersion() {
@@ -993,14 +998,14 @@ public class BetterUCClient implements ClientModInitializer {
 
     private void handleScreenHotkeys(Minecraft client) {
         while (SETTINGS_KEY.consumeClick()) {
-            if (client.gui.screen() == null) {
-                client.gui.setScreen(new BetterUCScreen());
+            if (!ClientCompat.hasScreen(client)) {
+                ClientCompat.setScreen(client, new BetterUCScreen());
             }
         }
 
         while (COMMANDS_KEY.consumeClick()) {
-            if (client.gui.screen() == null) {
-                client.gui.setScreen(new CommandGui());
+            if (!ClientCompat.hasScreen(client)) {
+                ClientCompat.setScreen(client, new CommandGui());
             }
         }
     }
@@ -1011,10 +1016,10 @@ public class BetterUCClient implements ClientModInitializer {
             queuedPress = true;
         }
 
-        if (client.gui.screen() instanceof PingWheelScreen) return;
+        if (ClientCompat.currentScreen(client) instanceof PingWheelScreen) return;
 
         boolean down = PING_KEY.isDown();
-        if (client.gui.screen() != null) {
+        if (ClientCompat.hasScreen(client)) {
             pingKeyWasDown = down;
             pingWheelOpenedForPress = false;
             return;
@@ -1036,7 +1041,7 @@ public class BetterUCClient implements ClientModInitializer {
 
         if (down) {
             if (!pingWheelOpenedForPress && now - pingKeyDownAtMs >= PING_WHEEL_HOLD_MS) {
-                client.gui.setScreen(new PingWheelScreen(PING_KEY));
+                ClientCompat.setScreen(client, new PingWheelScreen(PING_KEY));
                 pingWheelOpenedForPress = true;
             }
             return;
@@ -1057,7 +1062,7 @@ public class BetterUCClient implements ClientModInitializer {
     }
 
     private void handleConfiguredHotkeys(Minecraft client) {
-        if (client.player == null || client.gui.screen() != null) return;
+        if (client.player == null || ClientCompat.hasScreen(client)) return;
 
         List<BetterUCConfig.HotkeyCommand> hotkeys = BetterUCConfig.INSTANCE.hotkeyCommands;
         if (hotkeys == null || hotkeys.isEmpty()) {
@@ -1102,6 +1107,8 @@ public class BetterUCClient implements ClientModInitializer {
         CashHud.clear();
         AutoDropDrinkClient.reset();
         AutoFisherClient.reset();
+        AutoGaertnerClient.reset();
+        AutoWinzerClient.reset();
 
         BetterUCSuppressFlags.suppressModBlOutput = false;
         BetterUCSuppressFlags.modBlCallback = null;
