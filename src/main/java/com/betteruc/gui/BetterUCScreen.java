@@ -50,7 +50,7 @@ public class BetterUCScreen extends Screen {
             .map(container -> container.getMetadata().getVersion().getFriendlyString())
             .orElse("dev");
     private static final UpdateSection[] UPDATE_SECTIONS = new UpdateSection[]{
-            new UpdateSection("Neu in 1.2.3", new String[]{
+            new UpdateSection("Neu in 1.2.4", new String[]{
                     "/adropdrink gibt Lieferanten-Getraenke automatisch im 2,5s-Takt ab",
                     "Auto-Dropdrink stoppt, wenn du nicht in der Kneipe bist",
                     "Winzer-Automation leert alle Trauben-Fenster automatisch",

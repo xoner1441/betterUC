@@ -375,6 +375,254 @@ h3 {
   text-align: right;
 }
 
+.modal-open {
+  overflow: hidden;
+}
+
+.download-modal {
+  inset: 0;
+  position: fixed;
+  z-index: 50;
+}
+
+.download-modal-backdrop {
+  backdrop-filter: blur(12px);
+  background: rgba(7, 12, 12, 0.72);
+  inset: 0;
+  position: absolute;
+}
+
+.download-dialog {
+  background: #202326;
+  border: 1px solid #3a4148;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+  color: var(--text);
+  left: 50%;
+  max-height: min(720px, calc(100vh - 36px));
+  overflow: visible;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(530px, calc(100vw - 28px));
+}
+
+.download-dialog-head {
+  align-items: center;
+  border-bottom: 1px solid #343a40;
+  display: flex;
+  gap: 12px;
+  padding: 24px;
+}
+
+.download-dialog-icon,
+.download-result-mark {
+  align-items: center;
+  background: #111817;
+  border: 1px solid #343f43;
+  color: var(--cyan);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-weight: 900;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
+}
+
+.download-dialog-head h2 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.download-close {
+  align-items: center;
+  background: #343941;
+  border: 0;
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 28px;
+  height: 38px;
+  justify-content: center;
+  margin-left: auto;
+  width: 38px;
+}
+
+.download-dialog-body {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  padding: 26px 32px 28px;
+}
+
+.download-divider {
+  align-items: center;
+  color: var(--muted);
+  display: grid;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 14px;
+  grid-template-columns: 1fr auto 1fr;
+  width: 100%;
+}
+
+.download-divider::before,
+.download-divider::after {
+  background: #383d43;
+  content: "";
+  display: block;
+  height: 1px;
+}
+
+.download-select-block {
+  position: relative;
+  width: min(292px, 100%);
+}
+
+.download-select,
+.download-platform {
+  align-items: center;
+  background: #35383f;
+  border: 1px solid transparent;
+  color: #cbd5df;
+  display: flex;
+  font: inherit;
+  font-weight: 800;
+  justify-content: space-between;
+  min-height: 38px;
+  padding: 0 12px;
+  width: min(292px, 100%);
+}
+
+.download-select {
+  cursor: pointer;
+}
+
+.download-select:hover,
+.download-select:focus {
+  border-color: #4b5563;
+  outline: none;
+}
+
+.download-chevron {
+  color: var(--text);
+  font-size: 20px;
+}
+
+.download-platform {
+  color: #818892;
+}
+
+.download-platform small {
+  border: 1px solid #5b626b;
+  color: #aab1bb;
+  font-size: 11px;
+  padding: 1px 5px;
+  text-transform: uppercase;
+}
+
+.download-version-menu {
+  background: #15181c;
+  border: 1px solid #2e343b;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+  display: grid;
+  gap: 8px;
+  left: 0;
+  padding: 8px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 2;
+}
+
+.download-search-label {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.download-search-label span {
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  width: 1px;
+}
+
+.download-search-label input {
+  background: #3a3d44;
+  border-color: transparent;
+  min-height: 36px;
+}
+
+.download-version-list {
+  display: grid;
+  gap: 6px;
+  max-height: 186px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.download-version-option {
+  background: #3c4047;
+  border: 1px solid transparent;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  gap: 2px;
+  min-height: 44px;
+  padding: 7px 10px;
+  text-align: left;
+}
+
+.download-version-option:hover,
+.download-version-option:focus {
+  border-color: var(--cyan);
+  outline: none;
+}
+
+.download-version-option strong {
+  font-size: 16px;
+}
+
+.download-version-option span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.download-result {
+  align-items: center;
+  background: #111817;
+  border: 1px solid #2e3938;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  margin-top: 10px;
+  padding: 10px;
+  width: 100%;
+}
+
+.download-result strong,
+.download-result span {
+  display: block;
+}
+
+.download-result span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.download-result .button {
+  min-height: 36px;
+}
+
+.download-modal-hint {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 2px 0 0;
+  text-align: center;
+}
+
 .install-panel {
   max-width: 680px;
 }

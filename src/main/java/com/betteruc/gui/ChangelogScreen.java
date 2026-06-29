@@ -14,7 +14,7 @@ public class ChangelogScreen extends Screen {
     private static final Page[] PAGES = new Page[]{
             new Page(
                     "Highlights",
-                    "betterUC 1.2.3",
+                    "betterUC 1.2.4",
                     new String[]{
                             "/adropdrink gibt Lieferanten-Getraenke automatisch im 2,5s-Takt ab",
                             "Auto-Dropdrink stoppt, wenn du nicht in der Kneipe bist",
