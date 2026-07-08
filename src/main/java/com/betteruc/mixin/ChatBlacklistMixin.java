@@ -17,9 +17,11 @@ import com.betteruc.client.UserStatsClient;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.CashHud;
+import com.betteruc.hud.DealerTimerHud;
 import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.PaydayHud;
 import com.betteruc.hud.PlantageHud;
+import com.betteruc.hud.ProductionTimerHud;
 import com.betteruc.parser.BlacklistParser;
 import com.betteruc.parser.StatsLineClassifier;
 import org.spongepowered.asm.mixin.Mixin;
@@ -142,7 +144,9 @@ public class ChatBlacklistMixin {
         AutoWinzerClient.handleChatLine(Minecraft.getInstance(), raw);
         CarFindTracker.handleIncomingChat(Minecraft.getInstance(), raw);
         CommunicationDeviceTracker.handleChatLine(Minecraft.getInstance(), raw);
+        DealerTimerHud.handleChatLine(Minecraft.getInstance(), raw);
         PlantageHud.handleChatMessage(Minecraft.getInstance(), raw);
+        ProductionTimerHud.handleChatLine(Minecraft.getInstance(), raw);
 
         if (BetterUCSuppressFlags.consumeBlacklistInfoLocalMessageBypass()) {
             appendTimestampIfConfigured(message, ci);

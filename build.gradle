@@ -672,6 +672,15 @@ def variantProjectProperties = { variant ->
     ]
 }
 
+def batchSafeGradleArgument = { Object value ->
+    def text = value.toString()
+    def isWindows = System.getProperty("os.name", "").toLowerCase().contains("windows")
+    if (!isWindows || !(text.contains(">") || text.contains("<") || text.contains(" ") || text.contains("&"))) {
+        return text
+    }
+    return "\"${text.replace("\"", "\\\"")}\""
+}
+
 minecraftBuildVariants.each { variant ->
     if (variant.legacyBuildProjectDir) {
         tasks.register(variant.taskName, Exec) {
@@ -682,7 +691,7 @@ minecraftBuildVariants.each { variant ->
                 dependsOn tasks.named("generateMc1_21_10Sources")
             }
 
-            def props = variantProjectProperties(variant).collect { key, value -> "-P${key}=${value}" }
+            def props = variantProjectProperties(variant).collect { key, value -> batchSafeGradleArgument("-P${key}=${value}") }
             commandLine([file("gradlew.bat").absolutePath, "--project-dir", variant.legacyBuildProjectDir, "clean", "build", "--no-daemon", "-PbetterucRootDir=${projectDir.absolutePath}"] + props)
         }
     } else {

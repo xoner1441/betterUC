@@ -279,6 +279,8 @@ public final class BetterUCFontManager {
         BetterUCConfig.INSTANCE.potionHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.potionHudCustomFont, legacy);
         BetterUCConfig.INSTANCE.hackTimerHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.hackTimerHudCustomFont, legacy);
         BetterUCConfig.INSTANCE.plantTimerHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.plantTimerHudCustomFont, legacy);
+        BetterUCConfig.INSTANCE.dealerTimerHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.dealerTimerHudCustomFont, legacy);
+        BetterUCConfig.INSTANCE.productionTimerHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.productionTimerHudCustomFont, legacy);
         BetterUCConfig.INSTANCE.pingHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.pingHudCustomFont, legacy);
     }
 

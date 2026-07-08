@@ -13,14 +13,25 @@ import java.util.regex.Pattern;
 
 public class BankBalanceHud {
 
+    private static final long BANK_DELTA_DEDUP_WINDOW_MS = 1200L;
+    private static final Pattern TEXT_FORMATTING_PATTERN = Pattern.compile("\\u00A7.");
+    private static final Pattern CHAT_TIMESTAMP_PATTERN = Pattern.compile("^\\s*\\d{1,2}:\\d{2}:\\d{2}\\s+");
     private static final Pattern BANK_BALANCE_PATTERN = Pattern.compile(
             "(?i)(?:ihr\\s+bankguthaben\\s+betr(?:a|ae|\\u00E4)gt\\s*:?|neuer\\s+(?:bank\\s*)?kontostand\\s*:?|neuer\\s+betrag\\s*:?)\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$"
     );
     private static final Pattern PREVIOUS_BALANCE_PATTERN = Pattern.compile(
             "(?i)(?:vorheriger\\s+kontostand\\s*:?|alter\\s+betrag\\s*:?)\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$"
     );
+    private static final Pattern BANK_TRANSFER_SENT_PATTERN = Pattern.compile(
+            "(?i)\\bdu\\s+hast\\s+(.+?)\\s+([0-9][0-9\\.]*)\\s*\\$\\s+(?:\\u00FCberwiesen|ueberwiesen)\\s*!?"
+    );
+    private static final Pattern BANK_TRANSFER_RECEIVED_PATTERN = Pattern.compile(
+            "(?i)\\b(.+?)\\s+hat\\s+dir\\s+([0-9][0-9\\.]*)\\s*\\$\\s+(?:\\u00FCberwiesen|ueberwiesen)\\s*!?"
+    );
 
     private static int currentBankBalance = -1;
+    private static String lastBankDeltaKey = "";
+    private static long lastBankDeltaMs = 0L;
     private static final DecimalFormat MONEY_FORMAT = createMoneyFormat();
 
     public static void register() {
@@ -30,6 +41,32 @@ public class BankBalanceHud {
 
     public static void updateFromChatLine(String raw) {
         if (raw == null || raw.isBlank()) return;
+        String cleanedRaw = stripFormatting(raw);
+        for (String line : cleanedRaw.split("\\R+")) {
+            updateFromCleanLine(stripChatPrefix(line));
+        }
+    }
+
+    private static void updateFromCleanLine(String raw) {
+        if (raw == null || raw.isBlank()) return;
+
+        Matcher transferSentMatcher = BANK_TRANSFER_SENT_PATTERN.matcher(raw);
+        if (transferSentMatcher.find()) {
+            Integer parsed = parseMoneyValue(transferSentMatcher.group(2));
+            if (parsed != null) {
+                subtractBalanceAndPersist(parsed, "bank-transfer-sent:" + normalizeRawKey(raw));
+            }
+            return;
+        }
+
+        Matcher transferReceivedMatcher = BANK_TRANSFER_RECEIVED_PATTERN.matcher(raw);
+        if (transferReceivedMatcher.find()) {
+            Integer parsed = parseMoneyValue(transferReceivedMatcher.group(2));
+            if (parsed != null) {
+                addBalanceAndPersist(parsed, "bank-transfer-received:" + normalizeRawKey(raw));
+            }
+            return;
+        }
 
         Matcher balanceMatcher = BANK_BALANCE_PATTERN.matcher(raw);
         if (balanceMatcher.find()) {
@@ -123,6 +160,24 @@ public class BankBalanceHud {
         currentBankBalance = Math.max(-1, BetterUCConfig.INSTANCE.lastKnownBankBalance);
     }
 
+    private static String stripFormatting(String raw) {
+        return TEXT_FORMATTING_PATTERN.matcher(raw).replaceAll("");
+    }
+
+    private static String stripChatPrefix(String raw) {
+        if (raw == null) return "";
+        String cleaned = CHAT_TIMESTAMP_PATTERN.matcher(raw).replaceFirst("");
+        cleaned = cleaned.replaceFirst("^\\s*[^\\p{L}\\p{N}\\[]+\\s*", "");
+        return cleaned.trim();
+    }
+
+    private static String normalizeRawKey(String raw) {
+        if (raw == null) return "";
+        return raw.toLowerCase(Locale.ROOT)
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
     private static void setBalanceAndPersist(int newBalance) {
         if (newBalance < 0) return;
         boolean changed = currentBankBalance != newBalance
@@ -132,6 +187,33 @@ public class BankBalanceHud {
         if (changed) {
             BetterUCConfig.save();
         }
+    }
+
+    private static void subtractBalanceAndPersist(int amount, String rawKey) {
+        if (amount <= 0 || currentBankBalance < 0) return;
+        if (isDuplicateBankDelta(rawKey)) return;
+        setBalanceAndPersist(Math.max(0, currentBankBalance - amount));
+        recordBankDelta(rawKey);
+    }
+
+    private static void addBalanceAndPersist(int amount, String rawKey) {
+        if (amount <= 0 || currentBankBalance < 0) return;
+        if (isDuplicateBankDelta(rawKey)) return;
+        setBalanceAndPersist(currentBankBalance + amount);
+        recordBankDelta(rawKey);
+    }
+
+    private static boolean isDuplicateBankDelta(String rawKey) {
+        if (rawKey == null || rawKey.isBlank()) return false;
+        long age = System.currentTimeMillis() - lastBankDeltaMs;
+        return age >= 0L
+                && age <= BANK_DELTA_DEDUP_WINDOW_MS
+                && rawKey.equals(lastBankDeltaKey);
+    }
+
+    private static void recordBankDelta(String rawKey) {
+        lastBankDeltaKey = rawKey == null ? "" : rawKey;
+        lastBankDeltaMs = System.currentTimeMillis();
     }
 
     private static DecimalFormat createMoneyFormat() {

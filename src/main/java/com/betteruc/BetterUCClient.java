@@ -28,6 +28,7 @@ import com.betteruc.gui.PingWheelScreen;
 import com.betteruc.hud.AmmoHud;
 import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.CashHud;
+import com.betteruc.hud.DealerTimerHud;
 import com.betteruc.hud.FpsHud;
 import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.HealthHud;
@@ -35,6 +36,7 @@ import com.betteruc.hud.PaydayHud;
 import com.betteruc.hud.PingHud;
 import com.betteruc.hud.PlantageHud;
 import com.betteruc.hud.PotionEffectsHud;
+import com.betteruc.hud.ProductionTimerHud;
 import com.betteruc.hud.ToggleSprintHud;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
@@ -172,6 +174,8 @@ public class BetterUCClient implements ClientModInitializer {
         AmmoHud.register();
         BankBalanceHud.register();
         CashHud.register();
+        DealerTimerHud.register();
+        ProductionTimerHud.register();
         HealthHud.register();
         ToggleSprintHud.register();
         FpsHud.register();
@@ -191,6 +195,8 @@ public class BetterUCClient implements ClientModInitializer {
             AmmoHud.clear();
             BankBalanceHud.clear();
             CashHud.clear();
+            DealerTimerHud.clear();
+            ProductionTimerHud.clear();
             CommunicationDeviceTracker.reset();
             PingRelayClient.onJoin(client);
             statsOnJoinDelay = BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled
@@ -284,6 +290,25 @@ public class BetterUCClient implements ClientModInitializer {
                             sendServerCommand(client, "bank abbuchen " + betrag);
                             return 1;
                         })));
+
+        for (String commandName : new String[]{"überweisen", "ueberweisen"}) {
+            dispatcher.register(ClientCommands.literal(commandName)
+                    .then(ClientCommands.argument("spieler", StringArgumentType.word())
+                            .suggests((context, builder) -> SharedSuggestionProvider.suggest(collectSuggestedPlayerNames(), builder))
+                            .then(ClientCommands.argument("summe", StringArgumentType.word())
+                                    .then(ClientCommands.argument("grund", StringArgumentType.greedyString())
+                                            .executes(context -> {
+                                                Minecraft client = Minecraft.getInstance();
+                                                if (client.player == null) return 0;
+                                                if (!ensureAllowedServerForManualCommand(client)) return 0;
+
+                                                String spieler = StringArgumentType.getString(context, "spieler");
+                                                String summe = StringArgumentType.getString(context, "summe");
+                                                String grund = StringArgumentType.getString(context, "grund");
+                                                sendServerCommand(client, "bank überweisen " + spieler + " " + summe + " " + grund);
+                                                return 1;
+                                            })))));
+        }
     }
 
     private void registerAutoDropDrinkCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
@@ -944,6 +969,8 @@ public class BetterUCClient implements ClientModInitializer {
             if (client.player == null) return;
 
             HackTimerHud.tick();
+            DealerTimerHud.tick();
+            ProductionTimerHud.tick();
             PlantageHud.tick();
             AmmoHud.tickReloadKey(client);
             PingRelayClient.tick(client);
@@ -1105,6 +1132,8 @@ public class BetterUCClient implements ClientModInitializer {
         AmmoHud.clear();
         BankBalanceHud.clear();
         CashHud.clear();
+        DealerTimerHud.clear();
+        ProductionTimerHud.clear();
         AutoDropDrinkClient.reset();
         AutoFisherClient.reset();
         AutoGaertnerClient.reset();
