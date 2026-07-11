@@ -261,6 +261,8 @@ public class BetterUCConfig {
     public boolean showProductionTimerHud = true;
     public boolean toggleSprintEnabled = false;
     public boolean autoStatsOnJoinEnabled = true;
+    public boolean autoFactionBankOnBalanceEnabled = false;
+    public boolean autoAtmInfoOnBalanceEnabled = false;
     public Map<String, PlantTimerState> plantTimerStates = new LinkedHashMap<>();
 
     public String factionUrl = "https://example.com/faction.json";

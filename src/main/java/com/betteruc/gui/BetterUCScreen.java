@@ -198,6 +198,10 @@ public class BetterUCScreen extends Screen {
             case BANK -> {
                 y = addToggle(x, y, controlW, "Bank HUD", BetterUCConfig.INSTANCE.showBankHud,
                         () -> BetterUCConfig.INSTANCE.showBankHud = !BetterUCConfig.INSTANCE.showBankHud);
+                y = addToggle(x, y, controlW, "Auto-/fbank", BetterUCConfig.INSTANCE.autoFactionBankOnBalanceEnabled,
+                        () -> BetterUCConfig.INSTANCE.autoFactionBankOnBalanceEnabled = !BetterUCConfig.INSTANCE.autoFactionBankOnBalanceEnabled);
+                y = addToggle(x, y, controlW, "Auto-/atminfo", BetterUCConfig.INSTANCE.autoAtmInfoOnBalanceEnabled,
+                        () -> BetterUCConfig.INSTANCE.autoAtmInfoOnBalanceEnabled = !BetterUCConfig.INSTANCE.autoAtmInfoOnBalanceEnabled);
                 addColorButton(x, y, controlW, "Bank Farbe", BetterUCConfig.INSTANCE.bankHudColor,
                         color -> BetterUCConfig.INSTANCE.bankHudColor = color);
             }

@@ -1,5 +1,7 @@
 package com.betteruc.hud;
 
+import com.betteruc.client.ClientScheduler;
+import com.betteruc.client.ServerCommandUtil;
 import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.resources.Identifier;
@@ -14,10 +16,16 @@ import java.util.regex.Pattern;
 public class BankBalanceHud {
 
     private static final long BANK_DELTA_DEDUP_WINDOW_MS = 1200L;
+    private static final long AUTO_BANK_COMMAND_DEDUP_WINDOW_MS = 2000L;
+    private static final long AUTO_BANK_COMMAND_DELAY_MS = 150L;
+    private static final long AUTO_BANK_COMMAND_GAP_MS = 400L;
     private static final Pattern TEXT_FORMATTING_PATTERN = Pattern.compile("\\u00A7.");
     private static final Pattern CHAT_TIMESTAMP_PATTERN = Pattern.compile("^\\s*\\d{1,2}:\\d{2}:\\d{2}\\s+");
     private static final Pattern BANK_BALANCE_PATTERN = Pattern.compile(
             "(?i)(?:ihr\\s+bankguthaben\\s+betr(?:a|ae|\\u00E4)gt\\s*:?|neuer\\s+(?:bank\\s*)?kontostand\\s*:?|neuer\\s+betrag\\s*:?)\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$"
+    );
+    private static final Pattern PERSONAL_BANK_BALANCE_PATTERN = Pattern.compile(
+            "(?i)ihr\\s+bankguthaben\\s+betr(?:a|ae|\\u00E4)gt\\s*:?\\s*[+-]?[0-9][0-9\\.]*\\s*\\$"
     );
     private static final Pattern PREVIOUS_BALANCE_PATTERN = Pattern.compile(
             "(?i)(?:vorheriger\\s+kontostand\\s*:?|alter\\s+betrag\\s*:?)\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$"
@@ -32,6 +40,7 @@ public class BankBalanceHud {
     private static int currentBankBalance = -1;
     private static String lastBankDeltaKey = "";
     private static long lastBankDeltaMs = 0L;
+    private static long lastAutoBankFollowupMs = 0L;
     private static final DecimalFormat MONEY_FORMAT = createMoneyFormat();
 
     public static void register() {
@@ -73,6 +82,7 @@ public class BankBalanceHud {
             Integer parsed = parseMoneyValue(balanceMatcher.group(1));
             if (parsed != null) {
                 setBalanceAndPersist(Math.max(0, parsed));
+                requestBankFollowupsAfterPersonalBalance(raw);
             }
             return;
         }
@@ -214,6 +224,29 @@ public class BankBalanceHud {
     private static void recordBankDelta(String rawKey) {
         lastBankDeltaKey = rawKey == null ? "" : rawKey;
         lastBankDeltaMs = System.currentTimeMillis();
+    }
+
+    private static void requestBankFollowupsAfterPersonalBalance(String raw) {
+        boolean requestFactionBank = BetterUCConfig.INSTANCE.autoFactionBankOnBalanceEnabled;
+        boolean requestAtmInfo = BetterUCConfig.INSTANCE.autoAtmInfoOnBalanceEnabled;
+        if (!requestFactionBank && !requestAtmInfo) return;
+        if (!PERSONAL_BANK_BALANCE_PATTERN.matcher(raw).find()) return;
+
+        long now = System.currentTimeMillis();
+        if (now - lastAutoBankFollowupMs < AUTO_BANK_COMMAND_DEDUP_WINDOW_MS) return;
+        lastAutoBankFollowupMs = now;
+
+        Minecraft client = Minecraft.getInstance();
+        long nextDelayMs = AUTO_BANK_COMMAND_DELAY_MS;
+        if (requestFactionBank) {
+            ClientScheduler.runDelayedOnClient(client, nextDelayMs,
+                    () -> ServerCommandUtil.send(client, "fbank"));
+            nextDelayMs += AUTO_BANK_COMMAND_GAP_MS;
+        }
+        if (requestAtmInfo) {
+            ClientScheduler.runDelayedOnClient(client, nextDelayMs,
+                    () -> ServerCommandUtil.send(client, "atminfo"));
+        }
     }
 
     private static DecimalFormat createMoneyFormat() {
