@@ -1337,6 +1337,53 @@ select:focus {
   margin-top: 12px;
 }
 
+.cloud-history-panel {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+.cloud-history-panel h5 {
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+
+.cloud-history-list {
+  display: grid;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.cloud-history-entry {
+  align-items: center;
+  background: rgba(8, 14, 13, 0.55);
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 10px;
+}
+
+.cloud-history-entry strong,
+.cloud-history-entry span,
+.cloud-history-entry small {
+  display: block;
+}
+
+.cloud-history-entry span,
+.cloud-history-entry small {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.cloud-history-entry .button {
+  min-height: 34px;
+  padding: 0 10px;
+}
+
 .row-input {
   min-width: 180px;
   width: 100%;
@@ -1399,6 +1446,10 @@ select:focus {
   .database-overview-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .cloud-history-entry {
+    grid-template-columns: 1fr;
   }
 
   .hero {

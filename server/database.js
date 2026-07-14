@@ -80,6 +80,8 @@ function createDatabase(options = {}) {
       getCloudSettings: unavailable,
       putCloudSettings: unavailable,
       listCloudSettingsMetadata: unavailable,
+      getCloudSettingsHistory: unavailable,
+      restoreCloudSettings: unavailable,
       deleteCloudSettings: unavailable,
       getOverview: unavailable,
       async close() {}
@@ -417,6 +419,49 @@ function createDatabase(options = {}) {
     };
   }
 
+  function cloudHistoryFromRow(row) {
+    if (!row) return null;
+    return {
+      id: Number(row.id),
+      revision: Number(row.revision),
+      schemaVersion: Number(row.schema_version),
+      recordedAt: iso(row.recorded_at),
+      updatedByVersion: row.updated_by_version || "",
+      action: row.action || "update",
+      restoredFromRevision: row.restored_from_revision === null
+        ? null
+        : Number(row.restored_from_revision)
+    };
+  }
+
+  async function recordCloudHistory(client, accountId, profile, action, restoredFromRevision = null) {
+    await client.query(`
+      insert into cloud_settings_history (
+        account_id, revision, schema_version, settings, recorded_at,
+        updated_by_version, action, restored_from_revision
+      ) values ($1, $2, $3, $4::jsonb, now(), $5, $6, $7)
+    `, [
+      accountId,
+      Number(profile.revision),
+      Number(profile.schemaVersion),
+      JSON.stringify(profile.settings || {}),
+      text(profile.updatedByVersion),
+      action,
+      restoredFromRevision
+    ]);
+    await client.query(`
+      delete from cloud_settings_history
+      where account_id = $1
+        and id not in (
+          select id
+          from cloud_settings_history
+          where account_id = $1
+          order by recorded_at desc, id desc
+          limit 20
+        )
+    `, [accountId]);
+  }
+
   async function getCloudSettings(accountId) {
     const result = await pool.query(
       "select schema_version, revision, settings, updated_at, updated_by_version from cloud_settings where account_id = $1",
@@ -429,6 +474,7 @@ function createDatabase(options = {}) {
     const client = await pool.connect();
     try {
       await client.query("begin");
+      await client.query("select id from accounts where id = $1 for update", [accountId]);
       const currentResult = await client.query(
         "select schema_version, revision, settings, updated_at, updated_by_version from cloud_settings where account_id = $1 for update",
         [accountId]
@@ -459,6 +505,8 @@ function createDatabase(options = {}) {
         JSON.stringify(update.settings || {}),
         text(update.updatedByVersion)
       ]);
+      const savedProfile = cloudSettingsFromRow(result.rows[0]);
+      await recordCloudHistory(client, accountId, savedProfile, "update");
       await client.query(`
         insert into audit_log(account_id, actor, action, details)
         values ($1, $2, 'cloud_settings.updated', $3::jsonb)
@@ -468,7 +516,7 @@ function createDatabase(options = {}) {
         JSON.stringify({ revision: nextRevision, schemaVersion: Number(update.schemaVersion) })
       ]);
       await client.query("commit");
-      return { conflict: false, current: cloudSettingsFromRow(result.rows[0]) };
+      return { conflict: false, current: savedProfile };
     } catch (error) {
       await client.query("rollback");
       throw error;
@@ -479,34 +527,148 @@ function createDatabase(options = {}) {
 
   async function listCloudSettingsMetadata() {
     const result = await pool.query(`
-      select account_id, schema_version, revision, updated_at, updated_by_version
-      from cloud_settings
-      order by updated_at desc
+      select
+        accounts.id as account_id,
+        current_settings.schema_version,
+        current_settings.revision,
+        current_settings.updated_at,
+        current_settings.updated_by_version,
+        count(history.id)::integer as history_count
+      from accounts
+      left join cloud_settings current_settings on current_settings.account_id = accounts.id
+      left join cloud_settings_history history on history.account_id = accounts.id
+      group by
+        accounts.id,
+        current_settings.schema_version,
+        current_settings.revision,
+        current_settings.updated_at,
+        current_settings.updated_by_version
+      having current_settings.revision is not null or count(history.id) > 0
+      order by current_settings.updated_at desc nulls last, accounts.id
     `);
     return result.rows.map(row => ({
       accountId: row.account_id,
-      schemaVersion: Number(row.schema_version),
-      revision: Number(row.revision),
+      exists: row.revision !== null,
+      schemaVersion: row.schema_version === null ? null : Number(row.schema_version),
+      revision: row.revision === null ? null : Number(row.revision),
       updatedAt: iso(row.updated_at),
-      updatedByVersion: row.updated_by_version || ""
+      updatedByVersion: row.updated_by_version || "",
+      historyCount: Number(row.history_count || 0)
     }));
+  }
+
+  async function getCloudSettingsHistory(accountId, limit = 20) {
+    const safeLimit = Math.max(1, Math.min(20, Number(limit) || 20));
+    const result = await pool.query(`
+      select
+        id, revision, schema_version, recorded_at, updated_by_version,
+        action, restored_from_revision
+      from cloud_settings_history
+      where account_id = $1
+      order by recorded_at desc, id desc
+      limit $2
+    `, [accountId, safeLimit]);
+    return result.rows.map(cloudHistoryFromRow);
+  }
+
+  async function restoreCloudSettings(accountId, historyId, actor = "admin:panel") {
+    const client = await pool.connect();
+    try {
+      await client.query("begin");
+      await client.query("select id from accounts where id = $1 for update", [accountId]);
+      const sourceResult = await client.query(`
+        select
+          id, revision, schema_version, settings, recorded_at,
+          updated_by_version, action, restored_from_revision
+        from cloud_settings_history
+        where account_id = $1 and id = $2
+      `, [accountId, historyId]);
+      if (sourceResult.rowCount === 0) {
+        await client.query("rollback");
+        return null;
+      }
+
+      const currentResult = await client.query(
+        "select revision from cloud_settings where account_id = $1 for update",
+        [accountId]
+      );
+      const maxHistoryResult = await client.query(
+        "select coalesce(max(revision), 0)::bigint as revision from cloud_settings_history where account_id = $1",
+        [accountId]
+      );
+      const currentRevision = currentResult.rowCount > 0 ? Number(currentResult.rows[0].revision) : 0;
+      const maxHistoryRevision = Number(maxHistoryResult.rows[0].revision || 0);
+      const nextRevision = Math.max(currentRevision, maxHistoryRevision) + 1;
+      const source = sourceResult.rows[0];
+      const result = await client.query(`
+        insert into cloud_settings (
+          account_id, schema_version, revision, settings, updated_at, updated_by_version
+        ) values ($1, $2, $3, $4::jsonb, now(), $5)
+        on conflict (account_id) do update set
+          schema_version = excluded.schema_version,
+          revision = excluded.revision,
+          settings = excluded.settings,
+          updated_at = now(),
+          updated_by_version = excluded.updated_by_version
+        returning schema_version, revision, settings, updated_at, updated_by_version
+      `, [
+        accountId,
+        Number(source.schema_version),
+        nextRevision,
+        JSON.stringify(source.settings || {}),
+        `restore:${text(source.updated_by_version, "unknown")}`
+      ]);
+      const restoredProfile = cloudSettingsFromRow(result.rows[0]);
+      await recordCloudHistory(
+        client,
+        accountId,
+        restoredProfile,
+        "restore",
+        Number(source.revision)
+      );
+      await client.query(`
+        insert into audit_log(account_id, actor, action, details)
+        values ($1, $2, 'cloud_settings.restored', $3::jsonb)
+      `, [
+        accountId,
+        text(actor, "admin:panel"),
+        JSON.stringify({
+          revision: nextRevision,
+          restoredFromRevision: Number(source.revision),
+          historyId: Number(source.id)
+        })
+      ]);
+      await client.query("commit");
+      return restoredProfile;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async function deleteCloudSettings(accountId, actor = "admin:panel") {
     const client = await pool.connect();
     try {
       await client.query("begin");
-      const result = await client.query(
-        "delete from cloud_settings where account_id = $1 returning revision",
+      await client.query("select id from accounts where id = $1 for update", [accountId]);
+      const currentResult = await client.query(
+        "select schema_version, revision, settings, updated_at, updated_by_version from cloud_settings where account_id = $1 for update",
         [accountId]
       );
+      const current = currentResult.rowCount > 0 ? cloudSettingsFromRow(currentResult.rows[0]) : null;
+      if (current) {
+        await recordCloudHistory(client, accountId, current, "reset");
+      }
+      const result = await client.query("delete from cloud_settings where account_id = $1", [accountId]);
       await client.query(`
         insert into audit_log(account_id, actor, action, details)
         values ($1, $2, 'cloud_settings.reset', $3::jsonb)
       `, [
         accountId,
         text(actor, "admin:panel"),
-        JSON.stringify({ previousRevision: result.rowCount > 0 ? Number(result.rows[0].revision) : null })
+        JSON.stringify({ previousRevision: current ? current.revision : null })
       ]);
       await client.query("commit");
       return result.rowCount > 0;
@@ -535,6 +697,7 @@ function createDatabase(options = {}) {
         select
           (select count(*) from accounts)::integer as accounts,
           (select count(*) from cloud_settings)::integer as cloud_profiles,
+          (select count(*) from cloud_settings_history)::integer as cloud_revisions,
           (select count(*) from player_stats)::integer as stats_profiles,
           (select count(*) from web_credentials where password_hash is not null)::integer as web_profiles,
           (select count(*) from audit_log)::integer as audit_entries
@@ -559,6 +722,7 @@ function createDatabase(options = {}) {
       counts: {
         accounts: Number(counts.accounts || 0),
         cloudProfiles: Number(counts.cloud_profiles || 0),
+        cloudRevisions: Number(counts.cloud_revisions || 0),
         statsProfiles: Number(counts.stats_profiles || 0),
         webProfiles: Number(counts.web_profiles || 0),
         auditEntries: Number(counts.audit_entries || 0)
@@ -575,6 +739,8 @@ function createDatabase(options = {}) {
     getCloudSettings,
     putCloudSettings,
     listCloudSettingsMetadata,
+    getCloudSettingsHistory,
+    restoreCloudSettings,
     deleteCloudSettings,
     getOverview,
     async close() { await pool.end(); }

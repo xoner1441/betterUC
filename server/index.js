@@ -1401,6 +1401,38 @@ async function handleApi(req, res, url) {
       return;
     }
 
+    if (req.method === "GET" && action === "cloud-history") {
+      if (persistenceMode !== "postgres" || !database.enabled) {
+        json(res, 503, { ok: false, error: "Cloud-Verlauf ist ohne PostgreSQL nicht verfügbar." });
+        return;
+      }
+      json(res, 200, {
+        ok: true,
+        history: await database.getCloudSettingsHistory(account.id)
+      });
+      return;
+    }
+
+    if (req.method === "POST" && action === "restore-cloud") {
+      if (persistenceMode !== "postgres" || !database.enabled) {
+        json(res, 503, { ok: false, error: "Cloud-Verlauf ist ohne PostgreSQL nicht verfügbar." });
+        return;
+      }
+      const body = await readJsonBody(req);
+      const historyId = Number(body.historyId);
+      if (!Number.isSafeInteger(historyId) || historyId <= 0) {
+        json(res, 400, { ok: false, error: "Ungültige Cloud-Revision." });
+        return;
+      }
+      const profile = await database.restoreCloudSettings(account.id, historyId, "admin:panel");
+      if (!profile) {
+        json(res, 404, { ok: false, error: "Cloud-Revision wurde nicht gefunden." });
+        return;
+      }
+      json(res, 200, { ok: true, profile });
+      return;
+    }
+
     if (req.method === "POST" && action === "reset-cloud") {
       if (persistenceMode !== "postgres" || !database.enabled) {
         json(res, 503, { ok: false, error: "Cloud-Profile sind ohne PostgreSQL nicht verfügbar." });

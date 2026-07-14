@@ -22,6 +22,7 @@ const databaseConnection = document.querySelector("#databaseConnection");
 const databaseSize = document.querySelector("#databaseSize");
 const databaseMigration = document.querySelector("#databaseMigration");
 const cloudProfileCount = document.querySelector("#cloudProfileCount");
+const cloudRevisionCount = document.querySelector("#cloudRevisionCount");
 const statsProfileCount = document.querySelector("#statsProfileCount");
 const webProfileCount = document.querySelector("#webProfileCount");
 const auditEntryCount = document.querySelector("#auditEntryCount");
@@ -31,6 +32,9 @@ let adminKey = localStorage.getItem(ADMIN_STORAGE_KEY) || "";
 let panelSession = localStorage.getItem(PANEL_SESSION_KEY) || "";
 let accounts = [];
 let expandedAccounts = new Set();
+let cloudHistories = new Map();
+let cloudHistoryLoading = new Set();
+let cloudHistoryErrors = new Map();
 
 function setLoginMessage(text, type = "") {
   loginMessage.textContent = text;
@@ -141,9 +145,53 @@ function accountMatches(account, query) {
   return haystack.includes(query.toLowerCase());
 }
 
+function cloudHistoryActionLabel(entry) {
+  if (entry.action === "restore") {
+    return `Wiederhergestellt aus Rev. ${entry.restoredFromRevision ?? "-"}`;
+  }
+  if (entry.action === "reset") return "Stand vor Reset";
+  return "Gespeichert";
+}
+
+function cloudHistoryHtml(account, hasCloud) {
+  if (cloudHistoryLoading.has(account.id)) {
+    return `<p class="quiet">Cloud-Verlauf wird geladen.</p>`;
+  }
+  if (cloudHistoryErrors.has(account.id)) {
+    return `<p class="form-message error">${escapeHtml(cloudHistoryErrors.get(account.id))}</p>`;
+  }
+  const history = cloudHistories.get(account.id);
+  if (!history) {
+    return `<p class="quiet">Verlauf wird beim Öffnen der Details geladen.</p>`;
+  }
+  if (history.length === 0) {
+    return `<p class="quiet">Noch keine gespeicherten Cloud-Revisionen vorhanden.</p>`;
+  }
+  return `
+    <div class="cloud-history-list">
+      ${history.map(entry => {
+        const isCurrent = hasCloud && Number(account.cloudSettings?.revision) === Number(entry.revision);
+        return `
+          <article class="cloud-history-entry">
+            <div>
+              <strong>Rev. ${escapeHtml(entry.revision)}</strong>
+              <span>${escapeHtml(cloudHistoryActionLabel(entry))}</span>
+              <small>${escapeHtml(formatDate(entry.recordedAt))} · ${escapeHtml(entry.updatedByVersion || "Version unbekannt")} · Schema v${escapeHtml(entry.schemaVersion)}</small>
+            </div>
+            <button class="button secondary restore-cloud-settings" type="button" data-history-id="${escapeAttr(entry.id)}" ${isCurrent ? "disabled" : ""}>
+              ${isCurrent ? "Aktuell" : "Wiederherstellen"}
+            </button>
+          </article>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
 function accountDetailHtml(account) {
   const stats = account.stats || {};
   const cloud = account.cloudSettings || null;
+  const hasCloud = Boolean(cloud && (cloud.exists ?? cloud.revision !== null));
   const history = Array.isArray(account.statsHistory) ? account.statsHistory.slice(0, 6) : [];
   const meta = [
     ["Online", account.online ? "Ja" : "Nein"],
@@ -162,11 +210,12 @@ function accountDetailHtml(account) {
     ["Sessions abgemeldet", formatDate(account.webSessionsInvalidAfter)]
   ];
   const cloudProfile = [
-    ["Cloud-Profil", cloud ? "eingerichtet" : "nicht vorhanden"],
-    ["Revision", cloud ? String(cloud.revision) : "-"],
-    ["Letzter Sync", cloud ? formatDate(cloud.updatedAt) : "nie"],
+    ["Cloud-Profil", hasCloud ? "eingerichtet" : "nicht vorhanden"],
+    ["Revision", hasCloud ? String(cloud.revision) : "-"],
+    ["Letzter Sync", hasCloud ? formatDate(cloud.updatedAt) : "nie"],
     ["Mod-Version", cloud?.updatedByVersion || "-"],
-    ["Schema", cloud ? `v${cloud.schemaVersion}` : "-"]
+    ["Schema", hasCloud ? `v${cloud.schemaVersion}` : "-"],
+    ["Gespeicherte Stände", String(cloud?.historyCount || 0)]
   ];
   const statCards = [
     ["Bank", moneyLabel(stats.bankMoney)],
@@ -248,9 +297,13 @@ function accountDetailHtml(account) {
               `).join("")}
             </div>
             <div class="admin-detail-actions cloud-profile-actions">
-              <button class="button secondary danger reset-cloud-settings" type="button" ${cloud ? "" : "disabled"}>Cloud-Profil zurücksetzen</button>
+              <button class="button secondary danger reset-cloud-settings" type="button" ${hasCloud ? "" : "disabled"}>Cloud-Profil zurücksetzen</button>
             </div>
-            <p class="quiet">Dabei werden nur synchronisierte Mod-Einstellungen gelöscht. Account, Stats und Access-Code bleiben erhalten.</p>
+            <p class="quiet">Dabei werden nur die aktiven Mod-Einstellungen gelöscht. Der Verlauf, Account, Stats und Access-Code bleiben erhalten.</p>
+            <div class="cloud-history-panel">
+              <h5>Cloud-Verlauf</h5>
+              ${cloudHistoryHtml(account, hasCloud)}
+            </div>
           </div>
           <div>
             <h4>Verlauf</h4>
@@ -338,6 +391,7 @@ function renderDatabaseStatus(data, error = null) {
     ? (database.pendingMigrations?.length ? `${database.pendingMigrations.length} offen` : "aktuell")
     : "-";
   cloudProfileCount.textContent = counts.cloudProfiles ?? "-";
+  cloudRevisionCount.textContent = counts.cloudRevisions ?? "-";
   statsProfileCount.textContent = counts.statsProfiles ?? "-";
   webProfileCount.textContent = counts.webProfiles ?? "-";
   auditEntryCount.textContent = counts.auditEntries ?? "-";
@@ -358,6 +412,8 @@ async function loadAccounts() {
   accounts = data.accounts || [];
   const ids = new Set(accounts.map(account => account.id));
   expandedAccounts = new Set([...expandedAccounts].filter(id => ids.has(id)));
+  cloudHistories = new Map([...cloudHistories].filter(([id]) => ids.has(id)));
+  cloudHistoryErrors = new Map([...cloudHistoryErrors].filter(([id]) => ids.has(id)));
   updateTotals(data.totals || {});
   renderBackupStatus(data.backups || []);
   renderAccounts();
@@ -366,6 +422,30 @@ async function loadAccounts() {
   } catch (error) {
     renderDatabaseStatus(null, error);
   }
+}
+
+async function loadCloudHistory(id) {
+  cloudHistoryLoading.add(id);
+  cloudHistoryErrors.delete(id);
+  renderAccounts();
+  try {
+    const data = await api(`/api/admin/accounts/${encodeURIComponent(id)}/cloud-history`);
+    cloudHistories.set(id, Array.isArray(data.history) ? data.history : []);
+  } catch (error) {
+    cloudHistoryErrors.set(id, error.message || "Cloud-Verlauf konnte nicht geladen werden.");
+  } finally {
+    cloudHistoryLoading.delete(id);
+    renderAccounts();
+  }
+}
+
+async function restoreCloudRevision(id, historyId) {
+  await api(`/api/admin/accounts/${encodeURIComponent(id)}/restore-cloud`, {
+    method: "POST",
+    body: JSON.stringify({ historyId })
+  });
+  await loadAccounts();
+  await loadCloudHistory(id);
 }
 
 function rowAccountId(target) {
@@ -502,12 +582,18 @@ accountsTable.addEventListener("click", async event => {
 
   try {
     if (button.classList.contains("toggle-details")) {
+      const opening = !expandedAccounts.has(id);
       if (expandedAccounts.has(id)) {
         expandedAccounts.delete(id);
+        cloudHistories.delete(id);
+        cloudHistoryErrors.delete(id);
       } else {
         expandedAccounts.add(id);
       }
       renderAccounts();
+      if (opening && !cloudHistories.has(id) && !cloudHistoryLoading.has(id)) {
+        await loadCloudHistory(id);
+      }
       return;
     }
     if (button.classList.contains("save-account")) {
@@ -550,9 +636,21 @@ accountsTable.addEventListener("click", async event => {
       const detailRow = button.closest("tr");
       const accountRow = detailRow?.previousElementSibling;
       const name = accountRow?.querySelector("td strong")?.textContent?.trim() || "diesen Account";
-      if (!confirm(`Cloud-Profil von ${name} zurücksetzen? Die Mod lädt beim nächsten Sync wieder ein neues Profil hoch.`)) return;
+      if (!confirm(`Cloud-Profil von ${name} zurücksetzen? Der bisherige Stand bleibt im Verlauf wiederherstellbar.`)) return;
       await runAccountAction(id, "reset-cloud");
+      await loadCloudHistory(id);
       setCreateMessage("Cloud-Profil wurde zurückgesetzt.", "success");
+      return;
+    }
+    if (button.classList.contains("restore-cloud-settings")) {
+      const historyId = Number(button.dataset.historyId);
+      const detailRow = button.closest("tr");
+      const accountRow = detailRow?.previousElementSibling;
+      const name = accountRow?.querySelector("td strong")?.textContent?.trim() || "diesen Account";
+      const revision = button.closest(".cloud-history-entry")?.querySelector("strong")?.textContent || "diesen Stand";
+      if (!confirm(`${revision} für ${name} wiederherstellen? Dadurch wird eine neue Cloud-Revision erstellt.`)) return;
+      await restoreCloudRevision(id, historyId);
+      setCreateMessage("Cloud-Einstellungen wurden wiederhergestellt.", "success");
       return;
     }
     if (button.classList.contains("revoke-account")) {
