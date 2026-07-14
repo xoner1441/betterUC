@@ -73,6 +73,86 @@ https://betteruc.de/admin
 Admin users can also open `/admin` from the Userpanel without entering this key.
 Backups are written to `/opt/betteruc-relay/data/backups` once per day. The admin panel also has a manual backup button.
 
+## PostgreSQL persistence
+
+Install PostgreSQL once on the Hetzner server:
+
+```bash
+apt update
+apt install -y postgresql postgresql-client
+
+DB_PASSWORD="$(openssl rand -hex 32)"
+sudo -u postgres psql -v ON_ERROR_STOP=1 <<SQL
+create user betteruc_app with password '$DB_PASSWORD';
+create database betteruc owner betteruc_app;
+alter database betteruc set timezone to 'UTC';
+SQL
+
+echo "DATABASE_URL=postgresql://betteruc_app:$DB_PASSWORD@127.0.0.1:5432/betteruc" >> /etc/betteruc-relay.env
+echo "DATABASE_REQUIRED=false" >> /etc/betteruc-relay.env
+echo "DB_POOL_MAX=10" >> /etc/betteruc-relay.env
+chmod 600 /etc/betteruc-relay.env
+```
+
+PostgreSQL stays bound to localhost. Do not add port `5432` to the Hetzner or UFW firewall.
+
+Deploy the database-enabled server files, then verify the migration before making PostgreSQL mandatory:
+
+```bash
+cd /opt/betteruc-relay
+npm install --omit=dev
+set -a
+. /etc/betteruc-relay.env
+set +a
+npm run db:check
+systemctl restart betteruc-relay
+curl -s http://127.0.0.1:3000/health
+```
+
+The first database start imports `/opt/betteruc-relay/data/accounts.json` only when PostgreSQL has no accounts.
+The JSON file continues as a recovery mirror. The health response must report `"persistence":"postgres"`.
+
+For a controlled manual import instead of the automatic first-start import:
+
+```bash
+cd /opt/betteruc-relay
+npm run db:import-json
+```
+
+The importer refuses to overwrite a populated database. Use `--replace` only after creating a backup.
+Use `npm run db:import-json -- --verify-only` to compare the existing database with the JSON mirror without writing data.
+
+After checking the account count, Adminpanel, Userpanel, Discord links and one Mod connection, require PostgreSQL:
+
+```bash
+sed -i 's/^DATABASE_REQUIRED=.*/DATABASE_REQUIRED=true/' /etc/betteruc-relay.env
+systemctl restart betteruc-relay
+systemctl status betteruc-relay --no-pager
+```
+
+Create a daily PostgreSQL backup job:
+
+```bash
+install -d -m 700 /opt/betteruc-relay/data/postgres-backups
+
+cat > /usr/local/sbin/backup-betteruc-db <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+set -a
+. /etc/betteruc-relay.env
+set +a
+target="/opt/betteruc-relay/data/postgres-backups/betteruc-$(date -u +%Y-%m-%dT%H-%M-%SZ).dump"
+pg_dump "$DATABASE_URL" --format=custom --file="$target"
+find /opt/betteruc-relay/data/postgres-backups -type f -name '*.dump' -mtime +30 -delete
+EOF
+
+chmod 700 /usr/local/sbin/backup-betteruc-db
+(crontab -l 2>/dev/null; echo '25 3 * * * /usr/local/sbin/backup-betteruc-db') | crontab -
+/usr/local/sbin/backup-betteruc-db
+```
+
+Restore into an empty database with `pg_restore --clean --if-exists --dbname="$DATABASE_URL" <dump-file>`.
+
 ## Discord bot
 
 The relay can run the Discord support bot when `DISCORD_BOT_TOKEN` and `DISCORD_GUILD_ID` are present in

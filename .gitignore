@@ -19,6 +19,7 @@ crash-reports/
 .git-index-codex*
 discord-setup-bot/.env
 server/.env
+server/node_modules/
 tmp/
 tmp-src/
 tmp-chat-src.jar

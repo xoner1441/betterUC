@@ -9,6 +9,7 @@ const { Readable } = require("stream");
 const { URL } = require("url");
 const { WebSocketServer } = require("ws");
 const { startDiscordBot } = require("./discordBot");
+const { createDatabase } = require("./database");
 
 const PORT = Number(process.env.PORT || 3000);
 const MAX_CLIENTS = Number(process.env.MAX_CLIENTS || 500);
@@ -49,10 +50,13 @@ const MIME_TYPES = new Map([
 let store = { version: 1, accounts: [] };
 let saveTimer = null;
 let backupTimer = null;
+let saveQueue = Promise.resolve();
+let persistenceMode = "json";
 let latestReleaseCache = { fetchedAt: 0, release: null };
 const clients = new Set();
 const rateLimits = new Map();
 let discordBot = { notifyStateChanged() {}, stop() {} };
+const database = createDatabase();
 
 function nowIso() {
   return new Date().toISOString();
@@ -97,26 +101,66 @@ function isRateLimited(req, bucket, limit, windowMs) {
   return entry.count > limit;
 }
 
-async function loadStore() {
+async function readJsonStore() {
   await fsp.mkdir(DATA_DIR, { recursive: true });
   try {
     const raw = await fsp.readFile(STORE_FILE, "utf8");
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed.accounts)) {
-      store = { version: 1, ...parsed };
-      return;
+      return { version: 1, ...parsed };
     }
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
-  await saveStore();
+  return null;
+}
+
+async function writeJsonStore(snapshot = store) {
+  await fsp.mkdir(DATA_DIR, { recursive: true });
+  const tmp = `${STORE_FILE}.tmp`;
+  await fsp.writeFile(tmp, JSON.stringify(snapshot, null, 2), "utf8");
+  await fsp.rename(tmp, STORE_FILE);
+}
+
+async function loadStore() {
+  const jsonStore = await readJsonStore();
+  if (database.enabled) {
+    try {
+      await database.initialize();
+      const databaseAccounts = await database.loadAccounts();
+      if (databaseAccounts.length === 0 && jsonStore && jsonStore.accounts.length > 0) {
+        await database.replaceAccounts(jsonStore.accounts);
+        store = jsonStore;
+        console.log(`Imported ${store.accounts.length} betterUC accounts from JSON into PostgreSQL.`);
+      } else {
+        store = { version: 1, accounts: databaseAccounts };
+      }
+      persistenceMode = "postgres";
+      await writeJsonStore(store);
+      console.log(`betterUC persistence: PostgreSQL (${store.accounts.length} accounts)`);
+      return;
+    } catch (error) {
+      if (database.required) throw error;
+      console.error("PostgreSQL is unavailable; using the JSON fallback for this start.", error);
+    }
+  }
+
+  persistenceMode = "json";
+  store = jsonStore || { version: 1, accounts: [] };
+  await writeJsonStore(store);
+  console.log(`betterUC persistence: JSON fallback (${store.accounts.length} accounts)`);
 }
 
 async function saveStore() {
-  await fsp.mkdir(DATA_DIR, { recursive: true });
-  const tmp = `${STORE_FILE}.tmp`;
-  await fsp.writeFile(tmp, JSON.stringify(store, null, 2), "utf8");
-  await fsp.rename(tmp, STORE_FILE);
+  const snapshot = JSON.parse(JSON.stringify(store));
+  const operation = saveQueue.catch(() => {}).then(async () => {
+    if (persistenceMode === "postgres") {
+      await database.replaceAccounts(snapshot.accounts);
+    }
+    await writeJsonStore(snapshot);
+  });
+  saveQueue = operation;
+  return operation;
 }
 
 function backupDateKey(date = new Date()) {
@@ -1155,6 +1199,7 @@ async function handleApi(req, res, url) {
         maxClients: MAX_CLIENTS
       },
       accounts: store.accounts.filter(account => account.status !== "revoked").length,
+      persistence: persistenceMode,
       adminConfigured: Boolean(ADMIN_KEY),
       github: GITHUB_RELEASES_URL,
       time: Date.now()
@@ -1586,6 +1631,7 @@ async function handleHttp(req, res) {
       name: "betterUC Relay",
       clients: clients.size,
       accounts: store.accounts.length,
+      persistence: persistenceMode,
       ttlMs: PING_TTL_MS,
       time: Date.now()
     });
@@ -1818,8 +1864,45 @@ async function main() {
   });
 
   server.listen(PORT, () => {
-    console.log(`betterUC platform listening on ${PORT}`);
+    console.log(`betterUC platform listening on ${PORT} with ${persistenceMode} persistence`);
   });
+
+  let stopping = false;
+  const stop = async signal => {
+    if (stopping) return;
+    stopping = true;
+    console.log(`Stopping betterUC platform (${signal})...`);
+    clearTimeout(saveTimer);
+    clearInterval(backupTimer);
+    try {
+      await saveStore();
+    } catch (error) {
+      console.error("Could not flush betterUC data during shutdown", error);
+    }
+    try {
+      await discordBot.stop();
+    } catch (error) {
+      console.error("Could not stop betterUC Discord bot", error);
+    }
+    const serverClosed = new Promise(resolve => server.close(resolve));
+    for (const client of [...clients]) {
+      clients.delete(client);
+      try {
+        client.ws.terminate();
+      } catch {
+        // The socket may already have closed while shutdown was in progress.
+      }
+    }
+    await new Promise(resolve => wss.close(resolve));
+    if (typeof server.closeAllConnections === "function") {
+      server.closeAllConnections();
+    }
+    await serverClosed;
+    await database.close();
+    process.exit(0);
+  };
+  process.once("SIGTERM", () => stop("SIGTERM"));
+  process.once("SIGINT", () => stop("SIGINT"));
 }
 
 main().catch(error => {
