@@ -2,12 +2,15 @@ package com.betteruc.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.betteruc.parser.FactionStatsParser;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.Writer;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.text.Normalizer;
@@ -25,6 +28,51 @@ public class BetterUCConfig {
             .getConfigDir().resolve("betteruc.json").toFile();
     private static final File LEGACY_NAMETAG_CONFIG_FILE = FabricLoader.getInstance()
             .getConfigDir().resolve("nametagmod.json").toFile();
+    private static final Set<String> CLOUD_SETTING_FIELDS = Set.of(
+            "manualFactionPlayers", "manualBlacklistPlayers", "trackedFactionQueries", "hotkeyCommands",
+            "timerX", "timerY", "hackTimerX", "hackTimerY", "plantTimerX", "plantTimerY",
+            "dealerTimerX", "dealerTimerY", "productionTimerX", "productionTimerY",
+            "healthHudX", "healthHudY", "toggleSprintHudX", "toggleSprintHudY", "fpsHudX", "fpsHudY",
+            "paydayHudX", "paydayHudY", "ammoHudX", "ammoHudY", "bankHudX", "bankHudY",
+            "cashHudX", "cashHudY", "potionHudX", "potionHudY",
+            "healthHudScale", "toggleSprintHudScale", "fpsHudScale", "paydayHudScale", "ammoHudScale",
+            "bankHudScale", "cashHudScale", "potionHudScale", "hackTimerHudScale", "plantTimerHudScale",
+            "dealerTimerHudScale", "productionTimerHudScale",
+            "toggleSprintHudColor", "fpsHudColor", "paydayHudColor", "bankHudColor", "cashHudColor",
+            "dealerTimerHudColor", "productionTimerHudColor", "healthHudHeartColor", "healthHudTextColor",
+            "healthHudColor", "hudColorGradientEnabled", "hudGradientColor", "hudGradientConfigVersion",
+            "healthHudGradientEnabled", "toggleSprintHudGradientEnabled", "fpsHudGradientEnabled",
+            "paydayHudGradientEnabled", "ammoHudGradientEnabled", "bankHudGradientEnabled",
+            "cashHudGradientEnabled", "potionHudGradientEnabled", "hackTimerHudGradientEnabled",
+            "plantTimerHudGradientEnabled", "dealerTimerHudGradientEnabled", "productionTimerHudGradientEnabled",
+            "healthHudGradientColor", "toggleSprintHudGradientColor", "fpsHudGradientColor",
+            "paydayHudGradientColor", "ammoHudGradientColor", "bankHudGradientColor", "cashHudGradientColor",
+            "potionHudGradientColor", "hackTimerHudGradientColor", "plantTimerHudGradientColor",
+            "dealerTimerHudGradientColor", "productionTimerHudGradientColor",
+            "healthHudStyle", "toggleSprintHudStyle", "fpsHudStyle", "paydayHudStyle", "ammoHudStyle",
+            "bankHudStyle", "cashHudStyle", "potionHudStyle", "hackTimerHudStyle", "plantTimerHudStyle",
+            "dealerTimerHudStyle", "productionTimerHudStyle", "healthHudCustomFont",
+            "toggleSprintHudCustomFont", "fpsHudCustomFont", "paydayHudCustomFont", "ammoHudCustomFont",
+            "bankHudCustomFont", "cashHudCustomFont", "potionHudCustomFont", "hackTimerHudCustomFont",
+            "plantTimerHudCustomFont", "dealerTimerHudCustomFont", "productionTimerHudCustomFont",
+            "customHudFont", "cartoonHudFont",
+            "toggleSprintHudPrefixEnabled", "fpsHudPrefixEnabled", "paydayHudPrefixEnabled",
+            "ammoHudPrefixEnabled", "bankHudPrefixEnabled", "cashHudPrefixEnabled",
+            "hackTimerHudPrefixEnabled", "plantTimerHudPrefixEnabled", "dealerTimerHudPrefixEnabled",
+            "productionTimerHudPrefixEnabled", "toggleSprintHudPrefix", "fpsHudPrefix", "paydayHudPrefix",
+            "ammoHudPrefix", "bankHudPrefix", "cashHudPrefix", "hackTimerHudPrefix", "plantTimerHudPrefix",
+            "dealerTimerHudPrefix", "productionTimerHudPrefix",
+            "showHealthHud", "showFpsHud", "showPaydayHud", "showAmmoHud", "showBankHud", "showCashHud",
+            "showPotionEffectsHud", "showPlantTimerHud", "showDealerTimerHud", "showProductionTimerHud",
+            "toggleSprintEnabled", "autoStatsOnJoinEnabled", "autoFactionBankOnBalanceEnabled",
+            "autoAtmInfoOnBalanceEnabled", "chatTimestampsEnabled", "chatCustomizationEnabled",
+            "reinfCustomizationEnabled", "chatTimestampFormat", "maxChatHistory",
+            "pingRelayEnabled", "showPingHud", "showRoleHolograms", "pingHudScale", "pingHudStyle",
+            "pingHudCustomFont", "pingRelayScope", "pingRelayTtlSeconds", "pingRelayMaxDistance",
+            "pingRelayColor", "pingNormalColor", "pingDangerColor", "pingGatherColor", "pingCooldownMs",
+            "pingSoundEnabled", "pingSoundId", "autoUpdateEnabled", "blReasons"
+    );
+    private static Runnable saveListener = () -> { };
 
     public List<String> manualFactionPlayers = new ArrayList<>();
     public List<String> manualBlacklistPlayers = new ArrayList<>();
@@ -297,6 +345,7 @@ public class BetterUCConfig {
     public String lastSeenWelcomeVersion = "";
     public String discordInviteUrl = DEFAULT_DISCORD_INVITE_URL;
     public boolean autoUpdateEnabled = true;
+    public boolean cloudSettingsEnabled = true;
 
     public static class BlacklistReason {
         public int kills;
@@ -1059,6 +1108,7 @@ public class BetterUCConfig {
             String rawJson = Files.readString(file.toPath(), StandardCharsets.UTF_8);
             boolean hasChatCustomizationSetting = rawJson.contains("\"chatCustomizationEnabled\"");
             boolean hasReinfCustomizationSetting = rawJson.contains("\"reinfCustomizationEnabled\"");
+            boolean hasCloudSettingsSetting = rawJson.contains("\"cloudSettingsEnabled\"");
             BetterUCConfig loaded = GSON.fromJson(rawJson, BetterUCConfig.class);
             if (loaded == null) return;
 
@@ -1068,6 +1118,9 @@ public class BetterUCConfig {
             }
             if (!hasReinfCustomizationSetting) {
                 INSTANCE.reinfCustomizationEnabled = true;
+            }
+            if (!hasCloudSettingsSetting) {
+                INSTANCE.cloudSettingsEnabled = true;
             }
             ensureRuntimeCollections();
             if (INSTANCE.hotkeyCommands == null)         INSTANCE.hotkeyCommands = new ArrayList<>();
@@ -1143,11 +1196,64 @@ public class BetterUCConfig {
     }
 
     public static void save() {
+        boolean saved = false;
         try (Writer w = new FileWriter(CONFIG_FILE)) {
             GSON.toJson(INSTANCE, w);
+            saved = true;
         } catch (Exception e) {
             com.betteruc.BetterUCMod.LOGGER.error("Failed to save config", e);
         }
+        if (saved) {
+            try {
+                saveListener.run();
+            } catch (Exception e) {
+                com.betteruc.BetterUCMod.LOGGER.warn("Config save listener failed", e);
+            }
+        }
+    }
+
+    public static void setSaveListener(Runnable listener) {
+        saveListener = listener == null ? () -> { } : listener;
+    }
+
+    public static JsonObject cloudSettingsSnapshot() {
+        JsonObject result = new JsonObject();
+        JsonObject serialized = GSON.toJsonTree(INSTANCE).getAsJsonObject();
+        for (String name : CLOUD_SETTING_FIELDS) {
+            if (serialized.has(name)) {
+                result.add(name, serialized.get(name).deepCopy());
+            }
+        }
+        return result;
+    }
+
+    public static void applyCloudSettings(JsonObject settings) {
+        if (settings == null) return;
+        for (String name : CLOUD_SETTING_FIELDS) {
+            JsonElement value = settings.get(name);
+            if (value == null || value.isJsonNull()) continue;
+            try {
+                Field field = BetterUCConfig.class.getField(name);
+                Object parsed = GSON.fromJson(value, field.getGenericType());
+                field.set(INSTANCE, parsed);
+            } catch (Exception e) {
+                com.betteruc.BetterUCMod.LOGGER.warn("Ignored invalid cloud setting {}", name, e);
+            }
+        }
+        sanitizeAfterCloudApply();
+    }
+
+    private static void sanitizeAfterCloudApply() {
+        ensureRuntimeCollections();
+        sanitizeHudStyles();
+        sanitizeHudScales();
+        sanitizeHudPrefixes();
+        sanitizeHudGradients();
+        sanitizePingRelay();
+        sanitizeDiscordInvite();
+        sanitizeTrackedFactions();
+        rebuildRemoteFactionUnion();
+        refreshRuntimeNameCaches();
     }
 
     public static boolean isFaction(String name) {

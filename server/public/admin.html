@@ -44,7 +44,7 @@
           <h2>betterUC Nutzer</h2>
         </div>
         <div class="admin-actions">
-          <span id="backupStatus" class="admin-status">Backup wird geprÃ¼ft</span>
+          <span id="backupStatus" class="admin-status">Backup wird geprüft</span>
           <button id="createBackup" class="button secondary" type="button">Backup erstellen</button>
           <button id="refreshAccounts" class="button secondary" type="button">Aktualisieren</button>
           <button id="logoutAdmin" class="button secondary" type="button">Abmelden</button>
@@ -61,6 +61,25 @@
         <div><span>VIP</span><strong id="vipAccounts">0</strong></div>
         <div><span>Admins</span><strong id="adminAccounts">0</strong></div>
       </div>
+
+      <section class="database-overview" aria-labelledby="databaseTitle">
+        <div class="database-overview-header">
+          <div>
+            <p class="section-label">Cloud & Datenbank</p>
+            <h3 id="databaseTitle">Systemstatus</h3>
+          </div>
+          <span id="databaseConnection" class="status-pill">wird geprüft</span>
+        </div>
+        <div class="stats-row database-stats">
+          <div><span>Speicher</span><strong id="databaseSize">-</strong></div>
+          <div><span>Migration</span><strong id="databaseMigration">-</strong></div>
+          <div><span>Cloud-Profile</span><strong id="cloudProfileCount">-</strong></div>
+          <div><span>Stats-Profile</span><strong id="statsProfileCount">-</strong></div>
+          <div><span>Webprofile</span><strong id="webProfileCount">-</strong></div>
+          <div><span>Audit-Einträge</span><strong id="auditEntryCount">-</strong></div>
+        </div>
+        <p id="databaseDetail" class="quiet">Datenbankstatus wird geladen.</p>
+      </section>
 
       <div class="admin-grid">
         <form id="createAccount" class="tool-panel">

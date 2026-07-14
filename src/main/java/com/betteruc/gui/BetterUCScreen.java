@@ -3,6 +3,7 @@ package com.betteruc.gui;
 import com.betteruc.BetterUCMod;
 import com.betteruc.client.BetterUCFontManager;
 import com.betteruc.client.ClientCompat;
+import com.betteruc.client.CloudSettingsClient;
 import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.SyncRefreshActions;
@@ -50,26 +51,17 @@ public class BetterUCScreen extends Screen {
             .map(container -> container.getMetadata().getVersion().getFriendlyString())
             .orElse("dev");
     private static final UpdateSection[] UPDATE_SECTIONS = new UpdateSection[]{
-            new UpdateSection("Neu in 1.2.5", new String[]{
-                    "/adropdrink gibt Lieferanten-Getraenke automatisch im 2,5s-Takt ab",
-                    "Auto-Dropdrink stoppt, wenn du nicht in der Kneipe bist",
-                    "Winzer-Automation leert alle Trauben-Fenster automatisch",
-                    "Gaertner-Automation gibt Blumen ab und sammelt verwelkte Buesche",
-                    "Fischer-Automation sucht, fängt und gibt Fisch am Steg ab",
-                    "Lieferjunge-Scoreboard wird genauer ausgelesen",
-                    "Multi-Version-Build erstellt JARs fuer 26.2, 26.1.2 und 1.21.10",
-                    "Website-Download und Auto-Updater waehlen die passende JAR fuer deine Minecraft-Version",
-                    "1.21.10-Kompatibilitaet fuer Chat, HUDs, Fonts und Tab-Badges verbessert",
-                    "Zoom-Feature entfernt, weil es nicht mehr genutzt wird",
-                    "Bargeld-HUD verhindert doppelte Abbuchungs-Erkennung",
-                    "Fraktionstracking funktioniert wieder mit aktuellen /stats-Zeilen",
-                    "WPS/HQ-Chatformat wirkt jetzt ruhiger und einheitlicher",
-                    "Labels sind klein geschrieben und nicht mehr fett",
-                    "Formatierte Chatzeilen nutzen nun den Trenner ◆",
-                    "Lange Fahndungsgruende bleiben kompakt in einer Grund-Zeile",
-                    "Zeit, Wanteds und Wanted-Aenderungen stehen separat darunter",
-                    "Drogenabgabe 5/10/15g wird automatisch zu DA 5g/10g/15g",
-                    "Plus-Abstaende in Gruenden werden automatisch geglaettet"
+            new UpdateSection("Neu in 1.2.6", new String[]{
+                    "Mod-Einstellungen werden sicher mit deinem betterUC Account synchronisiert",
+                    "Beim Serverbeitritt wird automatisch das aktuelle Cloud-Profil geladen",
+                    "Neue Accounts erhalten automatisch ein Cloud-Profil aus ihren lokalen Einstellungen",
+                    "HUD-Positionen, Größen, Farben, Stile und Präfixe bleiben geräteübergreifend erhalten",
+                    "Chat-, Ping-, Hotkey- und Komforteinstellungen werden ebenfalls synchronisiert",
+                    "Access Codes, Relay-Adressen, Geldstände, Fraktionen und laufende Timer bleiben lokal",
+                    "Änderungen werden gebündelt gespeichert und belasten die Datenbank nicht pro Spielereignis",
+                    "Revisionsschutz verhindert, dass zwei Clients Einstellungen unbemerkt überschreiben",
+                    "Im neuen Cloud-Sync-Modul kannst du laden, hochladen oder die Automatik pausieren",
+                    "PostgreSQL speichert Profile versioniert und protokolliert Cloud-Aktualisierungen"
             }),
             new UpdateSection("Kurzstart", new String[]{
                     "Standard: N öffnet das betterUC ClickGUI",
@@ -254,6 +246,7 @@ public class BetterUCScreen extends Screen {
                 y = addTimestampField(x, y, controlW);
             }
             case CONNECTION -> y = addConnectionControls(x, y, controlW);
+            case CLOUD_SYNC -> y = addCloudSyncControls(x, y, controlW);
             case BLACKLIST -> {
                 y = addButton(x, y, controlW, "Blacklist Gründe", b -> openScreen(new BlacklistConfigScreen(this)));
                 y = addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(minecraft, true));
@@ -416,6 +409,17 @@ public class BetterUCScreen extends Screen {
                 color,
                 target
         )));
+    }
+
+    private int addCloudSyncControls(int x, int y, int width) {
+        y = addToggle(x, y, width, "Cloud Sync", BetterUCConfig.INSTANCE.cloudSettingsEnabled,
+                () -> BetterUCConfig.INSTANCE.cloudSettingsEnabled = !BetterUCConfig.INSTANCE.cloudSettingsEnabled);
+        y = addInfo(x, y, width, "Status", CloudSettingsClient.statusLabel());
+        y = addInfo(x, y, width, "Letzter Sync", CloudSettingsClient.lastSyncLabel());
+        y = addButton(x, y, width, "Cloud-Einstellungen laden",
+                b -> CloudSettingsClient.downloadNow(minecraft));
+        return addButton(x, y, width, "Aktuelle Einstellungen hochladen",
+                b -> CloudSettingsClient.uploadNow(minecraft));
     }
 
     private int addHudGradientControls(int x, int y, int width, ModuleOption module) {
@@ -702,6 +706,17 @@ public class BetterUCScreen extends Screen {
             return;
         }
 
+        if (selectedModule == ModuleOption.CLOUD_SYNC) {
+            context.text(
+                    font,
+                    Component.literal("Cloud: " + CloudSettingsClient.statusLabel()),
+                    x,
+                    y,
+                    CloudSettingsClient.isReady() ? 0xFF86EFAC : TEXT_MUTED
+            );
+            return;
+        }
+
         if (selectedModule.hasToggle()) {
             context.text(
                     font,
@@ -907,6 +922,8 @@ public class BetterUCScreen extends Screen {
                     BetterUCConfig.INSTANCE.chatTimestampsEnabled);
             case CONNECTION -> drawMiniInfo(context, previewX, previewY, "Verbindung", PingRelayClient.statusLabel(),
                     PingRelayClient.isConnected());
+            case CLOUD_SYNC -> drawMiniInfo(context, previewX, previewY, "Cloud Sync",
+                    CloudSettingsClient.statusLabel(), CloudSettingsClient.isReady());
             case BLACKLIST -> drawMiniInfo(context, previewX, previewY, "Blacklist",
                     BetterUCConfig.INSTANCE.chatBlacklistPlayers.size() + " Spieler", true);
             case PING -> drawMiniInfo(context, previewX, previewY, "Ping System",
@@ -1077,6 +1094,7 @@ public class BetterUCScreen extends Screen {
             case DEALER_TIMER -> BetterUCConfig.INSTANCE.showDealerTimerHud;
             case PRODUCTION_TIMER -> BetterUCConfig.INSTANCE.showProductionTimerHud;
             case AUTO_STATS -> BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled;
+            case CLOUD_SYNC -> BetterUCConfig.INSTANCE.cloudSettingsEnabled;
             case PING -> BetterUCConfig.INSTANCE.pingRelayEnabled;
             default -> true;
         };
@@ -1614,6 +1632,7 @@ public class BetterUCScreen extends Screen {
         AUTO_STATS(Category.GAMEPLAY, "Auto Stats", "Automatisches /stats", 0xFF34D399, true),
         CHAT(Category.GAMEPLAY, "Chat", "Zeitstempel & Customization", 0xFF38BDF8, false),
         CONNECTION(Category.GAMEPLAY, "Verbindung", "Account & Relay", 0xFF38BDF8, false),
+        CLOUD_SYNC(Category.GAMEPLAY, "Cloud Sync", "Synchronisierte Einstellungen", 0xFF22D3EE, true),
 
         BLACKLIST(Category.TOOLS, "Blacklist", "Gründe und Sync", 0xFFF97316, false),
         PING(Category.TOOLS, "Ping", "Private Mod-Pings", 0xFF38BDF8, true),

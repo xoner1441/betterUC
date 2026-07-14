@@ -68,12 +68,20 @@ function createDatabase(options = {}) {
   const required = String(options.required ?? process.env.DATABASE_REQUIRED ?? "false").toLowerCase() === "true";
   const logger = options.logger || console;
   if (!connectionString) {
+    const unavailable = async () => {
+      throw new Error("PostgreSQL cloud settings are unavailable.");
+    };
     return {
       enabled: false,
       required,
       async initialize() {},
       async loadAccounts() { return []; },
       async replaceAccounts() {},
+      getCloudSettings: unavailable,
+      putCloudSettings: unavailable,
+      listCloudSettingsMetadata: unavailable,
+      deleteCloudSettings: unavailable,
+      getOverview: unavailable,
       async close() {}
     };
   }
@@ -398,12 +406,177 @@ function createDatabase(options = {}) {
     }
   }
 
+  function cloudSettingsFromRow(row) {
+    if (!row) return null;
+    return {
+      schemaVersion: Number(row.schema_version),
+      revision: Number(row.revision),
+      settings: row.settings && typeof row.settings === "object" ? row.settings : {},
+      updatedAt: iso(row.updated_at),
+      updatedByVersion: row.updated_by_version || ""
+    };
+  }
+
+  async function getCloudSettings(accountId) {
+    const result = await pool.query(
+      "select schema_version, revision, settings, updated_at, updated_by_version from cloud_settings where account_id = $1",
+      [accountId]
+    );
+    return result.rowCount > 0 ? cloudSettingsFromRow(result.rows[0]) : null;
+  }
+
+  async function putCloudSettings(accountId, update) {
+    const client = await pool.connect();
+    try {
+      await client.query("begin");
+      const currentResult = await client.query(
+        "select schema_version, revision, settings, updated_at, updated_by_version from cloud_settings where account_id = $1 for update",
+        [accountId]
+      );
+      const current = currentResult.rowCount > 0 ? cloudSettingsFromRow(currentResult.rows[0]) : null;
+      const expectedRevision = current ? current.revision : 0;
+      if (Number(update.baseRevision) !== expectedRevision) {
+        await client.query("rollback");
+        return { conflict: true, current };
+      }
+
+      const nextRevision = expectedRevision + 1;
+      const result = await client.query(`
+        insert into cloud_settings (
+          account_id, schema_version, revision, settings, updated_at, updated_by_version
+        ) values ($1, $2, $3, $4::jsonb, now(), $5)
+        on conflict (account_id) do update set
+          schema_version = excluded.schema_version,
+          revision = excluded.revision,
+          settings = excluded.settings,
+          updated_at = now(),
+          updated_by_version = excluded.updated_by_version
+        returning schema_version, revision, settings, updated_at, updated_by_version
+      `, [
+        accountId,
+        Number(update.schemaVersion),
+        nextRevision,
+        JSON.stringify(update.settings || {}),
+        text(update.updatedByVersion)
+      ]);
+      await client.query(`
+        insert into audit_log(account_id, actor, action, details)
+        values ($1, $2, 'cloud_settings.updated', $3::jsonb)
+      `, [
+        accountId,
+        `mod:${text(update.updatedByVersion, "unknown")}`,
+        JSON.stringify({ revision: nextRevision, schemaVersion: Number(update.schemaVersion) })
+      ]);
+      await client.query("commit");
+      return { conflict: false, current: cloudSettingsFromRow(result.rows[0]) };
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async function listCloudSettingsMetadata() {
+    const result = await pool.query(`
+      select account_id, schema_version, revision, updated_at, updated_by_version
+      from cloud_settings
+      order by updated_at desc
+    `);
+    return result.rows.map(row => ({
+      accountId: row.account_id,
+      schemaVersion: Number(row.schema_version),
+      revision: Number(row.revision),
+      updatedAt: iso(row.updated_at),
+      updatedByVersion: row.updated_by_version || ""
+    }));
+  }
+
+  async function deleteCloudSettings(accountId, actor = "admin:panel") {
+    const client = await pool.connect();
+    try {
+      await client.query("begin");
+      const result = await client.query(
+        "delete from cloud_settings where account_id = $1 returning revision",
+        [accountId]
+      );
+      await client.query(`
+        insert into audit_log(account_id, actor, action, details)
+        values ($1, $2, 'cloud_settings.reset', $3::jsonb)
+      `, [
+        accountId,
+        text(actor, "admin:panel"),
+        JSON.stringify({ previousRevision: result.rowCount > 0 ? Number(result.rows[0].revision) : null })
+      ]);
+      await client.query("commit");
+      return result.rowCount > 0;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async function getOverview() {
+    const migrationsDir = path.join(__dirname, "migrations");
+    const expectedMigrations = (await fsp.readdir(migrationsDir))
+      .filter(name => /^\d+.*\.sql$/i.test(name))
+      .sort();
+    const [databaseResult, migrationsResult, countsResult] = await Promise.all([
+      pool.query(`
+        select
+          current_database() as database_name,
+          current_setting('server_version') as server_version,
+          pg_database_size(current_database())::text as database_size
+      `),
+      pool.query("select version, applied_at from schema_migrations order by version"),
+      pool.query(`
+        select
+          (select count(*) from accounts)::integer as accounts,
+          (select count(*) from cloud_settings)::integer as cloud_profiles,
+          (select count(*) from player_stats)::integer as stats_profiles,
+          (select count(*) from web_credentials where password_hash is not null)::integer as web_profiles,
+          (select count(*) from audit_log)::integer as audit_entries
+      `)
+    ]);
+    const databaseRow = databaseResult.rows[0] || {};
+    const counts = countsResult.rows[0] || {};
+    const migrations = migrationsResult.rows.map(row => ({
+      version: row.version,
+      appliedAt: iso(row.applied_at)
+    }));
+    const applied = new Set(migrations.map(entry => entry.version));
+    return {
+      connected: true,
+      databaseName: databaseRow.database_name || "",
+      serverVersion: databaseRow.server_version || "",
+      sizeBytes: Number(databaseRow.database_size || 0),
+      migrations,
+      expectedMigrations,
+      pendingMigrations: expectedMigrations.filter(version => !applied.has(version)),
+      latestMigration: migrations.at(-1) || null,
+      counts: {
+        accounts: Number(counts.accounts || 0),
+        cloudProfiles: Number(counts.cloud_profiles || 0),
+        statsProfiles: Number(counts.stats_profiles || 0),
+        webProfiles: Number(counts.web_profiles || 0),
+        auditEntries: Number(counts.audit_entries || 0)
+      }
+    };
+  }
+
   return {
     enabled: true,
     required,
     initialize,
     loadAccounts,
     replaceAccounts,
+    getCloudSettings,
+    putCloudSettings,
+    listCloudSettingsMetadata,
+    deleteCloudSettings,
+    getOverview,
     async close() { await pool.end(); }
   };
 }

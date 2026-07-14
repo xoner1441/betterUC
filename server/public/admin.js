@@ -18,6 +18,14 @@ const adminGeneratedToken = document.querySelector("#adminGeneratedToken");
 const copyAdminToken = document.querySelector("#copyAdminToken");
 const createBackup = document.querySelector("#createBackup");
 const backupStatus = document.querySelector("#backupStatus");
+const databaseConnection = document.querySelector("#databaseConnection");
+const databaseSize = document.querySelector("#databaseSize");
+const databaseMigration = document.querySelector("#databaseMigration");
+const cloudProfileCount = document.querySelector("#cloudProfileCount");
+const statsProfileCount = document.querySelector("#statsProfileCount");
+const webProfileCount = document.querySelector("#webProfileCount");
+const auditEntryCount = document.querySelector("#auditEntryCount");
+const databaseDetail = document.querySelector("#databaseDetail");
 
 let adminKey = localStorage.getItem(ADMIN_STORAGE_KEY) || "";
 let panelSession = localStorage.getItem(PANEL_SESSION_KEY) || "";
@@ -135,6 +143,7 @@ function accountMatches(account, query) {
 
 function accountDetailHtml(account) {
   const stats = account.stats || {};
+  const cloud = account.cloudSettings || null;
   const history = Array.isArray(account.statsHistory) ? account.statsHistory.slice(0, 6) : [];
   const meta = [
     ["Online", account.online ? "Ja" : "Nein"],
@@ -151,6 +160,13 @@ function accountDetailHtml(account) {
     ["Letzter Weblogin", formatDate(account.lastPanelLoginAt)],
     ["Zuletzt entfernt", formatDate(account.webPasswordClearedAt)],
     ["Sessions abgemeldet", formatDate(account.webSessionsInvalidAfter)]
+  ];
+  const cloudProfile = [
+    ["Cloud-Profil", cloud ? "eingerichtet" : "nicht vorhanden"],
+    ["Revision", cloud ? String(cloud.revision) : "-"],
+    ["Letzter Sync", cloud ? formatDate(cloud.updatedAt) : "nie"],
+    ["Mod-Version", cloud?.updatedByVersion || "-"],
+    ["Schema", cloud ? `v${cloud.schemaVersion}` : "-"]
   ];
   const statCards = [
     ["Bank", moneyLabel(stats.bankMoney)],
@@ -220,6 +236,21 @@ function accountDetailHtml(account) {
                 </article>
               `).join("")}
             </div>
+          </div>
+          <div>
+            <h4>Cloud-Profil</h4>
+            <div class="account-meta-grid">
+              ${cloudProfile.map(([label, value]) => `
+                <article class="account-meta-card">
+                  <span>${escapeHtml(label)}</span>
+                  <strong>${escapeHtml(value)}</strong>
+                </article>
+              `).join("")}
+            </div>
+            <div class="admin-detail-actions cloud-profile-actions">
+              <button class="button secondary danger reset-cloud-settings" type="button" ${cloud ? "" : "disabled"}>Cloud-Profil zurücksetzen</button>
+            </div>
+            <p class="quiet">Dabei werden nur synchronisierte Mod-Einstellungen gelöscht. Account, Stats und Access-Code bleiben erhalten.</p>
           </div>
           <div>
             <h4>Verlauf</h4>
@@ -296,6 +327,32 @@ function updateTotals(totals) {
   document.querySelector("#adminAccounts").textContent = totals.admin ?? 0;
 }
 
+function renderDatabaseStatus(data, error = null) {
+  const database = data?.database || {};
+  const counts = database.counts || {};
+  const connected = Boolean(database.connected) && !error;
+  databaseConnection.textContent = connected ? "PostgreSQL online" : "nicht verfügbar";
+  databaseConnection.className = `status-pill ${connected ? "active" : "revoked"}`;
+  databaseSize.textContent = connected ? formatBytes(database.sizeBytes) : "-";
+  databaseMigration.textContent = connected
+    ? (database.pendingMigrations?.length ? `${database.pendingMigrations.length} offen` : "aktuell")
+    : "-";
+  cloudProfileCount.textContent = counts.cloudProfiles ?? "-";
+  statsProfileCount.textContent = counts.statsProfiles ?? "-";
+  webProfileCount.textContent = counts.webProfiles ?? "-";
+  auditEntryCount.textContent = counts.auditEntries ?? "-";
+  if (error) {
+    databaseDetail.textContent = error.message || "Datenbankstatus konnte nicht geladen werden.";
+    return;
+  }
+  if (!connected) {
+    databaseDetail.textContent = `Persistenz: ${data?.persistence || "unbekannt"}. Cloud-Synchronisierung ist derzeit nicht verfügbar.`;
+    return;
+  }
+  const latest = database.latestMigration?.version || "keine";
+  databaseDetail.textContent = `${database.databaseName || "betteruc"} · PostgreSQL ${database.serverVersion || ""} · letzte Migration ${latest}`;
+}
+
 async function loadAccounts() {
   const data = await api("/api/admin/accounts");
   accounts = data.accounts || [];
@@ -304,6 +361,11 @@ async function loadAccounts() {
   updateTotals(data.totals || {});
   renderBackupStatus(data.backups || []);
   renderAccounts();
+  try {
+    renderDatabaseStatus(await api("/api/admin/database"));
+  } catch (error) {
+    renderDatabaseStatus(null, error);
+  }
 }
 
 function rowAccountId(target) {
@@ -482,6 +544,15 @@ accountsTable.addEventListener("click", async event => {
     if (button.classList.contains("logout-web")) {
       await runAccountAction(id, "logout-web");
       setCreateMessage("Websession wurde abgemeldet.", "success");
+      return;
+    }
+    if (button.classList.contains("reset-cloud-settings")) {
+      const detailRow = button.closest("tr");
+      const accountRow = detailRow?.previousElementSibling;
+      const name = accountRow?.querySelector("td strong")?.textContent?.trim() || "diesen Account";
+      if (!confirm(`Cloud-Profil von ${name} zurücksetzen? Die Mod lädt beim nächsten Sync wieder ein neues Profil hoch.`)) return;
+      await runAccountAction(id, "reset-cloud");
+      setCreateMessage("Cloud-Profil wurde zurückgesetzt.", "success");
       return;
     }
     if (button.classList.contains("revoke-account")) {

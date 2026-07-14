@@ -1197,6 +1197,38 @@ select:focus {
   margin-top: 5px;
 }
 
+.database-overview {
+  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  margin-bottom: 18px;
+  padding: 18px 0 14px;
+}
+
+.database-overview-header {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.database-overview-header h3,
+.database-overview-header .section-label {
+  margin: 0;
+}
+
+.database-overview-header h3 {
+  margin-top: 4px;
+}
+
+.database-stats {
+  margin-bottom: 10px;
+}
+
+.database-stats strong {
+  font-size: 20px;
+}
+
 .admin-player-name {
   align-items: center;
   display: inline-flex;
@@ -1301,6 +1333,10 @@ select:focus {
   padding: 0 12px;
 }
 
+.cloud-profile-actions {
+  margin-top: 12px;
+}
+
 .row-input {
   min-width: 180px;
   width: 100%;
@@ -1356,6 +1392,11 @@ select:focus {
   }
 
   .admin-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .database-overview-header {
     align-items: flex-start;
     flex-direction: column;
   }

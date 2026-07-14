@@ -12,6 +12,7 @@ import com.betteruc.client.AutoWinzerClient;
 import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ClientCompat;
 import com.betteruc.client.ClientScheduler;
+import com.betteruc.client.CloudSettingsClient;
 import com.betteruc.client.BetterUCFontManager;
 import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.MovementController;
@@ -150,6 +151,7 @@ public class BetterUCClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         BetterUCConfig.load();
+        CloudSettingsClient.initialize();
         BetterUCFontManager.initialize();
         registerKeyMappings();
         registerHudElements();
@@ -199,6 +201,7 @@ public class BetterUCClient implements ClientModInitializer {
             ProductionTimerHud.clear();
             CommunicationDeviceTracker.reset();
             PingRelayClient.onJoin(client);
+            CloudSettingsClient.onJoin(client);
             statsOnJoinDelay = BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled
                     ? AUTO_STATS_ON_JOIN_DELAY_TICKS
                     : -1;
@@ -209,6 +212,7 @@ public class BetterUCClient implements ClientModInitializer {
             ServerCommandUtil.markDisconnected();
             CommunicationDeviceTracker.reset();
             PingRelayClient.onDisconnect();
+            CloudSettingsClient.onDisconnect();
             resetRuntimeState(client);
         });
     }
@@ -974,6 +978,7 @@ public class BetterUCClient implements ClientModInitializer {
             PlantageHud.tick();
             AmmoHud.tickReloadKey(client);
             PingRelayClient.tick(client);
+            CloudSettingsClient.tick(client);
             AutoDropDrinkClient.tick(client);
             AutoGaertnerClient.tick(client);
             AutoWinzerClient.tick(client);

@@ -33,6 +33,8 @@ const GITHUB_RELEASES_URL = "https://github.com/xoner1441/betterUC/releases";
 const GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/xoner1441/betterUC/releases/latest";
 const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || "https://betteruc.de").replace(/\/+$/, "");
 const RELEASE_CACHE_TTL_MS = Number(process.env.RELEASE_CACHE_TTL_MS || 5 * 60 * 1000);
+const CLOUD_SETTINGS_SCHEMA_VERSION = 1;
+const CLOUD_SETTINGS_MAX_BYTES = 48 * 1024;
 
 const MIME_TYPES = new Map([
   [".html", "text/html; charset=utf-8"],
@@ -526,7 +528,7 @@ function userPanelAccount(account) {
   };
 }
 
-function adminAccount(account) {
+function adminAccount(account, cloudSettings = null) {
   const onlineClient = onlineClientForAccount(account);
   return {
     ...publicAccount(account),
@@ -535,7 +537,8 @@ function adminAccount(account) {
     online: Boolean(onlineClient),
     connectedAt: onlineClient ? onlineClient.connectedAt : null,
     stats: publicStats(account),
-    statsHistory: publicStatsHistory(account)
+    statsHistory: publicStatsHistory(account),
+    cloudSettings
   };
 }
 
@@ -1224,9 +1227,18 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/admin/accounts") {
     if (!requireAdmin(req, res, url)) return;
+    let cloudSettings = [];
+    if (persistenceMode === "postgres" && database.enabled) {
+      try {
+        cloudSettings = await database.listCloudSettingsMetadata();
+      } catch (error) {
+        console.error("Could not load cloud settings metadata for admin panel", error);
+      }
+    }
+    const cloudSettingsByAccount = new Map(cloudSettings.map(entry => [entry.accountId, entry]));
     json(res, 200, {
       ok: true,
-      accounts: store.accounts.map(adminAccount),
+      accounts: store.accounts.map(account => adminAccount(account, cloudSettingsByAccount.get(account.id) || null)),
       players: onlinePlayersForResponse(),
       backups: await listStoreBackups(),
       totals: {
@@ -1389,6 +1401,20 @@ async function handleApi(req, res, url) {
       return;
     }
 
+    if (req.method === "POST" && action === "reset-cloud") {
+      if (persistenceMode !== "postgres" || !database.enabled) {
+        json(res, 503, { ok: false, error: "Cloud-Profile sind ohne PostgreSQL nicht verfügbar." });
+        return;
+      }
+      const deleted = await database.deleteCloudSettings(account.id, "admin:panel");
+      json(res, 200, {
+        ok: true,
+        deleted,
+        account: adminAccount(account, null)
+      });
+      return;
+    }
+
     if (req.method === "POST" && action === "delete") {
       closeConnectionsForAccount(account.id);
       store.accounts = store.accounts.filter(existing => existing.id !== account.id);
@@ -1453,6 +1479,103 @@ async function handleApi(req, res, url) {
       ok: true,
       players: onlinePlayersForResponse()
     });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/database") {
+    if (!requireAdmin(req, res, url)) return;
+    if (persistenceMode !== "postgres" || !database.enabled) {
+      json(res, 200, {
+        ok: true,
+        persistence: persistenceMode,
+        database: { connected: false, counts: { accounts: store.accounts.length } }
+      });
+      return;
+    }
+    try {
+      json(res, 200, {
+        ok: true,
+        persistence: persistenceMode,
+        database: await database.getOverview()
+      });
+    } catch (error) {
+      console.error("Could not load PostgreSQL overview", error);
+      json(res, 503, { ok: false, error: "Datenbankstatus konnte nicht geladen werden." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/user/settings") {
+    const auth = authenticate(req, url);
+    if (!auth || !auth.account || auth.account.id === "legacy") {
+      json(res, 401, { ok: false, error: "Access Code fehlt oder ist ungueltig." });
+      return;
+    }
+    if (persistenceMode !== "postgres") {
+      json(res, 503, { ok: false, error: "Cloud-Einstellungen sind momentan nicht verfuegbar." });
+      return;
+    }
+
+    const profile = await database.getCloudSettings(auth.account.id);
+    json(res, 200, {
+      ok: true,
+      exists: Boolean(profile),
+      profile
+    });
+    return;
+  }
+
+  if (req.method === "PUT" && url.pathname === "/api/user/settings") {
+    if (isRateLimited(req, "cloud-settings", 30, 60_000)) {
+      json(res, 429, { ok: false, error: "Zu viele Cloud-Aktualisierungen. Bitte kurz warten." });
+      return;
+    }
+    const auth = authenticate(req, url);
+    if (!auth || !auth.account || auth.account.id === "legacy") {
+      json(res, 401, { ok: false, error: "Access Code fehlt oder ist ungueltig." });
+      return;
+    }
+    if (persistenceMode !== "postgres") {
+      json(res, 503, { ok: false, error: "Cloud-Einstellungen sind momentan nicht verfuegbar." });
+      return;
+    }
+
+    const body = await readJsonBody(req, CLOUD_SETTINGS_MAX_BYTES + 4096);
+    const schemaVersion = Number(body.schemaVersion);
+    const baseRevision = Number(body.baseRevision);
+    const settings = body.settings;
+    if (!Number.isSafeInteger(schemaVersion) || schemaVersion !== CLOUD_SETTINGS_SCHEMA_VERSION) {
+      json(res, 400, { ok: false, error: "Nicht unterstuetzte Einstellungs-Version." });
+      return;
+    }
+    if (!Number.isSafeInteger(baseRevision) || baseRevision < 0) {
+      json(res, 400, { ok: false, error: "Ungueltige Cloud-Revision." });
+      return;
+    }
+    if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+      json(res, 400, { ok: false, error: "Einstellungen muessen ein JSON-Objekt sein." });
+      return;
+    }
+    if (Buffer.byteLength(JSON.stringify(settings), "utf8") > CLOUD_SETTINGS_MAX_BYTES) {
+      json(res, 413, { ok: false, error: "Das Einstellungsprofil ist zu gross." });
+      return;
+    }
+
+    const result = await database.putCloudSettings(auth.account.id, {
+      schemaVersion,
+      baseRevision,
+      settings,
+      updatedByVersion: cleanSmallLabel(body.modVersion || "", "")
+    });
+    if (result.conflict) {
+      json(res, 409, {
+        ok: false,
+        error: "Die Cloud-Einstellungen wurden zwischenzeitlich geaendert.",
+        profile: result.current
+      });
+      return;
+    }
+    json(res, 200, { ok: true, profile: result.current });
     return;
   }
 

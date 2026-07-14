@@ -13,8 +13,24 @@ public class ChangelogScreen extends Screen {
 
     private static final Page[] PAGES = new Page[]{
             new Page(
-                    "Highlights",
-                    "betterUC 1.2.5",
+                    "Cloud Integration",
+                    "betterUC 1.2.6",
+                    new String[]{
+                            "Mod-Einstellungen werden mit deinem betterUC Account synchronisiert",
+                            "Beim Beitritt wird zuerst das aktuelle Cloud-Profil geladen",
+                            "Ohne Cloud-Profil werden deine lokalen Einstellungen automatisch hochgeladen",
+                            "HUD-Layout, Farben, Stile, Präfixe und Custom-Font-Auswahl bleiben erhalten",
+                            "Chat-, Ping-, Hotkey- und Komforteinstellungen werden ebenfalls synchronisiert",
+                            "Access Code, Relay-Adresse, Geldstände, Fraktion und aktive Timer bleiben lokal",
+                            "Änderungen werden kurz gesammelt und dann gebündelt gespeichert",
+                            "Revisionsschutz erkennt parallele Änderungen auf mehreren Geräten",
+                            "Cloud Sync kann im Client-Tab pausiert und manuell gesteuert werden",
+                            "Die neue PostgreSQL-Anbindung speichert Profile dauerhaft und versioniert"
+                    }
+            ),
+            new Page(
+                    "Bisherige Highlights",
+                    "betterUC 1.2.5 und älter",
                     new String[]{
                             "/adropdrink gibt Lieferanten-Getraenke automatisch im 2,5s-Takt ab",
                             "Auto-Dropdrink stoppt, wenn du nicht in der Kneipe bist",
