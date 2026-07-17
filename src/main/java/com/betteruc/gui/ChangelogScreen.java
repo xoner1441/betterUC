@@ -152,7 +152,6 @@ public class ChangelogScreen extends Screen {
                             "/blset und /setbl setzen Blacklist-Einträge mit Vorlagen",
                             "/modbl erweitert bestehende Blacklist-Einträge",
                             "/blinfo zeigt gespeicherte Infos zu einem Blacklist-Spieler",
-                            "/setrp setzt RP-Stufen für Blacklist-Einträge",
                             "Normale /blacklist-Ausgabe bleibt serverseitig sichtbar"
                     }
             )

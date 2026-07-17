@@ -36,6 +36,9 @@ public class BankBalanceHud {
     private static final Pattern BANK_TRANSFER_RECEIVED_PATTERN = Pattern.compile(
             "(?i)\\b(.+?)\\s+hat\\s+dir\\s+([0-9][0-9\\.]*)\\s*\\$\\s+(?:\\u00FCberwiesen|ueberwiesen)\\s*!?"
     );
+    private static final Pattern BATTLE_PASS_REWARD_PATTERN = Pattern.compile(
+            "(?i)\\[battle\\s+pass]\\s*\\+\\s*([0-9][0-9\\.]*)\\s*\\$\\s+erhalten\\s*\\.?"
+    );
 
     private static int currentBankBalance = -1;
     private static String lastBankDeltaKey = "";
@@ -73,6 +76,15 @@ public class BankBalanceHud {
             Integer parsed = parseMoneyValue(transferReceivedMatcher.group(2));
             if (parsed != null) {
                 addBalanceAndPersist(parsed, "bank-transfer-received:" + normalizeRawKey(raw));
+            }
+            return;
+        }
+
+        Matcher battlePassRewardMatcher = BATTLE_PASS_REWARD_PATTERN.matcher(raw);
+        if (battlePassRewardMatcher.find()) {
+            Integer parsed = parseMoneyValue(battlePassRewardMatcher.group(1));
+            if (parsed != null) {
+                addBalanceAndPersist(parsed, "battle-pass-reward:" + normalizeRawKey(raw));
             }
             return;
         }

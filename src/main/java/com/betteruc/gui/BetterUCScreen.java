@@ -94,7 +94,6 @@ public class BetterUCScreen extends Screen {
                     "/blset <spieler> <grund> oder /setbl setzt einen Blacklist-Eintrag",
                     "/modbl <spieler> <grund> erweitert einen bestehenden Blacklist-Eintrag",
                     "/blinfo <spieler> zeigt gespeicherte Blacklist-Infos",
-                    "/setrp <spieler> <1-3> setzt die RP-Stufe",
                     "/adropdrink sendet /dropdrink automatisch anhand des Lieferjunge-Scoreboards",
                     "Winzer-Fenster sammeln automatisch alle Trauben ein",
                     "Gaertner-Hinweise geben Blumen ab und sammeln verwelkte Buesche",

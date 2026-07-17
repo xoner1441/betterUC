@@ -2,7 +2,6 @@ package com.betteruc;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.betteruc.client.AutoDropDrinkClient;
@@ -236,7 +235,6 @@ public class BetterUCClient implements ClientModInitializer {
             registerSetBlacklistCommands(dispatcher, playerSuggestions, reasonSuggestions);
             registerBlacklistInfoCommand(dispatcher, playerSuggestions);
             registerModBlCommand(dispatcher, playerSuggestions, modBlReasonSuggestions);
-            registerSetRpCommand(dispatcher, playerSuggestions);
             registerUserPanelCommand(dispatcher);
             registerUpdateCommand(dispatcher);
             registerBankShortcutCommands(dispatcher);
@@ -413,30 +411,6 @@ public class BetterUCClient implements ClientModInitializer {
                         })));
     }
 
-    private void registerSetRpCommand(
-            CommandDispatcher<FabricClientCommandSource> dispatcher,
-            SuggestionProvider<FabricClientCommandSource> playerSuggestions
-    ) {
-        dispatcher.register(ClientCommands.literal("setrp")
-                .then(ClientCommands.argument("spieler", StringArgumentType.word())
-                        .suggests(playerSuggestions)
-                        .then(ClientCommands.argument("stufe", IntegerArgumentType.integer(1, 3))
-                                .suggests((ctx, builder) -> {
-                                    builder.suggest(1);
-                                    builder.suggest(2);
-                                    builder.suggest(3);
-                                    return builder.buildFuture();
-                                })
-                                .executes(context -> {
-                                    Minecraft client = Minecraft.getInstance();
-                                    if (client.player == null) return 0;
-
-                                    String spieler = StringArgumentType.getString(context, "spieler");
-                                    int stufe = IntegerArgumentType.getInteger(context, "stufe");
-                                    return executeSetRp(client, spieler, stufe);
-                                }))));
-    }
-
     private int executeBlacklistInfo(Minecraft client, String spieler) {
         if (client.player == null) return 0;
         if (!ensureAllowedServerForManualCommand(client)) return 0;
@@ -492,68 +466,6 @@ public class BetterUCClient implements ClientModInitializer {
         sendServerCommand(client, "blacklist");
         startBlacklistLoadTimeoutFallback(client, "modbl");
         return 1;
-    }
-
-    private int executeSetRp(Minecraft client, String spieler, int stufe) {
-        if (client.player == null) return 0;
-        if (!ensureAllowedServerForManualCommand(client)) return 0;
-        if (stufe < 1 || stufe > 3) {
-            client.player.sendSystemMessage(Component.literal("\u00A7cRP-Stufe muss zwischen 1 und 3 liegen!"));
-            return 0;
-        }
-
-        client.player.sendSystemMessage(Component.literal(
-                "\u00A77Lade Blacklist für \u00A7f" + spieler + "\u00A77 (RP " + stufe + "/3)..."
-        ));
-
-        BetterUCSuppressFlags.suppressModBlOutput = true;
-        BetterUCSuppressFlags.modBlCallback = () -> applySetRpFromLoadedData(client, spieler, stufe);
-
-        sendServerCommand(client, "blacklist");
-        startBlacklistLoadTimeoutFallback(client, "setrp");
-        return 1;
-    }
-
-    private void applySetRpFromLoadedData(Minecraft client, String spieler, int stufe) {
-        if (client.player == null) return;
-
-        String altGrund = BetterUCConfig.INSTANCE.blacklistReasons.get(spieler);
-        int[] altStats = BetterUCConfig.INSTANCE.blacklistStats.get(spieler);
-        if (altGrund == null || altStats == null) {
-            client.player.sendSystemMessage(Component.literal("\u00A7c" + spieler + " ist nicht auf der Blacklist!"));
-            return;
-        }
-
-        String neuerGrund = buildReasonWithRpStage(spieler, altGrund, stufe);
-        String commandGrundArg = toSetRpCommandReasonArg(neuerGrund);
-        int finalKills = clampModBlKills(altStats.length > 0 ? altStats[0] : 0);
-        int finalPreis = clampModBlPrice(altStats.length > 1 ? altStats[1] : 0);
-
-        BetterUCSuppressFlags.markPendingModBlReadd(spieler);
-        sendServerCommand(client, "bl remove " + spieler);
-        runDelayedOnClient(client, 500, () -> sendSetRpUpdatedEntry(
-                client,
-                spieler,
-                altGrund,
-                altStats,
-                finalKills,
-                finalPreis,
-                neuerGrund,
-                commandGrundArg
-        ));
-    }
-
-    private String buildReasonWithRpStage(String spieler, String altGrund, int stufe) {
-        boolean hasVogelfrei = (altGrund != null && altGrund.toLowerCase(Locale.ROOT).contains("(vogelfrei)"))
-                || BetterUCConfig.isVogelfrei(spieler)
-                || stufe == 3;
-        LinkedHashSet<String> parts = extractReasonPartsWithoutRpAndVogelfrei(altGrund);
-        String basis = String.join(" + ", parts);
-        if (hasVogelfrei) {
-            return basis.isEmpty() ? "(Vogelfrei)" : basis + " (Vogelfrei)";
-        }
-        String result = basis.isEmpty() ? "(" + stufe + "/3)" : basis + " (" + stufe + "/3)";
-        return result;
     }
 
     private void applyModBlFromLoadedData(
@@ -664,11 +576,6 @@ public class BetterUCClient implements ClientModInitializer {
         return formatted.isEmpty() ? "Unbekannt" : formatted;
     }
 
-    private String toSetRpCommandReasonArg(String prettyReason) {
-        String cleaned = sanitizeReasonToken(prettyReason);
-        return cleaned.isEmpty() ? "Unbekannt" : cleaned;
-    }
-
     private void sendUpdatedBlacklistEntry(
             Minecraft client,
             String spieler,
@@ -693,31 +600,6 @@ public class BetterUCClient implements ClientModInitializer {
                         + "\n\u00A77Neu: \u00A7e" + finalKills + " Kills \u00A77| \u00A7a" + finalPreis + "$ \u00A77| \u00A7f" + kombinierterGrund
         ));
         BetterUCMod.LOGGER.info("modbl: /{}", cmd);
-    }
-
-    private void sendSetRpUpdatedEntry(
-            Minecraft client,
-            String spieler,
-            String altGrund,
-            int[] altStats,
-            int finalKills,
-            int finalPreis,
-            String neuerGrund,
-            String commandGrundArg
-    ) {
-        if (client.player == null) return;
-
-        String cmd = String.format("bl add %s %d %d %s", spieler, finalKills, finalPreis, commandGrundArg);
-        sendServerCommand(client, cmd);
-        applyLocalBlacklistUpsert(spieler, finalKills, finalPreis, neuerGrund);
-        BetterUCSuppressFlags.clearPendingModBlReadd(spieler);
-
-        client.player.sendSystemMessage(Component.literal(
-                "\u00A7a[OK] RP-Set: \u00A7f" + spieler
-                        + "\n\u00A77Alt: \u00A7e" + altStats[0] + " Kills \u00A77| \u00A7a" + altStats[1] + "$ \u00A77| \u00A7f" + altGrund
-                        + "\n\u00A77Neu: \u00A7e" + finalKills + " Kills \u00A77| \u00A7a" + finalPreis + "$ \u00A77| \u00A7f" + neuerGrund
-        ));
-        BetterUCMod.LOGGER.info("setrp: /{}", cmd);
     }
 
     private void showBlacklistInfoFromLoadedData(Minecraft client, String spieler) {
