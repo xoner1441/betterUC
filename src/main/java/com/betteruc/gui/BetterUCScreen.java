@@ -57,6 +57,7 @@ public class BetterUCScreen extends Screen {
                     "Neue Accounts erhalten automatisch ein Cloud-Profil aus ihren lokalen Einstellungen",
                     "HUD-Positionen, Größen, Farben, Stile und Präfixe bleiben geräteübergreifend erhalten",
                     "Chat-, Ping-, Hotkey- und Komforteinstellungen werden ebenfalls synchronisiert",
+                    "Hotkeys k\u00F6nnen Commands sofort senden oder nur im Chat vorbereiten",
                     "Access Codes, Relay-Adressen, Geldstände, Fraktionen und laufende Timer bleiben lokal",
                     "Änderungen werden gebündelt gespeichert und belasten die Datenbank nicht pro Spielereignis",
                     "Revisionsschutz verhindert, dass zwei Clients Einstellungen unbemerkt überschreiben",

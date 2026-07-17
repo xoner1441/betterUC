@@ -1,6 +1,7 @@
 package com.betteruc.client;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.render.Camera;
 
@@ -19,6 +20,12 @@ public final class ClientCompat {
     public static void setScreen(MinecraftClient client, Screen screen) {
         if (client != null) {
             client.setScreen(screen);
+        }
+    }
+
+    public static void openChatWithText(MinecraftClient client, String text) {
+        if (client != null) {
+            client.setScreen(new ChatScreen(text == null ? "" : text, false));
         }
     }
 

@@ -21,6 +21,7 @@ public class ChangelogScreen extends Screen {
                             "Ohne Cloud-Profil werden deine lokalen Einstellungen automatisch hochgeladen",
                             "HUD-Layout, Farben, Stile, Präfixe und Custom-Font-Auswahl bleiben erhalten",
                             "Chat-, Ping-, Hotkey- und Komforteinstellungen werden ebenfalls synchronisiert",
+                            "Hotkeys k\u00F6nnen Commands sofort senden oder im Chat zum Best\u00E4tigen vorbereiten",
                             "Access Code, Relay-Adresse, Geldstände, Fraktion und aktive Timer bleiben lokal",
                             "Änderungen werden kurz gesammelt und dann gebündelt gespeichert",
                             "Revisionsschutz erkennt parallele Änderungen auf mehreren Geräten",

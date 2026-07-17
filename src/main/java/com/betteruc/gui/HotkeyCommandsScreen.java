@@ -19,12 +19,14 @@ public class HotkeyCommandsScreen extends Screen {
     private static final int ROW_HEIGHT = 24;
     private static final int HEADER_Y = 24;
     private static final int ROW_START_Y = 52;
-    private static final int COMMAND_X_OFFSET = -150;
-    private static final int COMMAND_WIDTH = 180;
-    private static final int KEY_X_OFFSET = 35;
+    private static final int COMMAND_X_OFFSET = -245;
+    private static final int COMMAND_WIDTH = 190;
+    private static final int KEY_X_OFFSET = -50;
     private static final int KEY_WIDTH = 95;
-    private static final int DELETE_X_OFFSET = 135;
-    private static final int DELETE_WIDTH = 35;
+    private static final int MODE_X_OFFSET = 50;
+    private static final int MODE_WIDTH = 150;
+    private static final int DELETE_X_OFFSET = 205;
+    private static final int DELETE_WIDTH = 40;
     private static final int ENTRY_HINT_Y_OFFSET = 42;
     private static final int CAPTURE_HINT_Y_OFFSET = 54;
 
@@ -133,6 +135,14 @@ public class HotkeyCommandsScreen extends Screen {
             rebuild();
         }).bounds(centerX + KEY_X_OFFSET, rowY, KEY_WIDTH, 20).build());
 
+        addRenderableWidget(Button.builder(Component.literal(getModeLabel(entry)), b -> {
+            if (index < entries().size()) {
+                BetterUCConfig.HotkeyCommand current = entries().get(index);
+                current.sendImmediately = !current.sendImmediately;
+            }
+            rebuild();
+        }).bounds(centerX + MODE_X_OFFSET, rowY, MODE_WIDTH, 20).build());
+
         addRenderableWidget(Button.builder(Component.literal("Del"), b -> {
             deleteEntry(index);
             rebuild();
@@ -168,6 +178,10 @@ public class HotkeyCommandsScreen extends Screen {
         } catch (Exception ignored) {
             return "Key: " + code;
         }
+    }
+
+    private String getModeLabel(BetterUCConfig.HotkeyCommand entry) {
+        return entry.sendImmediately ? "Sofort senden" : "Chat vorbereiten";
     }
 
     @Override
@@ -220,6 +234,7 @@ public class HotkeyCommandsScreen extends Screen {
         );
         context.text(font, Component.literal("Command"), centerX + COMMAND_X_OFFSET, 44, 0xAAAAAA);
         context.text(font, Component.literal("Key"), centerX + KEY_X_OFFSET, 44, 0xAAAAAA);
+        context.text(font, Component.literal("Aktion"), centerX + MODE_X_OFFSET, 44, 0xAAAAAA);
         context.text(font, Component.literal("Use /command or command"), centerX + COMMAND_X_OFFSET, height - ENTRY_HINT_Y_OFFSET, 0x777777);
 
         if (entries().isEmpty()) {

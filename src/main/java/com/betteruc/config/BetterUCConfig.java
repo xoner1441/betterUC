@@ -150,6 +150,7 @@ public class BetterUCConfig {
     public static class HotkeyCommand {
         public int keyCode = -1;
         public String command = "";
+        public boolean sendImmediately = true;
         public HotkeyCommand() {}
         public HotkeyCommand(int keyCode, String command) {
             this.keyCode = keyCode;

@@ -1000,7 +1000,11 @@ public class BetterUCClient implements ClientModInitializer {
             if (isDown && !wasDown) {
                 String cmd = command.startsWith("/") ? command.substring(1).trim() : command;
                 if (!cmd.isEmpty()) {
-                    sendServerCommand(client, cmd);
+                    if (entry.sendImmediately) {
+                        sendServerCommand(client, cmd);
+                    } else {
+                        ClientCompat.openChatWithText(client, "/" + cmd);
+                    }
                 }
             }
             hotkeyPressedState.put(keyCode, isDown);

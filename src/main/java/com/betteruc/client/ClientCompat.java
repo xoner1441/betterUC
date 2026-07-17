@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 
 public final class ClientCompat {
@@ -50,6 +51,12 @@ public final class ClientCompat {
 
         Method minecraftMethod = resolveMinecraftSetScreenMethod(client);
         invokeOneArg(minecraftMethod, client, screen);
+    }
+
+    public static void openChatWithText(Minecraft client, String text) {
+        if (client != null) {
+            setScreen(client, new ChatScreen(text == null ? "" : text, false));
+        }
     }
 
     public static Camera mainCamera(Minecraft client) {
