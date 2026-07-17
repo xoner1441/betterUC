@@ -12,6 +12,7 @@ import com.betteruc.client.ChatCustomizationFormatter;
 import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.PingRelayClient;
+import com.betteruc.client.RemoteFeatureFlagsClient;
 import com.betteruc.client.ServerCommandUtil;
 import com.betteruc.client.UserStatsClient;
 import com.betteruc.config.BetterUCConfig;
@@ -138,10 +139,18 @@ public class ChatBlacklistMixin {
         }
 
         String raw = message.getString();
-        AutoDropDrinkClient.handleChatLine(Minecraft.getInstance(), raw);
-        AutoFisherClient.handleChatLine(Minecraft.getInstance(), raw);
-        AutoGaertnerClient.handleChatLine(Minecraft.getInstance(), raw);
-        AutoWinzerClient.handleChatLine(Minecraft.getInstance(), raw);
+        if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_DROPDRINK)) {
+            AutoDropDrinkClient.handleChatLine(Minecraft.getInstance(), raw);
+        }
+        if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_FISHER)) {
+            AutoFisherClient.handleChatLine(Minecraft.getInstance(), raw);
+        }
+        if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_GAERTNER)) {
+            AutoGaertnerClient.handleChatLine(Minecraft.getInstance(), raw);
+        }
+        if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_WINZER)) {
+            AutoWinzerClient.handleChatLine(Minecraft.getInstance(), raw);
+        }
         CarFindTracker.handleIncomingChat(Minecraft.getInstance(), raw);
         CommunicationDeviceTracker.handleChatLine(Minecraft.getInstance(), raw);
         DealerTimerHud.handleChatLine(Minecraft.getInstance(), raw);
@@ -157,8 +166,10 @@ public class ChatBlacklistMixin {
         handlePaydayReset(raw);
         updateMoney(raw);
 
-        boolean wpsHqCustomizationEnabled = BetterUCConfig.INSTANCE.chatCustomizationEnabled;
-        boolean reinfCustomizationEnabled = BetterUCConfig.INSTANCE.reinfCustomizationEnabled;
+        boolean wpsHqCustomizationEnabled = BetterUCConfig.INSTANCE.chatCustomizationEnabled
+                && RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.CHAT_CUSTOMIZATION);
+        boolean reinfCustomizationEnabled = BetterUCConfig.INSTANCE.reinfCustomizationEnabled
+                && RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.REINF_CUSTOMIZATION);
         if (wpsHqCustomizationEnabled || reinfCustomizationEnabled) {
             ChatCustomizationFormatter.Result customized = ChatCustomizationFormatter.transform(
                     raw,

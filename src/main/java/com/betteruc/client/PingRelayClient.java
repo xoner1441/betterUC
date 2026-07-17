@@ -70,6 +70,12 @@ public final class PingRelayClient {
     public static void tick(Minecraft client) {
         cleanupExpired();
 
+        if (!RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.PING_SYSTEM)) {
+            disconnect();
+            status = "Serverseitig deaktiviert";
+            return;
+        }
+
         if (client == null || client.player == null || client.getConnection() == null) {
             disconnect();
             return;
@@ -127,6 +133,10 @@ public final class PingRelayClient {
     public static boolean sendPingAtCrosshair(Minecraft client, PingType pingType) {
         PingType safeType = pingType == null ? PingType.NORMAL : pingType;
         if (client == null || client.player == null || client.level == null) return false;
+        if (!RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.PING_SYSTEM)) {
+            RemoteFeatureFlagsClient.sendDisabledMessage(client, "Das Ping-System");
+            return false;
+        }
         if (!CommunicationDeviceTracker.canPing()) {
             sendLocalMessage(client, CommunicationDeviceTracker.blockMessage());
             return false;

@@ -67,6 +67,10 @@ public final class CloudSettingsClient {
 
     public static void tick(Minecraft client) {
         if (!joined || client == null || client.player == null) return;
+        if (!RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.CLOUD_SETTINGS)) {
+            if (!inFlight) status = "Serverseitig pausiert";
+            return;
+        }
         String token = accessToken();
         if (token.isBlank()) {
             activeToken = "";
@@ -105,11 +109,19 @@ public final class CloudSettingsClient {
     }
 
     public static void downloadNow(Minecraft client) {
+        if (!RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.CLOUD_SETTINGS)) {
+            RemoteFeatureFlagsClient.sendDisabledMessage(client, "Cloud-Sync");
+            return;
+        }
         if (!prepareManual(client)) return;
         requestDownload(client, true);
     }
 
     public static void uploadNow(Minecraft client) {
+        if (!RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.CLOUD_SETTINGS)) {
+            RemoteFeatureFlagsClient.sendDisabledMessage(client, "Cloud-Sync");
+            return;
+        }
         if (!prepareManual(client)) return;
         requestRevisionThenUpload(client);
     }
@@ -164,7 +176,8 @@ public final class CloudSettingsClient {
                 .build();
         HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
                 .whenComplete((response, error) -> client.execute(() -> {
-                    if (!joined || !token.equals(accessToken())) {
+                    if (!joined || !RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.CLOUD_SETTINGS)
+                            || !token.equals(accessToken())) {
                         inFlight = false;
                         return;
                     }
@@ -211,6 +224,11 @@ public final class CloudSettingsClient {
                 .build();
         HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
                 .whenComplete((response, error) -> client.execute(() -> {
+                    if (!joined || !RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.CLOUD_SETTINGS)
+                            || !token.equals(accessToken())) {
+                        inFlight = false;
+                        return;
+                    }
                     if (error != null) {
                         fail(client, true, "Cloud nicht erreichbar", error);
                         return;
@@ -254,6 +272,11 @@ public final class CloudSettingsClient {
                 .build();
         HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
                 .whenComplete((response, error) -> client.execute(() -> {
+                    if (!joined || !RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.CLOUD_SETTINGS)
+                            || !token.equals(accessToken())) {
+                        inFlight = false;
+                        return;
+                    }
                     if (error != null) {
                         fail(client, manual, "Cloud-Speichern fehlgeschlagen", error);
                         return;

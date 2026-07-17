@@ -165,7 +165,11 @@ public final class AutoGaertnerClient {
         if (now - lastDropFlowersAtMs < 3_000L) return;
         lastDropFlowersAtMs = now;
         ClientScheduler.runDelayedOnClient(client, COMMAND_DELAY_MS,
-                () -> ServerCommandUtil.send(client, "dropblumen", false));
+                () -> {
+                    if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_GAERTNER)) {
+                        ServerCommandUtil.send(client, "dropblumen", false);
+                    }
+                });
     }
 
     private static Slot findNextDeadBushSlot(Minecraft client, AbstractContainerMenu menu) {

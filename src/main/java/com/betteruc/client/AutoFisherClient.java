@@ -75,7 +75,11 @@ public final class AutoFisherClient {
         }
 
         ClientScheduler.runDelayedOnClient(client, COMMAND_DELAY_MS,
-                () -> ServerCommandUtil.send(client, command, false));
+                () -> {
+                    if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_FISHER)) {
+                        ServerCommandUtil.send(client, command, false);
+                    }
+                });
     }
 
     private enum CommandType {

@@ -1229,6 +1229,106 @@ select:focus {
   font-size: 20px;
 }
 
+.feature-flags-overview {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+  padding: 0 0 18px;
+}
+
+.feature-flags-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.feature-flag-card {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  min-height: 112px;
+  padding: 14px;
+  position: relative;
+}
+
+.feature-flag-card.is-disabled {
+  border-color: rgba(255, 77, 90, 0.55);
+}
+
+.feature-flag-copy,
+.feature-flag-copy span,
+.feature-flag-copy small {
+  display: block;
+}
+
+.feature-flag-copy strong {
+  color: var(--text);
+  display: block;
+  margin-bottom: 5px;
+}
+
+.feature-flag-copy span,
+.feature-flag-copy small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.feature-flag-copy small {
+  margin-top: 8px;
+}
+
+.feature-flag-toggle {
+  height: 1px;
+  opacity: 0;
+  position: absolute;
+  width: 1px;
+}
+
+.feature-switch {
+  background: #313a3b;
+  border: 1px solid var(--line);
+  height: 22px;
+  position: relative;
+  transition: background 150ms ease, border-color 150ms ease;
+  width: 42px;
+}
+
+.feature-switch::after {
+  background: var(--muted);
+  content: "";
+  height: 16px;
+  left: 2px;
+  position: absolute;
+  top: 2px;
+  transition: background 150ms ease, transform 150ms ease;
+  width: 16px;
+}
+
+.feature-flag-toggle:checked + .feature-switch {
+  background: rgba(93, 255, 160, 0.15);
+  border-color: var(--green);
+}
+
+.feature-flag-toggle:checked + .feature-switch::after {
+  background: var(--green);
+  transform: translateX(20px);
+}
+
+.feature-flag-toggle:focus-visible + .feature-switch {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+
+.feature-flag-toggle:disabled + .feature-switch {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .admin-player-name {
   align-items: center;
   display: inline-flex;
@@ -1446,6 +1546,10 @@ select:focus {
   .database-overview-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .feature-flags-grid {
+    grid-template-columns: 1fr;
   }
 
   .cloud-history-entry {

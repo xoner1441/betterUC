@@ -25,6 +25,8 @@ public class ChangelogScreen extends Screen {
                             "Access Code, Relay-Adresse, Geldstände, Fraktion und aktive Timer bleiben lokal",
                             "Änderungen werden kurz gesammelt und dann gebündelt gespeichert",
                             "Revisionsschutz erkennt parallele Änderungen auf mehreren Geräten",
+                            "Frühere Cloud-Stände können im Adminpanel sicher wiederhergestellt werden",
+                            "Globale Feature-Schalter pausieren Ping, Chat, Cloud Sync oder Job-Automationen bei Bedarf",
                             "Cloud Sync kann im Client-Tab pausiert und manuell gesteuert werden",
                             "Die neue PostgreSQL-Anbindung speichert Profile dauerhaft und versioniert",
                             "Sync-Aktivität, Client-Versionen, Konflikte und Fehler sind nachvollziehbar",

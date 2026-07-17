@@ -42,6 +42,17 @@ const PG_DUMP_BIN = process.env.PG_DUMP_BIN || "pg_dump";
 const PG_DUMP_TIMEOUT_MS = Math.max(30_000, Number(process.env.PG_DUMP_TIMEOUT_MS || 5 * 60 * 1000));
 const execFileAsync = promisify(execFile);
 
+const FEATURE_FLAG_DEFINITIONS = Object.freeze([
+  { key: "ping_system", label: "Ping-System", description: "Private globale und fraktionsbasierte Pings" },
+  { key: "chat_customization", label: "WPS/HQ Customizations", description: "Kompakte WPS- und HQ-Nachrichten" },
+  { key: "reinf_customization", label: "Reinf Customizations", description: "Kompakte Fraktions- und Bündnisrufe" },
+  { key: "cloud_settings", label: "Cloud-Sync", description: "Synchronisierte Mod-Einstellungen" },
+  { key: "auto_dropdrink", label: "Auto-Dropdrink", description: "Automatische Lieferjunge-Abgabe" },
+  { key: "auto_fisher", label: "Auto-Fischer", description: "Automatische Fischer-Befehle" },
+  { key: "auto_winzer", label: "Auto-Winzer", description: "Automatisches Leeren der Trauben-Fenster" },
+  { key: "auto_gaertner", label: "Auto-Gärtner", description: "Automatische Blumenabgabe und Buschsammlung" }
+]);
+
 const MIME_TYPES = new Map([
   [".html", "text/html; charset=utf-8"],
   [".css", "text/css; charset=utf-8"],
@@ -77,6 +88,24 @@ async function recordCloudSyncEvent(accountId, event) {
   } catch (error) {
     console.error("Could not record cloud sync event", accountId, error);
   }
+}
+
+function defaultFeatureFlags() {
+  return FEATURE_FLAG_DEFINITIONS.map(flag => ({
+    ...flag,
+    enabled: true,
+    updatedAt: null,
+    updatedBy: "default"
+  }));
+}
+
+async function loadFeatureFlags() {
+  const defaults = defaultFeatureFlags();
+  if (persistenceMode !== "postgres" || !database.enabled) return defaults;
+
+  const stored = await database.listFeatureFlags();
+  const storedByKey = new Map(stored.map(flag => [flag.key, flag]));
+  return defaults.map(fallback => ({ ...fallback, ...(storedByKey.get(fallback.key) || {}) }));
 }
 
 function json(res, status, payload) {
@@ -1348,6 +1377,57 @@ async function handleApi(req, res, url) {
 
   if (url.pathname === "/api/download/latest") {
     await handleLatestJarDownload(req, res);
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/client/features") {
+    try {
+      const features = await loadFeatureFlags();
+      json(res, 200, {
+        ok: true,
+        features,
+        revision: features.reduce((latest, flag) => Math.max(latest, Date.parse(flag.updatedAt || 0) || 0), 0)
+      });
+    } catch (error) {
+      console.error("Could not load betterUC feature flags", error);
+      json(res, 200, { ok: true, features: defaultFeatureFlags(), revision: 0, fallback: true });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/features") {
+    if (!requireAdmin(req, res, url)) return;
+    try {
+      json(res, 200, {
+        ok: true,
+        writable: persistenceMode === "postgres" && database.enabled,
+        features: await loadFeatureFlags()
+      });
+    } catch (error) {
+      console.error("Could not load feature flags for admin panel", error);
+      json(res, 503, { ok: false, error: "Feature-Schalter konnten nicht geladen werden." });
+    }
+    return;
+  }
+
+  const adminFeatureMatch = url.pathname.match(/^\/api\/admin\/features\/([a-z0-9_]+)$/);
+  if (adminFeatureMatch && req.method === "PATCH") {
+    if (!requireAdmin(req, res, url)) return;
+    if (persistenceMode !== "postgres" || !database.enabled) {
+      json(res, 503, { ok: false, error: "Feature-Schalter benötigen PostgreSQL." });
+      return;
+    }
+    const body = await readJsonBody(req);
+    if (typeof body.enabled !== "boolean") {
+      json(res, 400, { ok: false, error: "enabled muss true oder false sein." });
+      return;
+    }
+    const feature = await database.updateFeatureFlag(adminFeatureMatch[1], body.enabled, "admin:panel");
+    if (!feature) {
+      json(res, 404, { ok: false, error: "Feature-Schalter wurde nicht gefunden." });
+      return;
+    }
+    json(res, 200, { ok: true, feature });
     return;
   }
 

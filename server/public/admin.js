@@ -29,7 +29,12 @@ const cloudErrorCount = document.querySelector("#cloudErrorCount");
 const statsProfileCount = document.querySelector("#statsProfileCount");
 const webProfileCount = document.querySelector("#webProfileCount");
 const auditEntryCount = document.querySelector("#auditEntryCount");
+const featureFlagCount = document.querySelector("#featureFlagCount");
+const disabledFeatureFlagCount = document.querySelector("#disabledFeatureFlagCount");
 const databaseDetail = document.querySelector("#databaseDetail");
+const featureFlagsStatus = document.querySelector("#featureFlagsStatus");
+const featureFlagsList = document.querySelector("#featureFlagsList");
+const featureFlagMessage = document.querySelector("#featureFlagMessage");
 
 let adminKey = localStorage.getItem(ADMIN_STORAGE_KEY) || "";
 let panelSession = localStorage.getItem(PANEL_SESSION_KEY) || "";
@@ -38,6 +43,9 @@ let expandedAccounts = new Set();
 let cloudHistories = new Map();
 let cloudHistoryLoading = new Set();
 let cloudHistoryErrors = new Map();
+let featureFlags = [];
+let featureFlagsWritable = false;
+let featureFlagSaving = new Set();
 
 function setLoginMessage(text, type = "") {
   loginMessage.textContent = text;
@@ -45,8 +53,14 @@ function setLoginMessage(text, type = "") {
 }
 
 function setCreateMessage(text, type = "") {
-  createMessage.textContent = text;
-  createMessage.className = `form-message ${type}`;
+    createMessage.textContent = text;
+    createMessage.className = `form-message ${type}`;
+}
+
+function setFeatureFlagMessage(text, type = "") {
+  if (!featureFlagMessage) return;
+  featureFlagMessage.textContent = text;
+  featureFlagMessage.className = `form-message ${type}`;
 }
 
 function headers() {
@@ -130,6 +144,75 @@ function renderBackupStatus(backups) {
     ? `Nur JSON-Backup: ${formatDate(jsonBackup.createdAt)}`
     : "Noch kein Backup";
   backupStatus.title = "";
+}
+
+function renderFeatureFlags() {
+  if (!featureFlagsList || !featureFlagsStatus) return;
+  const disabledCount = featureFlags.filter(flag => !flag.enabled).length;
+  featureFlagsStatus.textContent = featureFlagsWritable
+    ? (disabledCount > 0 ? `${disabledCount} deaktiviert` : "alles aktiv")
+    : "nur lesbar";
+  featureFlagsStatus.className = `status-pill ${disabledCount > 0 ? "revoked" : "active"}`;
+
+  if (featureFlags.length === 0) {
+    featureFlagsList.innerHTML = `<p class="quiet">Keine Feature-Schalter vorhanden.</p>`;
+    return;
+  }
+
+  featureFlagsList.innerHTML = featureFlags.map(flag => {
+    const saving = featureFlagSaving.has(flag.key);
+    return `
+      <label class="feature-flag-card ${flag.enabled ? "is-enabled" : "is-disabled"}">
+        <span class="feature-flag-copy">
+          <strong>${escapeHtml(flag.label || flag.key)}</strong>
+          <span>${escapeHtml(flag.description || "")}</span>
+          <small>${flag.updatedAt ? `Geändert ${escapeHtml(formatDate(flag.updatedAt))}` : "Standard aktiv"}</small>
+        </span>
+        <input class="feature-flag-toggle" type="checkbox" data-key="${escapeAttr(flag.key)}"
+          ${flag.enabled ? "checked" : ""} ${!featureFlagsWritable || saving ? "disabled" : ""}>
+        <span class="feature-switch" aria-hidden="true"></span>
+      </label>
+    `;
+  }).join("");
+}
+
+async function loadFeatureFlags() {
+  try {
+    const data = await api("/api/admin/features");
+    featureFlags = Array.isArray(data.features) ? data.features : [];
+    featureFlagsWritable = Boolean(data.writable);
+    renderFeatureFlags();
+  } catch (error) {
+    featureFlags = [];
+    featureFlagsWritable = false;
+    renderFeatureFlags();
+    setFeatureFlagMessage(error.message || "Feature-Schalter konnten nicht geladen werden.", "error");
+  }
+}
+
+async function updateFeatureFlag(key, enabled) {
+  if (!key || featureFlagSaving.has(key)) return;
+  featureFlagSaving.add(key);
+  setFeatureFlagMessage("Änderung wird gespeichert ...");
+  renderFeatureFlags();
+  try {
+    const data = await api(`/api/admin/features/${encodeURIComponent(key)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ enabled })
+    });
+    const updated = data.feature;
+    featureFlags = featureFlags.map(flag => flag.key === key ? updated : flag);
+    setFeatureFlagMessage(
+      `${updated.label || key} ist jetzt ${updated.enabled ? "aktiv" : "deaktiviert"}.`,
+      "success"
+    );
+  } catch (error) {
+    setFeatureFlagMessage(error.message || "Änderung konnte nicht gespeichert werden.", "error");
+    await loadFeatureFlags();
+  } finally {
+    featureFlagSaving.delete(key);
+    renderFeatureFlags();
+  }
 }
 
 function accountMatches(account, query) {
@@ -427,6 +510,8 @@ function renderDatabaseStatus(data, error = null) {
   statsProfileCount.textContent = counts.statsProfiles ?? "-";
   webProfileCount.textContent = counts.webProfiles ?? "-";
   auditEntryCount.textContent = counts.auditEntries ?? "-";
+  featureFlagCount.textContent = counts.featureFlags ?? "-";
+  disabledFeatureFlagCount.textContent = counts.disabledFeatureFlags ?? "-";
   if (error) {
     databaseDetail.textContent = error.message || "Datenbankstatus konnte nicht geladen werden.";
     return;
@@ -454,6 +539,7 @@ async function loadAccounts() {
   } catch (error) {
     renderDatabaseStatus(null, error);
   }
+  await loadFeatureFlags();
 }
 
 async function loadCloudHistory(id) {
@@ -575,6 +661,12 @@ accountSearch.addEventListener("input", renderAccounts);
 accountRoleFilter?.addEventListener("change", renderAccounts);
 accountStatusFilter?.addEventListener("change", renderAccounts);
 accountFactionFilter?.addEventListener("input", renderAccounts);
+
+featureFlagsList?.addEventListener("change", event => {
+  const input = event.target.closest(".feature-flag-toggle");
+  if (!input) return;
+  updateFeatureFlag(input.dataset.key || "", input.checked);
+});
 
 createForm.addEventListener("submit", async event => {
   event.preventDefault();

@@ -84,6 +84,8 @@ function createDatabase(options = {}) {
       recordCloudSyncEvent: unavailable,
       restoreCloudSettings: unavailable,
       deleteCloudSettings: unavailable,
+      listFeatureFlags: unavailable,
+      updateFeatureFlag: unavailable,
       getOverview: unavailable,
       async close() {}
     };
@@ -744,6 +746,59 @@ function createDatabase(options = {}) {
     }
   }
 
+  function featureFlagFromRow(row) {
+    if (!row) return null;
+    return {
+      key: row.key,
+      enabled: Boolean(row.enabled),
+      label: row.label || row.key,
+      description: row.description || "",
+      updatedAt: iso(row.updated_at),
+      updatedBy: row.updated_by || ""
+    };
+  }
+
+  async function listFeatureFlags() {
+    const result = await pool.query(`
+      select key, enabled, label, description, updated_at, updated_by
+      from feature_flags
+      order by key
+    `);
+    return result.rows.map(featureFlagFromRow);
+  }
+
+  async function updateFeatureFlag(key, enabled, actor = "admin:panel") {
+    const client = await pool.connect();
+    try {
+      await client.query("begin");
+      const result = await client.query(`
+        update feature_flags
+        set enabled = $2, updated_at = now(), updated_by = $3
+        where key = $1
+        returning key, enabled, label, description, updated_at, updated_by
+      `, [text(key).trim().toLowerCase(), Boolean(enabled), text(actor, "admin:panel")]);
+      if (result.rowCount === 0) {
+        await client.query("rollback");
+        return null;
+      }
+      const flag = featureFlagFromRow(result.rows[0]);
+      await client.query(`
+        insert into audit_log(account_id, actor, action, details)
+        values (null, $1, 'feature_flag.updated', $2::jsonb)
+      `, [
+        text(actor, "admin:panel"),
+        JSON.stringify({ key: flag.key, enabled: flag.enabled })
+      ]);
+      await client.query("commit");
+      return flag;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async function getOverview() {
     const migrationsDir = path.join(__dirname, "migrations");
     const expectedMigrations = (await fsp.readdir(migrationsDir))
@@ -767,6 +822,8 @@ function createDatabase(options = {}) {
           (select count(*) from cloud_sync_events where event_type = 'error' and created_at >= now() - interval '24 hours')::integer as cloud_errors_24h,
           (select count(*) from player_stats)::integer as stats_profiles,
           (select count(*) from web_credentials where password_hash is not null)::integer as web_profiles,
+          (select count(*) from feature_flags)::integer as feature_flags,
+          (select count(*) from feature_flags where not enabled)::integer as disabled_feature_flags,
           (select count(*) from audit_log)::integer as audit_entries
       `)
     ]);
@@ -795,6 +852,8 @@ function createDatabase(options = {}) {
         cloudErrors24h: Number(counts.cloud_errors_24h || 0),
         statsProfiles: Number(counts.stats_profiles || 0),
         webProfiles: Number(counts.web_profiles || 0),
+        featureFlags: Number(counts.feature_flags || 0),
+        disabledFeatureFlags: Number(counts.disabled_feature_flags || 0),
         auditEntries: Number(counts.audit_entries || 0)
       }
     };
@@ -813,6 +872,8 @@ function createDatabase(options = {}) {
     recordCloudSyncEvent,
     restoreCloudSettings,
     deleteCloudSettings,
+    listFeatureFlags,
+    updateFeatureFlag,
     getOverview,
     async close() { await pool.end(); }
   };

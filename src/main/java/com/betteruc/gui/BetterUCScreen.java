@@ -6,6 +6,7 @@ import com.betteruc.client.ClientCompat;
 import com.betteruc.client.CloudSettingsClient;
 import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.PingRelayClient;
+import com.betteruc.client.RemoteFeatureFlagsClient;
 import com.betteruc.client.SyncRefreshActions;
 import com.betteruc.client.UserStatsClient;
 import com.betteruc.client.VersionChecker;
@@ -61,6 +62,8 @@ public class BetterUCScreen extends Screen {
                     "Access Codes, Relay-Adressen, Geldstände, Fraktionen und laufende Timer bleiben lokal",
                     "Änderungen werden gebündelt gespeichert und belasten die Datenbank nicht pro Spielereignis",
                     "Revisionsschutz verhindert, dass zwei Clients Einstellungen unbemerkt überschreiben",
+                    "Frühere Cloud-Stände können im Adminpanel als neue Revision wiederhergestellt werden",
+                    "Globale Feature-Schalter können betroffene Funktionen ohne neues Mod-Update pausieren",
                     "Im neuen Cloud-Sync-Modul kannst du laden, hochladen oder die Automatik pausieren",
                     "PostgreSQL speichert Profile versioniert und protokolliert Cloud-Aktualisierungen",
                     "Das Adminpanel zeigt Sync-Aktivität, Client-Versionen, Konflikte und Fehler",
@@ -416,6 +419,7 @@ public class BetterUCScreen extends Screen {
     private int addCloudSyncControls(int x, int y, int width) {
         y = addToggle(x, y, width, "Cloud Sync", BetterUCConfig.INSTANCE.cloudSettingsEnabled,
                 () -> BetterUCConfig.INSTANCE.cloudSettingsEnabled = !BetterUCConfig.INSTANCE.cloudSettingsEnabled);
+        y = addInfo(x, y, width, "Server-Freigabe", RemoteFeatureFlagsClient.statusLabel());
         y = addInfo(x, y, width, "Status", CloudSettingsClient.statusLabel());
         y = addInfo(x, y, width, "Letzter Sync", CloudSettingsClient.lastSyncLabel());
         y = addButton(x, y, width, "Cloud-Einstellungen laden",

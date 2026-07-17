@@ -81,8 +81,25 @@
           <div><span>Stats-Profile</span><strong id="statsProfileCount">-</strong></div>
           <div><span>Webprofile</span><strong id="webProfileCount">-</strong></div>
           <div><span>Audit-Einträge</span><strong id="auditEntryCount">-</strong></div>
+          <div><span>Feature-Schalter</span><strong id="featureFlagCount">-</strong></div>
+          <div><span>Deaktiviert</span><strong id="disabledFeatureFlagCount">-</strong></div>
         </div>
         <p id="databaseDetail" class="quiet">Datenbankstatus wird geladen.</p>
+      </section>
+
+      <section class="feature-flags-overview" aria-labelledby="featureFlagsTitle">
+        <div class="database-overview-header">
+          <div>
+            <p class="section-label">Remote Control</p>
+            <h3 id="featureFlagsTitle">Globale Feature-Schalter</h3>
+          </div>
+          <span id="featureFlagsStatus" class="status-pill">wird geprüft</span>
+        </div>
+        <p class="quiet">Deaktivierte Funktionen werden bei verbundenen Clients automatisch gestoppt und bleiben bis zur erneuten Freigabe gesperrt.</p>
+        <div id="featureFlagsList" class="feature-flags-grid" aria-live="polite">
+          <p class="quiet">Feature-Schalter werden geladen.</p>
+        </div>
+        <p id="featureFlagMessage" class="form-message"></p>
       </section>
 
       <div class="admin-grid">
@@ -173,6 +190,6 @@
     </section>
   </main>
 
-  <script src="/admin.js?v=webprofiles-2" defer></script>
+  <script src="/admin.js?v=cloud-controls-1" defer></script>
 </body>
 </html>

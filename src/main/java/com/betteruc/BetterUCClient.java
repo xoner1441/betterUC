@@ -16,6 +16,7 @@ import com.betteruc.client.BetterUCFontManager;
 import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.MovementController;
 import com.betteruc.client.PingRelayClient;
+import com.betteruc.client.RemoteFeatureFlagsClient;
 import com.betteruc.client.ServerCommandUtil;
 import com.betteruc.client.UserPanelClient;
 import com.betteruc.client.UserStatsClient;
@@ -104,6 +105,12 @@ public class BetterUCClient implements ClientModInitializer {
     private long pingKeyDownAtMs = 0L;
     private boolean pingWheelOpenedForPress = false;
     private boolean welcomeChangelogChecked = false;
+    private boolean remotePingEnabled = true;
+    private boolean remoteCloudEnabled = true;
+    private boolean remoteDropDrinkEnabled = true;
+    private boolean remoteFisherEnabled = true;
+    private boolean remoteWinzerEnabled = true;
+    private boolean remoteGaertnerEnabled = true;
 
     private static final class MatchedReason {
         private final String key;
@@ -199,6 +206,8 @@ public class BetterUCClient implements ClientModInitializer {
             DealerTimerHud.clear();
             ProductionTimerHud.clear();
             CommunicationDeviceTracker.reset();
+            resetRemoteFeatureStateTracking();
+            RemoteFeatureFlagsClient.onJoin(client);
             PingRelayClient.onJoin(client);
             CloudSettingsClient.onJoin(client);
             statsOnJoinDelay = BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled
@@ -210,8 +219,10 @@ public class BetterUCClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             ServerCommandUtil.markDisconnected();
             CommunicationDeviceTracker.reset();
+            RemoteFeatureFlagsClient.onDisconnect();
             PingRelayClient.onDisconnect();
             CloudSettingsClient.onDisconnect();
+            resetRemoteFeatureStateTracking();
             resetRuntimeState(client);
         });
     }
@@ -859,17 +870,70 @@ public class BetterUCClient implements ClientModInitializer {
             ProductionTimerHud.tick();
             PlantageHud.tick();
             AmmoHud.tickReloadKey(client);
-            PingRelayClient.tick(client);
-            CloudSettingsClient.tick(client);
-            AutoDropDrinkClient.tick(client);
-            AutoGaertnerClient.tick(client);
-            AutoWinzerClient.tick(client);
+            RemoteFeatureFlagsClient.tick(client);
+            applyRemoteFeatureState(client);
+            if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.PING_SYSTEM)) {
+                PingRelayClient.tick(client);
+            }
+            if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.CLOUD_SETTINGS)) {
+                CloudSettingsClient.tick(client);
+            }
+            if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_DROPDRINK)) {
+                AutoDropDrinkClient.tick(client);
+            }
+            if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_GAERTNER)) {
+                AutoGaertnerClient.tick(client);
+            }
+            if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_WINZER)) {
+                AutoWinzerClient.tick(client);
+            }
             tickStatsOnJoin(client);
             handleConfiguredHotkeys(client);
             MovementController.tick(client);
             handlePingHotkey(client);
             handleScreenHotkeys(client);
         });
+    }
+
+    private void applyRemoteFeatureState(Minecraft client) {
+        boolean pingEnabled = RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.PING_SYSTEM);
+        if (pingEnabled != remotePingEnabled) {
+            if (pingEnabled) PingRelayClient.onJoin(client);
+            else PingRelayClient.onDisconnect();
+            remotePingEnabled = pingEnabled;
+        }
+
+        boolean cloudEnabled = RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.CLOUD_SETTINGS);
+        if (cloudEnabled != remoteCloudEnabled) {
+            if (cloudEnabled) CloudSettingsClient.onJoin(client);
+            else CloudSettingsClient.onDisconnect();
+            remoteCloudEnabled = cloudEnabled;
+        }
+
+        boolean dropDrinkEnabled = RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_DROPDRINK);
+        if (!dropDrinkEnabled && remoteDropDrinkEnabled) AutoDropDrinkClient.reset();
+        remoteDropDrinkEnabled = dropDrinkEnabled;
+
+        boolean fisherEnabled = RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_FISHER);
+        if (!fisherEnabled && remoteFisherEnabled) AutoFisherClient.reset();
+        remoteFisherEnabled = fisherEnabled;
+
+        boolean winzerEnabled = RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_WINZER);
+        if (!winzerEnabled && remoteWinzerEnabled) AutoWinzerClient.reset();
+        remoteWinzerEnabled = winzerEnabled;
+
+        boolean gaertnerEnabled = RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_GAERTNER);
+        if (!gaertnerEnabled && remoteGaertnerEnabled) AutoGaertnerClient.reset();
+        remoteGaertnerEnabled = gaertnerEnabled;
+    }
+
+    private void resetRemoteFeatureStateTracking() {
+        remotePingEnabled = true;
+        remoteCloudEnabled = true;
+        remoteDropDrinkEnabled = true;
+        remoteFisherEnabled = true;
+        remoteWinzerEnabled = true;
+        remoteGaertnerEnabled = true;
     }
 
     private void maybeOpenWelcomeChangelog(Minecraft client) {
@@ -928,6 +992,14 @@ public class BetterUCClient implements ClientModInitializer {
         boolean queuedPress = false;
         while (PING_KEY.consumeClick()) {
             queuedPress = true;
+        }
+
+        if (!RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.PING_SYSTEM)) {
+            if (queuedPress) {
+                RemoteFeatureFlagsClient.sendDisabledMessage(client, "Das Ping-System");
+            }
+            resetPingPressState();
+            return;
         }
 
         if (ClientCompat.currentScreen(client) instanceof PingWheelScreen) return;
