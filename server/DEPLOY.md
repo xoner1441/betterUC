@@ -16,6 +16,7 @@ grep -q '^TOKEN_PEPPER=' /etc/betteruc-relay.env || echo "TOKEN_PEPPER=$(openssl
 grep -q '^ALLOW_LEGACY_TOKEN=' /etc/betteruc-relay.env || echo "ALLOW_LEGACY_TOKEN=true" >> /etc/betteruc-relay.env
 grep -q '^ADMIN_KEY=' /etc/betteruc-relay.env || echo "ADMIN_KEY=$(openssl rand -base64 32 | tr -d '=+/')" >> /etc/betteruc-relay.env
 grep -q '^BACKUP_RETENTION_DAYS=' /etc/betteruc-relay.env || echo "BACKUP_RETENTION_DAYS=30" >> /etc/betteruc-relay.env
+grep -q '^POSTGRES_BACKUP_DIR=' /etc/betteruc-relay.env || echo "POSTGRES_BACKUP_DIR=/opt/betteruc-relay/data/postgres-backups" >> /etc/betteruc-relay.env
 
 # Optional Discord bot. Fill these manually if the bot should run on the relay:
 # DISCORD_BOT_TOKEN=...
@@ -71,7 +72,8 @@ https://betteruc.de/admin
 ```
 
 Admin users can also open `/admin` from the Userpanel without entering this key.
-Backups are written to `/opt/betteruc-relay/data/backups` once per day. The admin panel also has a manual backup button.
+The relay creates a PostgreSQL dump in `/opt/betteruc-relay/data/postgres-backups` and a JSON recovery mirror in
+`/opt/betteruc-relay/data/backups` once per day. The Adminpanel button creates both backups immediately.
 
 ## PostgreSQL persistence
 
@@ -130,28 +132,22 @@ systemctl restart betteruc-relay
 systemctl status betteruc-relay --no-pager
 ```
 
-Create a daily PostgreSQL backup job:
+The relay now creates the daily PostgreSQL dump itself. Prepare the protected directory once:
 
 ```bash
 install -d -m 700 /opt/betteruc-relay/data/postgres-backups
-
-cat > /usr/local/sbin/backup-betteruc-db <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-set -a
-. /etc/betteruc-relay.env
-set +a
-target="/opt/betteruc-relay/data/postgres-backups/betteruc-$(date -u +%Y-%m-%dT%H-%M-%SZ).dump"
-pg_dump "$DATABASE_URL" --format=custom --file="$target"
-find /opt/betteruc-relay/data/postgres-backups -type f -name '*.dump' -mtime +30 -delete
-EOF
-
-chmod 700 /usr/local/sbin/backup-betteruc-db
-(crontab -l 2>/dev/null; echo '25 3 * * * /usr/local/sbin/backup-betteruc-db') | crontab -
-/usr/local/sbin/backup-betteruc-db
+systemctl restart betteruc-relay
 ```
 
-Restore into an empty database with `pg_restore --clean --if-exists --dbname="$DATABASE_URL" <dump-file>`.
+Use `DB-Backup erstellen` in the Adminpanel for an immediate test and verify both directories:
+
+```bash
+ls -lh /opt/betteruc-relay/data/postgres-backups
+ls -lh /opt/betteruc-relay/data/backups
+```
+
+Restore a dump with `pg_restore --clean --if-exists --dbname="$DATABASE_URL" /path/to/betteruc-....dump`.
+Copying dumps to a second server or object storage is still recommended for protection against a complete server loss.
 
 ## Discord bot
 

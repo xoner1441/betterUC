@@ -23,6 +23,9 @@ const databaseSize = document.querySelector("#databaseSize");
 const databaseMigration = document.querySelector("#databaseMigration");
 const cloudProfileCount = document.querySelector("#cloudProfileCount");
 const cloudRevisionCount = document.querySelector("#cloudRevisionCount");
+const cloudSyncEventCount = document.querySelector("#cloudSyncEventCount");
+const cloudConflictCount = document.querySelector("#cloudConflictCount");
+const cloudErrorCount = document.querySelector("#cloudErrorCount");
 const statsProfileCount = document.querySelector("#statsProfileCount");
 const webProfileCount = document.querySelector("#webProfileCount");
 const auditEntryCount = document.querySelector("#auditEntryCount");
@@ -113,10 +116,20 @@ function textLabel(value) {
 
 function renderBackupStatus(backups) {
   if (!backupStatus) return;
-  const latest = Array.isArray(backups) ? backups[0] : null;
-  backupStatus.textContent = latest
-    ? `Backup: ${formatDate(latest.createdAt)} (${formatBytes(latest.size)})`
+  const entries = Array.isArray(backups) ? backups : [];
+  const postgres = entries.find(backup => backup.type === "postgres");
+  const jsonBackup = entries.find(backup => backup.type === "json");
+  if (postgres) {
+    backupStatus.textContent = `DB-Backup: ${formatDate(postgres.createdAt)} (${formatBytes(postgres.size)})`;
+    backupStatus.title = jsonBackup
+      ? `JSON-Spiegel: ${formatDate(jsonBackup.createdAt)} (${formatBytes(jsonBackup.size)})`
+      : "Noch kein JSON-Spiegel vorhanden";
+    return;
+  }
+  backupStatus.textContent = jsonBackup
+    ? `Nur JSON-Backup: ${formatDate(jsonBackup.createdAt)}`
     : "Noch kein Backup";
+  backupStatus.title = "";
 }
 
 function accountMatches(account, query) {
@@ -151,6 +164,14 @@ function cloudHistoryActionLabel(entry) {
   }
   if (entry.action === "reset") return "Stand vor Reset";
   return "Gespeichert";
+}
+
+function cloudSyncEventLabel(type) {
+  if (type === "download") return "Cloud-Profil geladen";
+  if (type === "upload") return "Cloud-Profil gespeichert";
+  if (type === "conflict") return "Versionskonflikt";
+  if (type === "error") return "Sync-Fehler";
+  return "noch keine Aktivität";
 }
 
 function cloudHistoryHtml(account, hasCloud) {
@@ -215,7 +236,12 @@ function accountDetailHtml(account) {
     ["Letzter Sync", hasCloud ? formatDate(cloud.updatedAt) : "nie"],
     ["Mod-Version", cloud?.updatedByVersion || "-"],
     ["Schema", hasCloud ? `v${cloud.schemaVersion}` : "-"],
-    ["Gespeicherte Stände", String(cloud?.historyCount || 0)]
+    ["Gespeicherte Stände", String(cloud?.historyCount || 0)],
+    ["Letzte Aktivität", cloudSyncEventLabel(cloud?.lastEventType)],
+    ["Aktivität am", formatDate(cloud?.lastEventAt)],
+    ["Client-Version", cloud?.lastEventModVersion || "-"],
+    ["Konflikte (24h)", String(cloud?.conflicts24h || 0)],
+    ["Fehler (24h)", String(cloud?.errors24h || 0)]
   ];
   const statCards = [
     ["Bank", moneyLabel(stats.bankMoney)],
@@ -296,6 +322,9 @@ function accountDetailHtml(account) {
                 </article>
               `).join("")}
             </div>
+            ${cloud?.lastEventDetail
+              ? `<p class="quiet">Letzte Sync-Meldung: ${escapeHtml(cloud.lastEventDetail)}</p>`
+              : ""}
             <div class="admin-detail-actions cloud-profile-actions">
               <button class="button secondary danger reset-cloud-settings" type="button" ${hasCloud ? "" : "disabled"}>Cloud-Profil zurücksetzen</button>
             </div>
@@ -392,6 +421,9 @@ function renderDatabaseStatus(data, error = null) {
     : "-";
   cloudProfileCount.textContent = counts.cloudProfiles ?? "-";
   cloudRevisionCount.textContent = counts.cloudRevisions ?? "-";
+  cloudSyncEventCount.textContent = counts.cloudSyncEvents24h ?? "-";
+  cloudConflictCount.textContent = counts.cloudConflicts24h ?? "-";
+  cloudErrorCount.textContent = counts.cloudErrors24h ?? "-";
   statsProfileCount.textContent = counts.statsProfiles ?? "-";
   webProfileCount.textContent = counts.webProfiles ?? "-";
   auditEntryCount.textContent = counts.auditEntries ?? "-";

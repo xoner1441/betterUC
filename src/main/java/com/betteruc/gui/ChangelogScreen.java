@@ -25,7 +25,9 @@ public class ChangelogScreen extends Screen {
                             "Änderungen werden kurz gesammelt und dann gebündelt gespeichert",
                             "Revisionsschutz erkennt parallele Änderungen auf mehreren Geräten",
                             "Cloud Sync kann im Client-Tab pausiert und manuell gesteuert werden",
-                            "Die neue PostgreSQL-Anbindung speichert Profile dauerhaft und versioniert"
+                            "Die neue PostgreSQL-Anbindung speichert Profile dauerhaft und versioniert",
+                            "Sync-Aktivität, Client-Versionen, Konflikte und Fehler sind nachvollziehbar",
+                            "Automatische Datenbank-Backups sichern Accounts, Stats und Cloud-Profile"
                     }
             ),
             new Page(

@@ -159,6 +159,7 @@ public final class CloudSettingsClient {
         HttpRequest request = HttpRequest.newBuilder(uri)
                 .timeout(Duration.ofSeconds(10))
                 .header("x-betteruc-token", token)
+                .header("x-betteruc-version", modVersion())
                 .GET()
                 .build();
         HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
@@ -205,6 +206,7 @@ public final class CloudSettingsClient {
         HttpRequest request = HttpRequest.newBuilder(uri)
                 .timeout(Duration.ofSeconds(10))
                 .header("x-betteruc-token", token)
+                .header("x-betteruc-version", modVersion())
                 .GET()
                 .build();
         HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
@@ -247,6 +249,7 @@ public final class CloudSettingsClient {
                 .timeout(Duration.ofSeconds(10))
                 .header("content-type", "application/json")
                 .header("x-betteruc-token", token)
+                .header("x-betteruc-version", modVersion())
                 .PUT(HttpRequest.BodyPublishers.ofString(GSON.toJson(body), StandardCharsets.UTF_8))
                 .build();
         HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))

@@ -61,7 +61,9 @@ public class BetterUCScreen extends Screen {
                     "Änderungen werden gebündelt gespeichert und belasten die Datenbank nicht pro Spielereignis",
                     "Revisionsschutz verhindert, dass zwei Clients Einstellungen unbemerkt überschreiben",
                     "Im neuen Cloud-Sync-Modul kannst du laden, hochladen oder die Automatik pausieren",
-                    "PostgreSQL speichert Profile versioniert und protokolliert Cloud-Aktualisierungen"
+                    "PostgreSQL speichert Profile versioniert und protokolliert Cloud-Aktualisierungen",
+                    "Das Adminpanel zeigt Sync-Aktivität, Client-Versionen, Konflikte und Fehler",
+                    "Automatische Datenbank-Backups schützen Accounts, Stats und Cloud-Profile"
             }),
             new UpdateSection("Kurzstart", new String[]{
                     "Standard: N öffnet das betterUC ClickGUI",

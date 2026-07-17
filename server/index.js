@@ -1,12 +1,14 @@
 "use strict";
 
 const crypto = require("crypto");
+const { execFile } = require("child_process");
 const fs = require("fs");
 const fsp = fs.promises;
 const http = require("http");
 const path = require("path");
 const { Readable } = require("stream");
 const { URL } = require("url");
+const { promisify } = require("util");
 const { WebSocketServer } = require("ws");
 const { startDiscordBot } = require("./discordBot");
 const { createDatabase } = require("./database");
@@ -18,6 +20,7 @@ const PUBLIC_DIR = process.env.PUBLIC_DIR || path.join(__dirname, "public");
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 const STORE_FILE = path.join(DATA_DIR, "accounts.json");
 const BACKUP_DIR = process.env.BACKUP_DIR || path.join(DATA_DIR, "backups");
+const POSTGRES_BACKUP_DIR = process.env.POSTGRES_BACKUP_DIR || path.join(DATA_DIR, "postgres-backups");
 const BACKUP_RETENTION_DAYS = Number(process.env.BACKUP_RETENTION_DAYS || 30);
 const BACKUP_INTERVAL_ENV = Number(process.env.BACKUP_INTERVAL_MS);
 const BACKUP_INTERVAL_MS = Number.isFinite(BACKUP_INTERVAL_ENV)
@@ -35,6 +38,9 @@ const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || "https://betteruc.
 const RELEASE_CACHE_TTL_MS = Number(process.env.RELEASE_CACHE_TTL_MS || 5 * 60 * 1000);
 const CLOUD_SETTINGS_SCHEMA_VERSION = 1;
 const CLOUD_SETTINGS_MAX_BYTES = 48 * 1024;
+const PG_DUMP_BIN = process.env.PG_DUMP_BIN || "pg_dump";
+const PG_DUMP_TIMEOUT_MS = Math.max(30_000, Number(process.env.PG_DUMP_TIMEOUT_MS || 5 * 60 * 1000));
+const execFileAsync = promisify(execFile);
 
 const MIME_TYPES = new Map([
   [".html", "text/html; charset=utf-8"],
@@ -62,6 +68,15 @@ const database = createDatabase();
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+async function recordCloudSyncEvent(accountId, event) {
+  if (persistenceMode !== "postgres" || !database.enabled || !accountId) return;
+  try {
+    await database.recordCloudSyncEvent(accountId, event);
+  } catch (error) {
+    console.error("Could not record cloud sync event", accountId, error);
+  }
 }
 
 function json(res, status, payload) {
@@ -182,6 +197,7 @@ async function listStoreBackups() {
         const filePath = path.join(BACKUP_DIR, entry.name);
         const stat = await fsp.stat(filePath);
         return {
+          type: "json",
           name: entry.name,
           size: stat.size,
           createdAt: stat.mtime.toISOString()
@@ -193,6 +209,38 @@ async function listStoreBackups() {
     if (error.code === "ENOENT") return [];
     throw error;
   }
+}
+
+async function listPostgresBackups() {
+  try {
+    const entries = await fsp.readdir(POSTGRES_BACKUP_DIR, { withFileTypes: true });
+    const backups = await Promise.all(entries
+      .filter(entry => entry.isFile() && entry.name.startsWith("betteruc-") && entry.name.endsWith(".dump"))
+      .map(async entry => {
+        const filePath = path.join(POSTGRES_BACKUP_DIR, entry.name);
+        const stat = await fsp.stat(filePath);
+        return {
+          type: "postgres",
+          name: entry.name,
+          size: stat.size,
+          createdAt: stat.mtime.toISOString()
+        };
+      }));
+    backups.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return backups;
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
+}
+
+async function listPlatformBackups() {
+  const [postgres, jsonBackups] = await Promise.all([
+    listPostgresBackups(),
+    listStoreBackups()
+  ]);
+  return [...postgres, ...jsonBackups]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 async function cleanupStoreBackups() {
@@ -216,24 +264,102 @@ async function createStoreBackup(reason = "scheduled") {
   await cleanupStoreBackups();
   const stat = await fsp.stat(filePath);
   return {
+    type: "json",
     name: fileName,
     size: stat.size,
     createdAt: stat.mtime.toISOString()
   };
 }
 
-async function ensureDailyStoreBackup() {
+async function cleanupPostgresBackups() {
+  if (!Number.isFinite(BACKUP_RETENTION_DAYS) || BACKUP_RETENTION_DAYS <= 0) return;
+  const backups = await listPostgresBackups();
+  const cutoff = Date.now() - BACKUP_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  await Promise.all(backups
+    .filter(backup => new Date(backup.createdAt).getTime() < cutoff)
+    .map(backup => fsp.unlink(path.join(POSTGRES_BACKUP_DIR, backup.name)).catch(error => {
+      console.error("Could not remove old PostgreSQL backup", backup.name, error);
+    })));
+}
+
+async function createPostgresBackup(reason = "scheduled") {
+  if (persistenceMode !== "postgres" || !database.enabled) return null;
+  const connectionString = String(process.env.DATABASE_URL || "").trim();
+  if (!connectionString) throw new Error("DATABASE_URL fehlt für das PostgreSQL-Backup.");
+
+  let backupUrl;
+  let backupPassword = "";
+  try {
+    backupUrl = new URL(connectionString);
+    backupPassword = decodeURIComponent(backupUrl.password || "");
+    backupUrl.password = "";
+  } catch {
+    throw new Error("DATABASE_URL ist für das PostgreSQL-Backup ungültig.");
+  }
+
+  await fsp.mkdir(POSTGRES_BACKUP_DIR, { recursive: true });
+  const cleanReason = String(reason || "manual").replace(/[^a-z0-9_-]/gi, "").toLowerCase() || "manual";
+  const fileName = `betteruc-${backupTimestamp()}-${cleanReason}.dump`;
+  const filePath = path.join(POSTGRES_BACKUP_DIR, fileName);
+  try {
+    await execFileAsync(PG_DUMP_BIN, [
+      "--dbname", backupUrl.toString(),
+      "--format=custom",
+      "--no-owner",
+      "--no-privileges",
+      "--file", filePath
+    ], {
+      env: {
+        ...process.env,
+        ...(backupPassword ? { PGPASSWORD: backupPassword } : {})
+      },
+      timeout: PG_DUMP_TIMEOUT_MS,
+      windowsHide: true,
+      maxBuffer: 1024 * 1024
+    });
+  } catch (error) {
+    await fsp.unlink(filePath).catch(() => {});
+    const detail = String(error.stderr || error.message || "pg_dump fehlgeschlagen").trim();
+    throw new Error(`PostgreSQL-Backup fehlgeschlagen: ${detail.slice(0, 300)}`);
+  }
+  await cleanupPostgresBackups();
+  const stat = await fsp.stat(filePath);
+  return {
+    type: "postgres",
+    name: fileName,
+    size: stat.size,
+    createdAt: stat.mtime.toISOString()
+  };
+}
+
+async function createPlatformBackup(reason = "scheduled") {
+  const postgres = await createPostgresBackup(reason);
+  const jsonBackup = await createStoreBackup(reason);
+  return { postgres, json: jsonBackup };
+}
+
+async function ensureDailyPlatformBackup() {
   const today = backupDateKey();
-  const backups = await listStoreBackups();
-  if (backups.some(backup => backup.name.startsWith(`accounts-${today}`))) return null;
-  return createStoreBackup("daily");
+  const [postgresBackups, jsonBackups] = await Promise.all([
+    listPostgresBackups(),
+    listStoreBackups()
+  ]);
+  const result = { postgres: null, json: null };
+  if (persistenceMode === "postgres"
+      && !postgresBackups.some(backup => backup.name.startsWith(`betteruc-${today}`))) {
+    result.postgres = await createPostgresBackup("daily");
+  }
+  if (!jsonBackups.some(backup => backup.name.startsWith(`accounts-${today}`))) {
+    result.json = await createStoreBackup("daily");
+  }
+  return result;
 }
 
 function scheduleStoreBackups() {
   clearInterval(backupTimer);
-  ensureDailyStoreBackup().catch(error => console.error("Could not create betterUC daily backup", error));
+  ensureDailyPlatformBackup().catch(error => console.error("Could not create betterUC daily backup", error));
   backupTimer = setInterval(() => {
-    ensureDailyStoreBackup().catch(error => console.error("Could not create betterUC daily backup", error));
+    ensureDailyPlatformBackup().catch(error => console.error("Could not create betterUC daily backup", error));
   }, BACKUP_INTERVAL_MS);
 }
 
@@ -1185,7 +1311,7 @@ async function handleApi(req, res, url) {
     res.writeHead(204, {
       "access-control-allow-origin": "*",
       "access-control-allow-methods": "GET,POST,PATCH,OPTIONS",
-      "access-control-allow-headers": "content-type,authorization,x-betteruc-token,x-betteruc-admin,x-betteruc-session"
+      "access-control-allow-headers": "content-type,authorization,x-betteruc-token,x-betteruc-admin,x-betteruc-session,x-betteruc-version"
     });
     res.end();
     return;
@@ -1240,7 +1366,7 @@ async function handleApi(req, res, url) {
       ok: true,
       accounts: store.accounts.map(account => adminAccount(account, cloudSettingsByAccount.get(account.id) || null)),
       players: onlinePlayersForResponse(),
-      backups: await listStoreBackups(),
+      backups: await listPlatformBackups(),
       totals: {
         accounts: store.accounts.length,
         active: store.accounts.filter(account => cleanStatus(account.status) === "active").length,
@@ -1257,12 +1383,17 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && url.pathname === "/api/admin/backups") {
     if (!requireAdmin(req, res, url)) return;
-    const backup = await createStoreBackup("manual");
-    json(res, 201, {
-      ok: true,
-      backup,
-      backups: await listStoreBackups()
-    });
+    try {
+      const backup = await createPlatformBackup("manual");
+      json(res, 201, {
+        ok: true,
+        backup,
+        backups: await listPlatformBackups()
+      });
+    } catch (error) {
+      console.error("Could not create manual betterUC backup", error);
+      json(res, 500, { ok: false, error: error.message || "Backup konnte nicht erstellt werden." });
+    }
     return;
   }
 
@@ -1549,6 +1680,13 @@ async function handleApi(req, res, url) {
     }
 
     const profile = await database.getCloudSettings(auth.account.id);
+    await recordCloudSyncEvent(auth.account.id, {
+      type: "download",
+      revision: profile?.revision ?? 0,
+      schemaVersion: profile?.schemaVersion ?? CLOUD_SETTINGS_SCHEMA_VERSION,
+      modVersion: cleanSmallLabel(req.headers["x-betteruc-version"] || "", ""),
+      detail: profile ? "Cloud-Profil geladen" : "Noch kein Cloud-Profil"
+    });
     json(res, 200, {
       ok: true,
       exists: Boolean(profile),
@@ -1576,19 +1714,47 @@ async function handleApi(req, res, url) {
     const schemaVersion = Number(body.schemaVersion);
     const baseRevision = Number(body.baseRevision);
     const settings = body.settings;
+    const modVersion = cleanSmallLabel(body.modVersion || req.headers["x-betteruc-version"] || "", "");
     if (!Number.isSafeInteger(schemaVersion) || schemaVersion !== CLOUD_SETTINGS_SCHEMA_VERSION) {
+      await recordCloudSyncEvent(auth.account.id, {
+        type: "error",
+        revision: baseRevision,
+        schemaVersion,
+        modVersion,
+        detail: "Nicht unterstützte Einstellungs-Version"
+      });
       json(res, 400, { ok: false, error: "Nicht unterstuetzte Einstellungs-Version." });
       return;
     }
     if (!Number.isSafeInteger(baseRevision) || baseRevision < 0) {
+      await recordCloudSyncEvent(auth.account.id, {
+        type: "error",
+        schemaVersion,
+        modVersion,
+        detail: "Ungültige Cloud-Revision"
+      });
       json(res, 400, { ok: false, error: "Ungueltige Cloud-Revision." });
       return;
     }
     if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+      await recordCloudSyncEvent(auth.account.id, {
+        type: "error",
+        revision: baseRevision,
+        schemaVersion,
+        modVersion,
+        detail: "Einstellungen sind kein JSON-Objekt"
+      });
       json(res, 400, { ok: false, error: "Einstellungen muessen ein JSON-Objekt sein." });
       return;
     }
     if (Buffer.byteLength(JSON.stringify(settings), "utf8") > CLOUD_SETTINGS_MAX_BYTES) {
+      await recordCloudSyncEvent(auth.account.id, {
+        type: "error",
+        revision: baseRevision,
+        schemaVersion,
+        modVersion,
+        detail: "Einstellungsprofil überschreitet das Größenlimit"
+      });
       json(res, 413, { ok: false, error: "Das Einstellungsprofil ist zu gross." });
       return;
     }
@@ -1597,9 +1763,16 @@ async function handleApi(req, res, url) {
       schemaVersion,
       baseRevision,
       settings,
-      updatedByVersion: cleanSmallLabel(body.modVersion || "", "")
+      updatedByVersion: modVersion
     });
     if (result.conflict) {
+      await recordCloudSyncEvent(auth.account.id, {
+        type: "conflict",
+        revision: result.current?.revision ?? baseRevision,
+        schemaVersion,
+        modVersion,
+        detail: `Client-Revision ${baseRevision}, Cloud-Revision ${result.current?.revision ?? 0}`
+      });
       json(res, 409, {
         ok: false,
         error: "Die Cloud-Einstellungen wurden zwischenzeitlich geaendert.",
@@ -1607,6 +1780,13 @@ async function handleApi(req, res, url) {
       });
       return;
     }
+    await recordCloudSyncEvent(auth.account.id, {
+      type: "upload",
+      revision: result.current?.revision,
+      schemaVersion,
+      modVersion,
+      detail: "Cloud-Profil gespeichert"
+    });
     json(res, 200, { ok: true, profile: result.current });
     return;
   }

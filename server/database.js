@@ -81,6 +81,7 @@ function createDatabase(options = {}) {
       putCloudSettings: unavailable,
       listCloudSettingsMetadata: unavailable,
       getCloudSettingsHistory: unavailable,
+      recordCloudSyncEvent: unavailable,
       restoreCloudSettings: unavailable,
       deleteCloudSettings: unavailable,
       getOverview: unavailable,
@@ -533,17 +534,46 @@ function createDatabase(options = {}) {
         current_settings.revision,
         current_settings.updated_at,
         current_settings.updated_by_version,
-        count(history.id)::integer as history_count
+        coalesce(history_stats.history_count, 0)::integer as history_count,
+        latest_event.event_type as last_event_type,
+        latest_event.revision as last_event_revision,
+        latest_event.mod_version as last_event_mod_version,
+        latest_event.detail as last_event_detail,
+        latest_event.created_at as last_event_at,
+        coalesce(event_stats.event_count, 0)::integer as event_count,
+        coalesce(event_stats.conflicts_24h, 0)::integer as conflicts_24h,
+        coalesce(event_stats.errors_24h, 0)::integer as errors_24h
       from accounts
       left join cloud_settings current_settings on current_settings.account_id = accounts.id
-      left join cloud_settings_history history on history.account_id = accounts.id
-      group by
-        accounts.id,
-        current_settings.schema_version,
-        current_settings.revision,
-        current_settings.updated_at,
-        current_settings.updated_by_version
-      having current_settings.revision is not null or count(history.id) > 0
+      left join lateral (
+        select count(*)::integer as history_count
+        from cloud_settings_history history
+        where history.account_id = accounts.id
+      ) history_stats on true
+      left join lateral (
+        select
+          count(*)::integer as event_count,
+          count(*) filter (
+            where event_type = 'conflict'
+              and created_at >= now() - interval '24 hours'
+          )::integer as conflicts_24h,
+          count(*) filter (
+            where event_type = 'error'
+              and created_at >= now() - interval '24 hours'
+          )::integer as errors_24h
+        from cloud_sync_events sync_event
+        where sync_event.account_id = accounts.id
+      ) event_stats on true
+      left join lateral (
+        select event_type, revision, mod_version, detail, created_at
+        from cloud_sync_events latest
+        where latest.account_id = accounts.id
+        order by latest.created_at desc, latest.id desc
+        limit 1
+      ) latest_event on true
+      where current_settings.revision is not null
+        or coalesce(history_stats.history_count, 0) > 0
+        or coalesce(event_stats.event_count, 0) > 0
       order by current_settings.updated_at desc nulls last, accounts.id
     `);
     return result.rows.map(row => ({
@@ -553,8 +583,42 @@ function createDatabase(options = {}) {
       revision: row.revision === null ? null : Number(row.revision),
       updatedAt: iso(row.updated_at),
       updatedByVersion: row.updated_by_version || "",
-      historyCount: Number(row.history_count || 0)
+      historyCount: Number(row.history_count || 0),
+      lastEventType: row.last_event_type || "",
+      lastEventRevision: row.last_event_revision === null ? null : Number(row.last_event_revision),
+      lastEventModVersion: row.last_event_mod_version || "",
+      lastEventDetail: row.last_event_detail || "",
+      lastEventAt: iso(row.last_event_at),
+      conflicts24h: Number(row.conflicts_24h || 0),
+      errors24h: Number(row.errors_24h || 0)
     }));
+  }
+
+  async function recordCloudSyncEvent(accountId, event = {}) {
+    const eventType = text(event.type).trim().toLowerCase();
+    if (!["download", "upload", "conflict", "error"].includes(eventType)) {
+      throw new Error("Invalid cloud sync event type.");
+    }
+    const revision = nullableInteger(event.revision);
+    const schemaVersion = nullableInteger(event.schemaVersion);
+    const modVersion = text(event.modVersion).trim().slice(0, 64);
+    const detail = text(event.detail).trim().slice(0, 500);
+    await pool.query(`
+      insert into cloud_sync_events (
+        account_id, event_type, revision, schema_version, mod_version, detail
+      ) values ($1, $2, $3, $4, $5, $6)
+    `, [accountId, eventType, revision, schemaVersion, modVersion, detail]);
+    await pool.query(`
+      delete from cloud_sync_events
+      where account_id = $1
+        and id not in (
+          select id
+          from cloud_sync_events
+          where account_id = $1
+          order by created_at desc, id desc
+          limit 200
+        )
+    `, [accountId]);
   }
 
   async function getCloudSettingsHistory(accountId, limit = 20) {
@@ -698,6 +762,9 @@ function createDatabase(options = {}) {
           (select count(*) from accounts)::integer as accounts,
           (select count(*) from cloud_settings)::integer as cloud_profiles,
           (select count(*) from cloud_settings_history)::integer as cloud_revisions,
+          (select count(*) from cloud_sync_events where created_at >= now() - interval '24 hours')::integer as cloud_sync_events_24h,
+          (select count(*) from cloud_sync_events where event_type = 'conflict' and created_at >= now() - interval '24 hours')::integer as cloud_conflicts_24h,
+          (select count(*) from cloud_sync_events where event_type = 'error' and created_at >= now() - interval '24 hours')::integer as cloud_errors_24h,
           (select count(*) from player_stats)::integer as stats_profiles,
           (select count(*) from web_credentials where password_hash is not null)::integer as web_profiles,
           (select count(*) from audit_log)::integer as audit_entries
@@ -723,6 +790,9 @@ function createDatabase(options = {}) {
         accounts: Number(counts.accounts || 0),
         cloudProfiles: Number(counts.cloud_profiles || 0),
         cloudRevisions: Number(counts.cloud_revisions || 0),
+        cloudSyncEvents24h: Number(counts.cloud_sync_events_24h || 0),
+        cloudConflicts24h: Number(counts.cloud_conflicts_24h || 0),
+        cloudErrors24h: Number(counts.cloud_errors_24h || 0),
         statsProfiles: Number(counts.stats_profiles || 0),
         webProfiles: Number(counts.web_profiles || 0),
         auditEntries: Number(counts.audit_entries || 0)
@@ -740,6 +810,7 @@ function createDatabase(options = {}) {
     putCloudSettings,
     listCloudSettingsMetadata,
     getCloudSettingsHistory,
+    recordCloudSyncEvent,
     restoreCloudSettings,
     deleteCloudSettings,
     getOverview,
