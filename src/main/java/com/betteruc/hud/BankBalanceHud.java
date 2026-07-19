@@ -48,7 +48,9 @@ public class BankBalanceHud {
 
     public static void register() {
         restoreFromConfig();
-        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "bank_balance"), (context, tickCounter) -> render(context));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "bank_balance"), (context, tickCounter) -> {
+            if (ModernHudRenderer.shouldRenderGameplayHud()) render(context);
+        });
     }
 
     public static void updateFromChatLine(String raw) {

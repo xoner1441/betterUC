@@ -13,7 +13,9 @@ public class PaydayHud {
     private static long lastMinuteUpdateMs = 0L;
     private static boolean pausedByAfk = false;
     public static void register() {
-        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "payday"), (context, tickCounter) -> render(context));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "payday"), (context, tickCounter) -> {
+            if (ModernHudRenderer.shouldRenderGameplayHud()) render(context);
+        });
     }
 
     public static void updateFromStats(int current, int total) {

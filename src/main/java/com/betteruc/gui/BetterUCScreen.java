@@ -101,6 +101,7 @@ public class BetterUCScreen extends Screen {
                     "/modbl <spieler> <grund> erweitert einen bestehenden Blacklist-Eintrag",
                     "/blinfo <spieler> zeigt gespeicherte Blacklist-Infos",
                     "/adropdrink sendet /dropdrink automatisch anhand des Lieferjunge-Scoreboards",
+                    "/vm <spieler> sendet /asu <spieler> Versuchter Mord",
                     "Winzer-Fenster sammeln automatisch alle Trauben ein",
                     "Gaertner-Hinweise geben Blumen ab und sammeln verwelkte Buesche",
                     "/buonline zeigt Helpern und Admins online Mod-User"
@@ -211,6 +212,8 @@ public class BetterUCScreen extends Screen {
             case POTION -> {
                 y = addToggle(x, y, controlW, "Potion HUD", BetterUCConfig.INSTANCE.showPotionEffectsHud,
                         () -> BetterUCConfig.INSTANCE.showPotionEffectsHud = !BetterUCConfig.INSTANCE.showPotionEffectsHud);
+                addColorButton(x, y, controlW, "Potion Farbe", BetterUCConfig.INSTANCE.potionHudColor,
+                        color -> BetterUCConfig.INSTANCE.potionHudColor = color);
             }
             case SPRINT -> {
                 y = addToggle(x, y, controlW, "ToggleSprint", BetterUCConfig.INSTANCE.toggleSprintEnabled,
@@ -842,20 +845,21 @@ public class BetterUCScreen extends Screen {
                 }
             }
             case POTION -> {
+                int potionColor = BetterUCConfig.INSTANCE.potionHudColor;
                 if (modernStyle) {
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY, "EFFECT", "Stärke II",
-                            "1:26", 0xFF9328FF);
+                            "1:26", potionColor);
                     ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY + 33, "EFFECT", "Speed",
-                            "0:49", 0xFF7CAFC6);
+                            "0:49", potionColor);
                 } else if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "Stärke II", previewX, previewY, 0xFF9328FF);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "Stärke II", previewX, previewY, potionColor);
                     ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "1:26", previewX, previewY + 11, TEXT_MUTED);
-                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "Speed", previewX, previewY + 25, 0xFF7CAFC6);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "Speed", previewX, previewY + 25, potionColor);
                     ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "0:49", previewX, previewY + 36, TEXT_MUTED);
                 } else {
-                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, "Stärke II", previewX, previewY, 0xFF9328FF);
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, "Stärke II", previewX, previewY, potionColor);
                     ModernHudRenderer.drawHudTextWithShadow(context, this.font, "1:26", previewX, previewY + 10, TEXT_MUTED);
-                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, "Speed", previewX, previewY + 24, 0xFF7CAFC6);
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, "Speed", previewX, previewY + 24, potionColor);
                     ModernHudRenderer.drawHudTextWithShadow(context, this.font, "0:49", previewX, previewY + 34, TEXT_MUTED);
                 }
             }

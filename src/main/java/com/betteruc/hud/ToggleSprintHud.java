@@ -10,7 +10,9 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 public class ToggleSprintHud {
 
     public static void register() {
-        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "toggle_sprint"), (context, tickCounter) -> render(context));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "toggle_sprint"), (context, tickCounter) -> {
+            if (ModernHudRenderer.shouldRenderGameplayHud()) render(context);
+        });
     }
 
     private static void render(GuiGraphicsExtractor context) {

@@ -68,7 +68,6 @@ public final class BetterUCFontManager {
     }
 
     public static List<FontOption> getFontOptions() {
-        refreshFontOptions();
         return fontOptions;
     }
 

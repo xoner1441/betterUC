@@ -16,7 +16,9 @@ public class HackTimerHud {
     private static Component cachedText = Component.literal("");
 
     public static void register() {
-        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "hack_timer"), (context, tickCounter) -> render(context));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "hack_timer"), (context, tickCounter) -> {
+            if (ModernHudRenderer.shouldRenderGameplayHud()) render(context);
+        });
     }
 
     public static void start(int seconds) {

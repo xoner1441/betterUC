@@ -39,6 +39,7 @@ public class BetterUCConfig {
             "bankHudScale", "cashHudScale", "potionHudScale", "hackTimerHudScale", "plantTimerHudScale",
             "dealerTimerHudScale", "productionTimerHudScale",
             "toggleSprintHudColor", "fpsHudColor", "paydayHudColor", "bankHudColor", "cashHudColor",
+            "potionHudColor",
             "dealerTimerHudColor", "productionTimerHudColor", "healthHudHeartColor", "healthHudTextColor",
             "healthHudColor", "hudColorGradientEnabled", "hudGradientColor", "hudGradientConfigVersion",
             "healthHudGradientEnabled", "toggleSprintHudGradientEnabled", "fpsHudGradientEnabled",
@@ -107,6 +108,7 @@ public class BetterUCConfig {
     public static final int DEFAULT_PAYDAY_HUD_COLOR = 0xFFFFD866;
     public static final int DEFAULT_BANK_HUD_COLOR = 0xFF55FFFF;
     public static final int DEFAULT_CASH_HUD_COLOR = 0xFF86EFAC;
+    public static final int DEFAULT_POTION_HUD_COLOR = 0xFF9328FF;
     public static final int DEFAULT_HEALTH_HUD_COLOR = 0xFFFF5555;
     public static final int DEFAULT_HEALTH_HUD_HEART_COLOR = DEFAULT_HEALTH_HUD_COLOR;
     public static final int DEFAULT_HEALTH_HUD_TEXT_COLOR = DEFAULT_HEALTH_HUD_COLOR;
@@ -220,6 +222,7 @@ public class BetterUCConfig {
     public int paydayHudColor = DEFAULT_PAYDAY_HUD_COLOR;
     public int bankHudColor = DEFAULT_BANK_HUD_COLOR;
     public int cashHudColor = DEFAULT_CASH_HUD_COLOR;
+    public int potionHudColor = DEFAULT_POTION_HUD_COLOR;
     public int dealerTimerHudColor = 0xFFD946EF;
     public int productionTimerHudColor = 0xFFFBBF24;
     public int healthHudHeartColor = 0;
@@ -1158,6 +1161,7 @@ public class BetterUCConfig {
             INSTANCE.paydayHudColor = sanitizeHudColor(INSTANCE.paydayHudColor, DEFAULT_PAYDAY_HUD_COLOR);
             INSTANCE.bankHudColor = sanitizeHudColor(INSTANCE.bankHudColor, DEFAULT_BANK_HUD_COLOR);
             INSTANCE.cashHudColor = sanitizeHudColor(INSTANCE.cashHudColor, DEFAULT_CASH_HUD_COLOR);
+            INSTANCE.potionHudColor = sanitizeHudColor(INSTANCE.potionHudColor, DEFAULT_POTION_HUD_COLOR);
             INSTANCE.dealerTimerHudColor = sanitizeHudColor(INSTANCE.dealerTimerHudColor, 0xFFD946EF);
             INSTANCE.productionTimerHudColor = sanitizeHudColor(INSTANCE.productionTimerHudColor, 0xFFFBBF24);
             INSTANCE.healthHudColor = sanitizeHudColor(INSTANCE.healthHudColor, DEFAULT_HEALTH_HUD_COLOR);

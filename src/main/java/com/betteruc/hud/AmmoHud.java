@@ -31,7 +31,9 @@ public class AmmoHud {
     private static final Map<String, Integer> observedMagazineSizes = new HashMap<>();
 
     public static void register() {
-        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "ammo"), (context, tickCounter) -> render(context));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "ammo"), (context, tickCounter) -> {
+            if (ModernHudRenderer.shouldRenderGameplayHud()) render(context);
+        });
     }
 
     public static void updateFromOverlay(Component overlayMessage) {

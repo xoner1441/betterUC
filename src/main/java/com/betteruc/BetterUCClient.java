@@ -249,6 +249,7 @@ public class BetterUCClient implements ClientModInitializer {
             registerUserPanelCommand(dispatcher);
             registerUpdateCommand(dispatcher);
             registerBankShortcutCommands(dispatcher);
+            registerAttemptedMurderShortcutCommand(dispatcher, playerSuggestions);
             registerAutoDropDrinkCommand(dispatcher);
             registerBetterUcOnlineCommand(dispatcher);
         });
@@ -330,6 +331,24 @@ public class BetterUCClient implements ClientModInitializer {
                     AutoDropDrinkClient.start(Minecraft.getInstance());
                     return 1;
                 }));
+    }
+
+    private void registerAttemptedMurderShortcutCommand(
+            CommandDispatcher<FabricClientCommandSource> dispatcher,
+            SuggestionProvider<FabricClientCommandSource> playerSuggestions
+    ) {
+        dispatcher.register(ClientCommands.literal("vm")
+                .then(ClientCommands.argument("spieler", StringArgumentType.word())
+                        .suggests(playerSuggestions)
+                        .executes(context -> {
+                            Minecraft client = Minecraft.getInstance();
+                            if (client.player == null) return 0;
+                            if (!ensureAllowedServerForManualCommand(client)) return 0;
+
+                            String spieler = StringArgumentType.getString(context, "spieler");
+                            sendServerCommand(client, "asu " + spieler + " Versuchter Mord");
+                            return 1;
+                        })));
     }
 
     private void registerBetterUcOnlineCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {

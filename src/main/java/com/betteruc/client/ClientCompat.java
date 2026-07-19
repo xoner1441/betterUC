@@ -8,6 +8,7 @@ import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 
 public final class ClientCompat {
+    private static final long HUD_SCREEN_CACHE_NS = 2_000_000L;
     private static Method guiScreenMethod;
     private static boolean guiScreenMethodResolved;
     private static Field minecraftScreenField;
@@ -20,6 +21,8 @@ public final class ClientCompat {
     private static boolean mainCameraMethodResolved;
     private static Method getMainCameraMethod;
     private static boolean getMainCameraMethodResolved;
+    private static long lastHudScreenCheckNs;
+    private static boolean suppressGameplayHud;
 
     private ClientCompat() {
     }
@@ -41,6 +44,18 @@ public final class ClientCompat {
 
     public static boolean hasScreen(Minecraft client) {
         return currentScreen(client) != null;
+    }
+
+    public static boolean suppressGameplayHud(Minecraft client) {
+        long now = System.nanoTime();
+        if (now - lastHudScreenCheckNs < HUD_SCREEN_CACHE_NS) {
+            return suppressGameplayHud;
+        }
+
+        Screen screen = currentScreen(client);
+        suppressGameplayHud = screen != null && !(screen instanceof ChatScreen);
+        lastHudScreenCheckNs = now;
+        return suppressGameplayHud;
     }
 
     public static void setScreen(Minecraft client, Screen screen) {

@@ -1,6 +1,7 @@
 package com.betteruc.hud;
 
 import com.betteruc.client.BetterUCFontManager;
+import com.betteruc.client.ClientCompat;
 import com.betteruc.config.BetterUCConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -23,6 +24,11 @@ public final class ModernHudRenderer {
     private static final ThreadLocal<GradientStyle> ACTIVE_GRADIENT = new ThreadLocal<>();
 
     private ModernHudRenderer() {
+    }
+
+    public static boolean shouldRenderGameplayHud() {
+        Minecraft client = Minecraft.getInstance();
+        return client != null && !ClientCompat.suppressGameplayHud(client);
     }
 
     public static void drawScaled(

@@ -35,7 +35,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class PingRelayClient {
 
@@ -47,6 +49,7 @@ public final class PingRelayClient {
     private static final List<PingMarker> ACTIVE_PINGS = new ArrayList<>();
     private static final List<RelayPlayer> ONLINE_PLAYERS = new ArrayList<>();
     private static final List<RelayPlayer> GLOBAL_ONLINE_PLAYERS = new ArrayList<>();
+    private static final Map<String, String> TAB_BADGE_ROLE_CACHE = new ConcurrentHashMap<>();
     private static final long RECONNECT_DELAY_MS = 5000L;
     private static final long ONLINE_PLAYERS_REFRESH_MS = 10000L;
     private static final double PING_RAYCAST_DISTANCE = 128.0D;
@@ -113,6 +116,7 @@ public final class PingRelayClient {
             ONLINE_PLAYERS.clear();
             GLOBAL_ONLINE_PLAYERS.clear();
         }
+        TAB_BADGE_ROLE_CACHE.clear();
         nextReconnectAtMs = 0L;
         tick(client);
     }
@@ -124,6 +128,7 @@ public final class PingRelayClient {
             ONLINE_PLAYERS.clear();
             GLOBAL_ONLINE_PLAYERS.clear();
         }
+        TAB_BADGE_ROLE_CACHE.clear();
     }
 
     public static boolean sendPingAtCrosshair(Minecraft client) {
@@ -342,6 +347,9 @@ public final class PingRelayClient {
     public static String tabBadgeRoleForRenderedText(String renderedText) {
         if (renderedText == null || renderedText.isBlank()) return "";
         String normalizedText = renderedText.toLowerCase(Locale.ROOT).trim();
+        String cachedRole = TAB_BADGE_ROLE_CACHE.get(normalizedText);
+        if (cachedRole != null) return cachedRole;
+
         RelayPlayer bestMatch = null;
         synchronized (LOCK) {
             for (RelayPlayer player : ONLINE_PLAYERS) {
@@ -370,7 +378,12 @@ public final class PingRelayClient {
             }
         }
 
-        return bestMatch == null ? "" : cleanRole(bestMatch.role());
+        String resolvedRole = bestMatch == null ? "" : cleanRole(bestMatch.role());
+        if (TAB_BADGE_ROLE_CACHE.size() >= 512) {
+            TAB_BADGE_ROLE_CACHE.clear();
+        }
+        TAB_BADGE_ROLE_CACHE.put(normalizedText, resolvedRole);
+        return resolvedRole;
     }
 
     private static boolean looksLikeTabListName(String renderedText, String playerNameLower) {
@@ -678,6 +691,7 @@ public final class PingRelayClient {
             ONLINE_PLAYERS.clear();
             GLOBAL_ONLINE_PLAYERS.clear();
         }
+        TAB_BADGE_ROLE_CACHE.clear();
         if (socket != null) {
             try {
                 socket.sendClose(WebSocket.NORMAL_CLOSURE, "bye");
@@ -697,6 +711,7 @@ public final class PingRelayClient {
             ONLINE_PLAYERS.clear();
             GLOBAL_ONLINE_PLAYERS.clear();
         }
+        TAB_BADGE_ROLE_CACHE.clear();
         status = newStatus;
         nextReconnectAtMs = System.currentTimeMillis() + RECONNECT_DELAY_MS;
     }
@@ -728,6 +743,7 @@ public final class PingRelayClient {
             ONLINE_PLAYERS.clear();
             ONLINE_PLAYERS.addAll(nextPlayers);
         }
+        TAB_BADGE_ROLE_CACHE.clear();
     }
 
     private static void refreshOnlinePlayersFromApi(Minecraft client) {
@@ -761,6 +777,7 @@ public final class PingRelayClient {
                             GLOBAL_ONLINE_PLAYERS.clear();
                             GLOBAL_ONLINE_PLAYERS.addAll(nextPlayers);
                         }
+                        TAB_BADGE_ROLE_CACHE.clear();
                     } catch (Exception e) {
                         BetterUCMod.LOGGER.debug("Ignored invalid betterUC online players response");
                     }

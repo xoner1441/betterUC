@@ -15,7 +15,9 @@ public class HealthHud {
     private static Component cachedHealthText = Component.literal("");
 
     public static void register() {
-        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "health"), (context, tickCounter) -> render(context));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "health"), (context, tickCounter) -> {
+            if (ModernHudRenderer.shouldRenderGameplayHud()) render(context);
+        });
     }
 
     private static void render(GuiGraphicsExtractor context) {

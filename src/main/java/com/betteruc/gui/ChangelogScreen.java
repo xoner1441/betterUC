@@ -141,6 +141,7 @@ public class ChangelogScreen extends Screen {
                             "/car find Koordinaten werden automatisch ins Navi übernommen",
                             "Chat-Zeitstempel und größere Chat-Historie",
                             "/adropdrink sendet /dropdrink automatisch anhand des Lieferjunge-Scoreboards",
+                            "/vm <spieler> sendet /asu <spieler> Versuchter Mord",
                             "Fischer-Jobhinweise starten /findschwarm, /catchfish und /dropfish automatisch",
                             "Winzer-Fenster sammeln automatisch alle Trauben ein",
                             "Gaertner-Hinweise geben Blumen ab und sammeln verwelkte Buesche",

@@ -26,7 +26,9 @@ public class PotionEffectsHud {
     private static final List<MobEffectInstance> ACTIVE_EFFECTS = new ArrayList<>();
 
     public static void register() {
-        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "potion_effects"), (context, tickCounter) -> render(context));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "potion_effects"), (context, tickCounter) -> {
+            if (ModernHudRenderer.shouldRenderGameplayHud()) render(context);
+        });
     }
 
     private static void render(GuiGraphicsExtractor context) {
@@ -62,7 +64,7 @@ public class PotionEffectsHud {
             for (MobEffectInstance effect : ACTIVE_EFFECTS) {
                 Holder<MobEffect> entry = effect.getEffect();
                 Identifier effectIcon = effectIcon(entry);
-                int accentColor = 0xFF000000 | entry.value().getColor();
+                int accentColor = BetterUCConfig.INSTANCE.potionHudColor;
                 Component effectName = buildEffectName(effect);
                 Component durationText = MobEffectUtil.formatDuration(effect, 1.0F, tickRate);
 

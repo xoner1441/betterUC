@@ -23,8 +23,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -437,13 +441,13 @@ public final class VersionChecker {
                 return InstallOutcome.message("\u00A7c[betterUC] Auto-Updater kann nur aus einer geladenen Mod-JAR heraus installieren.");
             }
 
-            Path modsDir = currentJar.getParent();
-            if (modsDir == null || !Files.isDirectory(modsDir)) {
+            List<Path> installDirectories = findInstallDirectories(currentJar);
+            if (installDirectories.isEmpty()) {
                 return InstallOutcome.message("\u00A7c[betterUC] Mods-Ordner konnte nicht erkannt werden.");
             }
 
             String targetName = sanitizeJarName(latestVersion);
-            Path stagingDir = FabricLoader.getInstance().getConfigDir().resolve("betteruc-updates");
+            Path stagingDir = stableStagingDirectory();
             Files.createDirectories(stagingDir);
             Path downloadedJar = stagingDir.resolve(targetName);
             downloadJar(latestVersion, downloadedJar);
@@ -453,7 +457,9 @@ public final class VersionChecker {
                 return InstallOutcome.message("\u00A7c[betterUC] Download war ung\u00FCltig oder unvollst\u00E4ndig.");
             }
 
-            Path script = createInstallScript(stagingDir, modsDir, downloadedJar, targetName);
+            BetterUCMod.LOGGER.info("Preparing betterUC update for {} install director{}: {}",
+                    installDirectories.size(), installDirectories.size() == 1 ? "y" : "ies", installDirectories);
+            Path script = createInstallScript(stagingDir, installDirectories, downloadedJar, targetName);
             if (!startInstallScript(script)) {
                 return InstallOutcome.message("\u00A7c[betterUC] Update wurde heruntergeladen, aber das Install-Script konnte nicht gestartet werden.");
             }
@@ -496,6 +502,110 @@ public final class VersionChecker {
                 .orElseThrow(() -> new IOException("Loaded betterUC jar path not found"));
     }
 
+    private static Path stableStagingDirectory() {
+        String userHome = System.getProperty("user.home", "").trim();
+        if (!userHome.isEmpty()) {
+            return Path.of(userHome).resolve(".betteruc").resolve("updates");
+        }
+        return FabricLoader.getInstance().getConfigDir().resolve("betteruc-updates");
+    }
+
+    private static List<Path> findInstallDirectories(Path currentJar) throws IOException {
+        Set<Path> directories = new LinkedHashSet<>();
+        Path currentModsDirectory = currentJar.toAbsolutePath().normalize().getParent();
+        addInstallDirectory(directories, currentModsDirectory, true);
+
+        if (!isLabyModPath(currentJar)) {
+            return List.copyOf(directories);
+        }
+
+        String appData = System.getenv("APPDATA");
+        if (appData == null || appData.isBlank()) {
+            return List.copyOf(directories);
+        }
+
+        String minecraftVersion = getMinecraftVersion();
+        Path roamingDirectory = Path.of(appData).toAbsolutePath().normalize();
+        collectLabyModpackDirectories(
+                roamingDirectory.resolve(".minecraft").resolve("labymod-neo").resolve("modpacks"),
+                minecraftVersion,
+                directories
+        );
+        collectLabyInstanceDirectories(
+                roamingDirectory.resolve("LabyMod").resolve("instances"),
+                minecraftVersion,
+                directories
+        );
+        return List.copyOf(directories);
+    }
+
+    private static void collectLabyModpackDirectories(Path modpacksRoot, String minecraftVersion,
+                                                       Set<Path> directories) throws IOException {
+        if (!Files.isDirectory(modpacksRoot)) {
+            return;
+        }
+
+        try (var modpacks = Files.list(modpacksRoot)) {
+            for (Path modpack : modpacks.filter(Files::isDirectory).toList()) {
+                addInstallDirectory(
+                        directories,
+                        modpack.resolve("fabric").resolve(minecraftVersion).resolve("mods"),
+                        false
+                );
+            }
+        }
+    }
+
+    private static void collectLabyInstanceDirectories(Path instancesRoot, String minecraftVersion,
+                                                        Set<Path> directories) throws IOException {
+        if (!Files.isDirectory(instancesRoot)) {
+            return;
+        }
+
+        try (var instances = Files.list(instancesRoot)) {
+            for (Path instance : instances.filter(Files::isDirectory).toList()) {
+                addInstallDirectory(
+                        directories,
+                        instance.resolve("loader").resolve("fabric").resolve(minecraftVersion).resolve("mods"),
+                        false
+                );
+            }
+        }
+    }
+
+    private static void addInstallDirectory(Set<Path> directories, Path directory, boolean required) throws IOException {
+        if (directory == null || !Files.isDirectory(directory)) {
+            if (required) {
+                throw new IOException("Loaded betterUC mods directory not found");
+            }
+            return;
+        }
+
+        Path normalized = directory.toAbsolutePath().normalize();
+        if (required || containsBetterUcJar(normalized)) {
+            directories.add(normalized);
+        }
+    }
+
+    private static boolean containsBetterUcJar(Path directory) throws IOException {
+        try (var files = Files.list(directory)) {
+            return files.anyMatch(path -> {
+                if (!Files.isRegularFile(path)) {
+                    return false;
+                }
+                String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
+                return name.startsWith("betteruc-") && name.endsWith(".jar");
+            });
+        }
+    }
+
+    private static boolean isLabyModPath(Path path) {
+        String normalized = path.toAbsolutePath().normalize().toString()
+                .replace('\\', '/')
+                .toLowerCase(Locale.ROOT);
+        return normalized.contains("/labymod/") || normalized.contains("/labymod-neo/");
+    }
+
     private static String sanitizeJarName(LatestVersion latestVersion) {
         String name = latestVersion.assetName();
         if (name == null || name.isBlank()) {
@@ -509,48 +619,84 @@ public final class VersionChecker {
         return name;
     }
 
-    private static Path createInstallScript(Path stagingDir, Path modsDir, Path downloadedJar, String targetName) throws IOException {
+    private static Path createInstallScript(Path stagingDir, List<Path> installDirectories,
+                                            Path downloadedJar, String targetName) throws IOException {
         if (isWindows()) {
             Path script = stagingDir.resolve("install-betteruc-update.ps1");
             Path logFile = stagingDir.resolve("install-betteruc-update.log");
             String content = "$ErrorActionPreference = 'Stop'\r\n"
                     + "$pidToWait = " + ProcessHandle.current().pid() + "\r\n"
-                    + "$modsDir = " + psQuote(modsDir) + "\r\n"
+                    + "$modsDirs = @(" + joinPowerShellPaths(installDirectories) + ")\r\n"
                     + "$downloadedJar = " + psQuote(downloadedJar) + "\r\n"
-                    + "$targetJar = Join-Path $modsDir " + psQuote(targetName) + "\r\n"
+                    + "$targetName = " + psQuote(targetName) + "\r\n"
                     + "$logFile = " + psQuote(logFile) + "\r\n"
                     + "function Write-Log($message) { Add-Content -LiteralPath $logFile -Value ((Get-Date -Format o) + ' ' + $message) }\r\n"
                     + "Write-Log 'Waiting for Minecraft process to exit.'\r\n"
                     + "while (Get-Process -Id $pidToWait -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 750 }\r\n"
                     + "Start-Sleep -Seconds 2\r\n"
-                    + "Write-Log 'Replacing betterUC jars.'\r\n"
-                    + "Get-ChildItem -LiteralPath $modsDir -Filter 'betterUC-*.jar' -File -ErrorAction SilentlyContinue | Remove-Item -Force\r\n"
-                    + "Copy-Item -LiteralPath $downloadedJar -Destination $targetJar -Force\r\n"
+                    + "$installed = 0\r\n"
+                    + "foreach ($modsDir in $modsDirs) {\r\n"
+                    + "  try {\r\n"
+                    + "    if (-not (Test-Path -LiteralPath $modsDir -PathType Container)) { Write-Log ('Skipped missing directory ' + $modsDir); continue }\r\n"
+                    + "    $targetJar = Join-Path $modsDir $targetName\r\n"
+                    + "    Get-ChildItem -LiteralPath $modsDir -Filter 'betterUC-*.jar' -File -ErrorAction SilentlyContinue | Remove-Item -Force\r\n"
+                    + "    Copy-Item -LiteralPath $downloadedJar -Destination $targetJar -Force\r\n"
+                    + "    $installed++\r\n"
+                    + "    Write-Log ('Installed ' + $targetJar)\r\n"
+                    + "  } catch { Write-Log ('Failed ' + $modsDir + ': ' + $_.Exception.Message) }\r\n"
+                    + "}\r\n"
+                    + "if ($installed -eq 0) { throw 'No betterUC installation could be updated.' }\r\n"
                     + "Remove-Item -LiteralPath $downloadedJar -Force -ErrorAction SilentlyContinue\r\n"
-                    + "Write-Log ('Installed ' + $targetJar)\r\n";
+                    + "Write-Log ('Update completed for ' + $installed + ' installation(s).')\r\n";
             Files.writeString(script, content, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
             return script;
         }
 
         Path script = stagingDir.resolve("install-betteruc-update.sh");
         Path logFile = stagingDir.resolve("install-betteruc-update.log");
+        String installCalls = createShellInstallCalls(installDirectories);
         String content = "#!/bin/sh\n"
                 + "set -eu\n"
                 + "pid_to_wait=" + ProcessHandle.current().pid() + "\n"
-                + "mods_dir=" + shQuote(modsDir.toString()) + "\n"
                 + "downloaded_jar=" + shQuote(downloadedJar.toString()) + "\n"
-                + "target_jar=\"$mods_dir/" + targetName.replace("\"", "") + "\"\n"
+                + "target_name=" + shQuote(targetName) + "\n"
                 + "log_file=" + shQuote(logFile.toString()) + "\n"
+                + "installed=0\n"
+                + "install_into() {\n"
+                + "  mods_dir=\"$1\"\n"
+                + "  if [ ! -d \"$mods_dir\" ]; then echo \"$(date -Iseconds) Skipped missing directory $mods_dir\" >> \"$log_file\"; return; fi\n"
+                + "  target_jar=\"$mods_dir/$target_name\"\n"
+                + "  rm -f \"$mods_dir\"/betterUC-*.jar\n"
+                + "  cp \"$downloaded_jar\" \"$target_jar\"\n"
+                + "  installed=$((installed + 1))\n"
+                + "  echo \"$(date -Iseconds) Installed $target_jar\" >> \"$log_file\"\n"
+                + "}\n"
                 + "echo \"$(date -Iseconds) Waiting for Minecraft process to exit.\" >> \"$log_file\"\n"
                 + "while kill -0 \"$pid_to_wait\" 2>/dev/null; do sleep 1; done\n"
                 + "sleep 2\n"
-                + "rm -f \"$mods_dir\"/betterUC-*.jar\n"
-                + "cp \"$downloaded_jar\" \"$target_jar\"\n"
+                + installCalls
+                + "if [ \"$installed\" -eq 0 ]; then echo \"$(date -Iseconds) No betterUC installation could be updated.\" >> \"$log_file\"; exit 1; fi\n"
                 + "rm -f \"$downloaded_jar\"\n"
-                + "echo \"$(date -Iseconds) Installed $target_jar\" >> \"$log_file\"\n";
+                + "echo \"$(date -Iseconds) Update completed for $installed installation(s).\" >> \"$log_file\"\n";
         Files.writeString(script, content, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
         script.toFile().setExecutable(true);
         return script;
+    }
+
+    private static String joinPowerShellPaths(List<Path> paths) {
+        List<String> quotedPaths = new ArrayList<>();
+        for (Path path : paths) {
+            quotedPaths.add(psQuote(path));
+        }
+        return String.join(", ", quotedPaths);
+    }
+
+    private static String createShellInstallCalls(List<Path> paths) {
+        StringBuilder calls = new StringBuilder();
+        for (Path path : paths) {
+            calls.append("install_into ").append(shQuote(path.toString())).append("\n");
+        }
+        return calls.toString();
     }
 
     private static boolean startInstallScript(Path script) {

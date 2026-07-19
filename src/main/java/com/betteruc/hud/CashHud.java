@@ -55,7 +55,9 @@ public class CashHud {
 
     public static void register() {
         restoreFromConfig();
-        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "cash"), (context, tickCounter) -> render(context));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "cash"), (context, tickCounter) -> {
+            if (ModernHudRenderer.shouldRenderGameplayHud()) render(context);
+        });
     }
 
     public static void updateFromStatsLine(String raw) {

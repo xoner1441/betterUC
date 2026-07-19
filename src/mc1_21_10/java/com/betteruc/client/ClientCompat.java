@@ -17,6 +17,10 @@ public final class ClientCompat {
         return currentScreen(client) != null;
     }
 
+    public static boolean suppressGameplayHud(MinecraftClient client) {
+        return false;
+    }
+
     public static void setScreen(MinecraftClient client, Screen screen) {
         if (client != null) {
             client.setScreen(screen);

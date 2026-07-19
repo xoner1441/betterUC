@@ -33,6 +33,16 @@ public abstract class TextRendererTabBadgeMixin {
     @Unique
     private static final String PARTNER_BADGE = "\uE104";
     @Unique
+    private static final MutableText USER_BADGE_TEXT = betteruc$badge(USER_BADGE);
+    @Unique
+    private static final MutableText ADMIN_BADGE_TEXT = betteruc$badge(ADMIN_BADGE);
+    @Unique
+    private static final MutableText VIP_BADGE_TEXT = betteruc$badge(VIP_BADGE);
+    @Unique
+    private static final MutableText HELPER_BADGE_TEXT = betteruc$badge(HELPER_BADGE);
+    @Unique
+    private static final MutableText PARTNER_BADGE_TEXT = betteruc$badge(PARTNER_BADGE);
+    @Unique
     private static boolean betteruc$preparingBadge;
 
     @Inject(
@@ -49,6 +59,7 @@ public abstract class TextRendererTabBadgeMixin {
             int backgroundColor,
             CallbackInfoReturnable<TextRenderer.GlyphDrawable> cir
     ) {
+        if (betteruc$preparingBadge || !TabBadgeRenderState.isPlayerListRendering()) return;
         TextRenderer textRenderer = (TextRenderer) (Object) this;
         betteruc$appendBadgeIfNeeded(textRenderer, cir, text, textRenderer.getWidth(text), x, y, shadow);
     }
@@ -67,6 +78,7 @@ public abstract class TextRendererTabBadgeMixin {
             int backgroundColor,
             CallbackInfoReturnable<TextRenderer.GlyphDrawable> cir
     ) {
+        if (betteruc$preparingBadge || !TabBadgeRenderState.isPlayerListRendering()) return;
         TextRenderer textRenderer = (TextRenderer) (Object) this;
         betteruc$appendBadgeIfNeeded(textRenderer, cir, betteruc$plainText(text), textRenderer.getWidth(text), x, y, shadow);
     }
@@ -139,11 +151,11 @@ public abstract class TextRendererTabBadgeMixin {
     @Unique
     private static MutableText betteruc$badgeForRole(String role) {
         return switch (role) {
-            case "admin" -> betteruc$badge(ADMIN_BADGE);
-            case "helper" -> betteruc$badge(HELPER_BADGE);
-            case "partner" -> betteruc$badge(PARTNER_BADGE);
-            case "vip" -> betteruc$badge(VIP_BADGE);
-            default -> betteruc$badge(USER_BADGE);
+            case "admin" -> ADMIN_BADGE_TEXT;
+            case "helper" -> HELPER_BADGE_TEXT;
+            case "partner" -> PARTNER_BADGE_TEXT;
+            case "vip" -> VIP_BADGE_TEXT;
+            default -> USER_BADGE_TEXT;
         };
     }
 

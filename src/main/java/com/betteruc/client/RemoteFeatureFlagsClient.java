@@ -75,7 +75,7 @@ public final class RemoteFeatureFlagsClient {
     public static void tick(Minecraft client) {
         if (!joined || inFlight || client == null || client.player == null) return;
         if (System.currentTimeMillis() < nextRefreshAtMs) return;
-        requestFlags(client);
+        requestFlags();
     }
 
     public static boolean isEnabled(String key) {
@@ -93,7 +93,7 @@ public final class RemoteFeatureFlagsClient {
         ));
     }
 
-    private static void requestFlags(Minecraft client) {
+    private static void requestFlags() {
         URI uri = apiUri("/api/client/features");
         if (uri == null) {
             status = "Serveradresse ung\u00FCltig";
@@ -108,7 +108,7 @@ public final class RemoteFeatureFlagsClient {
                 .GET()
                 .build();
         HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
-                .whenComplete((response, error) -> client.execute(() -> {
+                .whenComplete((response, error) -> {
                     inFlight = false;
                     nextRefreshAtMs = System.currentTimeMillis() + REFRESH_INTERVAL_MS;
                     if (!joined) return;
@@ -125,19 +125,24 @@ public final class RemoteFeatureFlagsClient {
                         return;
                     }
 
-                    Map<String, Boolean> updated = enabledDefaults();
-                    JsonArray entries = body.getAsJsonArray("features");
-                    for (JsonElement element : entries) {
-                        if (!element.isJsonObject()) continue;
-                        JsonObject entry = element.getAsJsonObject();
-                        if (!entry.has("key") || !entry.has("enabled")) continue;
-                        String key = entry.get("key").getAsString();
-                        if (!KNOWN_FLAGS.contains(key)) continue;
-                        updated.put(key, entry.get("enabled").getAsBoolean());
+                    try {
+                        Map<String, Boolean> updated = new HashMap<>(enabledDefaults());
+                        JsonArray entries = body.getAsJsonArray("features");
+                        for (JsonElement element : entries) {
+                            if (!element.isJsonObject()) continue;
+                            JsonObject entry = element.getAsJsonObject();
+                            if (!entry.has("key") || !entry.has("enabled")) continue;
+                            String key = entry.get("key").getAsString();
+                            if (!KNOWN_FLAGS.contains(key)) continue;
+                            updated.put(key, entry.get("enabled").getAsBoolean());
+                        }
+                        flags = Map.copyOf(updated);
+                        status = "Aktuell";
+                    } catch (RuntimeException parseError) {
+                        status = "Antwort ung\u00FCltig";
+                        BetterUCMod.LOGGER.warn("Could not process betterUC feature flags response", parseError);
                     }
-                    flags = Map.copyOf(updated);
-                    status = "Aktuell";
-                }));
+                });
     }
 
     private static Map<String, Boolean> enabledDefaults() {

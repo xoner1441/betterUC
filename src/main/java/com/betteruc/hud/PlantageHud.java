@@ -69,7 +69,9 @@ public class PlantageHud {
 
     public static void register() {
         restoreFromConfig();
-        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "plantage"), (context, tickCounter) -> render(context));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "plantage"), (context, tickCounter) -> {
+            if (ModernHudRenderer.shouldRenderGameplayHud()) render(context);
+        });
     }
 
     public static void clear() {
