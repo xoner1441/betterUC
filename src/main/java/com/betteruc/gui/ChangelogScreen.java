@@ -14,8 +14,12 @@ public class ChangelogScreen extends Screen {
     private static final Page[] PAGES = new Page[]{
             new Page(
                     "Cloud Integration",
-                    "betterUC 1.2.6",
+                    "betterUC 1.2.7",
                     new String[]{
+                            "Render- und Cache-Optimierungen reduzieren Lagspikes in HUDs, Chat und Tablist",
+                            "Gameplay-HUDs pausieren unter 26.x hinter Inventaren und Einstellungsfenstern",
+                            "Potion HUD besitzt jetzt eine eigene Farbe fuer Text und moderne Akzentstriche",
+                            "/vm <spieler> sendet /asu <spieler> Versuchter Mord",
                             "Mod-Einstellungen werden mit deinem betterUC Account synchronisiert",
                             "Beim Beitritt wird zuerst das aktuelle Cloud-Profil geladen",
                             "Ohne Cloud-Profil werden deine lokalen Einstellungen automatisch hochgeladen",

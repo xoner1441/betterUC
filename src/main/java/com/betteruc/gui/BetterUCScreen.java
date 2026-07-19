@@ -52,7 +52,11 @@ public class BetterUCScreen extends Screen {
             .map(container -> container.getMetadata().getVersion().getFriendlyString())
             .orElse("dev");
     private static final UpdateSection[] UPDATE_SECTIONS = new UpdateSection[]{
-            new UpdateSection("Neu in 1.2.6", new String[]{
+            new UpdateSection("Neu in 1.2.7", new String[]{
+                    "Render- und Cache-Optimierungen reduzieren Lagspikes in HUDs, Chat und Tablist",
+                    "Gameplay-HUDs pausieren unter 26.x hinter Inventaren und Einstellungsfenstern",
+                    "Potion HUD besitzt jetzt eine eigene Farbe fuer Text und moderne Akzentstriche",
+                    "/vm <spieler> sendet /asu <spieler> Versuchter Mord",
                     "Mod-Einstellungen werden sicher mit deinem betterUC Account synchronisiert",
                     "Beim Serverbeitritt wird automatisch das aktuelle Cloud-Profil geladen",
                     "Neue Accounts erhalten automatisch ein Cloud-Profil aus ihren lokalen Einstellungen",
