@@ -54,13 +54,34 @@ function accountFromRow(row) {
     lastStatsAt: iso(row.last_stats_at),
     lastServer: row.last_server || "",
     lastChannel: row.last_channel || "",
-    lastVersion: row.last_version || ""
+    lastVersion: row.last_version || "",
+    lastGameVersion: row.last_game_version || ""
   };
   optional(account, "activatedAt", iso(row.activated_at));
   optional(account, "revokedAt", iso(row.revoked_at));
   optional(account, "resetAt", iso(row.reset_at));
   optional(account, "updatedAt", iso(row.updated_at));
   return account;
+}
+
+function suggestionFromRow(row) {
+  if (!row) return null;
+  return {
+    id: Number(row.id),
+    guildId: row.guild_id || "",
+    channelId: row.channel_id || "",
+    messageId: row.message_id || "",
+    authorDiscordId: row.author_discord_id || "",
+    accountId: row.account_id || null,
+    title: row.title || "",
+    description: row.description || "",
+    status: row.status || "open",
+    statusNote: row.status_note || "",
+    upvotes: Number(row.upvotes || 0),
+    downvotes: Number(row.downvotes || 0),
+    createdAt: iso(row.created_at),
+    updatedAt: iso(row.updated_at)
+  };
 }
 
 function createDatabase(options = {}) {
@@ -89,6 +110,16 @@ function createDatabase(options = {}) {
       listWasteDropAreas: unavailable,
       upsertWasteDropArea: unavailable,
       deleteWasteDropArea: unavailable,
+      createDiscordTicket: unavailable,
+      claimDiscordTicket: unavailable,
+      closeDiscordTicket: unavailable,
+      createDiscordSuggestion: unavailable,
+      attachDiscordSuggestionMessage: unavailable,
+      getDiscordSuggestion: unavailable,
+      voteDiscordSuggestion: unavailable,
+      updateDiscordSuggestionStatus: unavailable,
+      recordDiscordActivity: unavailable,
+      getDiscordWeeklyStats: unavailable,
       getOverview: unavailable,
       async close() {}
     };
@@ -232,10 +263,10 @@ function createDatabase(options = {}) {
           insert into accounts (
             id, minecraft_name, minecraft_uuid, faction, role, status, created_at, created_by,
             activated_at, revoked_at, reset_at, updated_at, last_seen_at, last_stats_at,
-            last_server, last_channel, last_version
+            last_server, last_channel, last_version, last_game_version
           ) values (
             $1, $2, $3, $4, $5, $6, coalesce($7::timestamptz, now()), $8,
-            $9, $10, $11, $12, $13, $14, $15, $16, $17
+            $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
           )
           on conflict (id) do update set
             minecraft_name = excluded.minecraft_name,
@@ -252,7 +283,8 @@ function createDatabase(options = {}) {
             last_stats_at = excluded.last_stats_at,
             last_server = excluded.last_server,
             last_channel = excluded.last_channel,
-            last_version = excluded.last_version
+            last_version = excluded.last_version,
+            last_game_version = excluded.last_game_version
         `, [
           account.id,
           text(account.minecraftName),
@@ -270,7 +302,8 @@ function createDatabase(options = {}) {
           iso(account.lastStatsAt),
           text(account.lastServer),
           text(account.lastChannel),
-          text(account.lastVersion)
+          text(account.lastVersion),
+          text(account.lastGameVersion)
         ]);
 
         if (account.tokenHash) {
@@ -873,6 +906,222 @@ function createDatabase(options = {}) {
     }
   }
 
+  async function createDiscordTicket(ticket = {}) {
+    const result = await pool.query(`
+      insert into discord_tickets (
+        guild_id, channel_id, opener_discord_id, account_id, topic
+      ) values ($1, $2, $3, $4, $5)
+      on conflict (channel_id) do update set
+        opener_discord_id = excluded.opener_discord_id,
+        account_id = excluded.account_id,
+        topic = excluded.topic
+      returning *
+    `, [
+      text(ticket.guildId),
+      text(ticket.channelId),
+      text(ticket.openerDiscordId),
+      ticket.accountId || null,
+      text(ticket.topic, "support")
+    ]);
+    return result.rows[0] || null;
+  }
+
+  async function claimDiscordTicket(channelId, claimedByDiscordId) {
+    const result = await pool.query(`
+      update discord_tickets
+      set claimed_by_discord_id = $2,
+          claimed_at = coalesce(claimed_at, now())
+      where channel_id = $1 and status = 'open' and claimed_by_discord_id is null
+      returning *
+    `, [text(channelId), text(claimedByDiscordId)]);
+    return result.rows[0] || null;
+  }
+
+  async function closeDiscordTicket(channelId, closeReason, transcriptPath = "") {
+    const result = await pool.query(`
+      update discord_tickets
+      set status = 'closed',
+          close_reason = $2,
+          transcript_path = $3,
+          closed_at = now()
+      where channel_id = $1
+      returning *
+    `, [text(channelId), text(closeReason), text(transcriptPath)]);
+    return result.rows[0] || null;
+  }
+
+  async function createDiscordSuggestion(suggestion = {}) {
+    const result = await pool.query(`
+      insert into discord_suggestions (
+        guild_id, author_discord_id, account_id, title, description
+      ) values ($1, $2, $3, $4, $5)
+      returning *
+    `, [
+      text(suggestion.guildId),
+      text(suggestion.authorDiscordId),
+      suggestion.accountId || null,
+      text(suggestion.title),
+      text(suggestion.description)
+    ]);
+    return suggestionFromRow(result.rows[0]);
+  }
+
+  async function attachDiscordSuggestionMessage(id, channelId, messageId) {
+    const result = await pool.query(`
+      update discord_suggestions
+      set channel_id = $2, message_id = $3, updated_at = now()
+      where id = $1
+      returning *
+    `, [Number(id), text(channelId), text(messageId)]);
+    return suggestionFromRow(result.rows[0]);
+  }
+
+  async function getDiscordSuggestion(id) {
+    const result = await pool.query(`
+      select suggestion.*,
+        count(*) filter (where vote.vote = 1)::integer as upvotes,
+        count(*) filter (where vote.vote = -1)::integer as downvotes
+      from discord_suggestions suggestion
+      left join discord_suggestion_votes vote on vote.suggestion_id = suggestion.id
+      where suggestion.id = $1
+      group by suggestion.id
+    `, [Number(id)]);
+    return suggestionFromRow(result.rows[0]);
+  }
+
+  async function voteDiscordSuggestion(id, discordId, vote) {
+    const normalizedVote = Number(vote) === -1 ? -1 : 1;
+    await pool.query(`
+      insert into discord_suggestion_votes (suggestion_id, discord_id, vote)
+      values ($1, $2, $3)
+      on conflict (suggestion_id, discord_id) do update set
+        vote = excluded.vote,
+        voted_at = now()
+    `, [Number(id), text(discordId), normalizedVote]);
+    return getDiscordSuggestion(id);
+  }
+
+  async function updateDiscordSuggestionStatus(id, suggestionStatus, note = "") {
+    const allowed = new Set(["open", "planned", "in_progress", "implemented", "rejected"]);
+    const normalized = text(suggestionStatus).trim().toLowerCase();
+    if (!allowed.has(normalized)) throw new Error("Invalid suggestion status.");
+    const result = await pool.query(`
+      update discord_suggestions
+      set status = $2, status_note = $3, updated_at = now()
+      where id = $1
+      returning *
+    `, [Number(id), normalized, text(note)]);
+    return result.rows[0] ? getDiscordSuggestion(id) : null;
+  }
+
+  async function recordDiscordActivity(eventType, accountId = null, details = {}) {
+    const result = await pool.query(`
+      insert into discord_activity_events (event_type, account_id, details)
+      values ($1, $2, $3::jsonb)
+      returning id, created_at
+    `, [text(eventType), accountId || null, JSON.stringify(details && typeof details === "object" ? details : {})]);
+    return {
+      id: Number(result.rows[0].id),
+      createdAt: iso(result.rows[0].created_at)
+    };
+  }
+
+  async function getDiscordWeeklyStats(since) {
+    const from = iso(since) || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const [activityResult, ticketResult, suggestionResult, cloudResult, accountResult, versionResult, gameVersionResult] = await Promise.all([
+      pool.query(`
+        select event_type, count(*)::integer as count
+        from discord_activity_events
+        where created_at >= $1
+        group by event_type
+      `, [from]),
+      pool.query(`
+        select
+          count(*)::integer as opened,
+          count(*) filter (where status = 'closed')::integer as closed,
+          coalesce(avg(extract(epoch from (closed_at - opened_at)) / 60)
+            filter (where closed_at is not null), 0)::integer as average_close_minutes
+        from discord_tickets
+        where opened_at >= $1
+      `, [from]),
+      pool.query(`
+        select
+          count(*)::integer as created,
+          count(*) filter (where status = 'implemented')::integer as implemented,
+          (select count(*)::integer from discord_suggestion_votes where voted_at >= $1) as votes
+        from discord_suggestions
+        where created_at >= $1
+      `, [from]),
+      pool.query(`
+        select
+          count(*)::integer as syncs,
+          count(*) filter (where event_type = 'conflict')::integer as conflicts,
+          count(*) filter (where event_type = 'error')::integer as errors
+        from cloud_sync_events
+        where created_at >= $1
+      `, [from]),
+      pool.query(`
+        select
+          count(*) filter (where status = 'active')::integer as active,
+          count(*) filter (where discord_id is not null and status = 'active')::integer as linked,
+          count(*) filter (where role = 'admin' and status = 'active')::integer as admins,
+          count(*) filter (where role = 'helper' and status = 'active')::integer as helpers,
+          count(*) filter (where role = 'partner' and status = 'active')::integer as partners,
+          count(*) filter (where role = 'vip' and status = 'active')::integer as vips
+        from accounts
+        left join discord_links on discord_links.account_id = accounts.id
+      `),
+      pool.query(`
+        select last_version as label, count(*)::integer as count
+        from accounts
+        where status = 'active' and last_version <> ''
+        group by last_version
+        order by count desc, label
+      `),
+      pool.query(`
+        select last_game_version as label, count(*)::integer as count
+        from accounts
+        where status = 'active' and last_game_version <> ''
+        group by last_game_version
+        order by count desc, label
+      `)
+    ]);
+    const activities = Object.fromEntries(activityResult.rows.map(row => [row.event_type, Number(row.count || 0)]));
+    const tickets = ticketResult.rows[0] || {};
+    const suggestions = suggestionResult.rows[0] || {};
+    const cloud = cloudResult.rows[0] || {};
+    const accounts = accountResult.rows[0] || {};
+    return {
+      since: from,
+      activities,
+      tickets: {
+        opened: Number(tickets.opened || 0),
+        closed: Number(tickets.closed || 0),
+        averageCloseMinutes: Number(tickets.average_close_minutes || 0)
+      },
+      suggestions: {
+        created: Number(suggestions.created || 0),
+        implemented: Number(suggestions.implemented || 0),
+        votes: Number(suggestions.votes || 0)
+      },
+      cloud: {
+        syncs: Number(cloud.syncs || 0),
+        conflicts: Number(cloud.conflicts || 0),
+        errors: Number(cloud.errors || 0)
+      },
+      accounts: {
+        active: Number(accounts.active || 0),
+        linked: Number(accounts.linked || 0),
+        admins: Number(accounts.admins || 0),
+        helpers: Number(accounts.helpers || 0),
+        partners: Number(accounts.partners || 0),
+        vips: Number(accounts.vips || 0)
+      },
+      versions: versionResult.rows.map(row => ({ label: row.label, count: Number(row.count || 0) })),
+      gameVersions: gameVersionResult.rows.map(row => ({ label: row.label, count: Number(row.count || 0) }))
+    };
+  }
+
   async function getOverview() {
     const migrationsDir = path.join(__dirname, "migrations");
     const expectedMigrations = (await fsp.readdir(migrationsDir))
@@ -951,6 +1200,16 @@ function createDatabase(options = {}) {
     listWasteDropAreas,
     upsertWasteDropArea,
     deleteWasteDropArea,
+    createDiscordTicket,
+    claimDiscordTicket,
+    closeDiscordTicket,
+    createDiscordSuggestion,
+    attachDiscordSuggestionMessage,
+    getDiscordSuggestion,
+    voteDiscordSuggestion,
+    updateDiscordSuggestionStatus,
+    recordDiscordActivity,
+    getDiscordWeeklyStats,
     getOverview,
     async close() { await pool.end(); }
   };

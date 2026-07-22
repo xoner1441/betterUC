@@ -104,6 +104,15 @@ async function recordCloudSyncEvent(accountId, event) {
   }
 }
 
+async function recordDiscordActivity(eventType, accountId = null, details = {}) {
+  if (persistenceMode !== "postgres" || !database.enabled) return;
+  try {
+    await database.recordDiscordActivity(eventType, accountId, details);
+  } catch (error) {
+    console.error("Could not record Discord activity", eventType, error);
+  }
+}
+
 function defaultFeatureFlags() {
   return FEATURE_FLAG_DEFINITIONS.map(flag => ({
     ...flag,
@@ -256,6 +265,7 @@ async function sendGlobalChatFromDiscord(input) {
     discordMessageId: input.discordMessageId,
     discordMessageUrl: input.discordMessageUrl
   });
+  recordDiscordActivity("global_chat.discord", account.id).catch(() => {});
   return { ok: true, event };
 }
 
@@ -324,6 +334,7 @@ async function sendAnnouncementFromDiscord(input) {
     discordName: input.discordName,
     discordMessageUrl: input.discordMessageUrl
   });
+  recordDiscordActivity("announcement.discord", account.id).catch(() => {});
   return { ok: true, event };
 }
 
@@ -489,6 +500,35 @@ async function listPlatformBackups() {
   ]);
   return [...postgres, ...jsonBackups]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
+async function discordSystemSnapshot() {
+  let databaseOverview = null;
+  let databaseError = null;
+  if (persistenceMode === "postgres" && database.enabled) {
+    try {
+      databaseOverview = await database.getOverview();
+    } catch (error) {
+      databaseError = error.message || "PostgreSQL nicht erreichbar";
+    }
+  } else {
+    databaseError = "PostgreSQL ist nicht aktiv";
+  }
+  const backups = await listPlatformBackups().catch(error => {
+    console.error("Could not inspect backups for Discord monitoring", error);
+    return [];
+  });
+  return {
+    checkedAt: nowIso(),
+    uptimeSeconds: Math.floor(process.uptime()),
+    memoryBytes: process.memoryUsage().rss,
+    persistenceMode,
+    database: databaseOverview,
+    databaseError,
+    backups,
+    onlinePlayers: onlinePlayersForResponse(),
+    accountCount: store.accounts.length
+  };
 }
 
 async function cleanupStoreBackups() {
@@ -868,6 +908,7 @@ function publicAccount(account) {
     lastServer: account.lastServer || "",
     lastChannel: account.lastChannel || "",
     lastVersion: account.lastVersion || "",
+    lastGameVersion: account.lastGameVersion || "",
     status: account.status || "active",
     lastPanelLoginAt: account.lastPanelLoginAt || null,
     webPasswordSetAt: account.webPasswordSetAt || null,
@@ -894,6 +935,7 @@ function userPanelAccount(account) {
     lastServer: account.lastServer || "",
     lastChannel: account.lastChannel || "",
     lastVersion: account.lastVersion || "",
+    lastGameVersion: account.lastGameVersion || "",
     lastPanelLoginAt: account.lastPanelLoginAt || null,
     tokenPrefix: account.tokenPrefix || "",
     hasWebPassword: Boolean(account.webPasswordHash),
@@ -942,7 +984,8 @@ async function createAccessAccount({ minecraftName, faction = "", role = "user",
     lastSeenAt: null,
     lastServer: "",
     lastChannel: "",
-    lastVersion: ""
+    lastVersion: "",
+    lastGameVersion: ""
   };
 
   store.accounts.push(account);
@@ -1249,6 +1292,7 @@ function updateAccountFromClient(account, info) {
   if (info.server) account.lastServer = info.server;
   if (info.channel) account.lastChannel = info.channel;
   if (info.version) account.lastVersion = info.version;
+  if (info.gameVersion) account.lastGameVersion = info.gameVersion;
   if (info.faction) account.faction = info.faction;
   account.lastSeenAt = nowIso();
   scheduleStoreSave();
@@ -1278,6 +1322,7 @@ function onlinePlayersForResponse() {
     channel: client.channel,
     faction: effectiveClientFaction(client),
     version: client.version || (client.account && client.account.lastVersion) || "",
+    gameVersion: client.gameVersion || (client.account && client.account.lastGameVersion) || "",
     role: client.role,
     priority: client.priority,
     admin: client.role === "admin",
@@ -1720,7 +1765,8 @@ async function handleApi(req, res, url) {
       lastSeenAt: null,
       lastServer: "",
       lastChannel: "",
-      lastVersion: ""
+      lastVersion: "",
+      lastGameVersion: ""
     };
 
     store.accounts.push(account);
@@ -1917,7 +1963,8 @@ async function handleApi(req, res, url) {
       lastSeenAt: null,
       lastServer: "",
       lastChannel: "",
-      lastVersion: ""
+      lastVersion: "",
+      lastGameVersion: ""
     };
 
     store.accounts.push(account);
@@ -2190,6 +2237,7 @@ async function handleApi(req, res, url) {
     if (Object.hasOwn(body, "minecraftUuid")) account.minecraftUuid = cleanSmallLabel(body.minecraftUuid || "", "");
     if (Object.hasOwn(body, "server")) account.lastServer = cleanSmallLabel(body.server || "", "").toLowerCase();
     if (Object.hasOwn(body, "version")) account.lastVersion = cleanSmallLabel(body.version || "", "");
+    if (Object.hasOwn(body, "gameVersion")) account.lastGameVersion = cleanSmallLabel(body.gameVersion || "", "");
     if (Object.hasOwn(body, "faction")) account.faction = cleanSmallLabel(body.faction || "");
     account.lastSeenAt = nowIso();
     mergeStats(account, body.stats || body);
@@ -2299,6 +2347,7 @@ function updateClientInfo(client, payload) {
     client.faction = cleanSmallLabel(payload.faction || "", "");
   }
   client.version = cleanSmallLabel(payload.version || client.version || "", "");
+  client.gameVersion = cleanSmallLabel(payload.gameVersion || client.gameVersion || "", "");
   updateAccountFromClient(client.account, client);
 }
 
@@ -2407,6 +2456,7 @@ async function handleWsMessage(client, raw) {
     }
 
     const event = broadcastGlobalChat(client, message, "minecraft");
+    recordDiscordActivity("global_chat.minecraft", accountId).catch(() => {});
     discordBot.publishGlobalChat(event).catch(error => {
       console.warn("Could not publish betterUC global chat to Discord", error.message);
     });
@@ -2439,6 +2489,7 @@ async function handleWsMessage(client, raw) {
       return;
     }
     const event = broadcastAnnouncement(client, message, "minecraft");
+    recordDiscordActivity("announcement.minecraft", client.account.id).catch(() => {});
     discordBot.publishAnnouncement(event).catch(error => {
       console.warn("Could not publish betterUC announcement to Discord", error.message);
     });
@@ -2523,12 +2574,18 @@ function handleWsConnection(ws, req, auth, url) {
     channel: cleanChannel(url.searchParams.get("channel") || "global"),
     faction: cleanSmallLabel(url.searchParams.get("faction") || "", ""),
     version: cleanSmallLabel(url.searchParams.get("version") || "", ""),
+    gameVersion: cleanSmallLabel(url.searchParams.get("gameVersion") || "", ""),
     connectedAt: nowIso()
   };
 
   const replacedServers = replaceExistingClientSessions(client);
   clients.add(client);
   updateAccountFromClient(client.account, client);
+  recordDiscordActivity("client.connected", client.account && client.account.id !== "legacy" ? client.account.id : null, {
+    modVersion: client.version,
+    gameVersion: client.gameVersion,
+    server: client.server
+  }).catch(() => {});
   ws.send(JSON.stringify({
     type: "welcome",
     verified: client.authType !== "legacy",
@@ -2597,7 +2654,18 @@ async function main() {
     unlinkDiscordAccount,
     findAccountByDiscordId,
     sendGlobalChatFromDiscord,
-    sendAnnouncementFromDiscord
+    sendAnnouncementFromDiscord,
+    getSystemSnapshot: discordSystemSnapshot,
+    createDiscordTicket: ticket => database.createDiscordTicket(ticket),
+    claimDiscordTicket: (channelId, discordId) => database.claimDiscordTicket(channelId, discordId),
+    closeDiscordTicket: (channelId, reason, transcriptPath) => database.closeDiscordTicket(channelId, reason, transcriptPath),
+    createDiscordSuggestion: suggestion => database.createDiscordSuggestion(suggestion),
+    attachDiscordSuggestionMessage: (id, channelId, messageId) => database.attachDiscordSuggestionMessage(id, channelId, messageId),
+    getDiscordSuggestion: id => database.getDiscordSuggestion(id),
+    voteDiscordSuggestion: (id, discordId, vote) => database.voteDiscordSuggestion(id, discordId, vote),
+    updateDiscordSuggestionStatus: (id, status, note) => database.updateDiscordSuggestionStatus(id, status, note),
+    getDiscordWeeklyStats: since => database.getDiscordWeeklyStats(since),
+    recordDiscordActivity
   })
     .then(bot => {
       discordBot = bot;

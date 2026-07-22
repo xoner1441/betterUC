@@ -57,6 +57,8 @@ public class BetterUCScreen extends Screen {
                     "Gameplay-HUDs pausieren unter 26.x hinter Inventaren und Einstellungsfenstern",
                     "Potion HUD besitzt jetzt eine eigene Farbe fuer Text und moderne Akzentstriche",
                     "/vm <spieler> sendet /asu <spieler> Versuchter Mord",
+                    "Discord-Tickets enthalten Mod-Daten, Zust\u00E4ndigkeit, Abschlussgrund und Transkript",
+                    "Discord-Rollen, System-Monitoring, Vorschl\u00E4ge und Wochenberichte sind integriert",
                     "Mod-Einstellungen werden sicher mit deinem betterUC Account synchronisiert",
                     "Beim Serverbeitritt wird automatisch das aktuelle Cloud-Profil geladen",
                     "Neue Accounts erhalten automatisch ein Cloud-Profil aus ihren lokalen Einstellungen",

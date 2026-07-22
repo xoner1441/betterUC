@@ -607,7 +607,8 @@ public final class PingRelayClient {
                     + "&server=" + encode(currentServerId(client))
                     + "&channel=" + encode(channel())
                     + "&faction=" + encode(currentFaction())
-                    + "&version=" + encode(modVersion());
+                    + "&version=" + encode(modVersion())
+                    + "&gameVersion=" + encode(gameVersion());
             return URI.create(url);
         } catch (Exception e) {
             BetterUCMod.LOGGER.warn("Invalid betterUC ping relay URL", e);
@@ -638,6 +639,7 @@ public final class PingRelayClient {
         hello.addProperty("channel", channel());
         hello.addProperty("faction", currentFaction());
         hello.addProperty("version", modVersion());
+        hello.addProperty("gameVersion", gameVersion());
         socket.sendText(GSON.toJson(hello), true);
     }
 
@@ -1168,6 +1170,13 @@ public final class PingRelayClient {
     private static String modVersion() {
         return FabricLoader.getInstance()
                 .getModContainer("betteruc")
+                .map(container -> container.getMetadata().getVersion().getFriendlyString())
+                .orElse("unknown");
+    }
+
+    private static String gameVersion() {
+        return FabricLoader.getInstance()
+                .getModContainer("minecraft")
                 .map(container -> container.getMetadata().getVersion().getFriendlyString())
                 .orElse("unknown");
     }

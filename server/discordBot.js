@@ -6,14 +6,18 @@ const path = require("path");
 
 let ActionRowBuilder;
 let ActivityType;
+let AttachmentBuilder;
 let ButtonBuilder;
 let ButtonStyle;
 let ChannelType;
 let Client;
 let EmbedBuilder;
 let GatewayIntentBits;
+let ModalBuilder;
 let PermissionFlagsBits;
 let SlashCommandBuilder;
+let TextInputBuilder;
+let TextInputStyle;
 
 const BOT_TOKEN = clean(process.env.DISCORD_BOT_TOKEN);
 const GUILD_ID = clean(process.env.DISCORD_GUILD_ID);
@@ -33,6 +37,24 @@ const GLOBAL_CHAT_LOG_CHANNEL_ID = clean(process.env.DISCORD_GLOBAL_CHAT_LOG_CHA
 const GLOBAL_CHAT_LOG_CHANNEL_NAME = clean(process.env.DISCORD_GLOBAL_CHAT_LOG_CHANNEL_NAME) || "betteruc-chat-log";
 const ANNOUNCEMENT_CHANNEL_ID = clean(process.env.DISCORD_ANNOUNCEMENT_CHANNEL_ID);
 const ANNOUNCEMENT_CHANNEL_NAME = clean(process.env.DISCORD_ANNOUNCEMENT_CHANNEL_NAME) || "ank\u00fcndigungen";
+const TICKET_LOG_CHANNEL_ID = clean(process.env.DISCORD_TICKET_LOG_CHANNEL_ID);
+const TICKET_LOG_CHANNEL_NAME = clean(process.env.DISCORD_TICKET_LOG_CHANNEL_NAME) || "ticket-logs";
+const TICKET_TRANSCRIPT_DIR = process.env.DISCORD_TICKET_TRANSCRIPT_DIR
+  || path.join(process.env.DATA_DIR || path.join(__dirname, "data"), "ticket-transcripts");
+const SUGGESTION_CHANNEL_ID = clean(process.env.DISCORD_SUGGESTION_CHANNEL_ID);
+const SUGGESTION_CHANNEL_NAME = clean(process.env.DISCORD_SUGGESTION_CHANNEL_NAME) || "vorschl\u00e4ge";
+const MONITOR_CHANNEL_ID = clean(process.env.DISCORD_MONITOR_CHANNEL_ID);
+const MONITOR_CHANNEL_NAME = clean(process.env.DISCORD_MONITOR_CHANNEL_NAME) || "systemstatus";
+const MONITOR_ENABLED = String(process.env.DISCORD_MONITOR_ENABLED || "true").toLowerCase() !== "false";
+const MONITOR_CHECK_MS = Math.max(60 * 1000, Number(process.env.DISCORD_MONITOR_CHECK_MS || 5 * 60 * 1000));
+const BACKUP_MAX_AGE_HOURS = Math.max(1, Number(process.env.DISCORD_BACKUP_MAX_AGE_HOURS || 36));
+const CLOUD_ERROR_ALERT_COUNT = Math.max(1, Number(process.env.DISCORD_CLOUD_ERROR_ALERT_COUNT || 5));
+const WEEKLY_CHANNEL_ID = clean(process.env.DISCORD_WEEKLY_CHANNEL_ID);
+const WEEKLY_CHANNEL_NAME = clean(process.env.DISCORD_WEEKLY_CHANNEL_NAME) || "wochenstatistik";
+const WEEKLY_REPORT_DAY = Math.min(6, Math.max(0, Number(process.env.DISCORD_WEEKLY_REPORT_DAY || 1)));
+const WEEKLY_REPORT_HOUR_UTC = Math.min(23, Math.max(0, Number(process.env.DISCORD_WEEKLY_REPORT_HOUR_UTC || 8)));
+const ROLE_SYNC_CREATE_MISSING = String(process.env.DISCORD_ROLE_SYNC_CREATE_MISSING || "true").toLowerCase() !== "false";
+const PUBLIC_BASE_URL = clean(process.env.PUBLIC_BASE_URL) || "https://betteruc.de";
 const RELEASE_REPO = clean(process.env.DISCORD_RELEASE_REPO) || "xoner1441/betterUC";
 const RELEASE_CHECK_MS = Math.max(5 * 60 * 1000, Number(process.env.DISCORD_RELEASE_CHECK_MS || 15 * 60 * 1000));
 const ANNOUNCE_EXISTING_RELEASE = String(process.env.DISCORD_ANNOUNCE_EXISTING_RELEASE || "false").toLowerCase() === "true";
@@ -47,14 +69,18 @@ function loadDiscord() {
   ({
     ActionRowBuilder,
     ActivityType,
+    AttachmentBuilder,
     ButtonBuilder,
     ButtonStyle,
     ChannelType,
     Client,
     EmbedBuilder,
     GatewayIntentBits,
+    ModalBuilder,
     PermissionFlagsBits,
-    SlashCommandBuilder
+    SlashCommandBuilder,
+    TextInputBuilder,
+    TextInputStyle
   } = require("discord.js"));
 }
 
@@ -234,7 +260,59 @@ function buildCommands() {
         .addStringOption(option => option
           .setName("name")
           .setDescription("Minecraft-Name")
+          .setRequired(true))),
+    new SlashCommandBuilder()
+      .setName("rollen-sync")
+      .setDescription("Legt betterUC-Rollen an und synchronisiert alle verknuepften Nutzer.")
+      .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+    new SlashCommandBuilder()
+      .setName("systemstatus")
+      .setDescription("Prueft Relay, Website, PostgreSQL und Backups.")
+      .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+    new SlashCommandBuilder()
+      .setName("vorschlag")
+      .setDescription("betterUC Vorschlaege einreichen und verwalten.")
+      .addSubcommand(subcommand => subcommand
+        .setName("erstellen")
+        .setDescription("Reicht einen neuen Vorschlag ein.")
+        .addStringOption(option => option
+          .setName("titel")
+          .setDescription("Kurzer Titel")
+          .setMaxLength(80)
+          .setRequired(true))
+        .addStringOption(option => option
+          .setName("beschreibung")
+          .setDescription("Was soll geaendert werden und warum?")
+          .setMaxLength(1000)
           .setRequired(true)))
+      .addSubcommand(subcommand => subcommand
+        .setName("status")
+        .setDescription("Aendert den Status eines Vorschlags.")
+        .addIntegerOption(option => option
+          .setName("id")
+          .setDescription("Vorschlags-ID")
+          .setMinValue(1)
+          .setRequired(true))
+        .addStringOption(option => option
+          .setName("status")
+          .setDescription("Neuer Bearbeitungsstatus")
+          .setRequired(true)
+          .addChoices(
+            { name: "Offen", value: "open" },
+            { name: "Geplant", value: "planned" },
+            { name: "In Arbeit", value: "in_progress" },
+            { name: "Umgesetzt", value: "implemented" },
+            { name: "Abgelehnt", value: "rejected" }
+          ))
+        .addStringOption(option => option
+          .setName("notiz")
+          .setDescription("Optionale Begruendung")
+          .setMaxLength(300)
+          .setRequired(false))),
+    new SlashCommandBuilder()
+      .setName("wochenstatistik")
+      .setDescription("Zeigt die betterUC-Auswertung der letzten sieben Tage.")
+      .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
   ].map(command => command.toJSON());
 }
 
@@ -249,7 +327,8 @@ function onlineEmbed(players) {
       `**${display(player.name, "unknown")}**`,
       roleLabel(player.role),
       display(player.faction, ""),
-      player.version ? `v${player.version}` : ""
+      player.version ? `Mod v${player.version}` : "",
+      player.gameVersion ? `MC ${player.gameVersion}` : ""
     ].filter(Boolean);
     return bits.join(" | ");
   });
@@ -506,6 +585,40 @@ function roleByName(guild, roleName) {
   return guild.roles.cache.find(entry => entry.name.toLowerCase() === lower) || null;
 }
 
+function managedRoleSpecs() {
+  return [
+    { name: MOD_USER_ROLE_NAME, color: 0xffffff },
+    { name: USER_ROLE_NAME, color: 0xffffff },
+    { name: VIP_ROLE_NAME, color: roleColor("vip") },
+    { name: PARTNER_ROLE_NAME, color: roleColor("partner") },
+    { name: HELPER_ROLE_NAME, color: roleColor("helper") },
+    { name: ADMIN_ROLE_NAME, color: roleColor("admin") }
+  ].filter(spec => clean(spec.name));
+}
+
+async function ensureManagedBetterUcRoles(guild) {
+  await guild.roles.fetch().catch(() => null);
+  if (!ROLE_SYNC_CREATE_MISSING) return 0;
+  const botMember = guild.members.me || await guild.members.fetch(guild.client.user.id).catch(() => null);
+  if (!botMember?.permissions.has(PermissionFlagsBits.ManageRoles)) {
+    console.warn("Discord role sync cannot create roles: Manage Roles permission is missing");
+    return 0;
+  }
+  let created = 0;
+  for (const spec of managedRoleSpecs()) {
+    if (roleByName(guild, spec.name)) continue;
+    await guild.roles.create({
+      name: spec.name,
+      color: spec.color,
+      hoist: false,
+      mentionable: false,
+      reason: "betterUC role synchronization"
+    });
+    created++;
+  }
+  return created;
+}
+
 async function syncBetterUcRoles(member, account) {
   if (!member || !member.guild) return;
   await member.guild.roles.fetch().catch(() => null);
@@ -570,6 +683,81 @@ function ticketChannelOverwrites(guild, openerId, teamRoles) {
   ];
 }
 
+function isTicketTeamMember(interaction) {
+  if (interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) return true;
+  const memberRoles = interaction.member?.roles?.cache;
+  if (!memberRoles) return false;
+  const allowed = new Set(TEAM_ROLE_NAMES.map(name => name.toLowerCase()));
+  return memberRoles.some(role => allowed.has(role.name.toLowerCase()));
+}
+
+function ticketOpenerId(channel) {
+  const match = String(channel?.topic || "").match(/discord:(\d+)/);
+  return match ? match[1] : "";
+}
+
+function ticketAccountText(account) {
+  if (!account) {
+    return "Kein betterUC-Account mit diesem Discord-Nutzer verkn\u00fcpft.";
+  }
+  return [
+    `Minecraft: **${display(account.minecraftName)}**`,
+    `Rolle: **${roleLabel(account.role)}**`,
+    `Fraktion: **${display(account.stats?.factionDisplay || account.faction)}**`,
+    `Mod-Version: **${display(account.lastVersion)}**`,
+    `Minecraft: **${display(account.lastGameVersion)}**`,
+    `Letzter Kontakt: **${display(account.lastSeenAt)}**`
+  ].join("\n");
+}
+
+function ticketControls() {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("ticket:claim")
+      .setLabel("\u00dcbernehmen")
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId("ticket:close")
+      .setLabel("Ticket schlie\u00dfen")
+      .setStyle(ButtonStyle.Danger)
+  );
+}
+
+async function fetchTicketMessages(channel, limit = 1000) {
+  const messages = [];
+  let before;
+  while (messages.length < limit) {
+    const batch = await channel.messages.fetch({ limit: Math.min(100, limit - messages.length), before });
+    if (batch.size === 0) break;
+    messages.push(...batch.values());
+    before = batch.last().id;
+    if (batch.size < 100) break;
+  }
+  return messages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+}
+
+async function createTicketTranscript(channel) {
+  const messages = await fetchTicketMessages(channel);
+  const lines = [
+    `betterUC Ticket-Transkript: #${channel.name}`,
+    `Channel-ID: ${channel.id}`,
+    `Erstellt: ${new Date().toISOString()}`,
+    ""
+  ];
+  for (const message of messages) {
+    const timestamp = new Date(message.createdTimestamp).toISOString();
+    const author = message.author?.tag || message.author?.username || "Unbekannt";
+    const content = clean(message.cleanContent || message.content).replace(/\r?\n/g, " ") || "[Embed/Anhang]";
+    const attachments = [...message.attachments.values()].map(entry => entry.url).join(" ");
+    lines.push(`[${timestamp}] ${author}: ${content}${attachments ? ` | ${attachments}` : ""}`);
+  }
+  await fsp.mkdir(TICKET_TRANSCRIPT_DIR, { recursive: true });
+  const fileName = `${slug(channel.name)}-${channel.id}.txt`;
+  const filePath = path.join(TICKET_TRANSCRIPT_DIR, fileName);
+  await fsp.writeFile(filePath, lines.join("\n"), "utf8");
+  return { fileName, filePath, messageCount: messages.length };
+}
+
 async function deferEphemeral(interaction) {
   if (!interaction.deferred && !interaction.replied) {
     await interaction.deferReply({ ephemeral: true });
@@ -615,7 +803,7 @@ async function ensureTicketBotPermissions(guild) {
   }
 }
 
-async function openTicket(interaction, topic) {
+async function openTicket(interaction, topic, context) {
   await deferEphemeral(interaction);
 
   const guild = interaction.guild;
@@ -650,20 +838,26 @@ async function openTicket(interaction, topic) {
       reason: `betterUC ticket opened by ${interaction.user.tag}`
     });
 
+    const account = context.findAccountByDiscordId(interaction.user.id);
+    await context.createDiscordTicket({
+      guildId: guild.id,
+      channelId: channel.id,
+      openerDiscordId: interaction.user.id,
+      accountId: account?.id || null,
+      topic
+    });
+
     const embed = new EmbedBuilder()
       .setTitle(`Ticket: ${ticketLabel(topic)}`)
       .setColor(0x38bdf8)
       .setDescription([
         `${interaction.user}, beschreibe dein Anliegen bitte moeglichst genau.`,
-        "Ein Teammitglied meldet sich dann hier im Ticket."
-      ].join("\n"));
-    const closeRow = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("ticket:close")
-        .setLabel("Ticket schliessen")
-        .setStyle(ButtonStyle.Danger)
-    );
-    await channel.send({ content: `${interaction.user}`, embeds: [embed], components: [closeRow] });
+        "Ein Teammitglied meldet sich dann hier im Ticket.",
+        "",
+        ticketAccountText(account)
+      ].join("\n"))
+      .setFooter({ text: "betterUC Support | Transkript wird beim Schlie\u00dfen gespeichert" });
+    await channel.send({ content: `${interaction.user}`, embeds: [embed], components: [ticketControls()] });
     await respondEphemeral(interaction, `Ticket erstellt: ${channel}`);
   } catch (error) {
     console.error("Discord ticket create error", error);
@@ -671,26 +865,90 @@ async function openTicket(interaction, topic) {
   }
 }
 
-async function closeTicket(interaction) {
+async function claimTicket(interaction, context) {
+  const channel = interaction.channel;
+  if (!channel || channel.type !== ChannelType.GuildText || !channel.name.startsWith("ticket-")) {
+    await interaction.reply({ content: "Dieser Button funktioniert nur in einem offenen Ticket.", ephemeral: true });
+    return;
+  }
+  if (!isTicketTeamMember(interaction)) {
+    await interaction.reply({ content: "Nur das Support-Team kann Tickets \u00fcbernehmen.", ephemeral: true });
+    return;
+  }
+  const ticket = await context.claimDiscordTicket(channel.id, interaction.user.id);
+  if (!ticket) {
+    await interaction.reply({ content: "Das Ticket ist bereits geschlossen oder nicht registriert.", ephemeral: true });
+    return;
+  }
+  await interaction.reply({ content: `${interaction.user} hat dieses Ticket \u00fcbernommen.` });
+}
+
+async function showCloseTicketModal(interaction) {
   const channel = interaction.channel;
   if (!channel || channel.type !== ChannelType.GuildText || !channel.name.startsWith("ticket-")) {
     await interaction.reply({ content: "Dieser Button funktioniert nur in einem offenen Ticket.", ephemeral: true });
     return;
   }
 
+  const modal = new ModalBuilder()
+    .setCustomId("ticket:close-modal")
+    .setTitle("Ticket schlie\u00dfen");
+  const reason = new TextInputBuilder()
+    .setCustomId("reason")
+    .setLabel("Abschlussgrund")
+    .setStyle(TextInputStyle.Paragraph)
+    .setMinLength(3)
+    .setMaxLength(500)
+    .setRequired(true);
+  modal.addComponents(new ActionRowBuilder().addComponents(reason));
+  await interaction.showModal(modal);
+}
+
+async function closeTicket(interaction, context) {
+  const channel = interaction.channel;
+  if (!channel || channel.type !== ChannelType.GuildText || !channel.name.startsWith("ticket-")) {
+    await interaction.reply({ content: "Dieses Ticket ist nicht mehr offen.", ephemeral: true });
+    return;
+  }
+  await deferEphemeral(interaction);
+  const closeReason = clean(interaction.fields.getTextInputValue("reason"));
+  const transcript = await createTicketTranscript(channel);
+  const openerId = ticketOpenerId(channel);
+
   const closedName = `closed-${channel.name.replace(/^ticket-/, "")}`.slice(0, 100);
   await channel.setName(closedName).catch(() => null);
-  await channel.permissionOverwrites.edit(interaction.user.id, { SendMessages: false }).catch(() => null);
+  if (openerId) {
+    await channel.permissionOverwrites.edit(openerId, { SendMessages: false }).catch(() => null);
+  }
+  await context.closeDiscordTicket(channel.id, closeReason, transcript.filePath);
+  const ticketLogChannel = context.getTicketLogChannel();
+  if (ticketLogChannel) {
+    const logEmbed = new EmbedBuilder()
+      .setTitle(`Ticket geschlossen: ${channel.name}`)
+      .setColor(0xff4d5a)
+      .addFields(
+        { name: "Grund", value: closeReason, inline: false },
+        { name: "Geschlossen von", value: interaction.user.tag, inline: true },
+        { name: "Nachrichten", value: String(transcript.messageCount), inline: true }
+      )
+      .setTimestamp();
+    await ticketLogChannel.send({
+      embeds: [logEmbed],
+      files: [new AttachmentBuilder(transcript.filePath, { name: transcript.fileName })],
+      allowedMentions: { parse: [] }
+    }).catch(error => console.warn("Could not upload ticket transcript", error.message));
+  }
   const deleteRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("ticket:delete")
       .setLabel("Ticket loeschen")
       .setStyle(ButtonStyle.Danger)
   );
-  await interaction.reply({
-    content: "Ticket geschlossen. Ein Teammitglied kann den Channel nun loeschen.",
+  await interaction.editReply({ content: "Ticket geschlossen und Transkript gespeichert." });
+  await channel.send({
+    content: `Ticket geschlossen. **Grund:** ${closeReason}`,
     components: [deleteRow],
-    ephemeral: false
+    allowedMentions: { parse: [] }
   });
 }
 
@@ -724,6 +982,229 @@ function ticketPanelPayload() {
   );
 
   return { embeds: [embed], components: [row] };
+}
+
+const SUGGESTION_STATUS = Object.freeze({
+  open: { label: "Offen", color: 0x38bdf8 },
+  planned: { label: "Geplant", color: 0xfacc15 },
+  in_progress: { label: "In Arbeit", color: 0xf97316 },
+  implemented: { label: "Umgesetzt", color: 0x22c55e },
+  rejected: { label: "Abgelehnt", color: 0xff4d5a }
+});
+
+function suggestionEmbed(suggestion, authorName = "betterUC Nutzer") {
+  const state = SUGGESTION_STATUS[suggestion.status] || SUGGESTION_STATUS.open;
+  const fields = [
+    { name: "Status", value: state.label, inline: true },
+    { name: "Stimmen", value: `\u25b2 ${suggestion.upvotes || 0} | \u25bc ${suggestion.downvotes || 0}`, inline: true },
+    { name: "Eingereicht von", value: display(authorName), inline: true }
+  ];
+  if (suggestion.statusNote) fields.push({ name: "Team-Notiz", value: suggestion.statusNote, inline: false });
+  return new EmbedBuilder()
+    .setTitle(`#${suggestion.id} | ${suggestion.title}`)
+    .setColor(state.color)
+    .setDescription(suggestion.description)
+    .addFields(fields)
+    .setTimestamp(suggestion.createdAt ? new Date(suggestion.createdAt) : new Date());
+}
+
+function suggestionVoteRow(suggestion) {
+  const votingDisabled = suggestion.status === "implemented" || suggestion.status === "rejected";
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`suggestion:vote:${suggestion.id}:up`)
+      .setLabel(`Daf\u00fcr (${suggestion.upvotes || 0})`)
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(votingDisabled),
+    new ButtonBuilder()
+      .setCustomId(`suggestion:vote:${suggestion.id}:down`)
+      .setLabel(`Dagegen (${suggestion.downvotes || 0})`)
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(votingDisabled)
+  );
+}
+
+function suggestionAuthor(context, suggestion) {
+  const account = context.getAccounts().find(entry => entry.id === suggestion.accountId);
+  return account?.minecraftName || `<@${suggestion.authorDiscordId}>`;
+}
+
+async function updateSuggestionMessage(client, context, suggestion) {
+  if (!suggestion?.channelId || !suggestion?.messageId) return;
+  const channel = await client.channels.fetch(suggestion.channelId).catch(() => null);
+  if (!channel?.isTextBased()) return;
+  const message = await channel.messages.fetch(suggestion.messageId).catch(() => null);
+  if (!message) return;
+  await message.edit({
+    embeds: [suggestionEmbed(suggestion, suggestionAuthor(context, suggestion))],
+    components: [suggestionVoteRow(suggestion)]
+  });
+}
+
+async function handleSuggestionCommand(interaction, context) {
+  const subcommand = interaction.options.getSubcommand();
+  if (subcommand === "erstellen") {
+    const account = context.findAccountByDiscordId(interaction.user.id);
+    if (!account) {
+      await interaction.reply({ content: "Verkn\u00fcpfe zuerst deinen betterUC-Account mit `/link`.", ephemeral: true });
+      return;
+    }
+    const channel = context.getSuggestionChannel();
+    if (!channel) {
+      await interaction.reply({ content: "Der Vorschlagskanal ist noch nicht eingerichtet.", ephemeral: true });
+      return;
+    }
+    await deferEphemeral(interaction);
+    const suggestion = await context.createDiscordSuggestion({
+      guildId: interaction.guildId,
+      authorDiscordId: interaction.user.id,
+      accountId: account.id,
+      title: clean(interaction.options.getString("titel", true)),
+      description: clean(interaction.options.getString("beschreibung", true))
+    });
+    const message = await channel.send({
+      embeds: [suggestionEmbed(suggestion, account.minecraftName)],
+      components: [suggestionVoteRow(suggestion)],
+      allowedMentions: { parse: [] }
+    });
+    const attached = await context.attachDiscordSuggestionMessage(suggestion.id, channel.id, message.id);
+    await interaction.editReply({ content: `Vorschlag #${attached.id} wurde in ${channel} ver\u00f6ffentlicht.` });
+    return;
+  }
+
+  if (!hasManageGuild(interaction)) {
+    await interaction.reply({ content: "Nur das Team kann den Vorschlagsstatus \u00e4ndern.", ephemeral: true });
+    return;
+  }
+  const id = interaction.options.getInteger("id", true);
+  const suggestion = await context.updateDiscordSuggestionStatus(
+    id,
+    interaction.options.getString("status", true),
+    clean(interaction.options.getString("notiz") || "")
+  );
+  if (!suggestion) {
+    await interaction.reply({ content: "Vorschlag nicht gefunden.", ephemeral: true });
+    return;
+  }
+  await updateSuggestionMessage(interaction.client, context, suggestion);
+  await interaction.reply({
+    content: `Vorschlag #${id} steht jetzt auf **${SUGGESTION_STATUS[suggestion.status]?.label || suggestion.status}**.`,
+    ephemeral: true
+  });
+}
+
+async function voteSuggestion(interaction, context) {
+  const parts = interaction.customId.split(":");
+  const id = Number(parts[2]);
+  const vote = parts[3] === "down" ? -1 : 1;
+  const account = context.findAccountByDiscordId(interaction.user.id);
+  if (!account) {
+    await interaction.reply({ content: "Zum Abstimmen musst du deinen betterUC-Account mit `/link` verkn\u00fcpfen.", ephemeral: true });
+    return;
+  }
+  const existing = await context.getDiscordSuggestion(id);
+  if (!existing) {
+    await interaction.reply({ content: "Vorschlag nicht gefunden.", ephemeral: true });
+    return;
+  }
+  if (existing.status === "implemented" || existing.status === "rejected") {
+    await interaction.reply({ content: "Die Abstimmung f\u00fcr diesen Vorschlag ist beendet.", ephemeral: true });
+    return;
+  }
+  const suggestion = await context.voteDiscordSuggestion(id, interaction.user.id, vote);
+  await interaction.update({
+    embeds: [suggestionEmbed(suggestion, suggestionAuthor(context, suggestion))],
+    components: [suggestionVoteRow(suggestion)]
+  });
+}
+
+function bytesLabel(value) {
+  const bytes = Number(value || 0);
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+async function publicHealthStatus() {
+  try {
+    const response = await fetch(`${PUBLIC_BASE_URL.replace(/\/+$/, "")}/health`, {
+      headers: { "User-Agent": "betterUC-monitor" },
+      signal: AbortSignal.timeout(5000)
+    });
+    return { ok: response.ok, status: response.status, error: response.ok ? "" : `HTTP ${response.status}` };
+  } catch (error) {
+    return { ok: false, status: 0, error: error.message || "nicht erreichbar" };
+  }
+}
+
+async function systemReport(context) {
+  const [snapshot, publicHealth] = await Promise.all([
+    context.getSystemSnapshot(),
+    publicHealthStatus()
+  ]);
+  const issues = [];
+  const database = snapshot.database;
+  if (!database?.connected) issues.push(snapshot.databaseError || "PostgreSQL nicht erreichbar");
+  if (database?.pendingMigrations?.length) issues.push(`${database.pendingMigrations.length} ausstehende Migration(en)`);
+  if ((database?.counts?.cloudErrors24h || 0) >= CLOUD_ERROR_ALERT_COUNT) {
+    issues.push(`${database.counts.cloudErrors24h} Cloud-Fehler in 24h`);
+  }
+  if (!publicHealth.ok) issues.push(`Website-/Healthcheck: ${publicHealth.error}`);
+  const postgresBackup = snapshot.backups.find(entry => entry.type === "postgres");
+  const backupAgeHours = postgresBackup
+    ? (Date.now() - new Date(postgresBackup.createdAt).getTime()) / 3600000
+    : Number.POSITIVE_INFINITY;
+  if (snapshot.persistenceMode === "postgres" && backupAgeHours > BACKUP_MAX_AGE_HOURS) {
+    issues.push(postgresBackup ? `PostgreSQL-Backup ist ${Math.floor(backupAgeHours)}h alt` : "Kein PostgreSQL-Backup gefunden");
+  }
+  return { snapshot, publicHealth, postgresBackup, backupAgeHours, issues, healthy: issues.length === 0 };
+}
+
+function systemStatusEmbed(report) {
+  const { snapshot, publicHealth, postgresBackup, issues, healthy } = report;
+  return new EmbedBuilder()
+    .setTitle(healthy ? "betterUC Systemstatus: Alles bereit" : "betterUC Systemstatus: Handlungsbedarf")
+    .setColor(healthy ? 0x22c55e : 0xff4d5a)
+    .addFields(
+      { name: "Relay", value: `Online | ${snapshot.onlinePlayers.length} Mod-User`, inline: true },
+      { name: "Website", value: publicHealth.ok ? `Online | HTTP ${publicHealth.status}` : `Fehler | ${publicHealth.error}`, inline: true },
+      { name: "PostgreSQL", value: snapshot.database?.connected ? `Online | ${bytesLabel(snapshot.database.sizeBytes)}` : `Fehler | ${display(snapshot.databaseError)}`, inline: true },
+      { name: "Migrationen", value: snapshot.database?.pendingMigrations?.length ? `${snapshot.database.pendingMigrations.length} offen` : "Aktuell", inline: true },
+      { name: "Letztes DB-Backup", value: postgresBackup ? new Date(postgresBackup.createdAt).toLocaleString("de-DE") : "Nicht gefunden", inline: true },
+      { name: "Cloud-Fehler (24h)", value: String(snapshot.database?.counts?.cloudErrors24h || 0), inline: true },
+      { name: "Bewertung", value: issues.length ? issues.map(issue => `- ${issue}`).join("\n") : "Keine Probleme erkannt.", inline: false }
+    )
+    .setTimestamp(new Date(snapshot.checkedAt));
+}
+
+function distributionLabel(entries) {
+  if (!entries?.length) return "Keine Daten";
+  return entries.slice(0, 8).map(entry => `${entry.label}: **${entry.count}**`).join("\n");
+}
+
+function weeklyStatsEmbed(stats, onlinePlayers) {
+  const chatMessages = Number(stats.activities["global_chat.minecraft"] || 0)
+    + Number(stats.activities["global_chat.discord"] || 0);
+  return new EmbedBuilder()
+    .setTitle("betterUC Wochenstatistik")
+    .setColor(0x38bdf8)
+    .setDescription(`Auswertung seit ${new Date(stats.since).toLocaleString("de-DE")}`)
+    .addFields(
+      { name: "Accounts", value: `Aktiv: **${stats.accounts.active}**\nDiscord-verkn\u00fcpft: **${stats.accounts.linked}**\nJetzt online: **${onlinePlayers.length}**`, inline: true },
+      { name: "Rollen", value: `Admins: **${stats.accounts.admins}**\nHelper: **${stats.accounts.helpers}**\nPartner: **${stats.accounts.partners}**\nVIP: **${stats.accounts.vips}**`, inline: true },
+      { name: "Community", value: `Globalchat: **${chatMessages}**\nVorschl\u00e4ge: **${stats.suggestions.created}**\nStimmen: **${stats.suggestions.votes}**`, inline: true },
+      { name: "Support", value: `Tickets erstellt: **${stats.tickets.opened}**\nGeschlossen: **${stats.tickets.closed}**\n\u00d8 Abschluss: **${stats.tickets.averageCloseMinutes} Min.**`, inline: true },
+      { name: "Cloud", value: `Syncs: **${stats.cloud.syncs}**\nKonflikte: **${stats.cloud.conflicts}**\nFehler: **${stats.cloud.errors}**`, inline: true },
+      { name: "Mod-Versionen", value: distributionLabel(stats.versions), inline: true },
+      { name: "Minecraft-Versionen", value: distributionLabel(stats.gameVersions), inline: true }
+    )
+    .setTimestamp();
+}
+
+function isoWeekStart(date = new Date()) {
+  const result = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = result.getUTCDay() || 7;
+  result.setUTCDate(result.getUTCDate() - day + 1);
+  return result;
 }
 
 function hasManageGuild(interaction) {
@@ -886,7 +1367,7 @@ async function handleCommand(interaction, context) {
   }
 
   if (interaction.commandName === "ticket") {
-    await openTicket(interaction, interaction.options.getString("thema", true));
+    await openTicket(interaction, interaction.options.getString("thema", true), context);
     return;
   }
 
@@ -923,6 +1404,46 @@ async function handleCommand(interaction, context) {
     return;
   }
 
+  if (interaction.commandName === "rollen-sync") {
+    if (!hasManageGuild(interaction)) {
+      await interaction.reply({ content: "Daf\u00fcr brauchst du Discord-Adminrechte.", ephemeral: true });
+      return;
+    }
+    await deferEphemeral(interaction);
+    const result = await context.syncRoles();
+    await interaction.editReply({
+      content: `Rollensync abgeschlossen: **${result.synced}** Nutzer synchronisiert, **${result.created}** Rollen neu angelegt.`
+    });
+    return;
+  }
+
+  if (interaction.commandName === "systemstatus") {
+    if (!hasManageGuild(interaction)) {
+      await interaction.reply({ content: "Daf\u00fcr brauchst du Discord-Adminrechte.", ephemeral: true });
+      return;
+    }
+    await deferEphemeral(interaction);
+    const report = await systemReport(context);
+    await interaction.editReply({ embeds: [systemStatusEmbed(report)] });
+    return;
+  }
+
+  if (interaction.commandName === "vorschlag") {
+    await handleSuggestionCommand(interaction, context);
+    return;
+  }
+
+  if (interaction.commandName === "wochenstatistik") {
+    if (!hasManageGuild(interaction)) {
+      await interaction.reply({ content: "Daf\u00fcr brauchst du Discord-Adminrechte.", ephemeral: true });
+      return;
+    }
+    await deferEphemeral(interaction);
+    const stats = await context.getDiscordWeeklyStats(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+    await interaction.editReply({ embeds: [weeklyStatsEmbed(stats, context.getOnlinePlayers())] });
+    return;
+  }
+
   if (interaction.commandName === "code") {
     await handleCodeCommand(interaction, context);
   }
@@ -937,16 +1458,29 @@ async function handleInteraction(interaction, context) {
 
     if (interaction.isButton()) {
       if (interaction.customId.startsWith("ticket:open:")) {
-        await openTicket(interaction, interaction.customId.split(":")[2] || "support");
+        await openTicket(interaction, interaction.customId.split(":")[2] || "support", context);
+        return;
+      }
+      if (interaction.customId === "ticket:claim") {
+        await claimTicket(interaction, context);
         return;
       }
       if (interaction.customId === "ticket:close") {
-        await closeTicket(interaction);
+        await showCloseTicketModal(interaction);
         return;
       }
       if (interaction.customId === "ticket:delete") {
         await deleteTicket(interaction);
+        return;
       }
+      if (interaction.customId.startsWith("suggestion:vote:")) {
+        await voteSuggestion(interaction, context);
+      }
+      return;
+    }
+
+    if (interaction.isModalSubmit() && interaction.customId === "ticket:close-modal") {
+      await closeTicket(interaction, context);
     }
   } catch (error) {
     console.error("Discord interaction error", error);
@@ -959,17 +1493,20 @@ async function handleInteraction(interaction, context) {
 }
 
 async function syncBetterUcRoleState(client, context) {
-  if (!GUILD_ID) return;
+  if (!GUILD_ID) return { created: 0, synced: 0 };
   const guild = await client.guilds.fetch(GUILD_ID).catch(() => null);
-  if (!guild) return;
-  await guild.roles.fetch().catch(() => null);
+  if (!guild) return { created: 0, synced: 0 };
+  const created = await ensureManagedBetterUcRoles(guild);
+  let synced = 0;
 
   for (const account of context.getAccounts()) {
     if (!account.discordId) continue;
     const member = await guild.members.fetch(account.discordId).catch(() => null);
     if (!member) continue;
     await syncBetterUcRoles(member, account);
+    synced++;
   }
+  return { created, synced };
 }
 
 async function startDiscordBot(context) {
@@ -1008,9 +1545,15 @@ async function startDiscordBot(context) {
   let presenceTimer = null;
   let roleSyncTimer = null;
   let releaseCheckTimer = null;
+  let monitorTimer = null;
+  let weeklyTimer = null;
   let globalChatChannel = null;
   let globalChatLogChannel = null;
   let announcementChannel = null;
+  let ticketLogChannel = null;
+  let suggestionChannel = null;
+  let monitorChannel = null;
+  let weeklyChannel = null;
 
   const logGlobalChat = async event => {
     if (!globalChatLogChannel) return;
@@ -1040,7 +1583,43 @@ async function startDiscordBot(context) {
     await logGlobalChat(event);
   };
 
-  const commandContext = { ...context, publishAnnouncement };
+  const commandContext = {
+    ...context,
+    publishAnnouncement,
+    getTicketLogChannel: () => ticketLogChannel,
+    getSuggestionChannel: () => suggestionChannel,
+    syncRoles: () => syncBetterUcRoleState(client, context)
+  };
+
+  const runMonitor = async (forcePost = false) => {
+    if (!MONITOR_ENABLED) return null;
+    const report = await systemReport(commandContext);
+    const nextState = report.healthy ? "healthy" : "degraded";
+    const changed = botState.monitorState && botState.monitorState !== nextState;
+    const firstProblem = !botState.monitorState && !report.healthy;
+    if (monitorChannel && (forcePost || changed || firstProblem)) {
+      await monitorChannel.send({ embeds: [systemStatusEmbed(report)], allowedMentions: { parse: [] } });
+    }
+    botState.monitorState = nextState;
+    botState.monitorCheckedAt = new Date().toISOString();
+    await writeBotState(botState);
+    return report;
+  };
+
+  const runWeeklyReport = async (forcePost = false) => {
+    if (!weeklyChannel) return null;
+    const now = new Date();
+    const weekStart = isoWeekStart(now);
+    const weekKey = weekStart.toISOString().slice(0, 10);
+    const due = now.getUTCDay() === WEEKLY_REPORT_DAY && now.getUTCHours() >= WEEKLY_REPORT_HOUR_UTC;
+    if (!forcePost && (!due || botState.weeklyReportKey === weekKey)) return null;
+    const stats = await context.getDiscordWeeklyStats(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000));
+    await weeklyChannel.send({ embeds: [weeklyStatsEmbed(stats, context.getOnlinePlayers())] });
+    botState.weeklyReportKey = weekKey;
+    botState.weeklyReportPostedAt = now.toISOString();
+    await writeBotState(botState);
+    return stats;
+  };
 
   const updatePresence = () => {
     if (!ready || !client.user) return;
@@ -1070,6 +1649,10 @@ async function startDiscordBot(context) {
         console.log(`betterUC Discord commands synced for ${guild.name}`);
         globalChatLogChannel = await resolveTextChannel(guild, GLOBAL_CHAT_LOG_CHANNEL_ID, GLOBAL_CHAT_LOG_CHANNEL_NAME);
         announcementChannel = await resolveTextChannel(guild, ANNOUNCEMENT_CHANNEL_ID, ANNOUNCEMENT_CHANNEL_NAME);
+        ticketLogChannel = await resolveTextChannel(guild, TICKET_LOG_CHANNEL_ID, TICKET_LOG_CHANNEL_NAME);
+        suggestionChannel = await resolveTextChannel(guild, SUGGESTION_CHANNEL_ID, SUGGESTION_CHANNEL_NAME);
+        monitorChannel = await resolveTextChannel(guild, MONITOR_CHANNEL_ID, MONITOR_CHANNEL_NAME);
+        weeklyChannel = await resolveTextChannel(guild, WEEKLY_CHANNEL_ID, WEEKLY_CHANNEL_NAME);
         if (GLOBAL_CHAT_ENABLED) {
           globalChatChannel = await resolveTextChannel(guild, GLOBAL_CHAT_CHANNEL_ID, GLOBAL_CHAT_CHANNEL_NAME);
           if (!globalChatChannel) {
@@ -1084,6 +1667,10 @@ async function startDiscordBot(context) {
         if (!announcementChannel) {
           console.warn(`Discord announcement channel not found (${ANNOUNCEMENT_CHANNEL_ID || ANNOUNCEMENT_CHANNEL_NAME}); using Globalchat channel as fallback`);
         }
+        if (!ticketLogChannel) console.warn(`Discord ticket log channel not found (${TICKET_LOG_CHANNEL_ID || TICKET_LOG_CHANNEL_NAME})`);
+        if (!suggestionChannel) console.warn(`Discord suggestion channel not found (${SUGGESTION_CHANNEL_ID || SUGGESTION_CHANNEL_NAME})`);
+        if (MONITOR_ENABLED && !monitorChannel) console.warn(`Discord monitor channel not found (${MONITOR_CHANNEL_ID || MONITOR_CHANNEL_NAME})`);
+        if (!weeklyChannel) console.warn(`Discord weekly channel not found (${WEEKLY_CHANNEL_ID || WEEKLY_CHANNEL_NAME})`);
       } else {
         await client.application.commands.set(buildCommands());
         console.log("betterUC Discord commands synced globally");
@@ -1096,6 +1683,14 @@ async function startDiscordBot(context) {
     roleSyncTimer = setInterval(() => {
       syncBetterUcRoleState(client, context).catch(error => console.warn("Discord role sync failed", error.message));
     }, Math.max(60 * 1000, Number(process.env.DISCORD_ROLE_SYNC_MS || 5 * 60 * 1000)));
+    runMonitor().catch(error => console.warn("Discord system monitoring failed", error.message));
+    monitorTimer = setInterval(() => {
+      runMonitor().catch(error => console.warn("Discord system monitoring failed", error.message));
+    }, MONITOR_CHECK_MS);
+    runWeeklyReport().catch(error => console.warn("Discord weekly report failed", error.message));
+    weeklyTimer = setInterval(() => {
+      runWeeklyReport().catch(error => console.warn("Discord weekly report failed", error.message));
+    }, 60 * 60 * 1000);
     checkGithubRelease(client).catch(error => console.warn("Discord release check failed", error.message));
     releaseCheckTimer = setInterval(() => {
       checkGithubRelease(client).catch(error => console.warn("Discord release check failed", error.message));
@@ -1144,6 +1739,8 @@ async function startDiscordBot(context) {
       clearTimeout(presenceTimer);
       clearInterval(roleSyncTimer);
       clearInterval(releaseCheckTimer);
+      clearInterval(monitorTimer);
+      clearInterval(weeklyTimer);
       client.destroy();
     }
   };

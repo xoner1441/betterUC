@@ -45,6 +45,17 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `DISCORD_HELPER_ROLE_NAME=Helper`
 - `DISCORD_ADMIN_ROLE_NAME=Admin`
 - `DISCORD_ROLE_SYNC_MS=300000`
+- `DISCORD_ROLE_SYNC_CREATE_MISSING=true` creates missing managed roles when the bot has Manage Roles
+- `DISCORD_TICKET_LOG_CHANNEL_ID=...` private channel receiving ticket transcripts
+- `DISCORD_TICKET_TRANSCRIPT_DIR=/opt/betteruc-relay/data/ticket-transcripts`
+- `DISCORD_SUGGESTION_CHANNEL_ID=...` public channel for persistent suggestions and votes
+- `DISCORD_MONITOR_CHANNEL_ID=...` private channel for status transitions and outages
+- `DISCORD_MONITOR_CHECK_MS=300000`
+- `DISCORD_BACKUP_MAX_AGE_HOURS=36`
+- `DISCORD_CLOUD_ERROR_ALERT_COUNT=5`
+- `DISCORD_WEEKLY_CHANNEL_ID=...` channel for the automatic weekly report
+- `DISCORD_WEEKLY_REPORT_DAY=1` UTC weekday (`0` Sunday, `1` Monday)
+- `DISCORD_WEEKLY_REPORT_HOUR_UTC=8`
 - `DISCORD_UPDATE_CHANNEL_NAME=updates`
 - `DISCORD_GLOBAL_CHAT_ENABLED=false` enables the live bridge after Discord's Message Content Intent is enabled
 - `DISCORD_GLOBAL_CHAT_CHANNEL_ID=...` Discord channel bridged with `/buc`
@@ -75,6 +86,12 @@ Slash commands:
 - `/broadcast nachricht:<text>` sends an important announcement to Discord and all connected mod users; betterUC Admin only.
 - `/ticket` opens a private support ticket.
 - `/ticket-panel` posts a button-based ticket panel. Requires Discord `Manage Server`.
+- Ticket buttons allow team members to claim a ticket. Closing requires a reason and stores/uploads a transcript.
+- `/rollen-sync` creates missing betterUC roles and synchronizes every linked account. Requires Discord `Manage Server`.
+- `/systemstatus` checks the public website, relay process, PostgreSQL, migrations, Cloud errors and backups.
+- `/vorschlag erstellen` posts a persistent proposal with one vote per linked account.
+- `/vorschlag status` changes a proposal to open, planned, in progress, implemented or rejected.
+- `/wochenstatistik` shows the last seven days of accounts, versions, chat, tickets, suggestions and Cloud activity.
 - `/updates check` checks GitHub releases.
 - `/updates post_latest` posts the latest GitHub release to the update channel.
 - `/code create`, `/code reset`, `/code revoke` manage access codes. Requires Discord `Manage Server`.
@@ -82,7 +99,7 @@ Slash commands:
 Invite the bot with the scopes `bot` and `applications.commands`.
 
 Linked accounts are synced to Discord roles. Every active linked account gets `DISCORD_MOD_USER_ROLE_NAME`.
-Accounts with betterUC roles `vip`, `helper` and `admin` also get the configured role names above. Revoked or unlinked
+Accounts with betterUC roles `vip`, `partner`, `helper` and `admin` also get the configured role names above. Revoked or unlinked
 accounts lose the managed betterUC roles again.
 
 ### Discord and `/buc` live chat
