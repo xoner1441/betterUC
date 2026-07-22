@@ -255,6 +255,7 @@ public class BetterUCClient implements ClientModInitializer {
             registerAutoDropDrinkCommand(dispatcher);
             registerMuellmannAreaCommand(dispatcher);
             registerGlobalChatCommand(dispatcher);
+            registerBroadcastCommand(dispatcher);
             registerBetterUcOnlineCommand(dispatcher);
         });
     }
@@ -362,6 +363,15 @@ public class BetterUCClient implements ClientModInitializer {
         dispatcher.register(ClientCommands.literal("buc")
                 .then(ClientCommands.argument("nachricht", StringArgumentType.greedyString())
                         .executes(context -> PingRelayClient.sendGlobalChatMessage(
+                                Minecraft.getInstance(),
+                                StringArgumentType.getString(context, "nachricht")
+                        ) ? 1 : 0)));
+    }
+
+    private void registerBroadcastCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
+        dispatcher.register(ClientCommands.literal("bubroadcast")
+                .then(ClientCommands.argument("nachricht", StringArgumentType.greedyString())
+                        .executes(context -> PingRelayClient.sendAnnouncement(
                                 Minecraft.getInstance(),
                                 StringArgumentType.getString(context, "nachricht")
                         ) ? 1 : 0)));

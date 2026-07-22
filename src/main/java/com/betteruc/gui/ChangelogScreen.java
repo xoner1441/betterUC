@@ -25,6 +25,7 @@ public class ChangelogScreen extends Screen {
                             "/dropwaste wird im passenden Bereich exakt mit f\u00FCnf Sekunden Abstand ausgef\u00FChrt",
                             "/buc <nachricht> schreibt in den globalen betterUC Mod-Chat",
                             "Der Globalchat kann live mit einem moderierten Discord-Kanal verbunden werden",
+                            "Admins senden wichtige Ank\u00FCndigungen mit /bubroadcast oder Discord /broadcast",
                             "Mod-Einstellungen werden mit deinem betterUC Account synchronisiert",
                             "Beim Beitritt wird zuerst das aktuelle Cloud-Profil geladen",
                             "Ohne Cloud-Profil werden deine lokalen Einstellungen automatisch hochgeladen",

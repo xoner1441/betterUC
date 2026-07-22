@@ -40,6 +40,8 @@ const CLOUD_SETTINGS_SCHEMA_VERSION = 1;
 const CLOUD_SETTINGS_MAX_BYTES = 48 * 1024;
 const GLOBAL_CHAT_MAX_LENGTH = 180;
 const GLOBAL_CHAT_COOLDOWN_MS = 2000;
+const ANNOUNCEMENT_MAX_LENGTH = 300;
+const ANNOUNCEMENT_COOLDOWN_MS = 10000;
 const PG_DUMP_BIN = process.env.PG_DUMP_BIN || "pg_dump";
 const PG_DUMP_TIMEOUT_MS = Math.max(30_000, Number(process.env.PG_DUMP_TIMEOUT_MS || 5 * 60 * 1000));
 const execFileAsync = promisify(execFile);
@@ -79,10 +81,12 @@ let wasteDropAreas = {};
 const clients = new Set();
 const rateLimits = new Map();
 const globalChatLastSent = new Map();
+let lastAnnouncementAt = 0;
 let discordBot = {
   notifyStateChanged() {},
   publishGlobalChat() { return Promise.resolve(); },
   logGlobalChat() { return Promise.resolve(); },
+  publishAnnouncement() { return Promise.resolve(); },
   stop() {}
 };
 const database = createDatabase();
@@ -250,6 +254,74 @@ async function sendGlobalChatFromDiscord(input) {
     discordId: input.discordId,
     discordName: input.discordName,
     discordMessageId: input.discordMessageId,
+    discordMessageUrl: input.discordMessageUrl
+  });
+  return { ok: true, event };
+}
+
+function announcementRateLimit() {
+  const now = Date.now();
+  const remainingMs = ANNOUNCEMENT_COOLDOWN_MS - (now - lastAnnouncementAt);
+  if (remainingMs > 0) {
+    return `Bitte warte noch ${Math.ceil(remainingMs / 1000)} Sekunde(n), bevor du erneut sendest.`;
+  }
+  lastAnnouncementAt = now;
+  return null;
+}
+
+function broadcastAnnouncement(sender, message, origin = "minecraft", metadata = {}) {
+  const event = {
+    type: "announcement",
+    id: crypto.randomUUID(),
+    sender: sender.name || (sender.account && sender.account.minecraftName) || "betterUC Team",
+    role: "admin",
+    message,
+    origin,
+    accountId: sender.account && sender.account.id !== "legacy"
+      ? sender.account.id
+      : (sender.id || null),
+    discordId: metadata.discordId || null,
+    discordName: metadata.discordName || null,
+    discordMessageUrl: metadata.discordMessageUrl || null,
+    createdAt: Date.now()
+  };
+  const raw = JSON.stringify({
+    type: event.type,
+    id: event.id,
+    sender: event.sender,
+    message: event.message,
+    origin: event.origin,
+    createdAt: event.createdAt
+  });
+  for (const target of clients) {
+    if (target.ws.readyState !== target.ws.OPEN || target.authType === "legacy") continue;
+    target.ws.send(raw);
+  }
+  return event;
+}
+
+async function sendAnnouncementFromDiscord(input) {
+  const account = findAccountByDiscordId(input && input.discordId);
+  if (!account || cleanRole(account.role) !== "admin") {
+    return { ok: false, error: "Nur verkn\u00fcpfte betterUC-Admins d\u00fcrfen Ank\u00fcndigungen senden." };
+  }
+  const message = cleanGlobalChatMessage(input.message);
+  if (!message) return { ok: false, error: "Die Ank\u00fcndigung ist leer." };
+  if (message.length > ANNOUNCEMENT_MAX_LENGTH) {
+    return { ok: false, error: `Eine Ank\u00fcndigung darf maximal ${ANNOUNCEMENT_MAX_LENGTH} Zeichen lang sein.` };
+  }
+  const rateLimitError = announcementRateLimit();
+  if (rateLimitError) return { ok: false, error: rateLimitError };
+
+  const sender = {
+    id: account.id,
+    name: account.minecraftName || input.discordName || "betterUC Team",
+    role: "admin",
+    account
+  };
+  const event = broadcastAnnouncement(sender, message, "discord", {
+    discordId: input.discordId,
+    discordName: input.discordName,
     discordMessageUrl: input.discordMessageUrl
   });
   return { ok: true, event };
@@ -2341,6 +2413,38 @@ async function handleWsMessage(client, raw) {
     return;
   }
 
+  if (payload.type === "announcement_send") {
+    if (client.authType === "legacy" || client.role !== "admin" || !client.account || client.account.id === "legacy") {
+      client.ws.send(JSON.stringify({
+        type: "announcement_error",
+        message: "Nur betterUC-Admins d\u00fcrfen Ank\u00fcndigungen senden."
+      }));
+      return;
+    }
+    const message = cleanGlobalChatMessage(payload.message);
+    if (!message) {
+      client.ws.send(JSON.stringify({ type: "announcement_error", message: "Die Ank\u00fcndigung ist leer." }));
+      return;
+    }
+    if (message.length > ANNOUNCEMENT_MAX_LENGTH) {
+      client.ws.send(JSON.stringify({
+        type: "announcement_error",
+        message: `Eine Ank\u00fcndigung darf maximal ${ANNOUNCEMENT_MAX_LENGTH} Zeichen lang sein.`
+      }));
+      return;
+    }
+    const rateLimitError = announcementRateLimit();
+    if (rateLimitError) {
+      client.ws.send(JSON.stringify({ type: "announcement_error", message: rateLimitError }));
+      return;
+    }
+    const event = broadcastAnnouncement(client, message, "minecraft");
+    discordBot.publishAnnouncement(event).catch(error => {
+      console.warn("Could not publish betterUC announcement to Discord", error.message);
+    });
+    return;
+  }
+
   if (payload.type === "waste_area_update") {
     if (client.role !== "admin" || client.authType === "legacy") {
       client.ws.send(JSON.stringify({
@@ -2492,7 +2596,8 @@ async function main() {
     linkDiscordAccountByCode,
     unlinkDiscordAccount,
     findAccountByDiscordId,
-    sendGlobalChatFromDiscord
+    sendGlobalChatFromDiscord,
+    sendAnnouncementFromDiscord
   })
     .then(bot => {
       discordBot = bot;

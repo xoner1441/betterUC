@@ -257,6 +257,35 @@ public final class PingRelayClient {
         }
     }
 
+    public static boolean sendAnnouncement(Minecraft client, String message) {
+        String cleaned = message == null ? "" : message.trim().replaceAll("\\s+", " ");
+        if (cleaned.isBlank()) return false;
+        if (cleaned.length() > 300) {
+            sendLocalMessage(client, "Eine Ankündigung darf maximal 300 Zeichen lang sein.");
+            return false;
+        }
+        WebSocket socket = webSocket;
+        if (!connected || socket == null) {
+            sendLocalMessage(client, "Ankündigung konnte nicht gesendet werden: Relay ist nicht verbunden.");
+            return false;
+        }
+        if (!"admin".equals(role)) {
+            sendLocalMessage(client, "Nur betterUC-Admins dürfen Ankündigungen senden.");
+            return false;
+        }
+        try {
+            JsonObject payload = new JsonObject();
+            payload.addProperty("type", "announcement_send");
+            payload.addProperty("message", cleaned);
+            socket.sendText(GSON.toJson(payload), true);
+            return true;
+        } catch (Exception e) {
+            BetterUCMod.LOGGER.warn("Could not send betterUC announcement", e);
+            sendLocalMessage(client, "Ankündigung konnte nicht gesendet werden.");
+            return false;
+        }
+    }
+
     public static String roleLabel() {
         return switch (role) {
             case "admin" -> "Admin";
@@ -673,6 +702,20 @@ public final class PingRelayClient {
                 return;
             }
 
+            if ("announcement".equals(type)) {
+                renderAnnouncement(
+                        client,
+                        stringValue(json, "sender", "betterUC Team"),
+                        stringValue(json, "message", "")
+                );
+                return;
+            }
+
+            if ("announcement_error".equals(type)) {
+                sendLocalMessage(client, stringValue(json, "message", "Ankündigung wurde abgelehnt."));
+                return;
+            }
+
             if (!"ping".equals(type)) return;
 
             PingMarker marker = new PingMarker(
@@ -988,6 +1031,18 @@ public final class PingRelayClient {
                 .append(Component.literal(": ").withStyle(ChatFormatting.DARK_GRAY))
                 .append(Component.literal(message).withStyle(ChatFormatting.WHITE));
         sendText(client, line);
+    }
+
+    private static void renderAnnouncement(Minecraft client, String sender, String message) {
+        if (message == null || message.isBlank()) return;
+        sendText(client, Component.literal("================================").withStyle(ChatFormatting.DARK_RED));
+        sendText(client, Component.literal("betterUC ANKÜNDIGUNG").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+        sendText(client, Component.literal(message).withStyle(ChatFormatting.YELLOW));
+        sendText(client, Component.literal("Gesendet von " + sender).withStyle(ChatFormatting.GRAY));
+        sendText(client, Component.literal("================================").withStyle(ChatFormatting.DARK_RED));
+        if (client != null && client.player != null) {
+            client.player.playSound(SoundEvents.NOTE_BLOCK_BELL.value(), 0.8F, 0.75F);
+        }
     }
 
     private static String versionLabel(String version) {

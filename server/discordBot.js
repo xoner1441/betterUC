@@ -31,6 +31,8 @@ const GLOBAL_CHAT_CHANNEL_ID = clean(process.env.DISCORD_GLOBAL_CHAT_CHANNEL_ID)
 const GLOBAL_CHAT_CHANNEL_NAME = clean(process.env.DISCORD_GLOBAL_CHAT_CHANNEL_NAME) || "betteruc-chat";
 const GLOBAL_CHAT_LOG_CHANNEL_ID = clean(process.env.DISCORD_GLOBAL_CHAT_LOG_CHANNEL_ID);
 const GLOBAL_CHAT_LOG_CHANNEL_NAME = clean(process.env.DISCORD_GLOBAL_CHAT_LOG_CHANNEL_NAME) || "betteruc-chat-log";
+const ANNOUNCEMENT_CHANNEL_ID = clean(process.env.DISCORD_ANNOUNCEMENT_CHANNEL_ID);
+const ANNOUNCEMENT_CHANNEL_NAME = clean(process.env.DISCORD_ANNOUNCEMENT_CHANNEL_NAME) || "ank\u00fcndigungen";
 const RELEASE_REPO = clean(process.env.DISCORD_RELEASE_REPO) || "xoner1441/betterUC";
 const RELEASE_CHECK_MS = Math.max(5 * 60 * 1000, Number(process.env.DISCORD_RELEASE_CHECK_MS || 15 * 60 * 1000));
 const ANNOUNCE_EXISTING_RELEASE = String(process.env.DISCORD_ANNOUNCE_EXISTING_RELEASE || "false").toLowerCase() === "true";
@@ -158,6 +160,14 @@ function buildCommands() {
     new SlashCommandBuilder()
       .setName("unlink")
       .setDescription("Loest die Verknuepfung zwischen Discord und betterUC."),
+    new SlashCommandBuilder()
+      .setName("broadcast")
+      .setDescription("Sendet eine wichtige betterUC-Ankuendigung an Discord und ingame.")
+      .addStringOption(option => option
+        .setName("nachricht")
+        .setDescription("Text der Ankuendigung")
+        .setMaxLength(300)
+        .setRequired(true)),
     new SlashCommandBuilder()
       .setName("ticket")
       .setDescription("Oeffnet ein privates Support-Ticket.")
@@ -352,6 +362,7 @@ function globalChatEmbed(event) {
 }
 
 function globalChatLogEmbed(event) {
+  const announcement = event.type === "announcement";
   const fields = [
     { name: "Herkunft", value: event.origin === "discord" ? "Discord" : "Minecraft", inline: true },
     { name: "Rolle", value: roleLabel(event.role), inline: true },
@@ -364,11 +375,26 @@ function globalChatLogEmbed(event) {
     fields.push({ name: "Discord-Nachricht", value: event.discordMessageUrl, inline: false });
   }
   return new EmbedBuilder()
-    .setTitle(display(event.sender, "Unbekannt"))
+    .setTitle(announcement
+      ? `ANK\u00dcNDIGUNG | ${display(event.sender, "Unbekannt")}`
+      : display(event.sender, "Unbekannt"))
     .setColor(roleColor(event.role))
-    .setDescription(trimText(event.message, 180))
+    .setDescription(trimText(event.message, announcement ? 300 : 180))
     .addFields(fields)
     .setFooter({ text: `Event ${display(event.id)}` })
+    .setTimestamp(event.createdAt ? new Date(event.createdAt) : new Date());
+}
+
+function announcementEmbed(event) {
+  const origin = event.origin === "discord" ? "Discord" : "Minecraft";
+  return new EmbedBuilder()
+    .setTitle("Wichtige betterUC-Ank\u00fcndigung")
+    .setColor(0xff4d5a)
+    .setDescription(trimText(event.message, 300))
+    .addFields(
+      { name: "Gesendet von", value: display(event.sender, "betterUC Team"), inline: true },
+      { name: "Herkunft", value: origin, inline: true }
+    )
     .setTimestamp(event.createdAt ? new Date(event.createdAt) : new Date());
 }
 
@@ -843,6 +869,22 @@ async function handleCommand(interaction, context) {
     return;
   }
 
+  if (interaction.commandName === "broadcast") {
+    const result = await context.sendAnnouncementFromDiscord({
+      discordId: interaction.user.id,
+      discordName: interaction.member?.displayName || interaction.user.globalName || interaction.user.username,
+      discordMessageUrl: null,
+      message: interaction.options.getString("nachricht", true)
+    });
+    if (!result.ok) {
+      await interaction.reply({ content: result.error || "Ank\u00fcndigung konnte nicht gesendet werden.", ephemeral: true });
+      return;
+    }
+    await context.publishAnnouncement(result.event);
+    await interaction.reply({ content: "Ank\u00fcndigung wurde an Discord und alle verbundenen Mod-Nutzer gesendet.", ephemeral: true });
+    return;
+  }
+
   if (interaction.commandName === "ticket") {
     await openTicket(interaction, interaction.options.getString("thema", true));
     return;
@@ -936,6 +978,7 @@ async function startDiscordBot(context) {
       notifyStateChanged() {},
       publishGlobalChat() { return Promise.resolve(); },
       logGlobalChat() { return Promise.resolve(); },
+      publishAnnouncement() { return Promise.resolve(); },
       stop() {}
     };
   }
@@ -948,6 +991,7 @@ async function startDiscordBot(context) {
       notifyStateChanged() {},
       publishGlobalChat() { return Promise.resolve(); },
       logGlobalChat() { return Promise.resolve(); },
+      publishAnnouncement() { return Promise.resolve(); },
       stop() {}
     };
   }
@@ -966,9 +1010,10 @@ async function startDiscordBot(context) {
   let releaseCheckTimer = null;
   let globalChatChannel = null;
   let globalChatLogChannel = null;
+  let announcementChannel = null;
 
   const logGlobalChat = async event => {
-    if (!GLOBAL_CHAT_ENABLED || !globalChatLogChannel) return;
+    if (!globalChatLogChannel) return;
     if (globalChatChannel && globalChatLogChannel.id === globalChatChannel.id) return;
     await globalChatLogChannel.send({
       embeds: [globalChatLogEmbed(event)],
@@ -984,6 +1029,18 @@ async function startDiscordBot(context) {
     });
     await logGlobalChat(event);
   };
+
+  const publishAnnouncement = async event => {
+    const target = announcementChannel || globalChatChannel;
+    if (!target) return;
+    await target.send({
+      embeds: [announcementEmbed(event)],
+      allowedMentions: { parse: [] }
+    });
+    await logGlobalChat(event);
+  };
+
+  const commandContext = { ...context, publishAnnouncement };
 
   const updatePresence = () => {
     if (!ready || !client.user) return;
@@ -1011,17 +1068,21 @@ async function startDiscordBot(context) {
         const guild = await client.guilds.fetch(GUILD_ID);
         await guild.commands.set(buildCommands());
         console.log(`betterUC Discord commands synced for ${guild.name}`);
+        globalChatLogChannel = await resolveTextChannel(guild, GLOBAL_CHAT_LOG_CHANNEL_ID, GLOBAL_CHAT_LOG_CHANNEL_NAME);
+        announcementChannel = await resolveTextChannel(guild, ANNOUNCEMENT_CHANNEL_ID, ANNOUNCEMENT_CHANNEL_NAME);
         if (GLOBAL_CHAT_ENABLED) {
           globalChatChannel = await resolveTextChannel(guild, GLOBAL_CHAT_CHANNEL_ID, GLOBAL_CHAT_CHANNEL_NAME);
-          globalChatLogChannel = await resolveTextChannel(guild, GLOBAL_CHAT_LOG_CHANNEL_ID, GLOBAL_CHAT_LOG_CHANNEL_NAME);
           if (!globalChatChannel) {
             console.warn(`Discord Globalchat channel not found (${GLOBAL_CHAT_CHANNEL_ID || GLOBAL_CHAT_CHANNEL_NAME})`);
           } else {
             console.log(`betterUC Discord Globalchat connected to #${globalChatChannel.name}`);
           }
-          if (!globalChatLogChannel) {
-            console.warn(`Discord Globalchat log channel not found (${GLOBAL_CHAT_LOG_CHANNEL_ID || GLOBAL_CHAT_LOG_CHANNEL_NAME})`);
-          }
+        }
+        if (!globalChatLogChannel) {
+          console.warn(`Discord moderation log channel not found (${GLOBAL_CHAT_LOG_CHANNEL_ID || GLOBAL_CHAT_LOG_CHANNEL_NAME})`);
+        }
+        if (!announcementChannel) {
+          console.warn(`Discord announcement channel not found (${ANNOUNCEMENT_CHANNEL_ID || ANNOUNCEMENT_CHANNEL_NAME}); using Globalchat channel as fallback`);
         }
       } else {
         await client.application.commands.set(buildCommands());
@@ -1041,7 +1102,7 @@ async function startDiscordBot(context) {
     }, RELEASE_CHECK_MS);
   });
 
-  client.on("interactionCreate", interaction => handleInteraction(interaction, context));
+  client.on("interactionCreate", interaction => handleInteraction(interaction, commandContext));
   client.on("messageCreate", async message => {
     if (!GLOBAL_CHAT_ENABLED || !globalChatChannel || message.author.bot) return;
     if (!message.guild || message.guild.id !== GUILD_ID || message.channel.id !== globalChatChannel.id) return;
@@ -1078,6 +1139,7 @@ async function startDiscordBot(context) {
     notifyStateChanged,
     publishGlobalChat,
     logGlobalChat,
+    publishAnnouncement,
     stop() {
       clearTimeout(presenceTimer);
       clearInterval(roleSyncTimer);

@@ -108,6 +108,7 @@ public class BetterUCScreen extends Screen {
                     "/vm <spieler> sendet /asu <spieler> Versuchter Mord",
                     "/muellarea <sorte> <pos1|pos2|clear> markiert die vier M\u00FCllsortierbereiche",
                     "/buc <nachricht> schreibt in den globalen betterUC Mod-Chat",
+                    "/bubroadcast <nachricht> sendet als Admin eine wichtige Ank\u00FCndigung",
                     "Winzer-Fenster sammeln automatisch alle Trauben ein",
                     "Gaertner-Hinweise geben Blumen ab und sammeln verwelkte Buesche",
                     "M\u00FCllmann liest Glas, Metall, Abfall und Holz und gibt sie im passenden Bereich ab",

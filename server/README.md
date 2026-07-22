@@ -51,6 +51,8 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `DISCORD_GLOBAL_CHAT_CHANNEL_NAME=betteruc-chat` fallback when no channel ID is configured
 - `DISCORD_GLOBAL_CHAT_LOG_CHANNEL_ID=...` optional private moderation log channel
 - `DISCORD_GLOBAL_CHAT_LOG_CHANNEL_NAME=betteruc-chat-log` fallback log channel name
+- `DISCORD_ANNOUNCEMENT_CHANNEL_ID=...` channel for important betterUC announcements
+- `DISCORD_ANNOUNCEMENT_CHANNEL_NAME=ankündigungen` fallback announcement channel name
 - `DISCORD_RELEASE_REPO=xoner1441/betterUC`
 - `DISCORD_RELEASE_CHECK_MS=900000`
 - `DISCORD_ANNOUNCE_EXISTING_RELEASE=false`
@@ -70,6 +72,7 @@ Slash commands:
 - `/me` shows your linked betterUC account.
 - `/link code:<access-code>` links Discord to a betterUC account and gives the `Mod-User` role when possible.
 - `/unlink` removes that Discord link.
+- `/broadcast nachricht:<text>` sends an important announcement to Discord and all connected mod users; betterUC Admin only.
 - `/ticket` opens a private support ticket.
 - `/ticket-panel` posts a button-based ticket panel. Requires Discord `Manage Server`.
 - `/updates check` checks GitHub releases.
