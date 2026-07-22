@@ -6,6 +6,18 @@ public final class ChangelogContent {
 
     private static final Page[] LATEST_PAGES = new Page[]{
             new Page(
+                    "NEU IN 1.2.9",
+                    "Automationen & HUDs",
+                    "Mehr Kontrolle über Job-Helfer und wichtige Anzeigen.",
+                    new String[]{
+                            "Lieferant, Fischer, Winzer, Gärtner und Müllmann sind einzeln schaltbar.",
+                            "Automationsschalter werden im Cloud-Profil synchronisiert.",
+                            "Der Mülleimer-Filter markiert ausgewählte Fundstücke direkt im Inventar.",
+                            "Das Ammo HUD erkennt Waffenprofile, Nachladen und niedrige Munition zuverlässiger.",
+                            "Fremde Actionbar-Texte überschreiben die Munitionsanzeige nicht mehr."
+                    }
+            ),
+            new Page(
                     "NEU IN 1.2.8",
                     "Cloud & Stabilität",
                     "Deine Einstellungen bleiben sicher, aktuell und auf deinen Geräten verfügbar.",

@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.2.9] - 2026-07-22
+
+### Neu
+- Neues ClickGUI-Modul **Automationen** mit einzelnen Schaltern für Lieferant, Fischer, Winzer, Gärtner und Müllmann.
+- Der **Mülleimer-Filter** hebt ausgewählte Fundstücke direkt im Mülleimer-Inventar hervor und kann das Fenster bei einem Treffer kurz offen halten.
+- Das **Ammo-HUD** erkennt unterstützte Waffenprofile, Magazinstatus, Nachladen und niedrige Munition zuverlässiger.
+- Die KR47-Magazingröße kann automatisch aus der tatsächlichen Nutzung gelernt werden.
+
+### Geändert
+- Ausgeschaltete Job-Automationen reagieren nicht mehr auf Chat-Trigger und brechen geplante Aktionen sauber ab.
+- Die persönlichen Automationsschalter werden mit den übrigen Mod-Einstellungen im Cloud-Profil synchronisiert.
+- BattlePass- und andere fremde Actionbar-Texte überschreiben die Munitionsanzeige nicht mehr.
+
+### Versionierung
+- Mod-Version auf **`1.2.9`** gesetzt.
+
 ## [1.2.8] - 2026-07-22
 
 ### Neu
