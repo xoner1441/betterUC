@@ -51,80 +51,6 @@ public class BetterUCScreen extends Screen {
             .getModContainer(BetterUCMod.MOD_ID)
             .map(container -> container.getMetadata().getVersion().getFriendlyString())
             .orElse("dev");
-    private static final UpdateSection[] UPDATE_SECTIONS = new UpdateSection[]{
-            new UpdateSection("Neu in 1.2.7", new String[]{
-                    "Render- und Cache-Optimierungen reduzieren Lagspikes in HUDs, Chat und Tablist",
-                    "Gameplay-HUDs pausieren unter 26.x hinter Inventaren und Einstellungsfenstern",
-                    "Potion HUD besitzt jetzt eine eigene Farbe fuer Text und moderne Akzentstriche",
-                    "/vm <spieler> sendet /asu <spieler> Versuchter Mord",
-                    "Discord-Tickets enthalten Mod-Daten, Zust\u00E4ndigkeit, Abschlussgrund und Transkript",
-                    "Discord-Rollen, System-Monitoring, Vorschl\u00E4ge und Wochenberichte sind integriert",
-                    "Mod-Einstellungen werden sicher mit deinem betterUC Account synchronisiert",
-                    "Beim Serverbeitritt wird automatisch das aktuelle Cloud-Profil geladen",
-                    "Neue Accounts erhalten automatisch ein Cloud-Profil aus ihren lokalen Einstellungen",
-                    "HUD-Positionen, Größen, Farben, Stile und Präfixe bleiben geräteübergreifend erhalten",
-                    "Chat-, Ping-, Hotkey- und Komforteinstellungen werden ebenfalls synchronisiert",
-                    "Hotkeys k\u00F6nnen Commands sofort senden oder nur im Chat vorbereiten",
-                    "Access Codes, Relay-Adressen, Geldstände, Fraktionen und laufende Timer bleiben lokal",
-                    "Änderungen werden gebündelt gespeichert und belasten die Datenbank nicht pro Spielereignis",
-                    "Revisionsschutz verhindert, dass zwei Clients Einstellungen unbemerkt überschreiben",
-                    "Frühere Cloud-Stände können im Adminpanel als neue Revision wiederhergestellt werden",
-                    "Globale Feature-Schalter können betroffene Funktionen ohne neues Mod-Update pausieren",
-                    "Im neuen Cloud-Sync-Modul kannst du laden, hochladen oder die Automatik pausieren",
-                    "PostgreSQL speichert Profile versioniert und protokolliert Cloud-Aktualisierungen",
-                    "Das Adminpanel zeigt Sync-Aktivität, Client-Versionen, Konflikte und Fehler",
-                    "Automatische Datenbank-Backups schützen Accounts, Stats und Cloud-Profile"
-            }),
-            new UpdateSection("Kurzstart", new String[]{
-                    "Standard: N öffnet das betterUC ClickGUI",
-                    "Standard: M öffnet das Command Menu",
-                    "Keybinds sind in den Minecraft-Steuerungen änderbar",
-                    "Ping-Key tippen: Normal-Ping setzen",
-                    "Ping-Key halten: Pingrad öffnen und Typ wählen"
-            }),
-            new UpdateSection("HUD & Design", new String[]{
-                    "Health, FPS, Payday, Ammo, Bank, Bargeld, Potion, Sprint, Hack und Plant einzeln einstellbar",
-                    "HUD Vorschau verschiebt und skaliert aktive HUDs per Maus",
-                    "Stile: Modern, Transparent, Cartoon und Custom",
-                    "Custom Fonts pro HUD-Modul auswählbar"
-            }),
-            new UpdateSection("Ping-System", new String[]{
-                    "Global: alle verbundenen Mod-User sehen den Ping",
-                    "Fraktion: nur Spieler deiner getrackten Fraktion sehen den Ping",
-                    "Staat: Polizei, FBI und Rettungsdienst teilen sich einen Ping-Kanal",
-                    "Normale, Gefahr- und Sammel-Pings haben eigene Farben",
-                    "Ping-Ton und Ping-Anzeige können ein- und ausgeschaltet werden"
-            }),
-            new UpdateSection("Accounts & Website", new String[]{
-                    "Access Code verbindet die Mod mit dem betterUC Relay",
-                    "/register <passwort> legt dein Userpanel-Passwort fest",
-                    "Userpanel zeigt Bank, Bargeld, Häuser, Spielzeit, Warns und Fraktion",
-                    "Adminpanel verwaltet Codes, Rollen und Spielerdaten",
-                    "Admin bleibt die einzige Rolle mit Adminpanel-Rechten",
-                    "Discord-Bereich öffnet oder kopiert den Community-Invite"
-            }),
-            new UpdateSection("Commandliste", new String[]{
-                    "/blset <spieler> <grund> oder /setbl setzt einen Blacklist-Eintrag",
-                    "/modbl <spieler> <grund> erweitert einen bestehenden Blacklist-Eintrag",
-                    "/blinfo <spieler> zeigt gespeicherte Blacklist-Infos",
-                    "/adropdrink sendet /dropdrink automatisch anhand des Lieferjunge-Scoreboards",
-                    "/vm <spieler> sendet /asu <spieler> Versuchter Mord",
-                    "/muellarea <sorte> <pos1|pos2|clear> markiert die vier M\u00FCllsortierbereiche",
-                    "/buc <nachricht> schreibt in den globalen betterUC Mod-Chat",
-                    "/bubroadcast <nachricht> sendet als Admin eine wichtige Ank\u00FCndigung",
-                    "Winzer-Fenster sammeln automatisch alle Trauben ein",
-                    "Gaertner-Hinweise geben Blumen ab und sammeln verwelkte Buesche",
-                    "M\u00FCllmann liest Glas, Metall, Abfall und Holz und gibt sie im passenden Bereich ab",
-                    "/buonline zeigt Helpern und Admins online Mod-User"
-            }),
-            new UpdateSection("Komfort", new String[]{
-                    "Auto-Stats aktualisiert HUD- und Userpanel-Daten nach Join und AFK",
-                    "Stats-Ausgaben werden im Chat möglichst sauber unterdrückt",
-                    "Update Notify prüft GitHub und kann neue Versionen automatisch vorbereiten",
-                    "Hotkey Commands können im Tools-Bereich frei angelegt werden"
-            })
-    };
-
     private Category selectedCategory = Category.HUD;
     private ModuleOption selectedModule = ModuleOption.FPS;
     private final List<ScrollableControl> detailControls = new ArrayList<>();
@@ -132,6 +58,8 @@ public class BetterUCScreen extends Screen {
     private boolean rebuildingWidgets = false;
     private int detailScrollOffset = 0;
     private int detailContentHeight = 0;
+    private int updatesScrollOffset = 0;
+    private int updatesContentHeight = 0;
 
     public BetterUCScreen() {
         super(Component.literal("betterUC"));
@@ -282,6 +210,7 @@ public class BetterUCScreen extends Screen {
                 y = addToggle(x, y, controlW, "Auto-Updater", BetterUCConfig.INSTANCE.autoUpdateEnabled,
                         () -> BetterUCConfig.INSTANCE.autoUpdateEnabled = !BetterUCConfig.INSTANCE.autoUpdateEnabled);
                 y = addButton(x, y, controlW, "Update installieren", b -> VersionChecker.installLatestUpdate(minecraft, true));
+                y = addButton(x, y, controlW, "Changelog öffnen", b -> openScreen(new ChangelogScreen(this)));
             }
         }
 
@@ -680,7 +609,10 @@ public class BetterUCScreen extends Screen {
         context.text(font, Component.literal(selectedModule.description), x + 14, y + 25, TEXT_MUTED);
         renderSelectedStatus(context, x + 14, y + 39);
         if (selectedModule == ModuleOption.UPDATES) {
-            renderUpdates(context, x + 14, y + 58, w - 28, h - 72);
+            boolean splitLayout = w >= 470;
+            int updatesX = splitLayout ? x + 224 : x + 14;
+            int updatesY = splitLayout ? y + 58 : y + 138;
+            renderUpdates(context, updatesX, updatesY, x + w - 14 - updatesX, y + h - 14 - updatesY);
             return;
         }
         renderPreview(context, x + Math.max(224, w - 172), y + 58);
@@ -968,43 +900,114 @@ public class BetterUCScreen extends Screen {
     }
 
     private void renderUpdates(GuiGraphicsExtractor context, int x, int y, int width, int height) {
-        int maxY = y + height;
-        if (width < 420) {
-            int currentY = y;
-            for (UpdateSection section : UPDATE_SECTIONS) {
-                if (currentY + 16 > maxY) break;
-                currentY = drawUpdateSection(context, section, x, currentY, width, maxY);
-            }
-            return;
+        int bottom = y + Math.max(0, height);
+        int safeWidth = Math.max(120, width - 7);
+        int cursor = 0;
+
+        cursor += drawUpdateIntro(context, x, y + cursor - updatesScrollOffset, safeWidth, y, bottom);
+        for (ChangelogContent.Page section : ChangelogContent.clickGuiSections()) {
+            int sectionHeight = updateSectionHeight(section, safeWidth);
+            int sectionY = y + cursor - updatesScrollOffset;
+            drawUpdateSection(context, section, x, sectionY, safeWidth, sectionHeight, y, bottom);
+            cursor += sectionHeight + 7;
         }
 
-        int columnGap = 20;
-        int columnWidth = Math.max(160, (width - columnGap) / 2);
-        int[] columnY = {y, y};
+        updatesContentHeight = cursor;
+        updatesScrollOffset = clamp(updatesScrollOffset, 0, maxUpdatesScroll(height));
+        renderUpdatesScrollbar(context, x + width - 3, y, height);
+    }
 
-        for (int i = 0; i < UPDATE_SECTIONS.length; i++) {
-            int column = i % 2;
-            int sectionX = x + column * (columnWidth + columnGap);
-            int sectionY = columnY[column];
-            if (sectionY + 16 > maxY) break;
+    private int drawUpdateIntro(
+            GuiGraphicsExtractor context,
+            int x,
+            int drawY,
+            int width,
+            int clipTop,
+            int clipBottom
+    ) {
+        if (drawY >= clipTop && drawY + 9 <= clipBottom) {
+            context.text(font, Component.literal("AKTUELLE VERSION"), x, drawY, withAlpha(selectedModule.accent, 0xFF));
+        }
+        if (drawY + 15 >= clipTop && drawY + 24 <= clipBottom) {
+            context.text(font, Component.literal("betterUC " + MOD_VERSION), x, drawY + 15, TEXT_PRIMARY);
+        }
+        int descriptionHeight = wrappedUpdateHeight(
+                "Die wichtigsten Änderungen dieses Updates. Für alle Features den vollständigen Changelog öffnen.",
+                width,
+                11
+        );
+        drawClippedWrappedUpdateLine(
+                context,
+                "Die wichtigsten Änderungen dieses Updates. Für alle Features den vollständigen Changelog öffnen.",
+                x,
+                drawY + 29,
+                width,
+                TEXT_MUTED,
+                clipTop,
+                clipBottom,
+                11,
+                ""
+        );
+        return 29 + descriptionHeight + 10;
+    }
 
-            columnY[column] = drawUpdateSection(context, UPDATE_SECTIONS[i], sectionX, sectionY, columnWidth, maxY);
+    private int updateSectionHeight(ChangelogContent.Page section, int width) {
+        int innerWidth = Math.max(40, width - 28);
+        int height = 12;
+        height += wrappedUpdateHeight(section.title(), innerWidth, 11);
+        height += 3 + wrappedUpdateHeight(section.description(), innerWidth, 11) + 8;
+        for (String line : section.lines()) {
+            height += wrappedUpdateHeight(line, innerWidth - font.width("• "), 11) + 4;
+        }
+        return height + 8;
+    }
+
+    private void drawUpdateSection(
+            GuiGraphicsExtractor context,
+            ChangelogContent.Page section,
+            int x,
+            int drawY,
+            int width,
+            int sectionHeight,
+            int clipTop,
+            int clipBottom
+    ) {
+        if (drawY + sectionHeight < clipTop || drawY > clipBottom) return;
+
+        int visibleTop = Math.max(clipTop, drawY);
+        int visibleBottom = Math.min(clipBottom, drawY + sectionHeight);
+        context.fill(x, visibleTop, x + width, visibleBottom, 0x681B2430);
+        context.fill(x, visibleTop, x + 3, visibleBottom, withAlpha(selectedModule.accent, 0xE6));
+
+        int innerX = x + 14;
+        int innerWidth = Math.max(40, width - 28);
+        int lineY = drawY + 9;
+        int used = drawClippedWrappedUpdateLine(context, section.title(), innerX, lineY, innerWidth,
+                TEXT_PRIMARY, clipTop, clipBottom, 11, "");
+        lineY += used + 3;
+        used = drawClippedWrappedUpdateLine(context, section.description(), innerX, lineY, innerWidth,
+                TEXT_MUTED, clipTop, clipBottom, 11, "");
+        lineY += used + 8;
+
+        for (String line : section.lines()) {
+            used = drawClippedWrappedUpdateLine(context, line, innerX, lineY, innerWidth,
+                    TEXT_SOFT, clipTop, clipBottom, 11, "• ");
+            lineY += used + 4;
         }
     }
 
-    private int drawUpdateSection(GuiGraphicsExtractor context, UpdateSection section, int x, int y, int width, int maxY) {
-        context.text(font, Component.literal(section.title), x, y, withAlpha(selectedModule.accent, 0xFF));
-
-        int lineY = y + 16;
-        for (String line : section.lines) {
-            if (lineY + 10 > maxY) break;
-            lineY = drawWrappedUpdateLine(context, line, x, lineY, width);
-        }
-        return lineY + 10;
-    }
-
-    private int drawWrappedUpdateLine(GuiGraphicsExtractor context, String line, int x, int y, int maxWidth) {
-        String prefix = "- ";
+    private int drawClippedWrappedUpdateLine(
+            GuiGraphicsExtractor context,
+            String line,
+            int x,
+            int y,
+            int maxWidth,
+            int color,
+            int clipTop,
+            int clipBottom,
+            int lineHeight,
+            String prefix
+    ) {
         String remaining = line;
         boolean firstLine = true;
         int currentY = y;
@@ -1012,12 +1015,39 @@ public class BetterUCScreen extends Screen {
             String usedPrefix = firstLine ? prefix : "  ";
             int availableWidth = Math.max(20, maxWidth - font.width(usedPrefix));
             String part = takeFittingText(remaining, availableWidth);
-            context.text(font, Component.literal(usedPrefix + part), x, currentY, firstLine ? TEXT_SOFT : TEXT_MUTED);
+            if (currentY >= clipTop && currentY + 9 <= clipBottom) {
+                context.text(font, Component.literal(usedPrefix + part), x, currentY, color);
+            }
             remaining = remaining.substring(part.length()).trim();
-            currentY += 11;
+            currentY += lineHeight;
             firstLine = false;
         }
-        return currentY + 1;
+        return Math.max(lineHeight, currentY - y);
+    }
+
+    private int wrappedUpdateHeight(String line, int maxWidth, int lineHeight) {
+        String remaining = line;
+        int lines = 0;
+        while (!remaining.isEmpty()) {
+            String part = takeFittingText(remaining, Math.max(20, maxWidth));
+            remaining = remaining.substring(part.length()).trim();
+            lines++;
+        }
+        return Math.max(lineHeight, lines * lineHeight);
+    }
+
+    private void renderUpdatesScrollbar(GuiGraphicsExtractor context, int x, int y, int height) {
+        int maxScroll = maxUpdatesScroll(height);
+        if (maxScroll <= 0 || height <= 0) return;
+        int thumbH = Math.max(22, (int) (height * (height / (double) Math.max(height, updatesContentHeight))));
+        int travel = Math.max(1, height - thumbH);
+        int thumbY = y + (int) Math.round(travel * (updatesScrollOffset / (double) maxScroll));
+        context.fill(x, y, x + 3, y + height, 0x55333C49);
+        context.fill(x, thumbY, x + 3, thumbY + thumbH, withAlpha(selectedModule.accent, 0xDD));
+    }
+
+    private int maxUpdatesScroll(int viewportHeight) {
+        return Math.max(0, updatesContentHeight - Math.max(0, viewportHeight));
     }
 
     private void drawMiniInfo(GuiGraphicsExtractor context, int x, int y, String label, String value, boolean active) {
@@ -1029,6 +1059,25 @@ public class BetterUCScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (selectedModule == ModuleOption.UPDATES) {
+            int x = detailX();
+            int y = detailY();
+            int w = detailW();
+            int h = detailH();
+            boolean splitLayout = w >= 470;
+            int updatesX = splitLayout ? x + 224 : x + 14;
+            int updatesY = splitLayout ? y + 58 : y + 138;
+            int updatesW = x + w - 14 - updatesX;
+            int updatesH = y + h - 14 - updatesY;
+            if (inBounds(mouseX, mouseY, updatesX, updatesY, updatesW, updatesH)) {
+                updatesScrollOffset = clamp(
+                        updatesScrollOffset - (int) Math.round(verticalAmount * 30.0D),
+                        0,
+                        maxUpdatesScroll(updatesH)
+                );
+                return true;
+            }
+        }
         if (selectedModule != ModuleOption.UPDATES
                 && maxDetailScroll() > 0
                 && inBounds(mouseX, mouseY, detailX(), detailControlsTop(), detailW(), detailControlsHeight())) {
@@ -1052,6 +1101,7 @@ public class BetterUCScreen extends Screen {
             selectedCategory = category;
             selectedModule = firstModuleFor(category);
             detailScrollOffset = 0;
+            updatesScrollOffset = 0;
             refreshWidgets();
             return true;
         }
@@ -1061,6 +1111,7 @@ public class BetterUCScreen extends Screen {
             selectedCategory = module.category;
             selectedModule = module;
             detailScrollOffset = 0;
+            updatesScrollOffset = 0;
             refreshWidgets();
             return true;
         }
@@ -1703,6 +1754,4 @@ public class BetterUCScreen extends Screen {
     private record ScrollableControl(AbstractWidget widget, int baseY) {
     }
 
-    private record UpdateSection(String title, String[] lines) {
-    }
 }
