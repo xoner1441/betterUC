@@ -6,7 +6,7 @@ public final class ChangelogContent {
 
     private static final Page[] LATEST_PAGES = new Page[]{
             new Page(
-                    "NEU IN 1.2.7",
+                    "NEU IN 1.2.8",
                     "Cloud & Stabilität",
                     "Deine Einstellungen bleiben sicher, aktuell und auf deinen Geräten verfügbar.",
                     new String[]{
@@ -19,7 +19,7 @@ public final class ChangelogContent {
                     }
             ),
             new Page(
-                    "NEU IN 1.2.7",
+                    "NEU IN 1.2.8",
                     "HUD & Bedienung",
                     "Mehr Kontrolle über Darstellung, Positionierung und tägliche Abläufe.",
                     new String[]{
@@ -31,7 +31,7 @@ public final class ChangelogContent {
                     }
             ),
             new Page(
-                    "NEU IN 1.2.7",
+                    "NEU IN 1.2.8",
                     "Kommunikation",
                     "betterUC verbindet Mod-User, Fraktionen und das Team übersichtlicher.",
                     new String[]{
@@ -44,7 +44,7 @@ public final class ChangelogContent {
                     }
             ),
             new Page(
-                    "NEU IN 1.2.7",
+                    "NEU IN 1.2.8",
                     "Jobs & Commands",
                     "Neue Helfer nehmen wiederkehrende Schritte ab, ohne die Kontrolle zu verstecken.",
                     new String[]{

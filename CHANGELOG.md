@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.8] - 2026-07-22
+
+### Neu
+- Das Changelog-Fenster im ClickGUI besitzt eine klare, scrollbare Übersicht mit kompakten Kategorien.
+- Der einmalige Willkommensscreen nach einem Update zeigt die wichtigsten Änderungen auf navigierbaren Seiten.
+- ClickGUI und Startscreen verwenden jetzt dieselbe Changelog-Datenquelle.
+
+### Geändert
+- Lange und doppelte Featurelisten wurden gekürzt und verständlicher gruppiert.
+- Umlaute und ältere Darstellungsfehler in den Changelog-Texten wurden korrigiert.
+
+### Versionierung
+- Mod-Version auf **`1.2.8`** gesetzt.
+
 ## [1.2.3] - 2026-06-15
 
 ### Neu

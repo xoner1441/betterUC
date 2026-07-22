@@ -85,7 +85,7 @@ public class ChangelogScreen extends Screen {
                 x + 18, y + 15, ACCENT);
         context.text(font, Component.literal(welcomeMode ? "Was ist neu?" : "betterUC im Überblick"),
                 x + 18, y + 31, TEXT);
-        context.text(font, Component.literal("1.2.7"), x + width - 18 - font.width("1.2.7"), y + 23, 0xFF86EFAC);
+        context.text(font, Component.literal("1.2.8"), x + width - 18 - font.width("1.2.8"), y + 23, 0xFF86EFAC);
 
         int progressY = y + 50;
         int available = width - 36;
