@@ -86,6 +86,9 @@ function createDatabase(options = {}) {
       deleteCloudSettings: unavailable,
       listFeatureFlags: unavailable,
       updateFeatureFlag: unavailable,
+      listWasteDropAreas: unavailable,
+      upsertWasteDropArea: unavailable,
+      deleteWasteDropArea: unavailable,
       getOverview: unavailable,
       async close() {}
     };
@@ -799,6 +802,77 @@ function createDatabase(options = {}) {
     }
   }
 
+  function wasteDropAreaFromRow(row) {
+    if (!row) return null;
+    return {
+      type: row.waste_type,
+      x1: nullableInteger(row.x1),
+      z1: nullableInteger(row.z1),
+      x2: nullableInteger(row.x2),
+      z2: nullableInteger(row.z2),
+      dimension: row.dimension || "",
+      updatedAt: iso(row.updated_at),
+      updatedBy: row.updated_by || ""
+    };
+  }
+
+  async function listWasteDropAreas() {
+    const result = await pool.query(`
+      select waste_type, x1, z1, x2, z2, dimension, updated_at, updated_by
+      from waste_drop_areas
+      order by waste_type
+    `);
+    return result.rows.map(wasteDropAreaFromRow);
+  }
+
+  async function upsertWasteDropArea(type, area, actor = "admin:mod") {
+    const result = await pool.query(`
+      insert into waste_drop_areas(
+        waste_type, x1, z1, x2, z2, dimension, updated_at, updated_by
+      ) values ($1, $2, $3, $4, $5, $6, now(), $7)
+      on conflict (waste_type) do update set
+        x1 = excluded.x1,
+        z1 = excluded.z1,
+        x2 = excluded.x2,
+        z2 = excluded.z2,
+        dimension = excluded.dimension,
+        updated_at = now(),
+        updated_by = excluded.updated_by
+      returning waste_type, x1, z1, x2, z2, dimension, updated_at, updated_by
+    `, [
+      text(type).trim().toLowerCase(),
+      nullableInteger(area && area.x1),
+      nullableInteger(area && area.z1),
+      nullableInteger(area && area.x2),
+      nullableInteger(area && area.z2),
+      text(area && area.dimension),
+      text(actor, "admin:mod")
+    ]);
+    return wasteDropAreaFromRow(result.rows[0]);
+  }
+
+  async function deleteWasteDropArea(type, actor = "admin:mod") {
+    const client = await pool.connect();
+    try {
+      await client.query("begin");
+      const result = await client.query(
+        "delete from waste_drop_areas where waste_type = $1 returning waste_type",
+        [text(type).trim().toLowerCase()]
+      );
+      await client.query(`
+        insert into audit_log(account_id, actor, action, details)
+        values (null, $1, 'waste_area.deleted', $2::jsonb)
+      `, [text(actor, "admin:mod"), JSON.stringify({ type })]);
+      await client.query("commit");
+      return result.rowCount > 0;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async function getOverview() {
     const migrationsDir = path.join(__dirname, "migrations");
     const expectedMigrations = (await fsp.readdir(migrationsDir))
@@ -874,6 +948,9 @@ function createDatabase(options = {}) {
     deleteCloudSettings,
     listFeatureFlags,
     updateFeatureFlag,
+    listWasteDropAreas,
+    upsertWasteDropArea,
+    deleteWasteDropArea,
     getOverview,
     async close() { await pool.end(); }
   };

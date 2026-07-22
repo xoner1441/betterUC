@@ -106,8 +106,11 @@ public class BetterUCScreen extends Screen {
                     "/blinfo <spieler> zeigt gespeicherte Blacklist-Infos",
                     "/adropdrink sendet /dropdrink automatisch anhand des Lieferjunge-Scoreboards",
                     "/vm <spieler> sendet /asu <spieler> Versuchter Mord",
+                    "/muellarea <sorte> <pos1|pos2|clear> markiert die vier M\u00FCllsortierbereiche",
+                    "/buc <nachricht> schreibt in den globalen betterUC Mod-Chat",
                     "Winzer-Fenster sammeln automatisch alle Trauben ein",
                     "Gaertner-Hinweise geben Blumen ab und sammeln verwelkte Buesche",
+                    "M\u00FCllmann liest Glas, Metall, Abfall und Holz und gibt sie im passenden Bereich ab",
                     "/buonline zeigt Helpern und Admins online Mod-User"
             }),
             new UpdateSection("Komfort", new String[]{
@@ -253,6 +256,8 @@ public class BetterUCScreen extends Screen {
                         () -> BetterUCConfig.INSTANCE.chatCustomizationEnabled = !BetterUCConfig.INSTANCE.chatCustomizationEnabled);
                 y = addToggle(x, y, controlW, "Reinf Customizations", BetterUCConfig.INSTANCE.reinfCustomizationEnabled,
                         () -> BetterUCConfig.INSTANCE.reinfCustomizationEnabled = !BetterUCConfig.INSTANCE.reinfCustomizationEnabled);
+                y = addToggle(x, y, controlW, "betterUC Globalchat", BetterUCConfig.INSTANCE.globalChatEnabled,
+                        () -> BetterUCConfig.INSTANCE.globalChatEnabled = !BetterUCConfig.INSTANCE.globalChatEnabled);
                 y = addToggle(x, y, controlW, "Chat-Zeit", BetterUCConfig.INSTANCE.chatTimestampsEnabled,
                         () -> BetterUCConfig.INSTANCE.chatTimestampsEnabled = !BetterUCConfig.INSTANCE.chatTimestampsEnabled);
                 y = addTimestampField(x, y, controlW);

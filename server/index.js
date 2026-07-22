@@ -38,6 +38,8 @@ const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || "https://betteruc.
 const RELEASE_CACHE_TTL_MS = Number(process.env.RELEASE_CACHE_TTL_MS || 5 * 60 * 1000);
 const CLOUD_SETTINGS_SCHEMA_VERSION = 1;
 const CLOUD_SETTINGS_MAX_BYTES = 48 * 1024;
+const GLOBAL_CHAT_MAX_LENGTH = 180;
+const GLOBAL_CHAT_COOLDOWN_MS = 2000;
 const PG_DUMP_BIN = process.env.PG_DUMP_BIN || "pg_dump";
 const PG_DUMP_TIMEOUT_MS = Math.max(30_000, Number(process.env.PG_DUMP_TIMEOUT_MS || 5 * 60 * 1000));
 const execFileAsync = promisify(execFile);
@@ -50,7 +52,8 @@ const FEATURE_FLAG_DEFINITIONS = Object.freeze([
   { key: "auto_dropdrink", label: "Auto-Dropdrink", description: "Automatische Lieferjunge-Abgabe" },
   { key: "auto_fisher", label: "Auto-Fischer", description: "Automatische Fischer-Befehle" },
   { key: "auto_winzer", label: "Auto-Winzer", description: "Automatisches Leeren der Trauben-Fenster" },
-  { key: "auto_gaertner", label: "Auto-Gärtner", description: "Automatische Blumenabgabe und Buschsammlung" }
+  { key: "auto_gaertner", label: "Auto-Gärtner", description: "Automatische Blumenabgabe und Buschsammlung" },
+  { key: "auto_muellmann", label: "Auto-Müllmann", description: "Automatische Müllsortierung in markierten Bereichen" }
 ]);
 
 const MIME_TYPES = new Map([
@@ -72,9 +75,16 @@ let backupTimer = null;
 let saveQueue = Promise.resolve();
 let persistenceMode = "json";
 let latestReleaseCache = { fetchedAt: 0, release: null };
+let wasteDropAreas = {};
 const clients = new Set();
 const rateLimits = new Map();
-let discordBot = { notifyStateChanged() {}, stop() {} };
+const globalChatLastSent = new Map();
+let discordBot = {
+  notifyStateChanged() {},
+  publishGlobalChat() { return Promise.resolve(); },
+  logGlobalChat() { return Promise.resolve(); },
+  stop() {}
+};
 const database = createDatabase();
 
 function nowIso() {
@@ -106,6 +116,143 @@ async function loadFeatureFlags() {
   const stored = await database.listFeatureFlags();
   const storedByKey = new Map(stored.map(flag => [flag.key, flag]));
   return defaults.map(fallback => ({ ...fallback, ...(storedByKey.get(fallback.key) || {}) }));
+}
+
+const WASTE_TYPES = new Set(["glas", "metall", "abfall", "holz"]);
+
+function publicWasteDropAreas() {
+  const result = {};
+  for (const type of WASTE_TYPES) {
+    const area = wasteDropAreas[type];
+    if (!area) continue;
+    result[type] = {
+      x1: Number.isInteger(area.x1) ? area.x1 : null,
+      z1: Number.isInteger(area.z1) ? area.z1 : null,
+      x2: Number.isInteger(area.x2) ? area.x2 : null,
+      z2: Number.isInteger(area.z2) ? area.z2 : null,
+      dimension: cleanDimension(area.dimension || ""),
+      updatedAt: area.updatedAt || null
+    };
+  }
+  return result;
+}
+
+async function loadWasteDropAreas() {
+  wasteDropAreas = {};
+  if (persistenceMode !== "postgres" || !database.enabled) return;
+  const stored = await database.listWasteDropAreas();
+  for (const area of stored) {
+    if (area && WASTE_TYPES.has(area.type)) wasteDropAreas[area.type] = area;
+  }
+}
+
+function sendWasteDropAreas(client) {
+  if (!client || client.ws.readyState !== client.ws.OPEN) return;
+  client.ws.send(JSON.stringify({
+    type: "waste_areas",
+    areas: publicWasteDropAreas()
+  }));
+}
+
+function broadcastWasteDropAreas() {
+  for (const client of clients) sendWasteDropAreas(client);
+}
+
+function cleanGlobalChatMessage(value) {
+  return String(value || "")
+    .replace(/\u00a7./g, "")
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function sendGlobalChatError(client, message) {
+  if (!client || client.ws.readyState !== client.ws.OPEN) return;
+  client.ws.send(JSON.stringify({
+    type: "global_chat_error",
+    message
+  }));
+}
+
+function broadcastGlobalChat(sender, message, origin = "minecraft", metadata = {}) {
+  const event = {
+    type: "global_chat",
+    id: crypto.randomUUID(),
+    sender: sender.name || (sender.account && sender.account.minecraftName) || "Unbekannt",
+    role: sender.role,
+    message,
+    origin,
+    accountId: sender.account && sender.account.id !== "legacy"
+      ? sender.account.id
+      : (sender.id || null),
+    discordId: metadata.discordId || null,
+    discordName: metadata.discordName || null,
+    discordMessageId: metadata.discordMessageId || null,
+    discordMessageUrl: metadata.discordMessageUrl || null,
+    createdAt: Date.now()
+  };
+  const raw = JSON.stringify({
+    type: event.type,
+    id: event.id,
+    sender: event.sender,
+    role: event.role,
+    message: event.message,
+    origin: event.origin,
+    createdAt: event.createdAt
+  });
+
+  for (const target of clients) {
+    if (target.ws.readyState !== target.ws.OPEN) continue;
+    if (target.authType === "legacy") continue;
+    target.ws.send(raw);
+  }
+  return event;
+}
+
+function globalChatRateLimit(accountId) {
+  const now = Date.now();
+  const remainingMs = GLOBAL_CHAT_COOLDOWN_MS - (now - (globalChatLastSent.get(accountId) || 0));
+  if (remainingMs > 0) {
+    return `Bitte warte noch ${Math.ceil(remainingMs / 1000)} Sekunde(n).`;
+  }
+  globalChatLastSent.set(accountId, now);
+  return null;
+}
+
+async function sendGlobalChatFromDiscord(input) {
+  const account = findAccountByDiscordId(input && input.discordId);
+  if (!account) {
+    return {
+      ok: false,
+      error: "Dein Discord-Konto ist nicht mit einem aktiven betterUC-Account verkn\u00fcpft. Nutze zuerst /link."
+    };
+  }
+
+  const message = cleanGlobalChatMessage(input.message);
+  if (!message) return { ok: false, error: "Die Globalchat-Nachricht ist leer." };
+  if (message.length > GLOBAL_CHAT_MAX_LENGTH) {
+    return {
+      ok: false,
+      error: `Die Globalchat-Nachricht darf maximal ${GLOBAL_CHAT_MAX_LENGTH} Zeichen lang sein.`
+    };
+  }
+
+  const rateLimitError = globalChatRateLimit(account.id);
+  if (rateLimitError) return { ok: false, error: rateLimitError };
+
+  const sender = {
+    id: account.id,
+    name: account.minecraftName || input.discordName || "Unbekannt",
+    role: cleanRole(account.role),
+    account
+  };
+  const event = broadcastGlobalChat(sender, message, "discord", {
+    discordId: input.discordId,
+    discordName: input.discordName,
+    discordMessageId: input.discordMessageId,
+    discordMessageUrl: input.discordMessageUrl
+  });
+  return { ok: true, event };
 }
 
 function json(res, status, payload) {
@@ -2133,7 +2280,7 @@ function broadcastPing(sender, payload) {
   }
 }
 
-function handleWsMessage(client, raw) {
+async function handleWsMessage(client, raw) {
   let payload;
   try {
     payload = JSON.parse(String(raw));
@@ -2161,6 +2308,101 @@ function handleWsMessage(client, raw) {
 
   if (payload.type === "ping") {
     broadcastPing(client, payload);
+    return;
+  }
+
+  if (payload.type === "global_chat_send") {
+    if (client.authType === "legacy" || !client.account || client.account.id === "legacy") {
+      sendGlobalChatError(client, "F\u00fcr den Globalchat wird ein pers\u00f6nlicher Access Code ben\u00f6tigt.");
+      return;
+    }
+
+    const message = cleanGlobalChatMessage(payload.message);
+    if (!message) {
+      sendGlobalChatError(client, "Die Globalchat-Nachricht ist leer.");
+      return;
+    }
+    if (message.length > GLOBAL_CHAT_MAX_LENGTH) {
+      sendGlobalChatError(client, `Die Globalchat-Nachricht darf maximal ${GLOBAL_CHAT_MAX_LENGTH} Zeichen lang sein.`);
+      return;
+    }
+
+    const accountId = client.account.id;
+    const rateLimitError = globalChatRateLimit(accountId);
+    if (rateLimitError) {
+      sendGlobalChatError(client, rateLimitError);
+      return;
+    }
+
+    const event = broadcastGlobalChat(client, message, "minecraft");
+    discordBot.publishGlobalChat(event).catch(error => {
+      console.warn("Could not publish betterUC global chat to Discord", error.message);
+    });
+    return;
+  }
+
+  if (payload.type === "waste_area_update") {
+    if (client.role !== "admin" || client.authType === "legacy") {
+      client.ws.send(JSON.stringify({
+        type: "waste_area_error",
+        message: "Nur betterUC-Admins dürfen Müllbereiche ändern."
+      }));
+      return;
+    }
+    if (persistenceMode !== "postgres" || !database.enabled) {
+      client.ws.send(JSON.stringify({
+        type: "waste_area_error",
+        message: "Die Datenbank ist derzeit nicht verfügbar."
+      }));
+      return;
+    }
+
+    const wasteType = String(payload.wasteType || "").trim().toLowerCase();
+    const action = String(payload.action || "").trim().toLowerCase();
+    if (!WASTE_TYPES.has(wasteType) || !["pos1", "pos2", "clear"].includes(action)) {
+      client.ws.send(JSON.stringify({ type: "waste_area_error", message: "Ungültige Bereichsdaten." }));
+      return;
+    }
+
+    const actor = `admin:${client.account.minecraftName || client.name || client.account.id}`;
+    if (action === "clear") {
+      await database.deleteWasteDropArea(wasteType, actor);
+      delete wasteDropAreas[wasteType];
+    } else {
+      const x = Number(payload.x);
+      const z = Number(payload.z);
+      const dimension = cleanDimension(payload.dimension || "");
+      if (!Number.isSafeInteger(x) || !Number.isSafeInteger(z) || dimension === "unknown") {
+        client.ws.send(JSON.stringify({ type: "waste_area_error", message: "Position oder Dimension ist ungültig." }));
+        return;
+      }
+
+      const current = wasteDropAreas[wasteType] || {
+        type: wasteType,
+        x1: null,
+        z1: null,
+        x2: null,
+        z2: null,
+        dimension
+      };
+      if (current.dimension && current.dimension !== dimension) {
+        current.x1 = null;
+        current.z1 = null;
+        current.x2 = null;
+        current.z2 = null;
+      }
+      current.dimension = dimension;
+      current[action === "pos1" ? "x1" : "x2"] = x;
+      current[action === "pos1" ? "z1" : "z2"] = z;
+      wasteDropAreas[wasteType] = await database.upsertWasteDropArea(wasteType, current, actor);
+    }
+
+    broadcastWasteDropAreas();
+    client.ws.send(JSON.stringify({
+      type: "waste_area_saved",
+      wasteType,
+      action
+    }));
   }
 }
 
@@ -2191,12 +2433,20 @@ function handleWsConnection(ws, req, auth, url) {
     admin: client.role === "admin",
     ttlMs: PING_TTL_MS
   }));
+  sendWasteDropAreas(client);
   broadcastPresence(client.server);
   for (const server of replacedServers) {
     if (server !== client.server) broadcastPresence(server);
   }
 
-  ws.on("message", raw => handleWsMessage(client, raw));
+  ws.on("message", raw => {
+    handleWsMessage(client, raw).catch(error => {
+      console.error("Could not handle betterUC websocket message", error);
+      if (ws.readyState === ws.OPEN) {
+        ws.send(JSON.stringify({ type: "waste_area_error", message: "Bereich konnte nicht gespeichert werden." }));
+      }
+    });
+  });
   ws.on("close", () => removeClient(client));
   ws.on("error", () => removeClient(client));
 }
@@ -2227,6 +2477,7 @@ function removeClient(client) {
 
 async function main() {
   await loadStore();
+  await loadWasteDropAreas();
   scheduleStoreBackups();
   startDiscordBot({
     getOnlinePlayers: onlinePlayersForResponse,
@@ -2240,7 +2491,8 @@ async function main() {
     revokeAccountByMinecraftName,
     linkDiscordAccountByCode,
     unlinkDiscordAccount,
-    findAccountByDiscordId
+    findAccountByDiscordId,
+    sendGlobalChatFromDiscord
   })
     .then(bot => {
       discordBot = bot;

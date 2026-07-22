@@ -7,6 +7,7 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.betteruc.client.AutoDropDrinkClient;
 import com.betteruc.client.AutoFisherClient;
 import com.betteruc.client.AutoGaertnerClient;
+import com.betteruc.client.AutoMuellmannClient;
 import com.betteruc.client.AutoWinzerClient;
 import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ClientCompat;
@@ -111,6 +112,7 @@ public class BetterUCClient implements ClientModInitializer {
     private boolean remoteFisherEnabled = true;
     private boolean remoteWinzerEnabled = true;
     private boolean remoteGaertnerEnabled = true;
+    private boolean remoteMuellmannEnabled = true;
 
     private static final class MatchedReason {
         private final String key;
@@ -251,6 +253,8 @@ public class BetterUCClient implements ClientModInitializer {
             registerBankShortcutCommands(dispatcher);
             registerAttemptedMurderShortcutCommand(dispatcher, playerSuggestions);
             registerAutoDropDrinkCommand(dispatcher);
+            registerMuellmannAreaCommand(dispatcher);
+            registerGlobalChatCommand(dispatcher);
             registerBetterUcOnlineCommand(dispatcher);
         });
     }
@@ -331,6 +335,36 @@ public class BetterUCClient implements ClientModInitializer {
                     AutoDropDrinkClient.start(Minecraft.getInstance());
                     return 1;
                 }));
+    }
+
+    private void registerMuellmannAreaCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
+        for (String commandName : new String[]{"muellarea", "mullarea"}) {
+            dispatcher.register(ClientCommands.literal(commandName)
+                    .then(ClientCommands.literal("status")
+                            .executes(context -> AutoMuellmannClient.showAreaStatus(Minecraft.getInstance())))
+                    .then(ClientCommands.argument("sorte", StringArgumentType.word())
+                            .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                    new String[]{"glas", "metall", "abfall", "holz"}, builder
+                            ))
+                            .then(ClientCommands.argument("aktion", StringArgumentType.word())
+                                    .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                            new String[]{"pos1", "pos2", "clear"}, builder
+                                    ))
+                                    .executes(context -> AutoMuellmannClient.configureArea(
+                                            Minecraft.getInstance(),
+                                            StringArgumentType.getString(context, "sorte"),
+                                            StringArgumentType.getString(context, "aktion")
+                                    )))));
+        }
+    }
+
+    private void registerGlobalChatCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
+        dispatcher.register(ClientCommands.literal("buc")
+                .then(ClientCommands.argument("nachricht", StringArgumentType.greedyString())
+                        .executes(context -> PingRelayClient.sendGlobalChatMessage(
+                                Minecraft.getInstance(),
+                                StringArgumentType.getString(context, "nachricht")
+                        ) ? 1 : 0)));
     }
 
     private void registerAttemptedMurderShortcutCommand(
@@ -906,6 +940,9 @@ public class BetterUCClient implements ClientModInitializer {
             if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_WINZER)) {
                 AutoWinzerClient.tick(client);
             }
+            if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_MUELLMANN)) {
+                AutoMuellmannClient.tick(client);
+            }
             tickStatsOnJoin(client);
             handleConfiguredHotkeys(client);
             MovementController.tick(client);
@@ -944,6 +981,10 @@ public class BetterUCClient implements ClientModInitializer {
         boolean gaertnerEnabled = RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_GAERTNER);
         if (!gaertnerEnabled && remoteGaertnerEnabled) AutoGaertnerClient.reset();
         remoteGaertnerEnabled = gaertnerEnabled;
+
+        boolean muellmannEnabled = RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_MUELLMANN);
+        if (!muellmannEnabled && remoteMuellmannEnabled) AutoMuellmannClient.reset();
+        remoteMuellmannEnabled = muellmannEnabled;
     }
 
     private void resetRemoteFeatureStateTracking() {
@@ -953,6 +994,7 @@ public class BetterUCClient implements ClientModInitializer {
         remoteFisherEnabled = true;
         remoteWinzerEnabled = true;
         remoteGaertnerEnabled = true;
+        remoteMuellmannEnabled = true;
     }
 
     private void maybeOpenWelcomeChangelog(Minecraft client) {
@@ -1119,6 +1161,7 @@ public class BetterUCClient implements ClientModInitializer {
         AutoDropDrinkClient.reset();
         AutoFisherClient.reset();
         AutoGaertnerClient.reset();
+        AutoMuellmannClient.reset();
         AutoWinzerClient.reset();
 
         BetterUCSuppressFlags.suppressModBlOutput = false;

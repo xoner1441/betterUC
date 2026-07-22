@@ -67,7 +67,7 @@ public class BetterUCConfig {
             "showPotionEffectsHud", "showPlantTimerHud", "showDealerTimerHud", "showProductionTimerHud",
             "toggleSprintEnabled", "autoStatsOnJoinEnabled", "autoFactionBankOnBalanceEnabled",
             "autoAtmInfoOnBalanceEnabled", "chatTimestampsEnabled", "chatCustomizationEnabled",
-            "reinfCustomizationEnabled", "chatTimestampFormat", "maxChatHistory",
+            "reinfCustomizationEnabled", "globalChatEnabled", "chatTimestampFormat", "maxChatHistory",
             "pingRelayEnabled", "showPingHud", "showRoleHolograms", "pingHudScale", "pingHudStyle",
             "pingHudCustomFont", "pingRelayScope", "pingRelayTtlSeconds", "pingRelayMaxDistance",
             "pingRelayColor", "pingNormalColor", "pingDangerColor", "pingGatherColor", "pingCooldownMs",
@@ -77,6 +77,7 @@ public class BetterUCConfig {
 
     public List<String> manualFactionPlayers = new ArrayList<>();
     public List<String> manualBlacklistPlayers = new ArrayList<>();
+    public transient Map<String, WasteDropArea> wasteDropAreas = new LinkedHashMap<>();
 
     public transient List<String> remoteFactionPlayers = new ArrayList<>();
     public transient Map<String, List<String>> remoteFactionMembersByFaction = new LinkedHashMap<>();
@@ -322,6 +323,7 @@ public class BetterUCConfig {
     public boolean chatTimestampsEnabled = true;
     public boolean chatCustomizationEnabled = true;
     public boolean reinfCustomizationEnabled = true;
+    public boolean globalChatEnabled = true;
     public String chatTimestampFormat = "[HH:mm:ss]";
     public int maxChatHistory = 2000;
     public int lastKnownCash = -1;
@@ -409,6 +411,28 @@ public class BetterUCConfig {
             return DEFAULT_HUD_SCALE;
         }
         return Math.max(MIN_HUD_SCALE, Math.min(MAX_HUD_SCALE, scale));
+    }
+
+    public static class WasteDropArea {
+        public int x1;
+        public int z1;
+        public int x2;
+        public int z2;
+        public boolean pos1Set;
+        public boolean pos2Set;
+        public String dimension = "";
+
+        public boolean isComplete() {
+            return pos1Set && pos2Set && dimension != null && !dimension.isBlank();
+        }
+
+        public boolean contains(int x, int z, String currentDimension) {
+            if (!isComplete() || currentDimension == null || !dimension.equals(currentDimension)) return false;
+            return x >= Math.min(x1, x2)
+                    && x <= Math.max(x1, x2)
+                    && z >= Math.min(z1, z2)
+                    && z <= Math.max(z1, z2);
+        }
     }
 
     public static String hudPrefix(String prefix) {
@@ -1037,6 +1061,7 @@ public class BetterUCConfig {
         if (INSTANCE.blacklistEntryRests == null) INSTANCE.blacklistEntryRests = new LinkedHashMap<>();
         if (INSTANCE.manualFactionPlayers == null) INSTANCE.manualFactionPlayers = new ArrayList<>();
         if (INSTANCE.manualBlacklistPlayers == null) INSTANCE.manualBlacklistPlayers = new ArrayList<>();
+        if (INSTANCE.wasteDropAreas == null) INSTANCE.wasteDropAreas = new LinkedHashMap<>();
         if (INSTANCE.manualFactionPlayerKeys == null) INSTANCE.manualFactionPlayerKeys = new LinkedHashSet<>();
         if (INSTANCE.remoteFactionPlayerKeys == null) INSTANCE.remoteFactionPlayerKeys = new LinkedHashSet<>();
         if (INSTANCE.manualBlacklistPlayerKeys == null) INSTANCE.manualBlacklistPlayerKeys = new LinkedHashSet<>();

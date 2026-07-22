@@ -203,6 +203,60 @@ public final class PingRelayClient {
         return connected && "admin".equals(role);
     }
 
+    public static boolean sendWasteAreaUpdate(
+            String wasteType,
+            String action,
+            int x,
+            int z,
+            String dimension
+    ) {
+        WebSocket socket = webSocket;
+        if (!connected || socket == null || !"admin".equals(role)) return false;
+        try {
+            JsonObject payload = new JsonObject();
+            payload.addProperty("type", "waste_area_update");
+            payload.addProperty("wasteType", wasteType == null ? "" : wasteType);
+            payload.addProperty("action", action == null ? "" : action);
+            payload.addProperty("x", x);
+            payload.addProperty("z", z);
+            payload.addProperty("dimension", dimension == null ? "" : dimension);
+            socket.sendText(GSON.toJson(payload), true);
+            return true;
+        } catch (Exception e) {
+            BetterUCMod.LOGGER.warn("Could not update global betterUC waste area", e);
+            return false;
+        }
+    }
+
+    public static boolean sendGlobalChatMessage(Minecraft client, String message) {
+        String cleaned = message == null ? "" : message.trim().replaceAll("\\s+", " ");
+        if (cleaned.isBlank()) return false;
+        if (cleaned.length() > 180) {
+            sendLocalMessage(client, "Die Globalchat-Nachricht darf maximal 180 Zeichen lang sein.");
+            return false;
+        }
+        WebSocket socket = webSocket;
+        if (!connected || socket == null) {
+            sendLocalMessage(client, "Globalchat ist nicht verbunden.");
+            return false;
+        }
+        if (!hasRelayCredential()) {
+            sendLocalMessage(client, "Für den Globalchat wird ein Access Code benötigt.");
+            return false;
+        }
+        try {
+            JsonObject payload = new JsonObject();
+            payload.addProperty("type", "global_chat_send");
+            payload.addProperty("message", cleaned);
+            socket.sendText(GSON.toJson(payload), true);
+            return true;
+        } catch (Exception e) {
+            BetterUCMod.LOGGER.warn("Could not send betterUC global chat message", e);
+            sendLocalMessage(client, "Globalchat-Nachricht konnte nicht gesendet werden.");
+            return false;
+        }
+    }
+
     public static String roleLabel() {
         return switch (role) {
             case "admin" -> "Admin";
@@ -581,6 +635,44 @@ public final class PingRelayClient {
                 return;
             }
 
+            if ("waste_areas".equals(type)) {
+                JsonElement areas = json.get("areas");
+                AutoMuellmannClient.applyGlobalAreas(
+                        areas != null && areas.isJsonObject() ? areas.getAsJsonObject() : new JsonObject()
+                );
+                return;
+            }
+
+            if ("waste_area_saved".equals(type)) {
+                String wasteType = stringValue(json, "wasteType", "Bereich");
+                String action = stringValue(json, "action", "");
+                sendLocalMessage(client, "Globaler Müllbereich gespeichert: " + wasteType + " " + action);
+                return;
+            }
+
+            if ("waste_area_error".equals(type)) {
+                sendLocalMessage(client, stringValue(json, "message", "Müllbereich konnte nicht gespeichert werden."));
+                return;
+            }
+
+            if ("global_chat".equals(type)) {
+                if (BetterUCConfig.INSTANCE.globalChatEnabled) {
+                    renderGlobalChatMessage(
+                            client,
+                            stringValue(json, "sender", "Unbekannt"),
+                            cleanRole(stringValue(json, "role", "user")),
+                            stringValue(json, "message", ""),
+                            stringValue(json, "origin", "minecraft")
+                    );
+                }
+                return;
+            }
+
+            if ("global_chat_error".equals(type)) {
+                sendLocalMessage(client, stringValue(json, "message", "Globalchat-Nachricht wurde abgelehnt."));
+                return;
+            }
+
             if (!"ping".equals(type)) return;
 
             PingMarker marker = new PingMarker(
@@ -878,6 +970,24 @@ public final class PingRelayClient {
             case "vip" -> ChatFormatting.DARK_PURPLE;
             default -> ChatFormatting.WHITE;
         };
+    }
+
+    private static void renderGlobalChatMessage(
+            Minecraft client,
+            String sender,
+            String senderRole,
+            String message,
+            String origin
+    ) {
+        if (message == null || message.isBlank()) return;
+        MutableComponent line = Component.literal("[betterUC Global] ").withStyle(ChatFormatting.DARK_AQUA);
+        if ("discord".equalsIgnoreCase(origin)) {
+            line.append(Component.literal("[DC] ").withStyle(ChatFormatting.BLUE));
+        }
+        line.append(Component.literal(sender).withStyle(roleFormatting(senderRole)))
+                .append(Component.literal(": ").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal(message).withStyle(ChatFormatting.WHITE));
+        sendText(client, line);
     }
 
     private static String versionLabel(String version) {

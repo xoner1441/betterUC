@@ -391,6 +391,7 @@ def transformLegacyJavaSource = { String source ->
     text = text.replaceAll(/\.withStyle\((Formatting\.[^,]+),\s*(Formatting\.[^)]+)\)/, ".formatted(\$1, \$2)")
     text = text.replace(".withStyle(color, Formatting.BOLD)", ".formatted(color, Formatting.BOLD)")
     text = text.replace(".withStyle(roleFormatting(entry.role()))", ".formatted(roleFormatting(entry.role()))")
+    text = text.replace(".withStyle(roleFormatting(senderRole))", ".formatted(roleFormatting(senderRole))")
     text = text.replace(".withStyle(style -> style.withFont(BUC_BADGE_FONT))", ".styled(style -> style.withFont(BUC_BADGE_FONT))")
     text = text.replace(".styled(style -> style.withFont(BUC_BADGE_FONT))", ".styled(style -> style.withFont(new net.minecraft.text.StyleSpriteSource.Font(BUC_BADGE_FONT)))")
     text = text.replaceAll(/\b([a-z][A-Za-z0-9_]*)ButtonWidget\b/, "\$1Button")

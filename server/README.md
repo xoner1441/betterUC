@@ -46,6 +46,11 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `DISCORD_ADMIN_ROLE_NAME=Admin`
 - `DISCORD_ROLE_SYNC_MS=300000`
 - `DISCORD_UPDATE_CHANNEL_NAME=updates`
+- `DISCORD_GLOBAL_CHAT_ENABLED=false` enables the live bridge after Discord's Message Content Intent is enabled
+- `DISCORD_GLOBAL_CHAT_CHANNEL_ID=...` Discord channel bridged with `/buc`
+- `DISCORD_GLOBAL_CHAT_CHANNEL_NAME=betteruc-chat` fallback when no channel ID is configured
+- `DISCORD_GLOBAL_CHAT_LOG_CHANNEL_ID=...` optional private moderation log channel
+- `DISCORD_GLOBAL_CHAT_LOG_CHANNEL_NAME=betteruc-chat-log` fallback log channel name
 - `DISCORD_RELEASE_REPO=xoner1441/betterUC`
 - `DISCORD_RELEASE_CHECK_MS=900000`
 - `DISCORD_ANNOUNCE_EXISTING_RELEASE=false`
@@ -76,3 +81,10 @@ Invite the bot with the scopes `bot` and `applications.commands`.
 Linked accounts are synced to Discord roles. Every active linked account gets `DISCORD_MOD_USER_ROLE_NAME`.
 Accounts with betterUC roles `vip`, `helper` and `admin` also get the configured role names above. Revoked or unlinked
 accounts lose the managed betterUC roles again.
+
+### Discord and `/buc` live chat
+
+Enable the **Message Content Intent** for the bot in the Discord Developer Portal, create the configured chat and log
+channels, and set `DISCORD_GLOBAL_CHAT_ENABLED=true`. Only Discord users linked to an active betterUC account through
+`/link` can forward messages into Minecraft. Messages are limited to 180 characters and share the two-second cooldown
+with ingame `/buc` messages. Bot messages are never forwarded and outgoing Discord messages cannot trigger mentions.
