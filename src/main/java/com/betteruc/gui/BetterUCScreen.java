@@ -131,6 +131,21 @@ public class BetterUCScreen extends Screen {
             case AMMO -> {
                 y = addToggle(x, y, controlW, "Ammo HUD", BetterUCConfig.INSTANCE.showAmmoHud,
                         () -> BetterUCConfig.INSTANCE.showAmmoHud = !BetterUCConfig.INSTANCE.showAmmoHud);
+                y = addToggle(x, y, controlW, "Magazinbalken", BetterUCConfig.INSTANCE.ammoHudMagazineBarEnabled,
+                        () -> BetterUCConfig.INSTANCE.ammoHudMagazineBarEnabled = !BetterUCConfig.INSTANCE.ammoHudMagazineBarEnabled);
+                y = addToggle(x, y, controlW, "Niedrige Munition", BetterUCConfig.INSTANCE.ammoHudLowAmmoWarningEnabled,
+                        () -> BetterUCConfig.INSTANCE.ammoHudLowAmmoWarningEnabled = !BetterUCConfig.INSTANCE.ammoHudLowAmmoWarningEnabled);
+                if (BetterUCConfig.INSTANCE.ammoHudLowAmmoWarningEnabled) {
+                    y = addToggle(x, y, controlW, "Warnsignal", BetterUCConfig.INSTANCE.ammoHudLowAmmoSoundEnabled,
+                            () -> BetterUCConfig.INSTANCE.ammoHudLowAmmoSoundEnabled = !BetterUCConfig.INSTANCE.ammoHudLowAmmoSoundEnabled);
+                    y = addRangeIntSlider(x, y, controlW, "Warnschwelle %",
+                            BetterUCConfig.INSTANCE.ammoHudLowAmmoThresholdPercent, 5, 50,
+                            value -> BetterUCConfig.INSTANCE.ammoHudLowAmmoThresholdPercent = value);
+                }
+                String kr47Magazine = BetterUCConfig.INSTANCE.ammoHudKr47MagazineSize > 0
+                        ? BetterUCConfig.INSTANCE.ammoHudKr47MagazineSize + " Schuss"
+                        : "wird automatisch gelernt";
+                y = addInfo(x, y, controlW, "KR47 Magazin", kr47Magazine);
             }
             case BANK -> {
                 y = addToggle(x, y, controlW, "Bank HUD", BetterUCConfig.INSTANCE.showBankHud,
@@ -782,8 +797,15 @@ public class BetterUCScreen extends Screen {
             }
             case AMMO -> {
                 if (modernStyle) {
-                    ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY, hudPreviewLabel(ModuleOption.AMMO), "20/96",
-                            "TS19", 0xFFFFAA33, 0xFF7CFF8A);
+                    if (BetterUCConfig.INSTANCE.ammoHudMagazineBarEnabled) {
+                        ModernHudRenderer.drawTwoLineProgressModule(context, minecraft, previewX, previewY,
+                                hudPreviewLabel(ModuleOption.AMMO), "20/96", "TS19",
+                                20.0F / 21.0F, 0xFFFFAA33, 0xFF7CFF8A);
+                    } else {
+                        ModernHudRenderer.drawTwoLineModule(context, minecraft, previewX, previewY,
+                                hudPreviewLabel(ModuleOption.AMMO), "20/96", "TS19",
+                                0xFFFFAA33, 0xFF7CFF8A);
+                    }
                 } else if (stylizedStyle) {
                     ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, hudPreviewText(ModuleOption.AMMO, "20/96"), previewX, previewY, 0xFFFFAA33);
                     ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "TS19", previewX, previewY + 11, 0xFF55FF55);

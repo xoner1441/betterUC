@@ -63,6 +63,8 @@ public class BetterUCConfig {
             "productionTimerHudPrefixEnabled", "toggleSprintHudPrefix", "fpsHudPrefix", "paydayHudPrefix",
             "ammoHudPrefix", "bankHudPrefix", "cashHudPrefix", "hackTimerHudPrefix", "plantTimerHudPrefix",
             "dealerTimerHudPrefix", "productionTimerHudPrefix",
+            "ammoHudMagazineBarEnabled", "ammoHudLowAmmoWarningEnabled", "ammoHudLowAmmoSoundEnabled",
+            "ammoHudLowAmmoThresholdPercent", "ammoHudKr47MagazineSize",
             "showHealthHud", "showFpsHud", "showPaydayHud", "showAmmoHud", "showBankHud", "showCashHud",
             "showPotionEffectsHud", "showPlantTimerHud", "showDealerTimerHud", "showProductionTimerHud",
             "toggleSprintEnabled", "autoStatsOnJoinEnabled", "autoFactionBankOnBalanceEnabled",
@@ -305,6 +307,11 @@ public class BetterUCConfig {
     public String plantTimerHudPrefix = "Plant";
     public String dealerTimerHudPrefix = "Dealer";
     public String productionTimerHudPrefix = "Produktion";
+    public boolean ammoHudMagazineBarEnabled = true;
+    public boolean ammoHudLowAmmoWarningEnabled = true;
+    public boolean ammoHudLowAmmoSoundEnabled = true;
+    public int ammoHudLowAmmoThresholdPercent = 25;
+    public int ammoHudKr47MagazineSize = 0;
     public boolean showHealthHud = true;
     public boolean showFpsHud = true;
     public boolean showPaydayHud = true;
@@ -529,6 +536,13 @@ public class BetterUCConfig {
         INSTANCE.plantTimerHudPrefix = sanitizeHudPrefix(INSTANCE.plantTimerHudPrefix, "Plant");
         INSTANCE.dealerTimerHudPrefix = sanitizeHudPrefix(INSTANCE.dealerTimerHudPrefix, "Dealer");
         INSTANCE.productionTimerHudPrefix = sanitizeHudPrefix(INSTANCE.productionTimerHudPrefix, "Produktion");
+    }
+
+    private static void sanitizeAmmoHud() {
+        INSTANCE.ammoHudLowAmmoThresholdPercent = Math.max(5, Math.min(50, INSTANCE.ammoHudLowAmmoThresholdPercent));
+        if (INSTANCE.ammoHudKr47MagazineSize != 25 && INSTANCE.ammoHudKr47MagazineSize != 30) {
+            INSTANCE.ammoHudKr47MagazineSize = 0;
+        }
     }
 
     private static String sanitizeHudPrefix(String value, String fallback) {
@@ -1210,6 +1224,7 @@ public class BetterUCConfig {
             sanitizeHudStyles();
             sanitizeHudScales();
             sanitizeHudPrefixes();
+            sanitizeAmmoHud();
             sanitizePingRelay();
             sanitizeDiscordInvite();
             if (INSTANCE.blReasons == null || INSTANCE.blReasons.isEmpty()) {
@@ -1293,6 +1308,7 @@ public class BetterUCConfig {
         sanitizeHudScales();
         sanitizeHudPrefixes();
         sanitizeHudGradients();
+        sanitizeAmmoHud();
         sanitizePingRelay();
         sanitizeDiscordInvite();
         sanitizeTrackedFactions();

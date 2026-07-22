@@ -324,6 +324,68 @@ public final class ModernHudRenderer {
         }
     }
 
+    public static void drawTwoLineProgressModule(
+            GuiGraphicsExtractor context,
+            Minecraft client,
+            int x,
+            int y,
+            String label,
+            String primary,
+            String secondary,
+            float progress,
+            int accentColor,
+            int secondaryColor
+    ) {
+        Font renderer = client.font;
+        String safeLabel = safe(label);
+        String safePrimary = safe(primary);
+        String safeSecondary = safe(secondary);
+        int labelWidth = renderer.width(safeLabel);
+        int primaryWidth = renderer.width(safePrimary);
+        int labelGap = safeLabel.isEmpty() ? 0 : 5;
+        int width = Math.max(86,
+                Math.max(
+                        labelWidth + primaryWidth + labelGap + 23,
+                        renderer.width(safeSecondary) + 16
+                ));
+        int height = 35;
+        boolean rightAligned = isRightAligned(x, width);
+
+        drawPanel(context, x, y, width, height, accentColor);
+        int rightTextX = x + width - 8;
+        if (rightAligned) {
+            if (!safeLabel.isEmpty()) {
+                int labelX = rightTextX - primaryWidth - labelWidth - labelGap;
+                drawHudTextWithShadow(context, renderer, safeLabel, labelX, y + 5, accentColor);
+            }
+            context.text(renderer, Component.literal(safePrimary), rightTextX - primaryWidth, y + 5, TEXT_PRIMARY);
+            if (!safeSecondary.isEmpty()) {
+                context.text(renderer, Component.literal(safeSecondary), rightTextX - renderer.width(safeSecondary), y + 17, secondaryColor);
+            }
+        } else {
+            if (!safeLabel.isEmpty()) {
+                drawHudTextWithShadow(context, renderer, safeLabel, x + 8, y + 5, accentColor);
+            }
+            context.text(renderer, Component.literal(safePrimary), rightTextX - primaryWidth + 1, y + 5, TEXT_PRIMARY);
+            if (!safeSecondary.isEmpty()) {
+                context.text(renderer, Component.literal(safeSecondary), x + 8, y + 17, secondaryColor);
+            }
+        }
+
+        int barX = x + 8;
+        int barY = y + 29;
+        int barWidth = width - 16;
+        context.fill(barX, barY, barX + barWidth, barY + 2, 0x66313A47);
+        int filledWidth = Math.round(barWidth * clamp01(progress));
+        if (filledWidth > 0) {
+            if (rightAligned) {
+                fillHorizontalGradient(context, barX + barWidth - filledWidth, barY, filledWidth, 2, accentColor, 0xEE);
+            } else {
+                fillHorizontalGradient(context, barX, barY, filledWidth, 2, accentColor, 0xEE);
+            }
+        }
+    }
+
     public static void drawStyledText(
             GuiGraphicsExtractor context,
             Minecraft client,

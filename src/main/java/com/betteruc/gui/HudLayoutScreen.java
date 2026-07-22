@@ -360,7 +360,9 @@ public class HudLayoutScreen extends Screen {
         return switch (module) {
             case HEALTH -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.healthHudStyle) ? 17 : 12;
             case PAYDAY -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.paydayHudStyle) ? 24 : 13;
-            case AMMO -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.ammoHudStyle) ? 31 : 24;
+            case AMMO -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.ammoHudStyle)
+                    ? (BetterUCConfig.INSTANCE.ammoHudMagazineBarEnabled ? 35 : 31)
+                    : (BetterUCConfig.INSTANCE.ammoHudMagazineBarEnabled ? 27 : 24);
             case POTION -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.potionHudStyle) ? 65 : 48;
             case PLANT_TIMER -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.plantTimerHudStyle) ? 31 : 24;
             case FPS -> singleLineHeight(BetterUCConfig.INSTANCE.fpsHudStyle);
@@ -450,7 +452,15 @@ public class HudLayoutScreen extends Screen {
                     ModernHudRenderer.drawHudTextWithShadow(context, minecraft.font, prefixedText(module, "25/60 Minuten"), x, y, BetterUCConfig.INSTANCE.paydayHudColor);
                 }
             }
-            case AMMO -> renderTwoLine(context, minecraft, style, fontId, x, y, hudLabel(module), prefixedText(module, "20/96"), "TS19", 0xFFFFAA33, 0xFF55FF55);
+            case AMMO -> {
+                if (modernStyle && BetterUCConfig.INSTANCE.ammoHudMagazineBarEnabled) {
+                    ModernHudRenderer.drawTwoLineProgressModule(context, minecraft, x, y, hudLabel(module),
+                            "20/96", "TS19", 20.0F / 21.0F, 0xFFFFAA33, 0xFF55FF55);
+                } else {
+                    renderTwoLine(context, minecraft, style, fontId, x, y, hudLabel(module),
+                            prefixedText(module, "20/96"), "TS19", 0xFFFFAA33, 0xFF55FF55);
+                }
+            }
             case BANK -> renderSingleLine(context, minecraft, style, fontId, x, y, hudLabel(module), "88.375$", prefixedText(module, "88.375$"), BetterUCConfig.INSTANCE.bankHudColor);
             case CASH -> renderSingleLine(context, minecraft, style, fontId, x, y, hudLabel(module), previewCashValue(), prefixedText(module, previewCashValue()), BetterUCConfig.INSTANCE.cashHudColor);
             case POTION -> {

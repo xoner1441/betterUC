@@ -313,6 +313,8 @@ def transformLegacyJavaSource = { String source ->
             ".getEyePosition()"                                                : ".getEyePos()",
             ".getViewVector("                                                  : ".getRotationVec(",
             ".getFoodData()"                                                   : ".getHungerManager()",
+            ".getMainHandItem()"                                              : ".getMainHandStack()",
+            ".getHoverName()"                                                 : ".getName()",
             ".getUUID()"                                                       : ".getUuid()",
             ".isShiftKeyDown()"                                                : ".isSneaking()",
             ".getVisualOrderText()"                                            : ".asOrderedText()",
