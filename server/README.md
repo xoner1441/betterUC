@@ -49,8 +49,9 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `DISCORD_TICKET_LOG_CHANNEL_ID=...` private channel receiving ticket transcripts
 - `DISCORD_TICKET_TRANSCRIPT_DIR=/opt/betteruc-relay/data/ticket-transcripts`
 - `DISCORD_SUGGESTION_CHANNEL_ID=...` public channel for persistent suggestions and votes
-- `DISCORD_MONITOR_CHANNEL_ID=...` private channel for status transitions and outages
-- `DISCORD_MONITOR_CHECK_MS=300000`
+- `DISCORD_MONITOR_CHANNEL_ID=...` channel containing one permanently updated live system-status message
+- `DISCORD_MONITOR_CHECK_MS=60000`
+- `DISCORD_MONITOR_PIN_MESSAGE=true` pins the live status message when the bot has Manage Messages
 - `DISCORD_BACKUP_MAX_AGE_HOURS=36`
 - `DISCORD_CLOUD_ERROR_ALERT_COUNT=5`
 - `DISCORD_WEEKLY_CHANNEL_ID=...` channel for the automatic weekly report

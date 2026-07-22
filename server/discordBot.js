@@ -46,7 +46,8 @@ const SUGGESTION_CHANNEL_NAME = clean(process.env.DISCORD_SUGGESTION_CHANNEL_NAM
 const MONITOR_CHANNEL_ID = clean(process.env.DISCORD_MONITOR_CHANNEL_ID);
 const MONITOR_CHANNEL_NAME = clean(process.env.DISCORD_MONITOR_CHANNEL_NAME) || "systemstatus";
 const MONITOR_ENABLED = String(process.env.DISCORD_MONITOR_ENABLED || "true").toLowerCase() !== "false";
-const MONITOR_CHECK_MS = Math.max(60 * 1000, Number(process.env.DISCORD_MONITOR_CHECK_MS || 5 * 60 * 1000));
+const MONITOR_CHECK_MS = Math.max(30 * 1000, Number(process.env.DISCORD_MONITOR_CHECK_MS || 60 * 1000));
+const MONITOR_PIN_MESSAGE = String(process.env.DISCORD_MONITOR_PIN_MESSAGE || "true").toLowerCase() !== "false";
 const BACKUP_MAX_AGE_HOURS = Math.max(1, Number(process.env.DISCORD_BACKUP_MAX_AGE_HOURS || 36));
 const CLOUD_ERROR_ALERT_COUNT = Math.max(1, Number(process.env.DISCORD_CLOUD_ERROR_ALERT_COUNT || 5));
 const WEEKLY_CHANNEL_ID = clean(process.env.DISCORD_WEEKLY_CHANNEL_ID);
@@ -1173,6 +1174,7 @@ function systemStatusEmbed(report) {
       { name: "Cloud-Fehler (24h)", value: String(snapshot.database?.counts?.cloudErrors24h || 0), inline: true },
       { name: "Bewertung", value: issues.length ? issues.map(issue => `- ${issue}`).join("\n") : "Keine Probleme erkannt.", inline: false }
     )
+    .setFooter({ text: `Live-Status | Aktualisierung alle ${Math.round(MONITOR_CHECK_MS / 1000)} Sekunden` })
     .setTimestamp(new Date(snapshot.checkedAt));
 }
 
@@ -1546,6 +1548,8 @@ async function startDiscordBot(context) {
   let roleSyncTimer = null;
   let releaseCheckTimer = null;
   let monitorTimer = null;
+  let monitorRefreshTimer = null;
+  let monitorRun = Promise.resolve();
   let weeklyTimer = null;
   let globalChatChannel = null;
   let globalChatLogChannel = null;
@@ -1591,19 +1595,46 @@ async function startDiscordBot(context) {
     syncRoles: () => syncBetterUcRoleState(client, context)
   };
 
-  const runMonitor = async (forcePost = false) => {
+  const updateMonitorMessage = async report => {
+    if (!monitorChannel) return null;
+
+    let message = null;
+    if (botState.monitorMessageChannelId === monitorChannel.id && botState.monitorMessageId) {
+      message = await monitorChannel.messages.fetch(botState.monitorMessageId).catch(() => null);
+    }
+
+    const payload = {
+      embeds: [systemStatusEmbed(report)],
+      allowedMentions: { parse: [] }
+    };
+    if (message) {
+      await message.edit(payload);
+    } else {
+      message = await monitorChannel.send(payload);
+      botState.monitorMessageId = message.id;
+      botState.monitorMessageChannelId = monitorChannel.id;
+    }
+    if (MONITOR_PIN_MESSAGE && !message.pinned) {
+      await message.pin("betterUC permanent system status").catch(error => {
+        console.warn("Could not pin betterUC system status", error.message);
+      });
+    }
+    return message;
+  };
+
+  const runMonitor = async () => {
     if (!MONITOR_ENABLED) return null;
     const report = await systemReport(commandContext);
-    const nextState = report.healthy ? "healthy" : "degraded";
-    const changed = botState.monitorState && botState.monitorState !== nextState;
-    const firstProblem = !botState.monitorState && !report.healthy;
-    if (monitorChannel && (forcePost || changed || firstProblem)) {
-      await monitorChannel.send({ embeds: [systemStatusEmbed(report)], allowedMentions: { parse: [] } });
-    }
-    botState.monitorState = nextState;
+    await updateMonitorMessage(report);
+    botState.monitorState = report.healthy ? "healthy" : "degraded";
     botState.monitorCheckedAt = new Date().toISOString();
     await writeBotState(botState);
     return report;
+  };
+
+  const queueMonitor = () => {
+    monitorRun = monitorRun.catch(() => null).then(() => runMonitor());
+    return monitorRun;
   };
 
   const runWeeklyReport = async (forcePost = false) => {
@@ -1636,6 +1667,11 @@ async function startDiscordBot(context) {
   const notifyStateChanged = () => {
     clearTimeout(presenceTimer);
     presenceTimer = setTimeout(updatePresence, 750);
+    clearTimeout(monitorRefreshTimer);
+    monitorRefreshTimer = setTimeout(() => {
+      if (!ready || !monitorChannel) return;
+      queueMonitor().catch(error => console.warn("Discord live system monitoring failed", error.message));
+    }, 1000);
   };
 
   client.once("ready", async () => {
@@ -1683,9 +1719,9 @@ async function startDiscordBot(context) {
     roleSyncTimer = setInterval(() => {
       syncBetterUcRoleState(client, context).catch(error => console.warn("Discord role sync failed", error.message));
     }, Math.max(60 * 1000, Number(process.env.DISCORD_ROLE_SYNC_MS || 5 * 60 * 1000)));
-    runMonitor().catch(error => console.warn("Discord system monitoring failed", error.message));
+    queueMonitor().catch(error => console.warn("Discord system monitoring failed", error.message));
     monitorTimer = setInterval(() => {
-      runMonitor().catch(error => console.warn("Discord system monitoring failed", error.message));
+      queueMonitor().catch(error => console.warn("Discord system monitoring failed", error.message));
     }, MONITOR_CHECK_MS);
     runWeeklyReport().catch(error => console.warn("Discord weekly report failed", error.message));
     weeklyTimer = setInterval(() => {
@@ -1737,6 +1773,7 @@ async function startDiscordBot(context) {
     publishAnnouncement,
     stop() {
       clearTimeout(presenceTimer);
+      clearTimeout(monitorRefreshTimer);
       clearInterval(roleSyncTimer);
       clearInterval(releaseCheckTimer);
       clearInterval(monitorTimer);
