@@ -166,7 +166,7 @@ public final class AutoGaertnerClient {
         lastDropFlowersAtMs = now;
         ClientScheduler.runDelayedOnClient(client, COMMAND_DELAY_MS,
                 () -> {
-                    if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_GAERTNER)) {
+                    if (AutomationController.isGaertnerEnabled()) {
                         ServerCommandUtil.send(client, "dropblumen", false);
                     }
                 });

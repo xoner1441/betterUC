@@ -8,6 +8,7 @@ import com.betteruc.client.AutoFisherClient;
 import com.betteruc.client.AutoGaertnerClient;
 import com.betteruc.client.AutoMuellmannClient;
 import com.betteruc.client.AutoWinzerClient;
+import com.betteruc.client.AutomationController;
 import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ChatCustomizationFormatter;
 import com.betteruc.client.ClientScheduler;
@@ -140,19 +141,19 @@ public class ChatBlacklistMixin {
         }
 
         String raw = message.getString();
-        if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_DROPDRINK)) {
+        if (AutomationController.isDropDrinkEnabled()) {
             AutoDropDrinkClient.handleChatLine(Minecraft.getInstance(), raw);
         }
-        if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_FISHER)) {
+        if (AutomationController.isFisherEnabled()) {
             AutoFisherClient.handleChatLine(Minecraft.getInstance(), raw);
         }
-        if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_GAERTNER)) {
+        if (AutomationController.isGaertnerEnabled()) {
             AutoGaertnerClient.handleChatLine(Minecraft.getInstance(), raw);
         }
-        if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_WINZER)) {
+        if (AutomationController.isWinzerEnabled()) {
             AutoWinzerClient.handleChatLine(Minecraft.getInstance(), raw);
         }
-        if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_MUELLMANN)) {
+        if (AutomationController.isMuellmannEnabled()) {
             AutoMuellmannClient.handleChatLine(Minecraft.getInstance(), raw);
         }
         CarFindTracker.handleIncomingChat(Minecraft.getInstance(), raw);

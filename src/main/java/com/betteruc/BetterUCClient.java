@@ -9,6 +9,7 @@ import com.betteruc.client.AutoFisherClient;
 import com.betteruc.client.AutoGaertnerClient;
 import com.betteruc.client.AutoMuellmannClient;
 import com.betteruc.client.AutoWinzerClient;
+import com.betteruc.client.AutomationController;
 import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ClientCompat;
 import com.betteruc.client.ClientScheduler;
@@ -942,16 +943,16 @@ public class BetterUCClient implements ClientModInitializer {
             if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.CLOUD_SETTINGS)) {
                 CloudSettingsClient.tick(client);
             }
-            if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_DROPDRINK)) {
+            if (AutomationController.isDropDrinkEnabled()) {
                 AutoDropDrinkClient.tick(client);
             }
-            if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_GAERTNER)) {
+            if (AutomationController.isGaertnerEnabled()) {
                 AutoGaertnerClient.tick(client);
             }
-            if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_WINZER)) {
+            if (AutomationController.isWinzerEnabled()) {
                 AutoWinzerClient.tick(client);
             }
-            if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_MUELLMANN)) {
+            if (AutomationController.isMuellmannEnabled()) {
                 AutoMuellmannClient.tick(client);
             }
             TrashFilterClient.tick(client);
@@ -978,23 +979,23 @@ public class BetterUCClient implements ClientModInitializer {
             remoteCloudEnabled = cloudEnabled;
         }
 
-        boolean dropDrinkEnabled = RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_DROPDRINK);
+        boolean dropDrinkEnabled = AutomationController.isDropDrinkEnabled();
         if (!dropDrinkEnabled && remoteDropDrinkEnabled) AutoDropDrinkClient.reset();
         remoteDropDrinkEnabled = dropDrinkEnabled;
 
-        boolean fisherEnabled = RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_FISHER);
+        boolean fisherEnabled = AutomationController.isFisherEnabled();
         if (!fisherEnabled && remoteFisherEnabled) AutoFisherClient.reset();
         remoteFisherEnabled = fisherEnabled;
 
-        boolean winzerEnabled = RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_WINZER);
+        boolean winzerEnabled = AutomationController.isWinzerEnabled();
         if (!winzerEnabled && remoteWinzerEnabled) AutoWinzerClient.reset();
         remoteWinzerEnabled = winzerEnabled;
 
-        boolean gaertnerEnabled = RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_GAERTNER);
+        boolean gaertnerEnabled = AutomationController.isGaertnerEnabled();
         if (!gaertnerEnabled && remoteGaertnerEnabled) AutoGaertnerClient.reset();
         remoteGaertnerEnabled = gaertnerEnabled;
 
-        boolean muellmannEnabled = RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_MUELLMANN);
+        boolean muellmannEnabled = AutomationController.isMuellmannEnabled();
         if (!muellmannEnabled && remoteMuellmannEnabled) AutoMuellmannClient.reset();
         remoteMuellmannEnabled = muellmannEnabled;
     }

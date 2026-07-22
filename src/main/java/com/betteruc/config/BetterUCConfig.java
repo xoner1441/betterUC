@@ -69,6 +69,8 @@ public class BetterUCConfig {
             "showPotionEffectsHud", "showPlantTimerHud", "showDealerTimerHud", "showProductionTimerHud",
             "toggleSprintEnabled", "autoStatsOnJoinEnabled", "autoFactionBankOnBalanceEnabled",
             "autoAtmInfoOnBalanceEnabled", "chatTimestampsEnabled", "chatCustomizationEnabled",
+            "autoDropDrinkEnabled", "autoFisherEnabled", "autoWinzerEnabled", "autoGaertnerEnabled",
+            "autoMuellmannEnabled",
             "reinfCustomizationEnabled", "globalChatEnabled", "chatTimestampFormat", "maxChatHistory",
             "pingRelayEnabled", "showPingHud", "showRoleHolograms", "pingHudScale", "pingHudStyle",
             "pingHudCustomFont", "pingRelayScope", "pingRelayTtlSeconds", "pingRelayMaxDistance",
@@ -326,6 +328,11 @@ public class BetterUCConfig {
     public boolean autoStatsOnJoinEnabled = true;
     public boolean autoFactionBankOnBalanceEnabled = false;
     public boolean autoAtmInfoOnBalanceEnabled = false;
+    public boolean autoDropDrinkEnabled = true;
+    public boolean autoFisherEnabled = true;
+    public boolean autoWinzerEnabled = true;
+    public boolean autoGaertnerEnabled = true;
+    public boolean autoMuellmannEnabled = true;
     public Map<String, PlantTimerState> plantTimerStates = new LinkedHashMap<>();
 
     public String factionUrl = "https://example.com/faction.json";

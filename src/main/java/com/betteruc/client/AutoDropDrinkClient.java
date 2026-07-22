@@ -41,8 +41,8 @@ public final class AutoDropDrinkClient {
 
     public static void start(Minecraft client) {
         if (client == null || client.player == null) return;
-        if (!RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_DROPDRINK)) {
-            RemoteFeatureFlagsClient.sendDisabledMessage(client, "Auto-Dropdrink");
+        if (!AutomationController.isDropDrinkEnabled()) {
+            AutomationController.sendDropDrinkDisabledMessage(client);
             return;
         }
         if (!ServerCommandUtil.ensureAllowedServerForManualCommand(client)) return;

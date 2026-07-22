@@ -2,6 +2,7 @@ package com.betteruc.gui;
 
 import com.betteruc.BetterUCMod;
 import com.betteruc.client.BetterUCFontManager;
+import com.betteruc.client.AutomationController;
 import com.betteruc.client.ClientCompat;
 import com.betteruc.client.CloudSettingsClient;
 import com.betteruc.client.CommunicationDeviceTracker;
@@ -197,6 +198,18 @@ public class BetterUCScreen extends Screen {
                 y = addToggle(x, y, controlW, "Auto-Stats Join", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled,
                         () -> BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled = !BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
                 y = addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(minecraft, true));
+            }
+            case AUTOMATIONS -> {
+                y = addToggle(x, y, controlW, "Lieferant /adropdrink", BetterUCConfig.INSTANCE.autoDropDrinkEnabled,
+                        () -> BetterUCConfig.INSTANCE.autoDropDrinkEnabled = !BetterUCConfig.INSTANCE.autoDropDrinkEnabled);
+                y = addToggle(x, y, controlW, "Fischer", BetterUCConfig.INSTANCE.autoFisherEnabled,
+                        () -> BetterUCConfig.INSTANCE.autoFisherEnabled = !BetterUCConfig.INSTANCE.autoFisherEnabled);
+                y = addToggle(x, y, controlW, "Winzer", BetterUCConfig.INSTANCE.autoWinzerEnabled,
+                        () -> BetterUCConfig.INSTANCE.autoWinzerEnabled = !BetterUCConfig.INSTANCE.autoWinzerEnabled);
+                y = addToggle(x, y, controlW, "G\u00E4rtner", BetterUCConfig.INSTANCE.autoGaertnerEnabled,
+                        () -> BetterUCConfig.INSTANCE.autoGaertnerEnabled = !BetterUCConfig.INSTANCE.autoGaertnerEnabled);
+                y = addToggle(x, y, controlW, "M\u00FCllmann", BetterUCConfig.INSTANCE.autoMuellmannEnabled,
+                        () -> BetterUCConfig.INSTANCE.autoMuellmannEnabled = !BetterUCConfig.INSTANCE.autoMuellmannEnabled);
             }
             case CHAT -> {
                 y = addToggle(x, y, controlW, "WPS/HQ Customizations", BetterUCConfig.INSTANCE.chatCustomizationEnabled,
@@ -921,6 +934,10 @@ public class BetterUCScreen extends Screen {
                 }
             }
             case AUTO_STATS -> drawMiniInfo(context, previewX, previewY, "Auto-Stats", "Join /stats", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
+            case AUTOMATIONS -> {
+                int enabled = AutomationController.localEnabledCount();
+                drawMiniInfo(context, previewX, previewY, "Automationen", enabled + "/5 aktiv", enabled > 0);
+            }
             case CHAT -> drawMiniInfo(context, previewX, previewY, "Chat",
                     BetterUCConfig.INSTANCE.chatTimestampsEnabled ? BetterUCConfig.INSTANCE.chatTimestampFormat : "AUS",
                     BetterUCConfig.INSTANCE.chatTimestampsEnabled);
@@ -1765,6 +1782,7 @@ public class BetterUCScreen extends Screen {
         PLANT_TIMER(Category.HUD, "Plant Timer", "Plantage-Timer", 0xFF6CF27D, true),
 
         AUTO_STATS(Category.GAMEPLAY, "Auto Stats", "Automatisches /stats", 0xFF34D399, true),
+        AUTOMATIONS(Category.GAMEPLAY, "Automationen", "Job-Helfer einzeln steuern", 0xFFFBBF24, false),
         CHAT(Category.GAMEPLAY, "Chat", "Zeitstempel & Customization", 0xFF38BDF8, false),
         CONNECTION(Category.GAMEPLAY, "Verbindung", "Account & Relay", 0xFF38BDF8, false),
         CLOUD_SYNC(Category.GAMEPLAY, "Cloud Sync", "Synchronisierte Einstellungen", 0xFF22D3EE, true),

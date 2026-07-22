@@ -76,7 +76,7 @@ public final class AutoFisherClient {
 
         ClientScheduler.runDelayedOnClient(client, COMMAND_DELAY_MS,
                 () -> {
-                    if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_FISHER)) {
+                    if (AutomationController.isFisherEnabled()) {
                         ServerCommandUtil.send(client, command, false);
                     }
                 });
