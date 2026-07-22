@@ -71,7 +71,10 @@ public class BetterUCConfig {
             "pingRelayEnabled", "showPingHud", "showRoleHolograms", "pingHudScale", "pingHudStyle",
             "pingHudCustomFont", "pingRelayScope", "pingRelayTtlSeconds", "pingRelayMaxDistance",
             "pingRelayColor", "pingNormalColor", "pingDangerColor", "pingGatherColor", "pingCooldownMs",
-            "pingSoundEnabled", "pingSoundId", "autoUpdateEnabled", "blReasons"
+            "pingSoundEnabled", "pingSoundId", "autoUpdateEnabled", "blReasons",
+            "trashFilterEnabled", "trashFilterCloseLockEnabled", "trashFilterRottenFlesh",
+            "trashFilterPaper", "trashFilterPotato", "trashFilterCarrot", "trashFilterApple",
+            "trashFilterChest", "trashFilterTrappedChest", "trashFilterEnderChest"
     );
     private static Runnable saveListener = () -> { };
 
@@ -352,6 +355,16 @@ public class BetterUCConfig {
     public String discordInviteUrl = DEFAULT_DISCORD_INVITE_URL;
     public boolean autoUpdateEnabled = true;
     public boolean cloudSettingsEnabled = true;
+    public boolean trashFilterEnabled = false;
+    public boolean trashFilterCloseLockEnabled = false;
+    public boolean trashFilterRottenFlesh = true;
+    public boolean trashFilterPaper = true;
+    public boolean trashFilterPotato = true;
+    public boolean trashFilterCarrot = true;
+    public boolean trashFilterApple = true;
+    public boolean trashFilterChest = true;
+    public boolean trashFilterTrappedChest = true;
+    public boolean trashFilterEnderChest = true;
 
     public static class BlacklistReason {
         public int kills;

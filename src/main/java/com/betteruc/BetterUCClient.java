@@ -13,6 +13,7 @@ import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ClientCompat;
 import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.CloudSettingsClient;
+import com.betteruc.client.TrashFilterClient;
 import com.betteruc.client.BetterUCFontManager;
 import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.MovementController;
@@ -953,6 +954,7 @@ public class BetterUCClient implements ClientModInitializer {
             if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_MUELLMANN)) {
                 AutoMuellmannClient.tick(client);
             }
+            TrashFilterClient.tick(client);
             tickStatsOnJoin(client);
             handleConfiguredHotkeys(client);
             MovementController.tick(client);

@@ -205,6 +205,28 @@ public class BetterUCScreen extends Screen {
             }
             case HOTKEYS -> y = addButton(x, y, controlW, "Hotkey Commands", b -> openScreen(new HotkeyCommandsScreen(this)));
             case COMMANDS -> y = addButton(x, y, controlW, "Command Menu", b -> openScreen(new CommandGui()));
+            case TRASH_FILTER -> {
+                y = addToggle(x, y, controlW, "Mülleimer Filter", BetterUCConfig.INSTANCE.trashFilterEnabled,
+                        () -> BetterUCConfig.INSTANCE.trashFilterEnabled = !BetterUCConfig.INSTANCE.trashFilterEnabled);
+                y = addToggle(x, y, controlW, "5s Schließsperre", BetterUCConfig.INSTANCE.trashFilterCloseLockEnabled,
+                        () -> BetterUCConfig.INSTANCE.trashFilterCloseLockEnabled = !BetterUCConfig.INSTANCE.trashFilterCloseLockEnabled);
+                y = addToggle(x, y, controlW, "Verrottetes Fleisch", BetterUCConfig.INSTANCE.trashFilterRottenFlesh,
+                        () -> BetterUCConfig.INSTANCE.trashFilterRottenFlesh = !BetterUCConfig.INSTANCE.trashFilterRottenFlesh);
+                y = addToggle(x, y, controlW, "Papier", BetterUCConfig.INSTANCE.trashFilterPaper,
+                        () -> BetterUCConfig.INSTANCE.trashFilterPaper = !BetterUCConfig.INSTANCE.trashFilterPaper);
+                y = addToggle(x, y, controlW, "Kartoffel", BetterUCConfig.INSTANCE.trashFilterPotato,
+                        () -> BetterUCConfig.INSTANCE.trashFilterPotato = !BetterUCConfig.INSTANCE.trashFilterPotato);
+                y = addToggle(x, y, controlW, "Karotte", BetterUCConfig.INSTANCE.trashFilterCarrot,
+                        () -> BetterUCConfig.INSTANCE.trashFilterCarrot = !BetterUCConfig.INSTANCE.trashFilterCarrot);
+                y = addToggle(x, y, controlW, "Apfel", BetterUCConfig.INSTANCE.trashFilterApple,
+                        () -> BetterUCConfig.INSTANCE.trashFilterApple = !BetterUCConfig.INSTANCE.trashFilterApple);
+                y = addToggle(x, y, controlW, "Truhe", BetterUCConfig.INSTANCE.trashFilterChest,
+                        () -> BetterUCConfig.INSTANCE.trashFilterChest = !BetterUCConfig.INSTANCE.trashFilterChest);
+                y = addToggle(x, y, controlW, "Redstone-Truhe", BetterUCConfig.INSTANCE.trashFilterTrappedChest,
+                        () -> BetterUCConfig.INSTANCE.trashFilterTrappedChest = !BetterUCConfig.INSTANCE.trashFilterTrappedChest);
+                y = addToggle(x, y, controlW, "Endertruhe", BetterUCConfig.INSTANCE.trashFilterEnderChest,
+                        () -> BetterUCConfig.INSTANCE.trashFilterEnderChest = !BetterUCConfig.INSTANCE.trashFilterEnderChest);
+            }
             case DISCORD -> y = addDiscordControls(x, y, controlW);
             case UPDATES -> {
                 y = addToggle(x, y, controlW, "Auto-Updater", BetterUCConfig.INSTANCE.autoUpdateEnabled,
@@ -892,6 +914,9 @@ public class BetterUCScreen extends Screen {
             case HOTKEYS -> drawMiniInfo(context, previewX, previewY, "Hotkeys",
                     BetterUCConfig.INSTANCE.hotkeyCommands.size() + " Commands", true);
             case COMMANDS -> drawMiniInfo(context, previewX, previewY, "Tools", "Command Menu", true);
+            case TRASH_FILTER -> drawMiniInfo(context, previewX, previewY, "Mülleimer Filter",
+                    BetterUCConfig.INSTANCE.trashFilterEnabled ? "Markierung aktiv" : "Aus",
+                    BetterUCConfig.INSTANCE.trashFilterEnabled);
             case DISCORD -> drawMiniInfo(context, previewX, previewY, "Discord", "Invite öffnen", true);
             case UPDATES -> {
             }
@@ -1175,6 +1200,7 @@ public class BetterUCScreen extends Screen {
             case AUTO_STATS -> BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled;
             case CLOUD_SYNC -> BetterUCConfig.INSTANCE.cloudSettingsEnabled;
             case PING -> BetterUCConfig.INSTANCE.pingRelayEnabled;
+            case TRASH_FILTER -> BetterUCConfig.INSTANCE.trashFilterEnabled;
             default -> true;
         };
     }
@@ -1725,6 +1751,7 @@ public class BetterUCScreen extends Screen {
         PING(Category.TOOLS, "Ping", "Private Mod-Pings", 0xFF38BDF8, true),
         HOTKEYS(Category.TOOLS, "Hotkeys", "Commands auf Tasten", 0xFFFBBF24, false),
         COMMANDS(Category.TOOLS, "Commands", "Command Menu", 0xFF22C55E, false),
+        TRASH_FILTER(Category.TOOLS, "Mülleimer Filter", "Fundstücke hervorheben", 0xFF4ADE80, true),
         DISCORD(Category.TOOLS, "Discord", "Community Invite", 0xFF5865F2, false),
         UPDATES(Category.TOOLS, "Updates", "Changelog und neue Features", 0xFF38BDF8, false);
 
