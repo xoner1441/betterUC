@@ -29,6 +29,7 @@ public class ChangelogScreen extends Screen {
                             "Discord-Tickets speichern Mod-Daten, Zust\u00E4ndigkeit, Abschlussgrund und Transkript",
                             "betterUC Rollen werden automatisch mit den passenden Discord-Rollen synchronisiert",
                             "Der Bot \u00FCberwacht Website, Relay, PostgreSQL, Cloud-Fehler und Backups",
+                            "Staatspings verbinden Polizei, FBI und Rettungsdienst in einem gemeinsamen Kanal",
                             "Vorschl\u00E4ge k\u00F6nnen auf Discord eingereicht, bewertet und vom Team verwaltet werden",
                             "Eine Wochenstatistik fasst Nutzer, Versionen, Support und Cloud-Aktivit\u00E4t zusammen",
                             "Mod-Einstellungen werden mit deinem betterUC Account synchronisiert",
@@ -140,7 +141,7 @@ public class ChangelogScreen extends Screen {
                     new String[]{
                             "Pingrad öffnet sich beim Halten der Ping-Taste",
                             "Normal-, Gefahr- und Sammeln-Pings sind auswählbar",
-                            "Pings können global oder nur an die eigene Fraktion gesendet werden",
+                            "Pings können global, an die eigene Fraktion oder an den Staat gesendet werden",
                             "Pings werden nur in der eingestellten Reichweite erkannt",
                             "Eigene Farben pro Pingtyp",
                             "Ping-Sounds sind auswählbar und können deaktiviert werden",

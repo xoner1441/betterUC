@@ -47,7 +47,7 @@ const PG_DUMP_TIMEOUT_MS = Math.max(30_000, Number(process.env.PG_DUMP_TIMEOUT_M
 const execFileAsync = promisify(execFile);
 
 const FEATURE_FLAG_DEFINITIONS = Object.freeze([
-  { key: "ping_system", label: "Ping-System", description: "Private globale und fraktionsbasierte Pings" },
+  { key: "ping_system", label: "Ping-System", description: "Private globale, fraktions- und staatsbasierte Pings" },
   { key: "chat_customization", label: "WPS/HQ Customizations", description: "Kompakte WPS- und HQ-Nachrichten" },
   { key: "reinf_customization", label: "Reinf Customizations", description: "Kompakte Fraktions- und Bündnisrufe" },
   { key: "cloud_settings", label: "Cloud-Sync", description: "Synchronisierte Mod-Einstellungen" },
@@ -787,7 +787,10 @@ function normalizeFactionKey(value) {
 
   if (folded === "kartell" || folded === "calderon kartell" || folded.startsWith("calderon kartell ")) return "kartell";
   if (folded === "zivilist" || folded === "zivi" || folded === "ziv") return "zivilist";
-  if (folded === "rettungsdienst" || folded === "retungsdienst" || folded === "medic") return "medic";
+  if (folded === "polizei" || folded.startsWith("polizei ")) return "polizei";
+  if (folded === "fbi" || folded === "f b i" || folded.startsWith("fbi ") || folded.startsWith("f b i ")) return "fbi";
+  if (folded === "rettungsdienst" || folded === "retungsdienst" || folded === "medic"
+    || folded.startsWith("rettungsdienst ") || folded.startsWith("retungsdienst ") || folded.startsWith("medic ")) return "medic";
   if (folded === "la cosa nostra" || folded === "lcn") return "lcn";
   if (folded === "westside ballas" || folded === "ballas") return "ballas";
   if (folded === "soldner" || folded === "soeldner") return "soeldner";
@@ -805,6 +808,11 @@ function effectiveClientFaction(client) {
   if (!account) return "";
   const stats = publicStats(account);
   return stats.factionDisplay || account.faction || "";
+}
+
+function isStateFaction(value) {
+  const faction = normalizeFactionKey(value);
+  return faction === "polizei" || faction === "fbi" || faction === "medic";
 }
 
 function publicStats(account) {
@@ -2355,13 +2363,17 @@ function sameAudience(sender, target, payload) {
   if (!sender || !target) return false;
   if (sender.server !== target.server) return false;
 
-  const scope = cleanChannel(payload.scope || "channel");
+  const scope = cleanChannel(payload.audience || payload.scope || "channel");
   if (scope === "faction") {
     const senderFaction = normalizeFactionKey(effectiveClientFaction(sender));
     const targetFaction = normalizeFactionKey(effectiveClientFaction(target));
     return Boolean(senderFaction)
       && Boolean(targetFaction)
       && senderFaction === targetFaction;
+  }
+  if (scope === "state") {
+    return isStateFaction(effectiveClientFaction(sender))
+      && isStateFaction(effectiveClientFaction(target));
   }
   if (scope === "global") {
     return true;

@@ -593,13 +593,14 @@ public class BetterUCConfig {
                     .toLowerCase(Locale.ROOT);
             INSTANCE.pingRelayChannel = cleaned.isEmpty() ? "global" : cleaned;
         }
-        if (INSTANCE.pingRelayScope == null
-                || (!INSTANCE.pingRelayScope.equalsIgnoreCase("global")
-                && !INSTANCE.pingRelayScope.equalsIgnoreCase("faction"))) {
-            INSTANCE.pingRelayScope = "global";
-        } else {
-            INSTANCE.pingRelayScope = INSTANCE.pingRelayScope.equalsIgnoreCase("faction") ? "faction" : "global";
-        }
+        String pingScope = INSTANCE.pingRelayScope == null
+                ? ""
+                : INSTANCE.pingRelayScope.trim().toLowerCase(Locale.ROOT);
+        INSTANCE.pingRelayScope = switch (pingScope) {
+            case "faction" -> "faction";
+            case "state" -> "state";
+            default -> "global";
+        };
         INSTANCE.pingRelayTtlSeconds = Math.max(5, Math.min(60, INSTANCE.pingRelayTtlSeconds));
         INSTANCE.pingRelayMaxDistance = Math.max(0, Math.min(128, INSTANCE.pingRelayMaxDistance));
         INSTANCE.pingRelayColor = sanitizeHexColor(INSTANCE.pingRelayColor, "#38BDF8");

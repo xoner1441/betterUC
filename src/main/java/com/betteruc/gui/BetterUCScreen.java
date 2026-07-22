@@ -91,6 +91,7 @@ public class BetterUCScreen extends Screen {
             new UpdateSection("Ping-System", new String[]{
                     "Global: alle verbundenen Mod-User sehen den Ping",
                     "Fraktion: nur Spieler deiner getrackten Fraktion sehen den Ping",
+                    "Staat: Polizei, FBI und Rettungsdienst teilen sich einen Ping-Kanal",
                     "Normale, Gefahr- und Sammel-Pings haben eigene Farben",
                     "Ping-Ton und Ping-Anzeige können ein- und ausgeschaltet werden"
             }),
@@ -324,9 +325,14 @@ public class BetterUCScreen extends Screen {
         y = addToggle(x, y, width, "Ping Anzeige", BetterUCConfig.INSTANCE.showPingHud,
                 () -> BetterUCConfig.INSTANCE.showPingHud = !BetterUCConfig.INSTANCE.showPingHud);
         y = addButton(x, y, width, pingScopeLabel(), b -> {
-            BetterUCConfig.INSTANCE.pingRelayScope = "faction".equals(BetterUCConfig.INSTANCE.pingRelayScope)
+            String currentScope = BetterUCConfig.INSTANCE.pingRelayScope == null
                     ? "global"
-                    : "faction";
+                    : BetterUCConfig.INSTANCE.pingRelayScope;
+            BetterUCConfig.INSTANCE.pingRelayScope = switch (currentScope) {
+                case "global" -> "faction";
+                case "faction" -> "state";
+                default -> "global";
+            };
             saveConfig();
             refreshWidgets();
         });
@@ -1365,7 +1371,15 @@ public class BetterUCScreen extends Screen {
     }
 
     private String pingScopeLabel() {
-        return "Ping Ziel: " + ("faction".equals(BetterUCConfig.INSTANCE.pingRelayScope) ? "Fraktion" : "Global");
+        String currentScope = BetterUCConfig.INSTANCE.pingRelayScope == null
+                ? "global"
+                : BetterUCConfig.INSTANCE.pingRelayScope;
+        String label = switch (currentScope) {
+            case "faction" -> "Fraktion";
+            case "state" -> "Staat";
+            default -> "Global";
+        };
+        return "Ping Ziel: " + label;
     }
 
     private String currentFactionLabel() {

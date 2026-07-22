@@ -155,6 +155,10 @@ public final class PingRelayClient {
             sendLocalMessage(client, "Fraktion noch nicht erkannt. Bitte /stats aktualisieren.");
             return false;
         }
+        if ("state".equals(scope) && !isStateFaction(currentFaction())) {
+            sendLocalMessage(client, "Staatspings sind nur für Polizei, FBI und Rettungsdienst verfügbar.");
+            return false;
+        }
         long now = System.currentTimeMillis();
         int cooldownMs = Math.max(0, Math.min(10000, BetterUCConfig.INSTANCE.pingCooldownMs));
         long remainingMs = lastPingSentMs + cooldownMs - now;
@@ -170,7 +174,8 @@ public final class PingRelayClient {
         payload.addProperty("sender", playerName(client));
         payload.addProperty("server", currentServerId(client));
         payload.addProperty("channel", channel());
-        payload.addProperty("scope", scope);
+        payload.addProperty("scope", "state".equals(scope) ? "faction" : scope);
+        payload.addProperty("audience", scope);
         payload.addProperty("dimension", currentDimension(client));
         payload.addProperty("x", target.pos.x);
         payload.addProperty("y", target.pos.y);
@@ -1066,7 +1071,13 @@ public final class PingRelayClient {
 
     private static String pingScope() {
         String raw = BetterUCConfig.INSTANCE.pingRelayScope == null ? "" : BetterUCConfig.INSTANCE.pingRelayScope.trim();
-        return "faction".equalsIgnoreCase(raw) ? "faction" : "global";
+        if ("faction".equalsIgnoreCase(raw)) return "faction";
+        if ("state".equalsIgnoreCase(raw)) return "state";
+        return "global";
+    }
+
+    private static boolean isStateFaction(String faction) {
+        return "polizei".equals(faction) || "fbi".equals(faction) || "medic".equals(faction);
     }
 
     private static boolean hasRelayCredential() {
