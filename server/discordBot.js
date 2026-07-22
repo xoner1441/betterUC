@@ -43,6 +43,8 @@ const TICKET_TRANSCRIPT_DIR = process.env.DISCORD_TICKET_TRANSCRIPT_DIR
   || path.join(process.env.DATA_DIR || path.join(__dirname, "data"), "ticket-transcripts");
 const SUGGESTION_CHANNEL_ID = clean(process.env.DISCORD_SUGGESTION_CHANNEL_ID);
 const SUGGESTION_CHANNEL_NAME = clean(process.env.DISCORD_SUGGESTION_CHANNEL_NAME) || "vorschl\u00e4ge";
+const SUGGESTION_GUIDE_ENABLED = String(process.env.DISCORD_SUGGESTION_GUIDE_ENABLED || "true").toLowerCase() !== "false";
+const SUGGESTION_GUIDE_DELAY_MS = Math.max(500, Number(process.env.DISCORD_SUGGESTION_GUIDE_DELAY_MS || 1500));
 const MONITOR_CHANNEL_ID = clean(process.env.DISCORD_MONITOR_CHANNEL_ID);
 const MONITOR_CHANNEL_NAME = clean(process.env.DISCORD_MONITOR_CHANNEL_NAME) || "systemstatus";
 const MONITOR_ENABLED = String(process.env.DISCORD_MONITOR_ENABLED || "true").toLowerCase() !== "false";
@@ -1025,6 +1027,28 @@ function suggestionVoteRow(suggestion) {
   );
 }
 
+function suggestionGuidePayload() {
+  const embed = new EmbedBuilder()
+    .setTitle("betterUC Vorschläge")
+    .setColor(0x38bdf8)
+    .setDescription([
+      "Du hast eine Idee für betterUC oder möchtest eine bestehende Funktion verbessern?",
+      "",
+      "Nutze **`/vorschlag erstellen`**, um einen neuen Vorschlag einzureichen.",
+      "",
+      "Der Bot führt dich anschließend durch die Erstellung. Beschreibe deine Idee verständlich und erkläre kurz, welchen Vorteil sie für Nutzer bietet.",
+      "",
+      "Bitte erstelle pro Idee einen eigenen Vorschlag."
+    ].join("\n"))
+    .setFooter({ text: "betterUC Community • Vorschlagssystem" });
+
+  return {
+    embeds: [embed],
+    components: [],
+    allowedMentions: { parse: [] }
+  };
+}
+
 function suggestionAuthor(context, suggestion) {
   const account = context.getAccounts().find(entry => entry.id === suggestion.accountId);
   return account?.minecraftName || `<@${suggestion.authorDiscordId}>`;
@@ -1069,6 +1093,7 @@ async function handleSuggestionCommand(interaction, context) {
       allowedMentions: { parse: [] }
     });
     const attached = await context.attachDiscordSuggestionMessage(suggestion.id, channel.id, message.id);
+    context.refreshSuggestionGuide?.();
     await interaction.editReply({ content: `Vorschlag #${attached.id} wurde in ${channel} ver\u00f6ffentlicht.` });
     return;
   }
@@ -1535,9 +1560,9 @@ async function startDiscordBot(context) {
     };
   }
 
-  const intents = [GatewayIntentBits.Guilds];
+  const intents = [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages];
   if (GLOBAL_CHAT_ENABLED) {
-    intents.push(GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent);
+    intents.push(GatewayIntentBits.MessageContent);
   }
   const client = new Client({
     intents
@@ -1551,6 +1576,8 @@ async function startDiscordBot(context) {
   let monitorRefreshTimer = null;
   let monitorRun = Promise.resolve();
   let weeklyTimer = null;
+  let suggestionGuideTimer = null;
+  let suggestionGuideRun = Promise.resolve();
   let globalChatChannel = null;
   let globalChatLogChannel = null;
   let announcementChannel = null;
@@ -1587,11 +1614,51 @@ async function startDiscordBot(context) {
     await logGlobalChat(event);
   };
 
+  const updateSuggestionGuide = async () => {
+    if (!SUGGESTION_GUIDE_ENABLED || !suggestionChannel) return null;
+
+    let guideMessage = null;
+    if (botState.suggestionGuideChannelId === suggestionChannel.id && botState.suggestionGuideMessageId) {
+      guideMessage = await suggestionChannel.messages.fetch(botState.suggestionGuideMessageId).catch(() => null);
+    }
+
+    const newestMessages = await suggestionChannel.messages.fetch({ limit: 1 }).catch(() => null);
+    const newestMessage = newestMessages?.first?.() || null;
+    if (guideMessage && newestMessage?.id === guideMessage.id) {
+      await guideMessage.edit(suggestionGuidePayload());
+      return guideMessage;
+    }
+
+    if (guideMessage) {
+      await guideMessage.delete().catch(error => {
+        console.warn("Could not move betterUC suggestion guide", error.message);
+      });
+    }
+
+    guideMessage = await suggestionChannel.send(suggestionGuidePayload());
+    botState.suggestionGuideMessageId = guideMessage.id;
+    botState.suggestionGuideChannelId = suggestionChannel.id;
+    await writeBotState(botState);
+    return guideMessage;
+  };
+
+  const queueSuggestionGuide = (delayMs = SUGGESTION_GUIDE_DELAY_MS) => {
+    if (!SUGGESTION_GUIDE_ENABLED || !suggestionChannel) return;
+    clearTimeout(suggestionGuideTimer);
+    suggestionGuideTimer = setTimeout(() => {
+      suggestionGuideRun = suggestionGuideRun
+        .catch(() => null)
+        .then(() => updateSuggestionGuide())
+        .catch(error => console.warn("Discord suggestion guide update failed", error.message));
+    }, Math.max(0, delayMs));
+  };
+
   const commandContext = {
     ...context,
     publishAnnouncement,
     getTicketLogChannel: () => ticketLogChannel,
     getSuggestionChannel: () => suggestionChannel,
+    refreshSuggestionGuide: () => queueSuggestionGuide(),
     syncRoles: () => syncBetterUcRoleState(client, context)
   };
 
@@ -1714,6 +1781,9 @@ async function startDiscordBot(context) {
     } catch (error) {
       console.error("Could not sync betterUC Discord commands", error);
     }
+    if (suggestionChannel) {
+      await updateSuggestionGuide().catch(error => console.warn("Discord suggestion guide setup failed", error.message));
+    }
     updatePresence();
     syncBetterUcRoleState(client, context).catch(error => console.warn("Discord role sync failed", error.message));
     roleSyncTimer = setInterval(() => {
@@ -1735,6 +1805,13 @@ async function startDiscordBot(context) {
 
   client.on("interactionCreate", interaction => handleInteraction(interaction, commandContext));
   client.on("messageCreate", async message => {
+    if (suggestionChannel
+        && message.guild?.id === GUILD_ID
+        && message.channel.id === suggestionChannel.id
+        && !message.author.bot) {
+      queueSuggestionGuide();
+    }
+
     if (!GLOBAL_CHAT_ENABLED || !globalChatChannel || message.author.bot) return;
     if (!message.guild || message.guild.id !== GUILD_ID || message.channel.id !== globalChatChannel.id) return;
     if (!message.content || !message.content.trim()) return;
@@ -1774,6 +1851,7 @@ async function startDiscordBot(context) {
     stop() {
       clearTimeout(presenceTimer);
       clearTimeout(monitorRefreshTimer);
+      clearTimeout(suggestionGuideTimer);
       clearInterval(roleSyncTimer);
       clearInterval(releaseCheckTimer);
       clearInterval(monitorTimer);

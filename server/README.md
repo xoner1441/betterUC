@@ -49,6 +49,8 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `DISCORD_TICKET_LOG_CHANNEL_ID=...` private channel receiving ticket transcripts
 - `DISCORD_TICKET_TRANSCRIPT_DIR=/opt/betteruc-relay/data/ticket-transcripts`
 - `DISCORD_SUGGESTION_CHANNEL_ID=...` public channel for persistent suggestions and votes
+- `DISCORD_SUGGESTION_GUIDE_ENABLED=true` keeps the `/vorschlag erstellen` guide at the bottom of the suggestion channel
+- `DISCORD_SUGGESTION_GUIDE_DELAY_MS=1500` debounce before the guide is moved below new messages
 - `DISCORD_MONITOR_CHANNEL_ID=...` channel containing one permanently updated live system-status message
 - `DISCORD_MONITOR_CHECK_MS=60000`
 - `DISCORD_MONITOR_PIN_MESSAGE=true` pins the live status message when the bot has Manage Messages
@@ -92,6 +94,7 @@ Slash commands:
 - `/systemstatus` checks the public website, relay process, PostgreSQL, migrations, Cloud errors and backups.
 - `/vorschlag erstellen` posts a persistent proposal with one vote per linked account.
 - `/vorschlag status` changes a proposal to open, planned, in progress, implemented or rejected.
+- The bot maintains one suggestion guide message below all proposals and user messages.
 - `/wochenstatistik` shows the last seven days of accounts, versions, chat, tickets, suggestions and Cloud activity.
 - `/updates check` checks GitHub releases.
 - `/updates post_latest` posts the latest GitHub release to the update channel.
