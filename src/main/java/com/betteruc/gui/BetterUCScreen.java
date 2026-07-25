@@ -235,6 +235,10 @@ public class BetterUCScreen extends Screen {
                         () -> BetterUCConfig.INSTANCE.autoGaertnerEnabled = !BetterUCConfig.INSTANCE.autoGaertnerEnabled);
                 y = addToggle(x, y, controlW, "M\u00FCllmann", BetterUCConfig.INSTANCE.autoMuellmannEnabled,
                         () -> BetterUCConfig.INSTANCE.autoMuellmannEnabled = !BetterUCConfig.INSTANCE.autoMuellmannEnabled);
+
+                y = addSectionHeader(x, y, controlW, "Erste Hilfe", 0xFFFF6B6B);
+                y = addToggle(x, y, controlW, "Folgeannahmen", BetterUCConfig.INSTANCE.autoFirstAidEnabled,
+                        () -> BetterUCConfig.INSTANCE.autoFirstAidEnabled = !BetterUCConfig.INSTANCE.autoFirstAidEnabled);
             }
             case CHAT -> {
                 y = addSectionHeader(x, y, controlW, "WPS & HQ", 0xFFFF6B6B);
@@ -1051,7 +1055,7 @@ public class BetterUCScreen extends Screen {
             case AUTO_STATS -> drawMiniInfo(context, previewX, previewY, "Auto-Stats", "Join /stats", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
             case AUTOMATIONS -> {
                 int enabled = AutomationController.localEnabledCount();
-                drawMiniInfo(context, previewX, previewY, "Automationen", enabled + "/5 aktiv", enabled > 0);
+                drawMiniInfo(context, previewX, previewY, "Automationen", enabled + "/6 aktiv", enabled > 0);
             }
             case CHAT -> drawReinfPreview(context, previewX, previewY);
             case CONNECTION -> drawMiniInfo(context, previewX, previewY, "Verbindung", PingRelayClient.statusLabel(),

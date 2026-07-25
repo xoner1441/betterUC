@@ -70,7 +70,7 @@ public class BetterUCConfig {
             "toggleSprintEnabled", "autoStatsOnJoinEnabled", "autoFactionBankOnBalanceEnabled",
             "autoAtmInfoOnBalanceEnabled", "chatTimestampsEnabled", "chatCustomizationEnabled",
             "autoDropDrinkEnabled", "autoFisherEnabled", "autoWinzerEnabled", "autoGaertnerEnabled",
-            "autoMuellmannEnabled",
+            "autoMuellmannEnabled", "autoFirstAidEnabled",
             "reinfCustomizationEnabled", "reinfUniformColorEnabled", "reinfLabelColor", "reinfTextColor",
             "reinfDistanceColor", "reinfUniformColor", "globalChatEnabled", "chatTimestampFormat", "maxChatHistory",
             "pingRelayEnabled", "showPingHud", "showRoleHolograms", "pingHudScale", "pingHudStyle",
@@ -338,6 +338,7 @@ public class BetterUCConfig {
     public boolean autoWinzerEnabled = true;
     public boolean autoGaertnerEnabled = true;
     public boolean autoMuellmannEnabled = true;
+    public boolean autoFirstAidEnabled = false;
     public Map<String, PlantTimerState> plantTimerStates = new LinkedHashMap<>();
 
     public String factionUrl = "https://example.com/faction.json";

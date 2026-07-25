@@ -5,6 +5,7 @@ import com.betteruc.BetterUCSuppressFlags;
 import com.betteruc.ServerGate;
 import com.betteruc.client.AutoDropDrinkClient;
 import com.betteruc.client.AutoFisherClient;
+import com.betteruc.client.AutoFirstAidClient;
 import com.betteruc.client.AutoGaertnerClient;
 import com.betteruc.client.AutoMuellmannClient;
 import com.betteruc.client.AutoWinzerClient;
@@ -156,6 +157,7 @@ public class ChatBlacklistMixin {
         if (AutomationController.isMuellmannEnabled()) {
             AutoMuellmannClient.handleChatLine(Minecraft.getInstance(), raw);
         }
+        AutoFirstAidClient.handleChatLine(Minecraft.getInstance(), raw);
         CarFindTracker.handleIncomingChat(Minecraft.getInstance(), raw);
         CommunicationDeviceTracker.handleChatLine(Minecraft.getInstance(), raw);
         DealerTimerHud.handleChatLine(Minecraft.getInstance(), raw);

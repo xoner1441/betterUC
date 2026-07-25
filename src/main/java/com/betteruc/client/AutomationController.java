@@ -33,6 +33,10 @@ public final class AutomationController {
                 && RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_MUELLMANN);
     }
 
+    public static boolean isFirstAidEnabled() {
+        return BetterUCConfig.INSTANCE.autoFirstAidEnabled;
+    }
+
     public static int localEnabledCount() {
         int count = 0;
         if (BetterUCConfig.INSTANCE.autoDropDrinkEnabled) count++;
@@ -40,6 +44,7 @@ public final class AutomationController {
         if (BetterUCConfig.INSTANCE.autoWinzerEnabled) count++;
         if (BetterUCConfig.INSTANCE.autoGaertnerEnabled) count++;
         if (BetterUCConfig.INSTANCE.autoMuellmannEnabled) count++;
+        if (BetterUCConfig.INSTANCE.autoFirstAidEnabled) count++;
         return count;
     }
 

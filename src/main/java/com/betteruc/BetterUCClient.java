@@ -6,6 +6,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.betteruc.client.AutoDropDrinkClient;
 import com.betteruc.client.AutoFisherClient;
+import com.betteruc.client.AutoFirstAidClient;
 import com.betteruc.client.AutoGaertnerClient;
 import com.betteruc.client.AutoMuellmannClient;
 import com.betteruc.client.AutoWinzerClient;
@@ -955,6 +956,7 @@ public class BetterUCClient implements ClientModInitializer {
             if (AutomationController.isMuellmannEnabled()) {
                 AutoMuellmannClient.tick(client);
             }
+            AutoFirstAidClient.tick(client);
             TrashFilterClient.tick(client);
             tickStatsOnJoin(client);
             handleConfiguredHotkeys(client);
@@ -1173,6 +1175,7 @@ public class BetterUCClient implements ClientModInitializer {
         ProductionTimerHud.clear();
         AutoDropDrinkClient.reset();
         AutoFisherClient.reset();
+        AutoFirstAidClient.reset();
         AutoGaertnerClient.reset();
         AutoMuellmannClient.reset();
         AutoWinzerClient.reset();
