@@ -88,6 +88,20 @@ class ParserSmokeTest {
     }
 
     @Test
+    void statsFactionLineRequiresExactLabelAndKnownFaction() {
+        assertEquals(
+                "Calder\u00F3n Kartell Leader",
+                FactionStatsParser.displayFromStatsLine(
+                        "\u00A7719:33:45 \u00A78- \u00A7cFraktion: Calder\u00F3n Kartell Leader"
+                )
+        );
+        assertEquals("Zivilist", FactionStatsParser.displayFromStatsLine(" - Fraktion: Zivilist"));
+        assertEquals("", FactionStatsParser.displayFromStatsLine(" \u00BB Fraktionsgehalt: +900$"));
+        assertEquals("", FactionStatsParser.displayFromStatsLine(" \u00BB Sub-Fraktionsgehalt: +500$"));
+        assertEquals("", FactionStatsParser.displayFromStatsLine(" - Fraktion: sgehalt: +500$"));
+    }
+
+    @Test
     void chatCustomizationCombinesKilledHqPairWithTimestamp() {
         ChatCustomizationFormatter.clearPending();
 

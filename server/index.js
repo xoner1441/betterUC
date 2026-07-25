@@ -776,6 +776,21 @@ function rolePriority(role) {
   return 50;
 }
 
+const KNOWN_FACTION_KEYS = new Set([
+  "zivilist",
+  "polizei",
+  "fbi",
+  "medic",
+  "lcn",
+  "ballas",
+  "kartell",
+  "kerzakov",
+  "yakuza",
+  "soeldner",
+  "news",
+  "ordo"
+]);
+
 function normalizeFactionKey(value) {
   const folded = String(value || "")
     .normalize("NFD")
@@ -791,23 +806,32 @@ function normalizeFactionKey(value) {
   if (folded === "fbi" || folded === "f b i" || folded.startsWith("fbi ") || folded.startsWith("f b i ")) return "fbi";
   if (folded === "rettungsdienst" || folded === "retungsdienst" || folded === "medic"
     || folded.startsWith("rettungsdienst ") || folded.startsWith("retungsdienst ") || folded.startsWith("medic ")) return "medic";
-  if (folded === "la cosa nostra" || folded === "lcn") return "lcn";
-  if (folded === "westside ballas" || folded === "ballas") return "ballas";
-  if (folded === "soldner" || folded === "soeldner") return "soeldner";
-  if (folded === "ordo absolutus" || folded === "ordo") return "ordo";
-  if (folded === "kerzakov" || folded === "kerzakov familie" || folded === "kerzakov family" || folded === "kf" || folded === "k f") return "kerzakov";
+  if (folded === "la cosa nostra" || folded === "lcn" || folded.startsWith("la cosa nostra ")) return "lcn";
+  if (folded === "westside ballas" || folded === "ballas" || folded.startsWith("westside ballas ")) return "ballas";
+  if (folded === "soldner" || folded === "soeldner" || folded.startsWith("soldner ") || folded.startsWith("soeldner ")) return "soeldner";
+  if (folded === "ordo absolutus" || folded === "ordo" || folded.startsWith("ordo absolutus ")) return "ordo";
+  if (folded === "kerzakov" || folded === "kerzakov familie" || folded === "kerzakov family"
+    || folded === "kf" || folded === "k f" || folded.startsWith("kerzakov familie ")
+    || folded.startsWith("kerzakov family ")) return "kerzakov";
+  if (folded === "yakuza" || folded.startsWith("yakuza ")) return "yakuza";
+  if (folded === "news" || folded.startsWith("news ")) return "news";
   if (folded === "f b i") return "fbi";
   return folded;
 }
 
+function isKnownFaction(value) {
+  return KNOWN_FACTION_KEYS.has(normalizeFactionKey(value));
+}
+
 function effectiveClientFaction(client) {
   const live = cleanSmallLabel(client && client.faction || "", "");
-  if (live) return live;
+  if (isKnownFaction(live)) return live;
 
   const account = client && client.account;
   if (!account) return "";
   const stats = publicStats(account);
-  return stats.factionDisplay || account.faction || "";
+  if (isKnownFaction(stats.factionDisplay)) return stats.factionDisplay;
+  return isKnownFaction(account.faction) ? account.faction : "";
 }
 
 function isStateFaction(value) {
@@ -817,10 +841,11 @@ function isStateFaction(value) {
 
 function publicStats(account) {
   const stats = account && account.stats && typeof account.stats === "object" ? account.stats : {};
+  const factionDisplay = cleanStatText(stats.factionDisplay || "");
   return {
     bankMoney: cleanStatNumber(stats.bankMoney),
     cashMoney: cleanStatNumber(stats.cashMoney),
-    factionDisplay: cleanStatText(stats.factionDisplay || ""),
+    factionDisplay: isKnownFaction(factionDisplay) ? factionDisplay : "",
     houses: cleanStatText(stats.houses || ""),
     loyaltyBonus: cleanStatNumber(stats.loyaltyBonus),
     playTimeHours: cleanStatNumber(stats.playTimeHours),
@@ -1277,7 +1302,10 @@ function mergeStats(account, incoming) {
 
   if (Object.hasOwn(source, "bankMoney")) setStat("bankMoney", cleanStatNumber(source.bankMoney));
   if (Object.hasOwn(source, "cashMoney")) setStat("cashMoney", cleanStatNumber(source.cashMoney));
-  if (Object.hasOwn(source, "factionDisplay")) setStat("factionDisplay", cleanStatText(source.factionDisplay || ""));
+  if (Object.hasOwn(source, "factionDisplay")) {
+    const factionDisplay = cleanStatText(source.factionDisplay || "");
+    if (isKnownFaction(factionDisplay)) setStat("factionDisplay", factionDisplay);
+  }
   if (Object.hasOwn(source, "houses")) setStat("houses", cleanStatText(source.houses || ""));
   if (Object.hasOwn(source, "loyaltyBonus")) setStat("loyaltyBonus", cleanStatNumber(source.loyaltyBonus));
   if (Object.hasOwn(source, "playTimeHours")) setStat("playTimeHours", cleanStatNumber(source.playTimeHours));

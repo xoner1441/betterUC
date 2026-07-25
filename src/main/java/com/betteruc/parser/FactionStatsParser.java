@@ -3,8 +3,16 @@ package com.betteruc.parser;
 import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class FactionStatsParser {
+    private static final Pattern CHAT_TIMESTAMP_PATTERN = Pattern.compile("^\\s*\\d{1,2}:\\d{2}:\\d{2}\\s+");
+    private static final Pattern TEXT_FORMATTING_PATTERN = Pattern.compile("(?i)\\u00A7[0-9A-FK-OR]");
+    private static final Pattern FACTION_STATS_LINE_PATTERN = Pattern.compile(
+            "^\\s*[-\\u2010-\\u2015\\u2212]?\\s*Fraktion\\s*:\\s*(.+?)\\s*$",
+            Pattern.CASE_INSENSITIVE
+    );
     private static final List<KnownFaction> KNOWN_FACTIONS = List.of(
             new KnownFaction("zivilist", "Zivilist"),
             new KnownFaction("polizei", "Polizei"),
@@ -21,6 +29,15 @@ public final class FactionStatsParser {
     );
 
     private FactionStatsParser() {
+    }
+
+    public static String displayFromStatsLine(String raw) {
+        String cleaned = cleanStatsLine(raw);
+        Matcher matcher = FACTION_STATS_LINE_PATTERN.matcher(cleaned);
+        if (!matcher.matches()) return "";
+
+        String display = matcher.group(1).trim();
+        return queryFromStatsValue(display).isEmpty() ? "" : display;
     }
 
     public static String queryFromStatsValue(String raw) {
@@ -62,6 +79,14 @@ public final class FactionStatsParser {
                 || folded.equals("kerzakov family")) return "kerzakov";
         if (folded.equals("f b i")) return "fbi";
         return folded;
+    }
+
+    private static String cleanStatsLine(String raw) {
+        if (raw == null) return "";
+        String cleaned = TEXT_FORMATTING_PATTERN.matcher(raw).replaceAll("");
+        cleaned = CHAT_TIMESTAMP_PATTERN.matcher(cleaned).replaceFirst("");
+        cleaned = cleaned.replaceFirst("^\\s*(?:\u00C2?\u00BB|>)+\\s*", "");
+        return cleaned.trim();
     }
 
     private static String fold(String raw) {

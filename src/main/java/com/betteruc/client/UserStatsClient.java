@@ -2,6 +2,7 @@ package com.betteruc.client;
 
 import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.CashHud;
+import com.betteruc.parser.FactionStatsParser;
 import com.google.gson.JsonObject;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -12,7 +13,6 @@ public final class UserStatsClient {
     private static final Pattern CHAT_TIMESTAMP_PATTERN = Pattern.compile("^\\s*\\d{1,2}:\\d{2}:\\d{2}\\s+");
     private static final Pattern TEXT_FORMATTING_PATTERN = Pattern.compile("(?i)\\u00A7[0-9A-FK-OR]");
     private static final Pattern HOUSE_PATTERN = Pattern.compile(STAT_PREFIX + "Haus\\s*:?\\s*(.+)$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern FACTION_PATTERN = Pattern.compile(STAT_PREFIX + "Fraktion\\s*:?\\s*(.+)$", Pattern.CASE_INSENSITIVE);
     private static final Pattern WARNS_PATTERN = Pattern.compile(STAT_PREFIX + "Verwarnungen\\s*:?\\s*(.+)$", Pattern.CASE_INSENSITIVE);
     private static final Pattern LOYALTY_PATTERN = Pattern.compile(STAT_PREFIX + "Treuebonus\\s*:?\\s*([0-9][0-9.]*)\\s*(?:Punkte?)?.*$", Pattern.CASE_INSENSITIVE);
     private static final Pattern PLAYTIME_PATTERN = Pattern.compile(STAT_PREFIX + "Spielzeit\\s*:?\\s*([0-9][0-9.]*)\\s*(?:Stunden?)?.*$", Pattern.CASE_INSENSITIVE);
@@ -71,9 +71,9 @@ public final class UserStatsClient {
             }
         }
 
-        matcher = FACTION_PATTERN.matcher(trimmed);
-        if (matcher.find()) {
-            String value = cleanText(matcher.group(1));
+        String factionDisplay = FactionStatsParser.displayFromStatsLine(raw);
+        if (!factionDisplay.isBlank()) {
+            String value = cleanText(factionDisplay);
             if (!value.equals(lastFactionDisplay)) {
                 lastFactionDisplay = value;
                 changed = true;

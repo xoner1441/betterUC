@@ -27,6 +27,7 @@ import com.betteruc.hud.PaydayHud;
 import com.betteruc.hud.PlantageHud;
 import com.betteruc.hud.ProductionTimerHud;
 import com.betteruc.parser.BlacklistParser;
+import com.betteruc.parser.FactionStatsParser;
 import com.betteruc.parser.StatsLineClassifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -61,10 +62,6 @@ public class ChatBlacklistMixin {
     private static final Pattern BLACK_MONEY_PATTERN = Pattern.compile("-\\s*Schwarzgeld:\\s*([0-9.]+)\\$", Pattern.CASE_INSENSITIVE);
     private static final Pattern PAYDAY_PATTERN = Pattern.compile(
             "Zeit seit PayDay:\\s*(\\d+)\\s*/\\s*(\\d+)\\s*Minuten",
-            Pattern.CASE_INSENSITIVE
-    );
-    private static final Pattern FACTION_STATS_PATTERN = Pattern.compile(
-            "^\\s*[-\\u2010-\\u2015\\u2212]?\\s*Fraktion\\s*:\\s*(.+)$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern CHAT_TIMESTAMP_PATTERN = Pattern.compile("^\\s*\\d{1,2}:\\d{2}:\\d{2}\\s+");
@@ -288,9 +285,9 @@ public class ChatBlacklistMixin {
 
     private void updateCurrentFaction(String raw) {
         if (raw == null || raw.isBlank()) return;
-        Matcher factionMatcher = FACTION_STATS_PATTERN.matcher(cleanStatsLine(raw));
-        if (!factionMatcher.find()) return;
-        if (BetterUCConfig.updateCurrentPlayerFactionFromStats(factionMatcher.group(1))) {
+        String factionDisplay = FactionStatsParser.displayFromStatsLine(raw);
+        if (factionDisplay.isBlank()) return;
+        if (BetterUCConfig.updateCurrentPlayerFactionFromStats(factionDisplay)) {
             PingRelayClient.refreshIdentity(Minecraft.getInstance());
         }
     }
