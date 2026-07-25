@@ -78,7 +78,7 @@ public class BetterUCClient implements ClientModInitializer {
     private static final int MAX_KILLS = 100;
     private static final int MAX_PRICE = 10_000;
     private static final int MIN_PRICE = 100;
-    private static final int AUTO_STATS_ON_JOIN_DELAY_TICKS = 240;
+    private static final int AUTO_STATS_ON_JOIN_DELAY_TICKS = 120;
     private static final long BLINFO_CACHE_MAX_AGE_MS = 20_000L;
     private static final long BLINFO_TIMEOUT_MS = 5000L;
     private static final long PING_WHEEL_HOLD_MS = 250L;

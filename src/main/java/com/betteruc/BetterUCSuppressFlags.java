@@ -11,8 +11,8 @@ public class BetterUCSuppressFlags {
     public static long lastSilentStatsRequestMs = 0L;
     public static long forceHideStatsOutputUntilMs = 0L;
     public static long forceHideDashStatsOutputUntilMs = 0L;
-    public static final long SILENT_STATS_TIMEOUT_MS = 18000L;
-    public static final long SILENT_STATS_DASH_TAIL_TIMEOUT_MS = 22000L;
+    public static final long SILENT_STATS_TIMEOUT_MS = 6000L;
+    public static final long SILENT_STATS_DASH_TAIL_TIMEOUT_MS = 6500L;
     // For /modbl: suppress output and call callback once loading is complete.
     public static boolean suppressModBlOutput = false;
     public static Runnable modBlCallback = null;
@@ -26,7 +26,7 @@ public class BetterUCSuppressFlags {
 
     public static void markSilentStatsRequest() {
         long now = System.currentTimeMillis();
-        pendingSilentStatsRequests++;
+        pendingSilentStatsRequests = 1;
         suppressStatsOutput = true;
         lastSilentStatsRequestMs = now;
         forceHideStatsOutputUntilMs = Math.max(forceHideStatsOutputUntilMs, now + SILENT_STATS_TIMEOUT_MS);
@@ -80,8 +80,12 @@ public class BetterUCSuppressFlags {
     }
 
     public static void finishSilentStatsCapture() {
+        pendingSilentStatsRequests = 0;
         activeSilentStatsCapture = false;
         suppressStatsOutput = false;
+        lastSilentStatsRequestMs = 0L;
+        forceHideStatsOutputUntilMs = 0L;
+        forceHideDashStatsOutputUntilMs = 0L;
     }
 
     public static void clearSilentBlacklistState() {
@@ -100,11 +104,13 @@ public class BetterUCSuppressFlags {
     public static void cleanupStaleSilentStatsState() {
         if (lastSilentStatsRequestMs <= 0L) return;
         long age = System.currentTimeMillis() - lastSilentStatsRequestMs;
-        if (age > SILENT_STATS_TIMEOUT_MS && !activeSilentStatsCapture) {
+        if (age > SILENT_STATS_TIMEOUT_MS) {
             pendingSilentStatsRequests = 0;
             activeSilentStatsCapture = false;
             suppressStatsOutput = false;
             lastSilentStatsRequestMs = 0L;
+            forceHideStatsOutputUntilMs = 0L;
+            forceHideDashStatsOutputUntilMs = 0L;
         }
     }
 

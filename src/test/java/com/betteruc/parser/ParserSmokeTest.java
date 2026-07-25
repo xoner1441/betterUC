@@ -1,5 +1,6 @@
 package com.betteruc.parser;
 
+import com.betteruc.BetterUCSuppressFlags;
 import com.betteruc.client.ChatCustomizationFormatter;
 import org.junit.jupiter.api.Test;
 
@@ -10,6 +11,30 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ParserSmokeTest {
+
+    @Test
+    void silentStatsCaptureReleasesImmediatelyAndCannotRemainStuck() {
+        BetterUCSuppressFlags.clearSilentBlacklistState();
+        BetterUCSuppressFlags.markSilentStatsRequest();
+        assertTrue(BetterUCSuppressFlags.beginSilentStatsCaptureIfPending());
+        assertTrue(BetterUCSuppressFlags.isSilentStatsCaptureActive());
+
+        BetterUCSuppressFlags.finishSilentStatsCapture();
+        assertFalse(BetterUCSuppressFlags.suppressStatsOutput);
+        assertFalse(BetterUCSuppressFlags.activeSilentStatsCapture);
+        assertEquals(0, BetterUCSuppressFlags.pendingSilentStatsRequests);
+        assertEquals(0L, BetterUCSuppressFlags.forceHideStatsOutputUntilMs);
+        assertEquals(0L, BetterUCSuppressFlags.forceHideDashStatsOutputUntilMs);
+
+        BetterUCSuppressFlags.markSilentStatsRequest();
+        assertTrue(BetterUCSuppressFlags.beginSilentStatsCaptureIfPending());
+        BetterUCSuppressFlags.lastSilentStatsRequestMs =
+                System.currentTimeMillis() - BetterUCSuppressFlags.SILENT_STATS_TIMEOUT_MS - 1L;
+        BetterUCSuppressFlags.cleanupStaleSilentStatsState();
+        assertFalse(BetterUCSuppressFlags.activeSilentStatsCapture);
+        assertFalse(BetterUCSuppressFlags.suppressStatsOutput);
+        BetterUCSuppressFlags.clearSilentBlacklistState();
+    }
 
     @Test
     void blacklistEntryParsesReasonStatsAndVogelfrei() {

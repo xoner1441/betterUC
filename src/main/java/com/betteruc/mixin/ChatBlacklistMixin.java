@@ -84,14 +84,15 @@ public class ChatBlacklistMixin {
 
     private static long lastAfkExitStatsRefreshMs = 0L;
     private static final long AFK_EXIT_STATS_REFRESH_COOLDOWN_MS = 3000L;
+    private static final long AFK_EXIT_STATS_REFRESH_DELAY_MS = 750L;
     private static long forceHideStatsLinesUntilMs = 0L;
-    private static final long FORCE_HIDE_STATS_WINDOW_MS = 8000L;
+    private static final long FORCE_HIDE_STATS_WINDOW_MS = 6000L;
     private static long forceHideDashStatsLinesUntilMs = 0L;
-    private static final long FORCE_HIDE_DASH_STATS_WINDOW_MS = 12000L;
+    private static final long FORCE_HIDE_DASH_STATS_WINDOW_MS = 6500L;
     private static long forceHideAfkExitTailUntilMs = 0L;
-    private static final long FORCE_HIDE_AFK_EXIT_TAIL_WINDOW_MS = 15000L;
+    private static final long FORCE_HIDE_AFK_EXIT_TAIL_WINDOW_MS = 6500L;
     private static long lastSuppressedStatsLineMs = 0L;
-    private static final long LINGERING_STATS_CLEANUP_WINDOW_MS = 15000L;
+    private static final long LINGERING_STATS_CLEANUP_WINDOW_MS = 750L;
 
     private static final List<String> tempBlacklist = new ArrayList<>();
     private static final List<String> tempVogelfrei = new ArrayList<>();
@@ -193,6 +194,18 @@ public class ChatBlacklistMixin {
             return;
         }
 
+        if (handleStatsHeader(raw, ci)) return;
+        if (handleImplicitSilentStatsStart(raw, ci)) return;
+        if (capturingStats && StatsLineClassifier.isStandaloneKdStatsLine(raw)) {
+            boolean suppressingOutput = activeStatsCaptureIsSilent
+                    || BetterUCSuppressFlags.isSilentStatsCaptureActive();
+            markStatsLineSuppressed();
+            finishStatsCapture();
+            if (suppressingOutput) ci.cancel();
+            return;
+        }
+        if (capturingStats && handleCapturingStats(raw, ci)) return;
+
         if (StatsLineClassifier.isStandaloneKdStatsLine(raw)) {
             ci.cancel();
             return;
@@ -204,9 +217,6 @@ public class ChatBlacklistMixin {
             return;
         }
 
-        if (handleStatsHeader(raw, ci)) return;
-        if (handleImplicitSilentStatsStart(raw, ci)) return;
-        if (capturingStats && handleCapturingStats(raw, ci)) return;
         if (handleRealtimeBlacklistMessages(raw)) return;
         if (handleBlacklistHeader(raw, ci)) return;
         if (capturingBlacklist && handleCapturingBlacklist(raw, ci)) return;
@@ -249,7 +259,7 @@ public class ChatBlacklistMixin {
         if (now - lastAfkExitStatsRefreshMs < AFK_EXIT_STATS_REFRESH_COOLDOWN_MS) return;
         lastAfkExitStatsRefreshMs = now;
 
-        client.execute(() -> {
+        ClientScheduler.runDelayedOnClient(client, AFK_EXIT_STATS_REFRESH_DELAY_MS, () -> {
             if (client.player == null || !ServerGate.isAllowedServer(client)) return;
             if (!ServerCommandUtil.isAutomaticSendReady(client)) return;
             if (ServerCommandUtil.sendAutomatic(client, "stats")) {
@@ -446,6 +456,10 @@ public class ChatBlacklistMixin {
             BetterUCSuppressFlags.finishSilentStatsCapture();
         }
         activeStatsCaptureIsSilent = false;
+        forceHideStatsLinesUntilMs = 0L;
+        forceHideDashStatsLinesUntilMs = 0L;
+        forceHideAfkExitTailUntilMs = 0L;
+        lastSuppressedStatsLineMs = System.currentTimeMillis();
     }
 
     private boolean handleBlacklistHeader(String raw, CallbackInfo ci) {
