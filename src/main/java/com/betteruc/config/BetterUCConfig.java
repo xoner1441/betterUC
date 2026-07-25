@@ -71,7 +71,8 @@ public class BetterUCConfig {
             "autoAtmInfoOnBalanceEnabled", "chatTimestampsEnabled", "chatCustomizationEnabled",
             "autoDropDrinkEnabled", "autoFisherEnabled", "autoWinzerEnabled", "autoGaertnerEnabled",
             "autoMuellmannEnabled",
-            "reinfCustomizationEnabled", "globalChatEnabled", "chatTimestampFormat", "maxChatHistory",
+            "reinfCustomizationEnabled", "reinfUniformColorEnabled", "reinfLabelColor", "reinfTextColor",
+            "reinfDistanceColor", "reinfUniformColor", "globalChatEnabled", "chatTimestampFormat", "maxChatHistory",
             "pingRelayEnabled", "showPingHud", "showRoleHolograms", "pingHudScale", "pingHudStyle",
             "pingHudCustomFont", "pingRelayScope", "pingRelayTtlSeconds", "pingRelayMaxDistance",
             "pingRelayColor", "pingNormalColor", "pingDangerColor", "pingGatherColor", "pingCooldownMs",
@@ -121,6 +122,10 @@ public class BetterUCConfig {
     public static final int DEFAULT_HEALTH_HUD_HEART_COLOR = DEFAULT_HEALTH_HUD_COLOR;
     public static final int DEFAULT_HEALTH_HUD_TEXT_COLOR = DEFAULT_HEALTH_HUD_COLOR;
     public static final int DEFAULT_HUD_GRADIENT_COLOR = 0xFFA855F7;
+    public static final int DEFAULT_REINF_LABEL_COLOR = 0xFFFF5555;
+    public static final int DEFAULT_REINF_TEXT_COLOR = 0xFF55FFFF;
+    public static final int DEFAULT_REINF_DISTANCE_COLOR = 0xFFFFFF55;
+    public static final int DEFAULT_REINF_UNIFORM_COLOR = 0xFF55FFFF;
     public static final float MIN_HUD_SCALE = 0.5F;
     public static final float MAX_HUD_SCALE = 3.0F;
     public static final float DEFAULT_HUD_SCALE = 1.0F;
@@ -340,6 +345,11 @@ public class BetterUCConfig {
     public boolean chatTimestampsEnabled = true;
     public boolean chatCustomizationEnabled = true;
     public boolean reinfCustomizationEnabled = true;
+    public boolean reinfUniformColorEnabled = false;
+    public int reinfLabelColor = DEFAULT_REINF_LABEL_COLOR;
+    public int reinfTextColor = DEFAULT_REINF_TEXT_COLOR;
+    public int reinfDistanceColor = DEFAULT_REINF_DISTANCE_COLOR;
+    public int reinfUniformColor = DEFAULT_REINF_UNIFORM_COLOR;
     public boolean globalChatEnabled = true;
     public String chatTimestampFormat = "[HH:mm:ss]";
     public int maxChatHistory = 2000;
@@ -550,6 +560,13 @@ public class BetterUCConfig {
         if (INSTANCE.ammoHudKr47MagazineSize != 25 && INSTANCE.ammoHudKr47MagazineSize != 30) {
             INSTANCE.ammoHudKr47MagazineSize = 0;
         }
+    }
+
+    private static void sanitizeReinfColors() {
+        INSTANCE.reinfLabelColor = sanitizeHudColor(INSTANCE.reinfLabelColor, DEFAULT_REINF_LABEL_COLOR);
+        INSTANCE.reinfTextColor = sanitizeHudColor(INSTANCE.reinfTextColor, DEFAULT_REINF_TEXT_COLOR);
+        INSTANCE.reinfDistanceColor = sanitizeHudColor(INSTANCE.reinfDistanceColor, DEFAULT_REINF_DISTANCE_COLOR);
+        INSTANCE.reinfUniformColor = sanitizeHudColor(INSTANCE.reinfUniformColor, DEFAULT_REINF_UNIFORM_COLOR);
     }
 
     private static String sanitizeHudPrefix(String value, String fallback) {
@@ -1155,6 +1172,7 @@ public class BetterUCConfig {
         sanitizeHudScales();
         sanitizeHudPrefixes();
         sanitizeHudGradients();
+        sanitizeReinfColors();
         sanitizePingRelay();
         sanitizeDiscordInvite();
         sanitizeTrackedFactions();
@@ -1227,6 +1245,7 @@ public class BetterUCConfig {
             INSTANCE.healthHudColor = sanitizeHudColor(INSTANCE.healthHudColor, DEFAULT_HEALTH_HUD_COLOR);
             INSTANCE.healthHudHeartColor = sanitizeHudColor(INSTANCE.healthHudHeartColor, INSTANCE.healthHudColor);
             INSTANCE.healthHudTextColor = sanitizeHudColor(INSTANCE.healthHudTextColor, INSTANCE.healthHudColor);
+            sanitizeReinfColors();
             sanitizeHudGradients();
             sanitizeHudStyles();
             sanitizeHudScales();
@@ -1315,6 +1334,7 @@ public class BetterUCConfig {
         sanitizeHudScales();
         sanitizeHudPrefixes();
         sanitizeHudGradients();
+        sanitizeReinfColors();
         sanitizeAmmoHud();
         sanitizePingRelay();
         sanitizeDiscordInvite();

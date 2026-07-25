@@ -1,5 +1,6 @@
 package com.betteruc.client;
 
+import com.betteruc.config.BetterUCConfig;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -8,6 +9,7 @@ import java.util.regex.Pattern;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 
 public final class ChatCustomizationFormatter {
     private static final long PENDING_TTL_MS = 30000L;
@@ -321,7 +323,8 @@ public final class ChatCustomizationFormatter {
     }
 
     private static Component supportHeadline(String action, String target) {
-        return action(action)
+        return supportText(action == null ? "" : action.trim().toLowerCase(Locale.ROOT),
+                BetterUCConfig.INSTANCE.reinfLabelColor)
                 .append(separator(" \u25C6 "))
                 .append(supportName(target));
     }
@@ -330,15 +333,22 @@ public final class ChatCustomizationFormatter {
         MutableComponent text = Component.literal("\u00BB ").withStyle(ChatFormatting.GRAY);
         boolean hasSource = source != null && !source.isBlank();
         if (hasSource) {
-            text.append(Component.literal(source.trim()).withStyle(ChatFormatting.AQUA))
+            text.append(supportText(source.trim(), BetterUCConfig.INSTANCE.reinfTextColor))
                     .append(separator(" | "));
         }
-        text.append(Component.literal(location == null ? "" : location.trim()).withStyle(ChatFormatting.AQUA));
+        text.append(supportText(location == null ? "" : location.trim(), BetterUCConfig.INSTANCE.reinfTextColor));
         if (suffix != null && !suffix.isBlank()) {
             text.append(separator(" | "))
-                    .append(Component.literal(suffix.trim()).withStyle(ChatFormatting.YELLOW));
+                    .append(supportText(suffix.trim(), BetterUCConfig.INSTANCE.reinfDistanceColor));
         }
         return text;
+    }
+
+    public static List<Component> reinforcementPreview() {
+        return List.of(
+                supportHeadline("REINF", "FABI1441"),
+                supportDetail("FBI", "Bank", "120m")
+        );
     }
 
     private static String supportActionLabel(String rawAction) {
@@ -377,7 +387,15 @@ public final class ChatCustomizationFormatter {
     }
 
     private static MutableComponent supportName(String value) {
-        return Component.literal(value == null ? "" : value.trim()).withStyle(ChatFormatting.AQUA);
+        return supportText(value == null ? "" : value.trim(), BetterUCConfig.INSTANCE.reinfTextColor);
+    }
+
+    private static MutableComponent supportText(String value, int configuredColor) {
+        int color = BetterUCConfig.INSTANCE.reinfUniformColorEnabled
+                ? BetterUCConfig.INSTANCE.reinfUniformColor
+                : configuredColor;
+        return Component.literal(value == null ? "" : value)
+                .setStyle(Style.EMPTY.withColor(color & 0xFFFFFF));
     }
 
     private static MutableComponent payName(String value) {

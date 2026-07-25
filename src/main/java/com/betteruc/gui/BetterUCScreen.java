@@ -6,6 +6,7 @@ import com.betteruc.client.AutomationController;
 import com.betteruc.client.ClientCompat;
 import com.betteruc.client.CloudSettingsClient;
 import com.betteruc.client.CommunicationDeviceTracker;
+import com.betteruc.client.ChatCustomizationFormatter;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.RemoteFeatureFlagsClient;
 import com.betteruc.client.SyncRefreshActions;
@@ -55,6 +56,7 @@ public class BetterUCScreen extends Screen {
     private Category selectedCategory = Category.HUD;
     private ModuleOption selectedModule = ModuleOption.FPS;
     private final List<ScrollableControl> detailControls = new ArrayList<>();
+    private final List<DetailSectionHeader> detailSectionHeaders = new ArrayList<>();
     private final List<Runnable> textFieldFlushers = new ArrayList<>();
     private boolean rebuildingWidgets = false;
     private int detailScrollOffset = 0;
@@ -78,6 +80,7 @@ public class BetterUCScreen extends Screen {
         }
 
         detailControls.clear();
+        detailSectionHeaders.clear();
         detailContentHeight = 0;
         addDetailControls();
         addRenderableWidget(Button.builder(Component.literal("HUD Vorschau"), b -> openScreen(new HudLayoutScreen(this)))
@@ -96,6 +99,7 @@ public class BetterUCScreen extends Screen {
         int controlW = Math.max(120, Math.min(194, detailW() - 28));
 
         if (selectedModule.hasHudStyle()) {
+            y = addSectionHeader(x, y, controlW, "Darstellung", 0xFF38BDF8);
             y = addHudStyleButton(x, y, controlW, selectedModule);
             if (BetterUCConfig.isCustomHudStyle(getHudStyle(selectedModule))) {
                 y = addCustomFontControls(x, y, controlW, selectedModule);
@@ -105,35 +109,42 @@ public class BetterUCScreen extends Screen {
             y = addHudGradientControls(x, y, controlW, selectedModule);
         }
         if (hasHudPrefix(selectedModule)) {
+            y = addSectionHeader(x, y, controlW, "Beschriftung", 0xFFFACC15);
             y = addHudPrefixControls(x, y, controlW, selectedModule);
         }
 
         switch (selectedModule) {
             case HEALTH -> {
+                y = addSectionHeader(x, y, controlW, "Anzeige", 0xFFFF5555);
                 y = addToggle(x, y, controlW, "Health HUD", BetterUCConfig.INSTANCE.showHealthHud,
                         () -> BetterUCConfig.INSTANCE.showHealthHud = !BetterUCConfig.INSTANCE.showHealthHud);
                 y = addColorButton(x, y, controlW, "Herz Farbe", BetterUCConfig.INSTANCE.healthHudHeartColor,
                         color -> BetterUCConfig.INSTANCE.healthHudHeartColor = color);
-                addColorButton(x, y, controlW, "Zahl Farbe", BetterUCConfig.INSTANCE.healthHudTextColor,
+                y = addColorButton(x, y, controlW, "Zahl Farbe", BetterUCConfig.INSTANCE.healthHudTextColor,
                         color -> BetterUCConfig.INSTANCE.healthHudTextColor = color);
             }
             case FPS -> {
+                y = addSectionHeader(x, y, controlW, "Anzeige", 0xFF22D3EE);
                 y = addToggle(x, y, controlW, "FPS HUD", BetterUCConfig.INSTANCE.showFpsHud,
                         () -> BetterUCConfig.INSTANCE.showFpsHud = !BetterUCConfig.INSTANCE.showFpsHud);
-                addColorButton(x, y, controlW, "FPS Farbe", BetterUCConfig.INSTANCE.fpsHudColor,
+                y = addColorButton(x, y, controlW, "FPS Farbe", BetterUCConfig.INSTANCE.fpsHudColor,
                         color -> BetterUCConfig.INSTANCE.fpsHudColor = color);
             }
             case PAYDAY -> {
+                y = addSectionHeader(x, y, controlW, "Anzeige", 0xFFFACC15);
                 y = addToggle(x, y, controlW, "Payday HUD", BetterUCConfig.INSTANCE.showPaydayHud,
                         () -> BetterUCConfig.INSTANCE.showPaydayHud = !BetterUCConfig.INSTANCE.showPaydayHud);
-                addColorButton(x, y, controlW, "Payday Farbe", BetterUCConfig.INSTANCE.paydayHudColor,
+                y = addColorButton(x, y, controlW, "Payday Farbe", BetterUCConfig.INSTANCE.paydayHudColor,
                         color -> BetterUCConfig.INSTANCE.paydayHudColor = color);
             }
             case AMMO -> {
+                y = addSectionHeader(x, y, controlW, "Anzeige", 0xFFF59E0B);
                 y = addToggle(x, y, controlW, "Ammo HUD", BetterUCConfig.INSTANCE.showAmmoHud,
                         () -> BetterUCConfig.INSTANCE.showAmmoHud = !BetterUCConfig.INSTANCE.showAmmoHud);
                 y = addToggle(x, y, controlW, "Magazinbalken", BetterUCConfig.INSTANCE.ammoHudMagazineBarEnabled,
                         () -> BetterUCConfig.INSTANCE.ammoHudMagazineBarEnabled = !BetterUCConfig.INSTANCE.ammoHudMagazineBarEnabled);
+
+                y = addSectionHeader(x, y, controlW, "Warnung", 0xFFFF5555);
                 y = addToggle(x, y, controlW, "Niedrige Munition", BetterUCConfig.INSTANCE.ammoHudLowAmmoWarningEnabled,
                         () -> BetterUCConfig.INSTANCE.ammoHudLowAmmoWarningEnabled = !BetterUCConfig.INSTANCE.ammoHudLowAmmoWarningEnabled);
                 if (BetterUCConfig.INSTANCE.ammoHudLowAmmoWarningEnabled) {
@@ -143,63 +154,77 @@ public class BetterUCScreen extends Screen {
                             BetterUCConfig.INSTANCE.ammoHudLowAmmoThresholdPercent, 5, 50,
                             value -> BetterUCConfig.INSTANCE.ammoHudLowAmmoThresholdPercent = value);
                 }
+
+                y = addSectionHeader(x, y, controlW, "Waffendaten", 0xFF94A3B8);
                 String kr47Magazine = BetterUCConfig.INSTANCE.ammoHudKr47MagazineSize > 0
                         ? BetterUCConfig.INSTANCE.ammoHudKr47MagazineSize + " Schuss"
                         : "wird automatisch gelernt";
                 y = addInfo(x, y, controlW, "KR47 Magazin", kr47Magazine);
             }
             case BANK -> {
+                y = addSectionHeader(x, y, controlW, "Anzeige", 0xFF22D3EE);
                 y = addToggle(x, y, controlW, "Bank HUD", BetterUCConfig.INSTANCE.showBankHud,
                         () -> BetterUCConfig.INSTANCE.showBankHud = !BetterUCConfig.INSTANCE.showBankHud);
+                y = addColorButton(x, y, controlW, "Bank Farbe", BetterUCConfig.INSTANCE.bankHudColor,
+                        color -> BetterUCConfig.INSTANCE.bankHudColor = color);
+
+                y = addSectionHeader(x, y, controlW, "Automatik", 0xFF4ADE80);
                 y = addToggle(x, y, controlW, "Auto-/fbank", BetterUCConfig.INSTANCE.autoFactionBankOnBalanceEnabled,
                         () -> BetterUCConfig.INSTANCE.autoFactionBankOnBalanceEnabled = !BetterUCConfig.INSTANCE.autoFactionBankOnBalanceEnabled);
                 y = addToggle(x, y, controlW, "Auto-/atminfo", BetterUCConfig.INSTANCE.autoAtmInfoOnBalanceEnabled,
                         () -> BetterUCConfig.INSTANCE.autoAtmInfoOnBalanceEnabled = !BetterUCConfig.INSTANCE.autoAtmInfoOnBalanceEnabled);
-                addColorButton(x, y, controlW, "Bank Farbe", BetterUCConfig.INSTANCE.bankHudColor,
-                        color -> BetterUCConfig.INSTANCE.bankHudColor = color);
             }
             case CASH -> {
+                y = addSectionHeader(x, y, controlW, "Anzeige", 0xFF4ADE80);
                 y = addToggle(x, y, controlW, "Bargeld HUD", BetterUCConfig.INSTANCE.showCashHud,
                         () -> BetterUCConfig.INSTANCE.showCashHud = !BetterUCConfig.INSTANCE.showCashHud);
-                addColorButton(x, y, controlW, "Bargeld Farbe", BetterUCConfig.INSTANCE.cashHudColor,
+                y = addColorButton(x, y, controlW, "Bargeld Farbe", BetterUCConfig.INSTANCE.cashHudColor,
                         color -> BetterUCConfig.INSTANCE.cashHudColor = color);
             }
             case POTION -> {
+                y = addSectionHeader(x, y, controlW, "Anzeige", 0xFFA855F7);
                 y = addToggle(x, y, controlW, "Potion HUD", BetterUCConfig.INSTANCE.showPotionEffectsHud,
                         () -> BetterUCConfig.INSTANCE.showPotionEffectsHud = !BetterUCConfig.INSTANCE.showPotionEffectsHud);
-                addColorButton(x, y, controlW, "Potion Farbe", BetterUCConfig.INSTANCE.potionHudColor,
+                y = addColorButton(x, y, controlW, "Potion Farbe", BetterUCConfig.INSTANCE.potionHudColor,
                         color -> BetterUCConfig.INSTANCE.potionHudColor = color);
             }
             case SPRINT -> {
+                y = addSectionHeader(x, y, controlW, "Anzeige", 0xFF4ADE80);
                 y = addToggle(x, y, controlW, "ToggleSprint", BetterUCConfig.INSTANCE.toggleSprintEnabled,
                         () -> BetterUCConfig.INSTANCE.toggleSprintEnabled = !BetterUCConfig.INSTANCE.toggleSprintEnabled);
-                addColorButton(x, y, controlW, "Sprint Farbe", BetterUCConfig.INSTANCE.toggleSprintHudColor,
+                y = addColorButton(x, y, controlW, "Sprint Farbe", BetterUCConfig.INSTANCE.toggleSprintHudColor,
                         color -> BetterUCConfig.INSTANCE.toggleSprintHudColor = color);
             }
             case HACK_TIMER, PLANT_TIMER, DEALER_TIMER, PRODUCTION_TIMER -> {
                 if (selectedModule == ModuleOption.PLANT_TIMER) {
+                    y = addSectionHeader(x, y, controlW, "Anzeige", 0xFF4ADE80);
                     y = addToggle(x, y, controlW, "Plant HUD", BetterUCConfig.INSTANCE.showPlantTimerHud,
                             () -> BetterUCConfig.INSTANCE.showPlantTimerHud = !BetterUCConfig.INSTANCE.showPlantTimerHud);
                 }
                 if (selectedModule == ModuleOption.DEALER_TIMER) {
+                    y = addSectionHeader(x, y, controlW, "Anzeige", 0xFFF59E0B);
                     y = addToggle(x, y, controlW, "Dealer Timer", BetterUCConfig.INSTANCE.showDealerTimerHud,
                             () -> BetterUCConfig.INSTANCE.showDealerTimerHud = !BetterUCConfig.INSTANCE.showDealerTimerHud);
-                    addColorButton(x, y, controlW, "Dealer Farbe", BetterUCConfig.INSTANCE.dealerTimerHudColor,
+                    y = addColorButton(x, y, controlW, "Dealer Farbe", BetterUCConfig.INSTANCE.dealerTimerHudColor,
                             color -> BetterUCConfig.INSTANCE.dealerTimerHudColor = color);
                 }
                 if (selectedModule == ModuleOption.PRODUCTION_TIMER) {
+                    y = addSectionHeader(x, y, controlW, "Anzeige", 0xFF22D3EE);
                     y = addToggle(x, y, controlW, "Produktion Timer", BetterUCConfig.INSTANCE.showProductionTimerHud,
                             () -> BetterUCConfig.INSTANCE.showProductionTimerHud = !BetterUCConfig.INSTANCE.showProductionTimerHud);
-                    addColorButton(x, y, controlW, "Produktion Farbe", BetterUCConfig.INSTANCE.productionTimerHudColor,
+                    y = addColorButton(x, y, controlW, "Produktion Farbe", BetterUCConfig.INSTANCE.productionTimerHudColor,
                             color -> BetterUCConfig.INSTANCE.productionTimerHudColor = color);
                 }
             }
             case AUTO_STATS -> {
+                y = addSectionHeader(x, y, controlW, "Automatik", 0xFF4ADE80);
                 y = addToggle(x, y, controlW, "Auto-Stats Join", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled,
                         () -> BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled = !BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
+                y = addSectionHeader(x, y, controlW, "Aktionen", 0xFF38BDF8);
                 y = addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(minecraft, true));
             }
             case AUTOMATIONS -> {
+                y = addSectionHeader(x, y, controlW, "Job-Automationen", 0xFF4ADE80);
                 y = addToggle(x, y, controlW, "Lieferant /adropdrink", BetterUCConfig.INSTANCE.autoDropDrinkEnabled,
                         () -> BetterUCConfig.INSTANCE.autoDropDrinkEnabled = !BetterUCConfig.INSTANCE.autoDropDrinkEnabled);
                 y = addToggle(x, y, controlW, "Fischer", BetterUCConfig.INSTANCE.autoFisherEnabled,
@@ -212,20 +237,51 @@ public class BetterUCScreen extends Screen {
                         () -> BetterUCConfig.INSTANCE.autoMuellmannEnabled = !BetterUCConfig.INSTANCE.autoMuellmannEnabled);
             }
             case CHAT -> {
-                y = addToggle(x, y, controlW, "WPS/HQ Customizations", BetterUCConfig.INSTANCE.chatCustomizationEnabled,
+                y = addSectionHeader(x, y, controlW, "WPS & HQ", 0xFFFF6B6B);
+                y = addToggle(x, y, controlW, "Formatierung", BetterUCConfig.INSTANCE.chatCustomizationEnabled,
                         () -> BetterUCConfig.INSTANCE.chatCustomizationEnabled = !BetterUCConfig.INSTANCE.chatCustomizationEnabled);
-                y = addToggle(x, y, controlW, "Reinf Customizations", BetterUCConfig.INSTANCE.reinfCustomizationEnabled,
+
+                y = addSectionHeader(x, y, controlW, "Reinf", BetterUCConfig.INSTANCE.reinfLabelColor);
+                y = addToggle(x, y, controlW, "Formatierung", BetterUCConfig.INSTANCE.reinfCustomizationEnabled,
                         () -> BetterUCConfig.INSTANCE.reinfCustomizationEnabled = !BetterUCConfig.INSTANCE.reinfCustomizationEnabled);
-                y = addToggle(x, y, controlW, "betterUC Globalchat", BetterUCConfig.INSTANCE.globalChatEnabled,
+                if (BetterUCConfig.INSTANCE.reinfCustomizationEnabled) {
+                    y = addToggle(x, y, controlW, "Einheitliche Reinf-Farbe",
+                            BetterUCConfig.INSTANCE.reinfUniformColorEnabled,
+                            () -> BetterUCConfig.INSTANCE.reinfUniformColorEnabled =
+                                    !BetterUCConfig.INSTANCE.reinfUniformColorEnabled);
+                    if (BetterUCConfig.INSTANCE.reinfUniformColorEnabled) {
+                        y = addColorButton(x, y, controlW, "Reinf Farbe",
+                                BetterUCConfig.INSTANCE.reinfUniformColor,
+                                color -> BetterUCConfig.INSTANCE.reinfUniformColor = color);
+                    } else {
+                        y = addColorButton(x, y, controlW, "Reinf Labelfarbe",
+                                BetterUCConfig.INSTANCE.reinfLabelColor,
+                                color -> BetterUCConfig.INSTANCE.reinfLabelColor = color);
+                        y = addColorButton(x, y, controlW, "Reinf Textfarbe",
+                                BetterUCConfig.INSTANCE.reinfTextColor,
+                                color -> BetterUCConfig.INSTANCE.reinfTextColor = color);
+                        y = addColorButton(x, y, controlW, "Reinf Distanzfarbe",
+                                BetterUCConfig.INSTANCE.reinfDistanceColor,
+                                color -> BetterUCConfig.INSTANCE.reinfDistanceColor = color);
+                    }
+                    y = addButton(x, y, controlW, "Reinf Farben zur\u00FCcksetzen", b -> resetReinfColors());
+                }
+
+                y = addSectionHeader(x, y, controlW, "Globalchat", 0xFF4ADE80);
+                y = addToggle(x, y, controlW, "Globalchat", BetterUCConfig.INSTANCE.globalChatEnabled,
                         () -> BetterUCConfig.INSTANCE.globalChatEnabled = !BetterUCConfig.INSTANCE.globalChatEnabled);
-                y = addToggle(x, y, controlW, "Chat-Zeit", BetterUCConfig.INSTANCE.chatTimestampsEnabled,
+
+                y = addSectionHeader(x, y, controlW, "Chat-Zeit", 0xFF94A3B8);
+                y = addToggle(x, y, controlW, "Zeitstempel", BetterUCConfig.INSTANCE.chatTimestampsEnabled,
                         () -> BetterUCConfig.INSTANCE.chatTimestampsEnabled = !BetterUCConfig.INSTANCE.chatTimestampsEnabled);
                 y = addTimestampField(x, y, controlW);
             }
             case CONNECTION -> y = addConnectionControls(x, y, controlW);
             case CLOUD_SYNC -> y = addCloudSyncControls(x, y, controlW);
             case BLACKLIST -> {
+                y = addSectionHeader(x, y, controlW, "Verwaltung", 0xFFF59E0B);
                 y = addButton(x, y, controlW, "Blacklist Gründe", b -> openScreen(new BlacklistConfigScreen(this)));
+                y = addSectionHeader(x, y, controlW, "Synchronisierung", 0xFF38BDF8);
                 y = addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(minecraft, true));
             }
             case PING -> {
@@ -234,10 +290,15 @@ public class BetterUCScreen extends Screen {
             case HOTKEYS -> y = addButton(x, y, controlW, "Hotkey Commands", b -> openScreen(new HotkeyCommandsScreen(this)));
             case COMMANDS -> y = addButton(x, y, controlW, "Command Menu", b -> openScreen(new CommandGui()));
             case TRASH_FILTER -> {
+                y = addSectionHeader(x, y, controlW, "Filter", 0xFF4ADE80);
                 y = addToggle(x, y, controlW, "Mülleimer Filter", BetterUCConfig.INSTANCE.trashFilterEnabled,
                         () -> BetterUCConfig.INSTANCE.trashFilterEnabled = !BetterUCConfig.INSTANCE.trashFilterEnabled);
+
+                y = addSectionHeader(x, y, controlW, "Verhalten", 0xFFFACC15);
                 y = addToggle(x, y, controlW, "5s Schließsperre", BetterUCConfig.INSTANCE.trashFilterCloseLockEnabled,
                         () -> BetterUCConfig.INSTANCE.trashFilterCloseLockEnabled = !BetterUCConfig.INSTANCE.trashFilterCloseLockEnabled);
+
+                y = addSectionHeader(x, y, controlW, "Fundstücke", 0xFF38BDF8);
                 y = addToggle(x, y, controlW, "Verrottetes Fleisch", BetterUCConfig.INSTANCE.trashFilterRottenFlesh,
                         () -> BetterUCConfig.INSTANCE.trashFilterRottenFlesh = !BetterUCConfig.INSTANCE.trashFilterRottenFlesh);
                 y = addToggle(x, y, controlW, "Papier", BetterUCConfig.INSTANCE.trashFilterPaper,
@@ -299,6 +360,7 @@ public class BetterUCScreen extends Screen {
     }
 
     private int addPingControls(int x, int y, int width) {
+        y = addSectionHeader(x, y, width, "System", 0xFF38BDF8);
         y = addToggle(x, y, width, "Ping System", BetterUCConfig.INSTANCE.pingRelayEnabled,
                 () -> BetterUCConfig.INSTANCE.pingRelayEnabled = !BetterUCConfig.INSTANCE.pingRelayEnabled);
         y = addToggle(x, y, width, "Ping Anzeige", BetterUCConfig.INSTANCE.showPingHud,
@@ -315,11 +377,15 @@ public class BetterUCScreen extends Screen {
             saveConfig();
             refreshWidgets();
         });
+
+        y = addSectionHeader(x, y, width, "Anzeige", 0xFF22D3EE);
         y = addDoubleSlider(x, y, width, "Ping Größe", BetterUCConfig.INSTANCE.pingHudScale,
                 BetterUCConfig.MIN_HUD_SCALE, BetterUCConfig.MAX_HUD_SCALE,
                 value -> BetterUCConfig.INSTANCE.pingHudScale = (float) value);
         y = addRangeIntSlider(x, y, width, "Sichtweite", BetterUCConfig.INSTANCE.pingRelayMaxDistance, 0, 128,
                 value -> BetterUCConfig.INSTANCE.pingRelayMaxDistance = Math.max(0, value));
+
+        y = addSectionHeader(x, y, width, "Audio & Cooldown", 0xFFFACC15);
         y = addToggle(x, y, width, "Ping Ton", BetterUCConfig.INSTANCE.pingSoundEnabled,
                 () -> BetterUCConfig.INSTANCE.pingSoundEnabled = !BetterUCConfig.INSTANCE.pingSoundEnabled);
         y = addButton(x, y, width, "Sound: " + PingRelayClient.pingSoundLabel(BetterUCConfig.INSTANCE.pingSoundId), b -> {
@@ -329,6 +395,8 @@ public class BetterUCScreen extends Screen {
         });
         y = addRangeIntSlider(x, y, width, "Cooldown ms", BetterUCConfig.INSTANCE.pingCooldownMs, 500, 10000,
                 value -> BetterUCConfig.INSTANCE.pingCooldownMs = Math.max(500, value));
+
+        y = addSectionHeader(x, y, width, "Ping-Farben", 0xFFA855F7);
         y = addColorButton(x, y, width, "Normal Farbe", parseHexColor(BetterUCConfig.INSTANCE.pingNormalColor, 0xFF38BDF8),
                 color -> {
                     BetterUCConfig.INSTANCE.pingNormalColor = "#" + hex(color);
@@ -338,19 +406,26 @@ public class BetterUCScreen extends Screen {
                 color -> BetterUCConfig.INSTANCE.pingDangerColor = "#" + hex(color));
         y = addColorButton(x, y, width, "Sammeln Farbe", parseHexColor(BetterUCConfig.INSTANCE.pingGatherColor, 0xFF22C55E),
                 color -> BetterUCConfig.INSTANCE.pingGatherColor = "#" + hex(color));
+
+        y = addSectionHeader(x, y, width, "Test", 0xFF94A3B8);
         return addButton(x, y, width, "Ping testen", b -> PingRelayClient.sendPingAtCrosshair(minecraft, PingRelayClient.PingType.NORMAL));
     }
 
     private int addConnectionControls(int x, int y, int width) {
+        y = addSectionHeader(x, y, width, "Accountstatus", 0xFF4ADE80);
         y = addInfo(x, y, width, "Status", PingRelayClient.statusLabel());
         y = addInfo(x, y, width, "Spieler", currentPlayerName());
         y = addInfo(x, y, width, "Rolle", PingRelayClient.roleLabel());
-        y = addToggle(x, y, width, "Hologramme", BetterUCConfig.INSTANCE.showRoleHolograms,
-                () -> BetterUCConfig.INSTANCE.showRoleHolograms = !BetterUCConfig.INSTANCE.showRoleHolograms);
         y = addInfo(x, y, width, "Fraktion", currentFactionLabel());
         y = addInfo(x, y, width, "Kommunikation", CommunicationDeviceTracker.statusLabel());
         y = addInfo(x, y, width, "Server", currentServerLabel());
         y = addInfo(x, y, width, "Version", MOD_VERSION);
+
+        y = addSectionHeader(x, y, width, "Darstellung", 0xFF38BDF8);
+        y = addToggle(x, y, width, "Hologramme", BetterUCConfig.INSTANCE.showRoleHolograms,
+                () -> BetterUCConfig.INSTANCE.showRoleHolograms = !BetterUCConfig.INSTANCE.showRoleHolograms);
+
+        y = addSectionHeader(x, y, width, "Zugang", 0xFFFACC15);
         y = addTextField(x, y, width, "Access Code", BetterUCConfig.INSTANCE.pingRelayToken, 160,
                 value -> BetterUCConfig.INSTANCE.pingRelayToken = value.trim());
         y = addButton(x, y, width, "Access Code holen", b -> Util.getPlatform().openUri(URI.create("https://betteruc.de/access")));
@@ -360,6 +435,8 @@ public class BetterUCScreen extends Screen {
                 minecraft.player.sendSystemMessage(Component.literal("[betterUC] Stats werden ans Userpanel gesendet."));
             }
         });
+
+        y = addSectionHeader(x, y, width, "Erweitert", 0xFF94A3B8);
         y = addTextField(x, y, width, "Ping Gruppe", BetterUCConfig.INSTANCE.pingRelayChannel, 32,
                 value -> BetterUCConfig.INSTANCE.pingRelayChannel = value);
         y = addTextField(x, y, width, "Relay Server", BetterUCConfig.INSTANCE.pingRelayUrl, 160,
@@ -379,6 +456,7 @@ public class BetterUCScreen extends Screen {
     }
 
     private int addDiscordControls(int x, int y, int width) {
+        y = addSectionHeader(x, y, width, "Community", 0xFF5865F2);
         y = addInfo(x, y, width, "Discord", "betterUC Community");
         y = addButton(x, y, width, "Discord öffnen", b -> openDiscordInvite());
         return addButton(x, y, width, "Invite kopieren", b -> copyDiscordInvite());
@@ -399,6 +477,11 @@ public class BetterUCScreen extends Screen {
         return y + 24;
     }
 
+    private int addSectionHeader(int x, int y, int width, String label, int color) {
+        detailSectionHeaders.add(new DetailSectionHeader(label, x, y, width, color));
+        return y + 18;
+    }
+
     private int addColorButton(
             int x,
             int y,
@@ -416,12 +499,25 @@ public class BetterUCScreen extends Screen {
         )));
     }
 
+    private void resetReinfColors() {
+        BetterUCConfig.INSTANCE.reinfUniformColorEnabled = false;
+        BetterUCConfig.INSTANCE.reinfLabelColor = BetterUCConfig.DEFAULT_REINF_LABEL_COLOR;
+        BetterUCConfig.INSTANCE.reinfTextColor = BetterUCConfig.DEFAULT_REINF_TEXT_COLOR;
+        BetterUCConfig.INSTANCE.reinfDistanceColor = BetterUCConfig.DEFAULT_REINF_DISTANCE_COLOR;
+        BetterUCConfig.INSTANCE.reinfUniformColor = BetterUCConfig.DEFAULT_REINF_UNIFORM_COLOR;
+        saveConfig();
+        refreshWidgets();
+    }
+
     private int addCloudSyncControls(int x, int y, int width) {
+        y = addSectionHeader(x, y, width, "Cloud Sync", 0xFF38BDF8);
         y = addToggle(x, y, width, "Cloud Sync", BetterUCConfig.INSTANCE.cloudSettingsEnabled,
                 () -> BetterUCConfig.INSTANCE.cloudSettingsEnabled = !BetterUCConfig.INSTANCE.cloudSettingsEnabled);
         y = addInfo(x, y, width, "Server-Freigabe", RemoteFeatureFlagsClient.statusLabel());
         y = addInfo(x, y, width, "Status", CloudSettingsClient.statusLabel());
         y = addInfo(x, y, width, "Letzter Sync", CloudSettingsClient.lastSyncLabel());
+
+        y = addSectionHeader(x, y, width, "Aktionen", 0xFF4ADE80);
         y = addButton(x, y, width, "Cloud-Einstellungen laden",
                 b -> CloudSettingsClient.downloadNow(minecraft));
         return addButton(x, y, width, "Aktuelle Einstellungen hochladen",
@@ -666,7 +762,26 @@ public class BetterUCScreen extends Screen {
             return;
         }
         renderPreview(context, x + Math.max(224, w - 172), y + 58);
+        renderDetailSectionHeaders(context);
         renderDetailScrollbar(context);
+    }
+
+    private void renderDetailSectionHeaders(GuiGraphicsExtractor context) {
+        int top = detailControlsTop();
+        int bottom = detailControlsBottom();
+
+        for (DetailSectionHeader header : detailSectionHeaders) {
+            int y = header.baseY() - detailScrollOffset;
+            if (y < top || y + 11 > bottom) continue;
+
+            int color = withAlpha(header.color(), 0xFF);
+            context.text(font, Component.literal(header.label()), header.x(), y + 1, color);
+            int lineStart = header.x() + font.width(header.label()) + 8;
+            int lineEnd = header.x() + header.sectionWidth();
+            if (lineStart < lineEnd) {
+                context.fill(lineStart, y + 7, lineEnd, y + 8, withAlpha(header.color(), 0x66));
+            }
+        }
     }
 
     private void renderDetailScrollbar(GuiGraphicsExtractor context) {
@@ -938,9 +1053,7 @@ public class BetterUCScreen extends Screen {
                 int enabled = AutomationController.localEnabledCount();
                 drawMiniInfo(context, previewX, previewY, "Automationen", enabled + "/5 aktiv", enabled > 0);
             }
-            case CHAT -> drawMiniInfo(context, previewX, previewY, "Chat",
-                    BetterUCConfig.INSTANCE.chatTimestampsEnabled ? BetterUCConfig.INSTANCE.chatTimestampFormat : "AUS",
-                    BetterUCConfig.INSTANCE.chatTimestampsEnabled);
+            case CHAT -> drawReinfPreview(context, previewX, previewY);
             case CONNECTION -> drawMiniInfo(context, previewX, previewY, "Verbindung", PingRelayClient.statusLabel(),
                     PingRelayClient.isConnected());
             case CLOUD_SYNC -> drawMiniInfo(context, previewX, previewY, "Cloud Sync",
@@ -1121,6 +1234,25 @@ public class BetterUCScreen extends Screen {
         context.text(font, Component.literal(value), x + 10, y + 20, TEXT_PRIMARY);
     }
 
+    private void drawReinfPreview(GuiGraphicsExtractor context, int x, int y) {
+        if (!BetterUCConfig.INSTANCE.reinfCustomizationEnabled) {
+            drawMiniInfo(context, x, y, "Reinf", "Anpassung aus", false);
+            return;
+        }
+
+        List<Component> lines = ChatCustomizationFormatter.reinforcementPreview();
+        int width = 110;
+        for (Component line : lines) {
+            width = Math.max(width, font.width(line) + 20);
+        }
+        int accent = BetterUCConfig.INSTANCE.reinfUniformColorEnabled
+                ? BetterUCConfig.INSTANCE.reinfUniformColor
+                : BetterUCConfig.INSTANCE.reinfLabelColor;
+        ModernHudRenderer.drawPanel(context, x, y, width, 38, accent);
+        context.text(font, lines.get(0), x + 10, y + 8, TEXT_PRIMARY);
+        context.text(font, lines.get(1), x + 10, y + 20, TEXT_PRIMARY);
+    }
+
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         if (selectedModule == ModuleOption.UPDATES) {
@@ -1159,6 +1291,17 @@ public class BetterUCScreen extends Screen {
 
         double mouseX = event.x();
         double mouseY = event.y();
+
+        if (selectedModule != ModuleOption.UPDATES && maxDetailScroll() > 0) {
+            int trackX = detailX() + detailW() - 10;
+            int trackY = detailControlsTop();
+            int trackHeight = detailControlsHeight();
+            if (inBounds(mouseX, mouseY, trackX, trackY, 8, trackHeight)) {
+                double ratio = clamp01((mouseY - trackY) / Math.max(1.0D, trackHeight));
+                setDetailScrollOffset((int) Math.round(ratio * maxDetailScroll()));
+                return true;
+            }
+        }
 
         Category category = categoryAt(mouseX, mouseY);
         if (category != null) {
@@ -1819,6 +1962,9 @@ public class BetterUCScreen extends Screen {
     }
 
     private record ScrollableControl(AbstractWidget widget, int baseY) {
+    }
+
+    private record DetailSectionHeader(String label, int x, int baseY, int sectionWidth, int color) {
     }
 
 }
