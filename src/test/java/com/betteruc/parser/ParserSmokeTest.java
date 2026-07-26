@@ -2,6 +2,7 @@ package com.betteruc.parser;
 
 import com.betteruc.BetterUCSuppressFlags;
 import com.betteruc.client.ChatCustomizationFormatter;
+import com.betteruc.hud.RichTaxAlertHud;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -11,6 +12,22 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ParserSmokeTest {
+
+    @Test
+    void richTaxAlertRecognizesOnlyFiveMinutePaydayWarning() {
+        assertTrue(RichTaxAlertHud.matchesPaydayWarning(
+                "\u00A7719:55:00 \u00A7bInfo: Du hast in 5 Minuten deinen PayDay"
+        ));
+        assertTrue(RichTaxAlertHud.matchesPaydayWarning(
+                "Info: Du hast in 5 Minuten deinen Payday."
+        ));
+        assertFalse(RichTaxAlertHud.matchesPaydayWarning(
+                "Info: Du hast in 3 Minuten deinen PayDay"
+        ));
+        assertFalse(RichTaxAlertHud.matchesPaydayWarning(
+                "======== PayDay ========"
+        ));
+    }
 
     @Test
     void silentStatsCaptureReleasesImmediatelyAndCannotRemainStuck() {

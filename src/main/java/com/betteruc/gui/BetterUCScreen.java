@@ -173,6 +173,15 @@ public class BetterUCScreen extends Screen {
                         () -> BetterUCConfig.INSTANCE.autoFactionBankOnBalanceEnabled = !BetterUCConfig.INSTANCE.autoFactionBankOnBalanceEnabled);
                 y = addToggle(x, y, controlW, "Auto-/atminfo", BetterUCConfig.INSTANCE.autoAtmInfoOnBalanceEnabled,
                         () -> BetterUCConfig.INSTANCE.autoAtmInfoOnBalanceEnabled = !BetterUCConfig.INSTANCE.autoAtmInfoOnBalanceEnabled);
+
+                y = addSectionHeader(x, y, controlW, "Reichensteuer", 0xFFFF5555);
+                y = addToggle(x, y, controlW, "Reichensteuer-Alert", BetterUCConfig.INSTANCE.richTaxAlertEnabled,
+                        () -> BetterUCConfig.INSTANCE.richTaxAlertEnabled = !BetterUCConfig.INSTANCE.richTaxAlertEnabled);
+                if (BetterUCConfig.INSTANCE.richTaxAlertEnabled) {
+                    y = addToggle(x, y, controlW, "Alert-Ton", BetterUCConfig.INSTANCE.richTaxAlertSoundEnabled,
+                            () -> BetterUCConfig.INSTANCE.richTaxAlertSoundEnabled = !BetterUCConfig.INSTANCE.richTaxAlertSoundEnabled);
+                    y = addInfo(x, y, controlW, "Grenze", "mehr als 100.000$");
+                }
             }
             case CASH -> {
                 y = addSectionHeader(x, y, controlW, "Anzeige", 0xFF4ADE80);

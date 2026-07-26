@@ -42,6 +42,7 @@ import com.betteruc.hud.PingHud;
 import com.betteruc.hud.PlantageHud;
 import com.betteruc.hud.PotionEffectsHud;
 import com.betteruc.hud.ProductionTimerHud;
+import com.betteruc.hud.RichTaxAlertHud;
 import com.betteruc.hud.ToggleSprintHud;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
@@ -189,6 +190,7 @@ public class BetterUCClient implements ClientModInitializer {
         CashHud.register();
         DealerTimerHud.register();
         ProductionTimerHud.register();
+        RichTaxAlertHud.register();
         HealthHud.register();
         ToggleSprintHud.register();
         FpsHud.register();
@@ -210,6 +212,7 @@ public class BetterUCClient implements ClientModInitializer {
             CashHud.clear();
             DealerTimerHud.clear();
             ProductionTimerHud.clear();
+            RichTaxAlertHud.clear();
             CommunicationDeviceTracker.reset();
             resetRemoteFeatureStateTracking();
             RemoteFeatureFlagsClient.onJoin(client);
@@ -934,6 +937,7 @@ public class BetterUCClient implements ClientModInitializer {
             HackTimerHud.tick();
             DealerTimerHud.tick();
             ProductionTimerHud.tick();
+            RichTaxAlertHud.tick(client);
             PlantageHud.tick();
             AmmoHud.tickReloadKey(client);
             RemoteFeatureFlagsClient.tick(client);
@@ -1173,6 +1177,7 @@ public class BetterUCClient implements ClientModInitializer {
         CashHud.clear();
         DealerTimerHud.clear();
         ProductionTimerHud.clear();
+        RichTaxAlertHud.clear();
         AutoDropDrinkClient.reset();
         AutoFisherClient.reset();
         AutoFirstAidClient.reset();

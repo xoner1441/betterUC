@@ -68,7 +68,8 @@ public class BetterUCConfig {
             "showHealthHud", "showFpsHud", "showPaydayHud", "showAmmoHud", "showBankHud", "showCashHud",
             "showPotionEffectsHud", "showPlantTimerHud", "showDealerTimerHud", "showProductionTimerHud",
             "toggleSprintEnabled", "autoStatsOnJoinEnabled", "autoFactionBankOnBalanceEnabled",
-            "autoAtmInfoOnBalanceEnabled", "chatTimestampsEnabled", "chatCustomizationEnabled",
+            "autoAtmInfoOnBalanceEnabled", "richTaxAlertEnabled", "richTaxAlertSoundEnabled",
+            "chatTimestampsEnabled", "chatCustomizationEnabled",
             "autoDropDrinkEnabled", "autoFisherEnabled", "autoWinzerEnabled", "autoGaertnerEnabled",
             "autoMuellmannEnabled", "autoFirstAidEnabled",
             "reinfCustomizationEnabled", "reinfUniformColorEnabled", "reinfLabelColor", "reinfTextColor",
@@ -333,6 +334,8 @@ public class BetterUCConfig {
     public boolean autoStatsOnJoinEnabled = true;
     public boolean autoFactionBankOnBalanceEnabled = false;
     public boolean autoAtmInfoOnBalanceEnabled = false;
+    public boolean richTaxAlertEnabled = true;
+    public boolean richTaxAlertSoundEnabled = true;
     public boolean autoDropDrinkEnabled = true;
     public boolean autoFisherEnabled = true;
     public boolean autoWinzerEnabled = true;
@@ -1192,6 +1195,8 @@ public class BetterUCConfig {
             boolean hasChatCustomizationSetting = rawJson.contains("\"chatCustomizationEnabled\"");
             boolean hasReinfCustomizationSetting = rawJson.contains("\"reinfCustomizationEnabled\"");
             boolean hasCloudSettingsSetting = rawJson.contains("\"cloudSettingsEnabled\"");
+            boolean hasRichTaxAlertSetting = rawJson.contains("\"richTaxAlertEnabled\"");
+            boolean hasRichTaxAlertSoundSetting = rawJson.contains("\"richTaxAlertSoundEnabled\"");
             BetterUCConfig loaded = GSON.fromJson(rawJson, BetterUCConfig.class);
             if (loaded == null) return;
 
@@ -1204,6 +1209,12 @@ public class BetterUCConfig {
             }
             if (!hasCloudSettingsSetting) {
                 INSTANCE.cloudSettingsEnabled = true;
+            }
+            if (!hasRichTaxAlertSetting) {
+                INSTANCE.richTaxAlertEnabled = true;
+            }
+            if (!hasRichTaxAlertSoundSetting) {
+                INSTANCE.richTaxAlertSoundEnabled = true;
             }
             ensureRuntimeCollections();
             if (INSTANCE.hotkeyCommands == null)         INSTANCE.hotkeyCommands = new ArrayList<>();

@@ -41,6 +41,7 @@ public class BankBalanceHud {
     );
 
     private static int currentBankBalance = -1;
+    private static long lastBalanceUpdateMs = 0L;
     private static String lastBankDeltaKey = "";
     private static long lastBankDeltaMs = 0L;
     private static long lastAutoBankFollowupMs = 0L;
@@ -115,6 +116,11 @@ public class BankBalanceHud {
         return currentBankBalance;
     }
 
+    public static long getBalanceAgeMs() {
+        if (lastBalanceUpdateMs <= 0L) return Long.MAX_VALUE;
+        return Math.max(0L, System.currentTimeMillis() - lastBalanceUpdateMs);
+    }
+
     public static String formatMoney(int value) {
         if (value < 0) return String.valueOf(value);
         return MONEY_FORMAT.format(value);
@@ -182,6 +188,7 @@ public class BankBalanceHud {
 
     private static void restoreFromConfig() {
         currentBankBalance = Math.max(-1, BetterUCConfig.INSTANCE.lastKnownBankBalance);
+        lastBalanceUpdateMs = 0L;
     }
 
     private static String stripFormatting(String raw) {
@@ -207,10 +214,12 @@ public class BankBalanceHud {
         boolean changed = currentBankBalance != newBalance
                 || BetterUCConfig.INSTANCE.lastKnownBankBalance != newBalance;
         currentBankBalance = newBalance;
+        lastBalanceUpdateMs = System.currentTimeMillis();
         BetterUCConfig.INSTANCE.lastKnownBankBalance = newBalance;
         if (changed) {
             BetterUCConfig.save();
         }
+        RichTaxAlertHud.onBankBalanceUpdated(Minecraft.getInstance(), newBalance);
     }
 
     private static void subtractBalanceAndPersist(int amount, String rawKey) {

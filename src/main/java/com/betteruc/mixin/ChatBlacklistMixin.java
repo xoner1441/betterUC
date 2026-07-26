@@ -26,6 +26,7 @@ import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.PaydayHud;
 import com.betteruc.hud.PlantageHud;
 import com.betteruc.hud.ProductionTimerHud;
+import com.betteruc.hud.RichTaxAlertHud;
 import com.betteruc.parser.BlacklistParser;
 import com.betteruc.parser.FactionStatsParser;
 import com.betteruc.parser.StatsLineClassifier;
@@ -161,6 +162,7 @@ public class ChatBlacklistMixin {
         DealerTimerHud.handleChatLine(Minecraft.getInstance(), raw);
         PlantageHud.handleChatMessage(Minecraft.getInstance(), raw);
         ProductionTimerHud.handleChatLine(Minecraft.getInstance(), raw);
+        RichTaxAlertHud.handleChatLine(Minecraft.getInstance(), raw);
 
         if (BetterUCSuppressFlags.consumeBlacklistInfoLocalMessageBypass()) {
             appendTimestampIfConfigured(message, ci);
@@ -235,6 +237,7 @@ public class ChatBlacklistMixin {
         if (raw == null || raw.isBlank()) return;
         if (PAYDAY_HEADER_PATTERN.matcher(raw.trim()).matches()) {
             PaydayHud.resetForNewPayday();
+            RichTaxAlertHud.resetForNewPayday();
         }
 
         String lower = raw.toLowerCase(Locale.ROOT);
