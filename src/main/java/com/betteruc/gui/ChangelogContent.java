@@ -6,6 +6,18 @@ public final class ChangelogContent {
 
     private static final Page[] LATEST_PAGES = new Page[]{
             new Page(
+                    "NEU IN 1.3.0",
+                    "Bank & PayDay",
+                    "Wichtige Bankinformationen fallen rechtzeitig auf.",
+                    new String[]{
+                            "Der neue Reichensteuer-Alert warnt 5 Minuten vor dem PayDay.",
+                            "Die Warnung erscheint, wenn mehr als 100.000$ auf der Bank liegen.",
+                            "Ein Slide-in, ein Chat-Hinweis und ein optionaler Ton machen den Alert sichtbar.",
+                            "Veraltete Bankwerte werden vor der Pruefung automatisch aktualisiert.",
+                            "Alert und Warnton lassen sich im Bank-Modul getrennt aktivieren."
+                    }
+            ),
+            new Page(
                     "NEU IN 1.2.9",
                     "Automationen & HUDs",
                     "Mehr Kontrolle über Job-Helfer und wichtige Anzeigen.",

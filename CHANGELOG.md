@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.3.0] - 2026-07-26
+
+### Neu
+- Neuer togglebarer **Reichensteuer-Alert** im Bank-Modul.
+- Bei mehr als **100.000$ Bankguthaben** erscheint fünf Minuten vor dem PayDay ein Slide-in mit Chat-Hinweis.
+- Der Warnton kann unabhängig vom Alert ein- oder ausgeschaltet werden.
+
+### Geändert
+- Unbekannte oder veraltete Bankwerte werden vor der Reichensteuer-Prüfung automatisch über `/bank` aktualisiert.
+- Der Alert wird pro PayDay-Zyklus nur einmal ausgelöst und seine Einstellungen werden über das Cloud-Profil synchronisiert.
+
+### Versionierung
+- Mod-Version auf **`1.3.0`** gesetzt.
+
 ## [1.2.9] - 2026-07-22
 
 ### Neu
