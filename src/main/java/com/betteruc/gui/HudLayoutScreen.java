@@ -3,6 +3,7 @@ package com.betteruc.gui;
 import com.betteruc.client.ClientCompat;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.CashHud;
+import com.betteruc.hud.HealthHud;
 import com.betteruc.hud.ModernHudRenderer;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,9 +14,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 
 public class HudLayoutScreen extends Screen {
 
@@ -24,8 +23,6 @@ public class HudLayoutScreen extends Screen {
     private static final int HANDLE_SIZE = 7;
     private static final int SNAP_DISTANCE = 8;
     private static final int SNAP_GAP = 2;
-    private static final Identifier HEART_TEXTURE = Identifier.withDefaultNamespace("hud/heart/full");
-
     private final Screen parent;
     private HudModule draggingModule;
     private HudModule resizingModule;
@@ -332,9 +329,7 @@ public class HudLayoutScreen extends Screen {
         Font renderer = font;
         return switch (module) {
             case HEALTH -> {
-                String style = BetterUCConfig.INSTANCE.healthHudStyle;
-                int textWidth = renderer.width("10");
-                yield BetterUCConfig.isModernHudStyle(style) ? Math.max(34, textWidth + 27) : 9 + 4 + textWidth;
+                yield HealthHud.getPreviewWidth(renderer, BetterUCConfig.INSTANCE.healthHudStyle);
             }
             case FPS -> singleLineWidth(hudLabel(module), "144", prefixedText(module, "144"), BetterUCConfig.INSTANCE.fpsHudStyle);
             case PAYDAY -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.paydayHudStyle)
@@ -422,25 +417,16 @@ public class HudLayoutScreen extends Screen {
                 () -> {
             switch (module) {
             case HEALTH -> {
-                Component health = Component.literal("10");
-                int textColor = BetterUCConfig.INSTANCE.healthHudTextColor;
-                int heartColor = BetterUCConfig.INSTANCE.healthHudHeartColor;
-                if (modernStyle) {
-                    int moduleWidth = widthFor(module);
-                    boolean rightAligned = ModernHudRenderer.isRightAligned(x, moduleWidth);
-                    int heartX = rightAligned ? x + moduleWidth - 16 : x + 7;
-                    int textX = rightAligned ? heartX - minecraft.font.width(health) - 4 : x + 19;
-                    ModernHudRenderer.drawPanel(context, x, y, moduleWidth, 17, heartColor);
-                    context.blitSprite(RenderPipelines.GUI_TEXTURED, HEART_TEXTURE, heartX, y + 4, 9, 9, heartColor);
-                    ModernHudRenderer.drawHudTextWithShadow(context, minecraft.font, health, Math.max(x + 6, textX), y + 4, textColor);
-                    return;
-                }
-                context.blitSprite(RenderPipelines.GUI_TEXTURED, HEART_TEXTURE, x, y, 9, 9, heartColor);
-                if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, minecraft.font, style, fontId, health, x + 12, y, textColor);
-                } else {
-                    ModernHudRenderer.drawHudTextWithShadow(context, minecraft.font, health, x + 11, y, textColor);
-                }
+                HealthHud.drawPreview(
+                        context,
+                        minecraft,
+                        x,
+                        y,
+                        style,
+                        fontId,
+                        BetterUCConfig.INSTANCE.healthHudHeartColor,
+                        BetterUCConfig.INSTANCE.healthHudTextColor
+                );
             }
             case FPS -> renderSingleLine(context, minecraft, style, fontId, x, y, hudLabel(module), "144", prefixedText(module, "144"), BetterUCConfig.INSTANCE.fpsHudColor);
             case PAYDAY -> {

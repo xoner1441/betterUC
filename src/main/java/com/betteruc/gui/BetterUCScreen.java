@@ -16,6 +16,7 @@ import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.CashHud;
 import com.betteruc.hud.HackTimerHud;
+import com.betteruc.hud.HealthHud;
 import com.betteruc.hud.ModernHudRenderer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.util.Util;
@@ -880,37 +881,16 @@ public class BetterUCScreen extends Screen {
         ModernHudRenderer.withHudGradient(getHudGradientEnabled(selectedModule), getHudGradientColor(selectedModule), () -> {
         switch (selectedModule) {
             case HEALTH -> {
-                if (modernStyle) {
-                    ModernHudRenderer.drawPanel(context, previewX, previewY, 38, 17, BetterUCConfig.INSTANCE.healthHudHeartColor);
-                    context.blitSprite(
-                            net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
-                            net.minecraft.resources.Identifier.withDefaultNamespace("hud/heart/full"),
-                            previewX + 7,
-                            previewY + 4,
-                            9,
-                            9,
-                            BetterUCConfig.INSTANCE.healthHudHeartColor
-                    );
-                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, "10", previewX + 19, previewY + 4,
-                            BetterUCConfig.INSTANCE.healthHudTextColor);
-                    return;
-                }
-                context.blitSprite(
-                        net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
-                        net.minecraft.resources.Identifier.withDefaultNamespace("hud/heart/full"),
+                HealthHud.drawPreview(
+                        context,
+                        minecraft,
                         previewX,
                         previewY,
-                        9,
-                        9,
-                        BetterUCConfig.INSTANCE.healthHudHeartColor
+                        style,
+                        fontId,
+                        BetterUCConfig.INSTANCE.healthHudHeartColor,
+                        BetterUCConfig.INSTANCE.healthHudTextColor
                 );
-                if (stylizedStyle) {
-                    ModernHudRenderer.drawStyledText(context, this.font, style, fontId, Component.literal("10"), previewX + 12, previewY,
-                            BetterUCConfig.INSTANCE.healthHudTextColor);
-                    return;
-                }
-                ModernHudRenderer.drawHudTextWithShadow(context, this.font, "10", previewX + 11, previewY,
-                        BetterUCConfig.INSTANCE.healthHudTextColor);
             }
             case FPS -> {
                 if (modernStyle) {
