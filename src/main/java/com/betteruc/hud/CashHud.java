@@ -41,6 +41,14 @@ public class CashHud {
     private static final Pattern PLAYER_MONEY_RECEIVED_PATTERN = Pattern.compile(
             "(?i)\\b(.+?)\\s+hat\\s+dir\\s+([0-9][0-9\\.]*)\\s*\\$\\s+gegeben\\s*!?"
     );
+    private static final Pattern CASINO_PURCHASE_PATTERN = Pattern.compile(
+            "(?iu)(?:casino|ᴄᴀsɪɴᴏ).*?gekauft\\s*:\\s*[0-9][0-9\\.]*\\s*jetons\\s*"
+                    + "\\(\\s*-\\s*([0-9][0-9\\.]*)\\s*\\$"
+    );
+    private static final Pattern CASINO_SALE_PATTERN = Pattern.compile(
+            "(?iu)(?:casino|ᴄᴀsɪɴᴏ).*?verkauft\\s*:\\s*[0-9][0-9\\.]*\\s*jetons\\s*"
+                    + "\\(\\s*\\+\\s*([0-9][0-9\\.]*)\\s*\\$"
+    );
     private static final Pattern CASH_SIGNED_DELTA_PATTERN = Pattern.compile(
             "^\\s*([+-])\\s*([0-9][0-9\\.]*)\\s*\\$\\s*$"
     );
@@ -104,6 +112,16 @@ public class CashHud {
             if (parsed != null) {
                 applyDeltaAndPersist('+', parsed, "pay-received:" + normalizeRawKey(raw));
             }
+            return;
+        }
+
+        CasinoCashDelta casinoDelta = parseCasinoCashDelta(raw);
+        if (casinoDelta != null) {
+            applyDeltaAndPersist(
+                    casinoDelta.sign(),
+                    casinoDelta.amount(),
+                    "casino:" + normalizeRawKey(raw)
+            );
             return;
         }
 
@@ -251,6 +269,27 @@ public class CashHud {
         } catch (NumberFormatException ignored) {
             return null;
         }
+    }
+
+    static CasinoCashDelta parseCasinoCashDelta(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String cleaned = stripChatPrefix(stripFormatting(raw));
+
+        Matcher purchaseMatcher = CASINO_PURCHASE_PATTERN.matcher(cleaned);
+        if (purchaseMatcher.find()) {
+            Integer amount = parseMoneyValue(purchaseMatcher.group(1));
+            return amount == null || amount <= 0 ? null : new CasinoCashDelta('-', amount);
+        }
+
+        Matcher saleMatcher = CASINO_SALE_PATTERN.matcher(cleaned);
+        if (saleMatcher.find()) {
+            Integer amount = parseMoneyValue(saleMatcher.group(1));
+            return amount == null || amount <= 0 ? null : new CasinoCashDelta('+', amount);
+        }
+        return null;
+    }
+
+    record CasinoCashDelta(char sign, int amount) {
     }
 
     private static void restoreFromConfig() {
