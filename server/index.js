@@ -36,6 +36,10 @@ const GITHUB_RELEASES_URL = "https://github.com/xoner1441/betterUC/releases";
 const GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/xoner1441/betterUC/releases/latest";
 const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || "https://betteruc.de").replace(/\/+$/, "");
 const RELEASE_CACHE_TTL_MS = Number(process.env.RELEASE_CACHE_TTL_MS || 5 * 60 * 1000);
+const UPDATE_WATCH_INTERVAL_MS = Math.max(
+  30 * 1000,
+  Number(process.env.UPDATE_WATCH_INTERVAL_MS || 60 * 1000)
+);
 const CLOUD_SETTINGS_SCHEMA_VERSION = 1;
 const CLOUD_SETTINGS_MAX_BYTES = 48 * 1024;
 const GLOBAL_CHAT_MAX_LENGTH = 180;
@@ -74,9 +78,11 @@ const MIME_TYPES = new Map([
 let store = { version: 1, accounts: [] };
 let saveTimer = null;
 let backupTimer = null;
+let updateWatchTimer = null;
 let saveQueue = Promise.resolve();
 let persistenceMode = "json";
 let latestReleaseCache = { fetchedAt: 0, release: null };
+let latestKnownReleaseVersion = "";
 let wasteDropAreas = {};
 const clients = new Set();
 const rateLimits = new Map();
@@ -1522,8 +1528,14 @@ function releaseResponse(release, req, target = "mc26.x") {
     target: cleanedTarget,
     availableTargets: releaseAvailableTargets(release),
     assetName: asset ? asset.name : "",
-    assetSize: asset ? asset.size : 0
+    assetSize: asset ? asset.size : 0,
+    sha256: asset ? normalizeReleaseDigest(asset.digest) : ""
   };
+}
+
+function normalizeReleaseDigest(value) {
+  const normalized = String(value || "").trim().toLowerCase().replace(/^sha256:/, "");
+  return /^[0-9a-f]{64}$/.test(normalized) ? normalized : "";
 }
 
 async function fetchLatestRelease() {
@@ -1552,7 +1564,8 @@ async function fetchLatestRelease() {
     .map(asset => ({
       name: String(asset.name || ""),
       url: String(asset.browser_download_url || ""),
-      size: Number(asset.size || 0)
+      size: Number(asset.size || 0),
+      digest: String(asset.digest || "")
     }));
   const defaultAsset = releaseAssetForTarget({ assets: jarAssets }, "mc26.x");
   const release = {
@@ -1573,6 +1586,82 @@ async function fetchLatestRelease() {
 
   latestReleaseCache = { fetchedAt: now, release };
   return release;
+}
+
+function versionParts(value) {
+  return normalizeReleaseVersion(value)
+    .split(/[.-]/)
+    .map(part => {
+      const match = String(part || "").match(/^\d+/);
+      return match ? Number(match[0]) : 0;
+    });
+}
+
+function isReleaseNewer(currentVersion, remoteVersion) {
+  const current = versionParts(currentVersion);
+  const remote = versionParts(remoteVersion);
+  const length = Math.max(current.length, remote.length);
+  for (let index = 0; index < length; index++) {
+    const currentPart = current[index] || 0;
+    const remotePart = remote[index] || 0;
+    if (remotePart !== currentPart) return remotePart > currentPart;
+  }
+  return false;
+}
+
+function sendUpdateAvailable(client, release) {
+  if (!client || client.ws.readyState !== client.ws.OPEN || !release) return;
+  const version = normalizeReleaseVersion(release.tagName);
+  if (!version || !isReleaseNewer(client.version, version)) return;
+  client.ws.send(JSON.stringify({
+    type: "update_available",
+    version,
+    pageUrl: `${PUBLIC_BASE_URL}/download`,
+    publishedAt: release.publishedAt || null
+  }));
+}
+
+function broadcastUpdateAvailable(release) {
+  for (const client of clients) {
+    sendUpdateAvailable(client, release);
+  }
+}
+
+async function notifyClientAboutLatestRelease(client) {
+  try {
+    sendUpdateAvailable(client, await fetchLatestRelease());
+  } catch (error) {
+    console.warn("Could not check latest release for connected client", error.message);
+  }
+}
+
+async function pollLatestRelease() {
+  try {
+    const release = await fetchLatestRelease();
+    const version = normalizeReleaseVersion(release.tagName);
+    if (!version) return;
+    if (!latestKnownReleaseVersion) {
+      latestKnownReleaseVersion = version;
+      return;
+    }
+    if (isReleaseNewer(latestKnownReleaseVersion, version)) {
+      latestKnownReleaseVersion = version;
+      broadcastUpdateAvailable(release);
+      console.log(`Broadcasted betterUC update ${version} to connected clients`);
+    }
+  } catch (error) {
+    console.warn("Could not poll latest betterUC release", error.message);
+  }
+}
+
+async function startReleaseWatcher() {
+  await pollLatestRelease();
+  updateWatchTimer = setInterval(() => {
+    pollLatestRelease().catch(error => {
+      console.warn("Could not poll latest betterUC release", error.message);
+    });
+  }, UPDATE_WATCH_INTERVAL_MS);
+  if (typeof updateWatchTimer.unref === "function") updateWatchTimer.unref();
 }
 
 async function handleLatestJarDownload(req, res) {
@@ -2635,6 +2724,9 @@ function handleWsConnection(ws, req, auth, url) {
     ttlMs: PING_TTL_MS
   }));
   sendWasteDropAreas(client);
+  notifyClientAboutLatestRelease(client).catch(error => {
+    console.warn("Could not send update state to connected client", error.message);
+  });
   broadcastPresence(client.server);
   for (const server of replacedServers) {
     if (server !== client.server) broadcastPresence(server);
@@ -2680,6 +2772,9 @@ async function main() {
   await loadStore();
   await loadWasteDropAreas();
   scheduleStoreBackups();
+  startReleaseWatcher().catch(error => {
+    console.warn("Could not start betterUC release watcher", error.message);
+  });
   startDiscordBot({
     getOnlinePlayers: onlinePlayersForResponse,
     getAccounts: () => store.accounts.map(adminAccount),
@@ -2754,6 +2849,7 @@ async function main() {
     console.log(`Stopping betterUC platform (${signal})...`);
     clearTimeout(saveTimer);
     clearInterval(backupTimer);
+    clearInterval(updateWatchTimer);
     try {
       await saveStore();
     } catch (error) {

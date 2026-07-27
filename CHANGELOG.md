@@ -6,10 +6,14 @@
 - Neuer togglebarer **Reichensteuer-Alert** im Bank-Modul.
 - Bei mehr als **100.000$ Bankguthaben** erscheint fünf Minuten vor dem PayDay ein Slide-in mit Chat-Hinweis.
 - Der Warnton kann unabhängig vom Alert ein- oder ausgeschaltet werden.
+- Neue anklickbare Update-Mitteilung für alle verbundenen betterUC-Nutzer.
+- Ein Bestätigungsfenster installiert vorbereitete Updates und startet Minecraft nach Möglichkeit automatisch neu.
 
 ### Geändert
 - Unbekannte oder veraltete Bankwerte werden vor der Reichensteuer-Prüfung automatisch über `/bank` aktualisiert.
 - Der Alert wird pro PayDay-Zyklus nur einmal ausgelöst und seine Einstellungen werden über das Cloud-Profil synchronisiert.
+- Der Auto-Updater lädt die passende JAR im Hintergrund, prüft Mod-ID, Version und optional SHA-256 und tauscht sie erst nach Bestätigung aus.
+- Der Relay meldet neue Releases live; eine periodische Client-Prüfung bleibt als Fallback aktiv.
 
 ### Versionierung
 - Mod-Version auf **`1.3.0`** gesetzt.

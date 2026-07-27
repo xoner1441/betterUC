@@ -934,6 +934,7 @@ public class BetterUCClient implements ClientModInitializer {
             maybeOpenWelcomeChangelog(client);
             if (client.player == null) return;
 
+            VersionChecker.tick(client);
             HackTimerHud.tick();
             DealerTimerHud.tick();
             ProductionTimerHud.tick();

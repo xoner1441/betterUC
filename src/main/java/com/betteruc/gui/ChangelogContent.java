@@ -14,7 +14,9 @@ public final class ChangelogContent {
                             "Die Warnung erscheint, wenn mehr als 100.000$ auf der Bank liegen.",
                             "Ein Slide-in, ein Chat-Hinweis und ein optionaler Ton machen den Alert sichtbar.",
                             "Veraltete Bankwerte werden vor der Pruefung automatisch aktualisiert.",
-                            "Alert und Warnton lassen sich im Bank-Modul getrennt aktivieren."
+                            "Alert und Warnton lassen sich im Bank-Modul getrennt aktivieren.",
+                            "Neue Updates werden live gemeldet und im Hintergrund sicher vorbereitet.",
+                            "Ein Klick bestaetigt die Installation und startet Minecraft nach Moeglichkeit neu."
                     }
             ),
             new Page(

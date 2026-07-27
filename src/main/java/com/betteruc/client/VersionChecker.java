@@ -2,6 +2,7 @@ package com.betteruc.client;
 
 import com.betteruc.BetterUCMod;
 import com.betteruc.config.BetterUCConfig;
+import com.betteruc.gui.UpdateRestartScreen;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -22,8 +23,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -32,6 +35,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 public final class VersionChecker {
     private static final String OWNER = "xoner1441";
@@ -55,20 +60,35 @@ public final class VersionChecker {
 
     private static volatile boolean checkRunning = false;
     private static volatile boolean installRunning = false;
-    private static volatile boolean installPreparedThisSession = false;
-    private static volatile boolean notifiedThisSession = false;
+    private static volatile boolean confirmationRequested = false;
+    private static volatile boolean restartTriggered = false;
+    private static volatile PreparedUpdate preparedUpdate;
+    private static volatile String notifiedVersion = "";
     private static volatile long lastCheckMs = 0L;
 
     private VersionChecker() {
     }
 
     public static void checkOnJoin(Minecraft client) {
-        if (client == null || notifiedThisSession || checkRunning) {
+        lastCheckMs = 0L;
+        checkForUpdates(client, true);
+    }
+
+    public static void tick(Minecraft client) {
+        checkForUpdates(client, false);
+    }
+
+    public static void onRelayUpdateAvailable(Minecraft client, String announcedVersion) {
+        if (client == null || !isRemoteNewer(getCurrentVersion(), announcedVersion)) {
             return;
         }
+        checkForUpdates(client, true);
+    }
 
+    private static void checkForUpdates(Minecraft client, boolean bypassCooldown) {
+        if (client == null || client.player == null || checkRunning) return;
         long now = System.currentTimeMillis();
-        if (now - lastCheckMs < CHECK_COOLDOWN_MS) {
+        if (!bypassCooldown && now - lastCheckMs < CHECK_COOLDOWN_MS) {
             return;
         }
 
@@ -91,15 +111,8 @@ public final class VersionChecker {
                     }
 
                     client.execute(() -> {
-                        if (client.player == null || notifiedThisSession) {
-                            return;
-                        }
-
-                        notifiedThisSession = true;
-                        client.player.sendSystemMessage(buildUpdateMessage(currentVersion, latestVersion));
-                        if (BetterUCConfig.INSTANCE.autoUpdateEnabled && latestVersion.hasJarAsset()) {
-                            installUpdate(client, latestVersion, false);
-                        }
+                        if (client.player == null) return;
+                        announceUpdate(client, currentVersion, latestVersion);
                     });
                 });
     }
@@ -108,8 +121,14 @@ public final class VersionChecker {
         if (client == null) {
             return;
         }
+        PreparedUpdate ready = preparedUpdate;
+        if (ready != null && isRemoteNewer(getCurrentVersion(), ready.latestVersion().version())) {
+            openRestartConfirmation(client, ready);
+            return;
+        }
         if (installRunning) {
-            sendLocalMessage(client, "\u00A7e[betterUC] Auto-Updater l\u00E4uft bereits.");
+            confirmationRequested = manual;
+            sendLocalMessage(client, "\u00A7e[betterUC] Download l\u00E4uft bereits. Das Best\u00E4tigungsfenster \u00F6ffnet sich danach automatisch.");
             return;
         }
 
@@ -121,16 +140,16 @@ public final class VersionChecker {
         CompletableFuture.supplyAsync(() -> {
                     LatestVersion latestVersion = fetchLatestVersion();
                     if (latestVersion == null || latestVersion.version().isBlank()) {
-                        return InstallOutcome.message("\u00A7c[betterUC] Konnte keine aktuelle betterUC-Version finden.");
+                        return PrepareOutcome.message("\u00A7c[betterUC] Konnte keine aktuelle betterUC-Version finden.");
                     }
 
                     String currentVersion = getCurrentVersion();
                     if (!isRemoteNewer(currentVersion, latestVersion.version())) {
-                        return InstallOutcome.message("\u00A7a[betterUC] Du nutzt bereits die aktuelle Version \u00A7f"
+                        return PrepareOutcome.message("\u00A7a[betterUC] Du nutzt bereits die aktuelle Version \u00A7f"
                                 + normalizeVersion(currentVersion) + "\u00A7a.");
                     }
 
-                    return prepareInstall(latestVersion);
+                    return prepareDownload(latestVersion);
                 })
                 .whenComplete((outcome, error) -> {
                     installRunning = false;
@@ -140,12 +159,105 @@ public final class VersionChecker {
                             sendLocalMessage(client, "\u00A7c[betterUC] Auto-Update fehlgeschlagen: " + safeError(error));
                             return;
                         }
-                        if (outcome == null || outcome.message().isBlank()) {
-                            return;
+                        if (outcome != null && outcome.ready() && preparedUpdate != null) {
+                            confirmationRequested = false;
+                            openRestartConfirmation(client, preparedUpdate);
+                        } else if (outcome != null && !outcome.message().isBlank()) {
+                            sendLocalMessage(client, outcome.message());
                         }
-                        sendLocalMessage(client, outcome.message());
                     });
                 });
+    }
+
+    public static String preparedVersion() {
+        PreparedUpdate update = preparedUpdate;
+        return update == null ? "" : normalizeVersion(update.latestVersion().version());
+    }
+
+    public static boolean preparedRestartSupported() {
+        PreparedUpdate update = preparedUpdate;
+        return update != null && update.restartCommand() != null;
+    }
+
+    public static boolean confirmInstallAndRestart(Minecraft client) {
+        PreparedUpdate update = preparedUpdate;
+        if (client == null || update == null || restartTriggered) return false;
+
+        try {
+            Path script = createInstallScript(
+                    update.stagingDirectory(),
+                    update.installDirectories(),
+                    update.downloadedJar(),
+                    update.targetName(),
+                    update.restartCommand()
+            );
+            if (!startInstallScript(script)) {
+                sendLocalMessage(client, "\u00A7c[betterUC] Das Installationsprogramm konnte nicht gestartet werden.");
+                return false;
+            }
+
+            restartTriggered = true;
+            client.stop();
+            return true;
+        } catch (Exception e) {
+            BetterUCMod.LOGGER.warn("Could not launch betterUC update restart", e);
+            sendLocalMessage(client, "\u00A7c[betterUC] Neustart fehlgeschlagen: " + safeError(e));
+            return false;
+        }
+    }
+
+    private static void announceUpdate(Minecraft client, String currentVersion, LatestVersion latestVersion) {
+        String normalizedLatest = normalizeVersion(latestVersion.version());
+        boolean firstNotice = !normalizedLatest.equalsIgnoreCase(notifiedVersion);
+        if (firstNotice) {
+            notifiedVersion = normalizedLatest;
+            client.player.sendSystemMessage(buildUpdateMessage(currentVersion, latestVersion));
+        }
+
+        if (preparedUpdate != null || installRunning || !latestVersion.hasJarAsset()) {
+            return;
+        }
+        if (BetterUCConfig.INSTANCE.autoUpdateEnabled) {
+            prepareKnownUpdate(client, latestVersion);
+        }
+    }
+
+    private static void prepareKnownUpdate(Minecraft client, LatestVersion latestVersion) {
+        if (client == null || latestVersion == null || installRunning || preparedUpdate != null) return;
+
+        installRunning = true;
+        sendLocalMessage(client, "\u00A77[betterUC] Auto-Updater l\u00E4dt Version \u00A7f"
+                + normalizeVersion(latestVersion.version()) + "\u00A77 im Hintergrund...");
+        CompletableFuture.supplyAsync(() -> prepareDownload(latestVersion))
+                .whenComplete((outcome, error) -> {
+                    installRunning = false;
+                    client.execute(() -> {
+                        if (error != null) {
+                            BetterUCMod.LOGGER.warn("Could not prepare betterUC auto update", error);
+                            sendLocalMessage(client, "\u00A7c[betterUC] Auto-Update fehlgeschlagen: " + safeError(error));
+                            return;
+                        }
+                        if (outcome != null && outcome.ready()) {
+                            if (confirmationRequested && preparedUpdate != null) {
+                                confirmationRequested = false;
+                                openRestartConfirmation(client, preparedUpdate);
+                            } else {
+                                sendReadyMessage(client);
+                            }
+                        } else if (outcome != null && !outcome.message().isBlank()) {
+                            sendLocalMessage(client, outcome.message());
+                        }
+                    });
+                });
+    }
+
+    private static void openRestartConfirmation(Minecraft client, PreparedUpdate update) {
+        if (client == null || update == null) return;
+        ClientCompat.setScreen(client, new UpdateRestartScreen(
+                ClientCompat.currentScreen(client),
+                normalizeVersion(update.latestVersion().version()),
+                update.restartCommand() != null
+        ));
     }
 
     private static LatestVersion fetchLatestVersion() {
@@ -161,11 +273,11 @@ public final class VersionChecker {
 
         Optional<String> mainVersion = fetchVersionFromGradleProperties(RAW_GRADLE_PROPERTIES_MAIN);
         if (mainVersion.isPresent()) {
-            return new LatestVersion(mainVersion.get(), REPO_URL, "", "");
+            return new LatestVersion(mainVersion.get(), REPO_URL, "", "", "");
         }
 
         return fetchVersionFromGradleProperties(RAW_GRADLE_PROPERTIES_MASTER)
-                .map(version -> new LatestVersion(version, REPO_URL, "", ""))
+                .map(version -> new LatestVersion(version, REPO_URL, "", "", ""))
                 .orElse(null);
     }
 
@@ -202,11 +314,12 @@ public final class VersionChecker {
 
             String assetName = jsonString(object, "assetName");
             String downloadUrl = jsonString(object, "downloadUrl");
+            String sha256 = normalizeSha256(jsonString(object, "sha256"));
             if (!downloadUrl.isBlank() && !looksLikeJarDownloadUrl(downloadUrl)) {
                 downloadUrl = "";
             }
 
-            return Optional.of(new LatestVersion(version, pageUrl, assetName, downloadUrl));
+            return Optional.of(new LatestVersion(version, pageUrl, assetName, downloadUrl, sha256));
         } catch (RuntimeException e) {
             BetterUCMod.LOGGER.warn("Could not parse betterUC website release JSON", e);
             return Optional.empty();
@@ -226,7 +339,7 @@ public final class VersionChecker {
         }
 
         String url = findFirst(HTML_URL_PATTERN, body).orElse(LATEST_RELEASE_URL);
-        return Optional.of(new LatestVersion(tagName, url, "", ""));
+        return Optional.of(new LatestVersion(tagName, url, "", "", ""));
     }
 
     private static Optional<LatestVersion> parseLatestReleaseJson(String body) {
@@ -285,7 +398,8 @@ public final class VersionChecker {
 
             String assetName = selectedAsset == null ? "" : jsonString(selectedAsset, "name");
             String assetUrl = selectedAsset == null ? "" : jsonString(selectedAsset, "browser_download_url");
-            return Optional.of(new LatestVersion(tagName, url, assetName, assetUrl));
+            String sha256 = selectedAsset == null ? "" : normalizeSha256(jsonString(selectedAsset, "digest"));
+            return Optional.of(new LatestVersion(tagName, url, assetName, assetUrl, sha256));
         } catch (RuntimeException e) {
             BetterUCMod.LOGGER.warn("Could not parse betterUC latest release JSON", e);
             return Optional.empty();
@@ -426,24 +540,27 @@ public final class VersionChecker {
         return Optional.of(matcher.group(1).trim());
     }
 
-    private static InstallOutcome prepareInstall(LatestVersion latestVersion) {
-        if (installPreparedThisSession) {
-            return InstallOutcome.message("\u00A7e[betterUC] Update wurde bereits vorbereitet. Bitte Minecraft komplett schlie\u00DFen und neu starten.");
+    private static PrepareOutcome prepareDownload(LatestVersion latestVersion) {
+        PreparedUpdate existing = preparedUpdate;
+        if (existing != null
+                && normalizeVersion(existing.latestVersion().version())
+                .equalsIgnoreCase(normalizeVersion(latestVersion.version()))) {
+            return PrepareOutcome.prepared();
         }
         if (!latestVersion.hasJarAsset()) {
-            return InstallOutcome.message("\u00A7e[betterUC] Update verf\u00FCgbar, aber es wurde keine betterUC-JAR gefunden.\n"
+            return PrepareOutcome.message("\u00A7e[betterUC] Update verf\u00FCgbar, aber es wurde keine betterUC-JAR gefunden.\n"
                     + "\u00A77Download: \u00A7b" + latestVersion.url());
         }
 
         try {
             Path currentJar = currentModJarPath();
             if (!Files.isRegularFile(currentJar)) {
-                return InstallOutcome.message("\u00A7c[betterUC] Auto-Updater kann nur aus einer geladenen Mod-JAR heraus installieren.");
+                return PrepareOutcome.message("\u00A7c[betterUC] Auto-Updater kann nur aus einer geladenen Mod-JAR heraus installieren.");
             }
 
             List<Path> installDirectories = findInstallDirectories(currentJar);
             if (installDirectories.isEmpty()) {
-                return InstallOutcome.message("\u00A7c[betterUC] Mods-Ordner konnte nicht erkannt werden.");
+                return PrepareOutcome.message("\u00A7c[betterUC] Mods-Ordner konnte nicht erkannt werden.");
             }
 
             String targetName = sanitizeJarName(latestVersion);
@@ -452,25 +569,28 @@ public final class VersionChecker {
             Path downloadedJar = stagingDir.resolve(targetName);
             downloadJar(latestVersion, downloadedJar);
 
-            if (!Files.isRegularFile(downloadedJar) || Files.size(downloadedJar) < MIN_JAR_SIZE_BYTES) {
+            try {
+                validateDownloadedJar(downloadedJar, latestVersion);
+            } catch (IOException validationError) {
                 Files.deleteIfExists(downloadedJar);
-                return InstallOutcome.message("\u00A7c[betterUC] Download war ung\u00FCltig oder unvollst\u00E4ndig.");
+                throw validationError;
             }
 
-            BetterUCMod.LOGGER.info("Preparing betterUC update for {} install director{}: {}",
+            RestartCommand restartCommand = captureRestartCommand().orElse(null);
+            preparedUpdate = new PreparedUpdate(
+                    latestVersion,
+                    stagingDir,
+                    List.copyOf(installDirectories),
+                    downloadedJar,
+                    targetName,
+                    restartCommand
+            );
+            BetterUCMod.LOGGER.info("Prepared betterUC update for {} install director{}: {}",
                     installDirectories.size(), installDirectories.size() == 1 ? "y" : "ies", installDirectories);
-            Path script = createInstallScript(stagingDir, installDirectories, downloadedJar, targetName);
-            if (!startInstallScript(script)) {
-                return InstallOutcome.message("\u00A7c[betterUC] Update wurde heruntergeladen, aber das Install-Script konnte nicht gestartet werden.");
-            }
-
-            installPreparedThisSession = true;
-            return InstallOutcome.message("\u00A7a[betterUC] Update \u00A7f" + normalizeVersion(latestVersion.version())
-                    + "\u00A7a wurde heruntergeladen.\n"
-                    + "\u00A7eSchlie\u00DFe Minecraft komplett und starte danach neu, damit die neue Version greift.");
+            return PrepareOutcome.prepared();
         } catch (Exception e) {
             BetterUCMod.LOGGER.warn("Could not prepare betterUC install", e);
-            return InstallOutcome.message("\u00A7c[betterUC] Auto-Update fehlgeschlagen: " + safeError(e));
+            return PrepareOutcome.message("\u00A7c[betterUC] Auto-Update fehlgeschlagen: " + safeError(e));
         }
     }
 
@@ -490,6 +610,58 @@ public final class VersionChecker {
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             Files.deleteIfExists(downloadedJar);
             throw new IOException("Download HTTP " + response.statusCode());
+        }
+    }
+
+    private static void validateDownloadedJar(Path downloadedJar, LatestVersion latestVersion) throws IOException {
+        if (!Files.isRegularFile(downloadedJar) || Files.size(downloadedJar) < MIN_JAR_SIZE_BYTES) {
+            throw new IOException("Download war ung\u00FCltig oder unvollst\u00E4ndig");
+        }
+
+        String expectedHash = normalizeSha256(latestVersion.sha256());
+        if (!expectedHash.isBlank()) {
+            String actualHash = sha256(downloadedJar);
+            if (!expectedHash.equalsIgnoreCase(actualHash)) {
+                throw new IOException("SHA-256-Pr\u00FCfung fehlgeschlagen");
+            }
+        }
+
+        try (ZipFile zip = new ZipFile(downloadedJar.toFile())) {
+            ZipEntry metadataEntry = zip.getEntry("fabric.mod.json");
+            if (metadataEntry == null) {
+                throw new IOException("fabric.mod.json fehlt");
+            }
+            JsonObject metadata;
+            try (var stream = zip.getInputStream(metadataEntry);
+                 var reader = new java.io.InputStreamReader(stream, StandardCharsets.UTF_8)) {
+                metadata = JsonParser.parseReader(reader).getAsJsonObject();
+            } catch (RuntimeException e) {
+                throw new IOException("fabric.mod.json ist ung\u00FCltig", e);
+            }
+
+            if (!BetterUCMod.MOD_ID.equals(jsonString(metadata, "id"))) {
+                throw new IOException("Die heruntergeladene JAR ist nicht betterUC");
+            }
+            String jarVersion = normalizeVersion(jsonString(metadata, "version"));
+            if (!normalizeVersion(latestVersion.version()).equalsIgnoreCase(jarVersion)) {
+                throw new IOException("JAR-Version stimmt nicht mit dem Release \u00FCberein");
+            }
+        }
+    }
+
+    private static String sha256(Path path) throws IOException {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            try (var input = Files.newInputStream(path)) {
+                byte[] buffer = new byte[16 * 1024];
+                int read;
+                while ((read = input.read(buffer)) >= 0) {
+                    if (read > 0) digest.update(buffer, 0, read);
+                }
+            }
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IOException("SHA-256 ist nicht verf\u00FCgbar", e);
         }
     }
 
@@ -619,35 +791,65 @@ public final class VersionChecker {
         return name;
     }
 
+    private static Optional<RestartCommand> captureRestartCommand() {
+        ProcessHandle.Info info = ProcessHandle.current().info();
+        String command = info.command().orElse("").trim();
+        String[] arguments = info.arguments().orElse(new String[0]);
+        if (command.isBlank() || arguments.length == 0) {
+            return Optional.empty();
+        }
+
+        String workingDirectory = System.getProperty("user.dir", "").trim();
+        if (workingDirectory.isBlank()) {
+            workingDirectory = Path.of(".").toAbsolutePath().normalize().toString();
+        }
+        return Optional.of(new RestartCommand(command, List.of(arguments), workingDirectory));
+    }
+
     private static Path createInstallScript(Path stagingDir, List<Path> installDirectories,
-                                            Path downloadedJar, String targetName) throws IOException {
+                                            Path downloadedJar, String targetName,
+                                            RestartCommand restartCommand) throws IOException {
         if (isWindows()) {
             Path script = stagingDir.resolve("install-betteruc-update.ps1");
             Path logFile = stagingDir.resolve("install-betteruc-update.log");
+            Path backupDir = stagingDir.resolve("backup");
+            String restartBlock = createPowerShellRestartBlock(restartCommand);
             String content = "$ErrorActionPreference = 'Stop'\r\n"
                     + "$pidToWait = " + ProcessHandle.current().pid() + "\r\n"
                     + "$modsDirs = @(" + joinPowerShellPaths(installDirectories) + ")\r\n"
                     + "$downloadedJar = " + psQuote(downloadedJar) + "\r\n"
                     + "$targetName = " + psQuote(targetName) + "\r\n"
                     + "$logFile = " + psQuote(logFile) + "\r\n"
+                    + "$backupDir = " + psQuote(backupDir) + "\r\n"
                     + "function Write-Log($message) { Add-Content -LiteralPath $logFile -Value ((Get-Date -Format o) + ' ' + $message) }\r\n"
                     + "Write-Log 'Waiting for Minecraft process to exit.'\r\n"
                     + "while (Get-Process -Id $pidToWait -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 750 }\r\n"
                     + "Start-Sleep -Seconds 2\r\n"
+                    + "New-Item -ItemType Directory -Path $backupDir -Force | Out-Null\r\n"
                     + "$installed = 0\r\n"
+                    + "$directoryIndex = 0\r\n"
                     + "foreach ($modsDir in $modsDirs) {\r\n"
                     + "  try {\r\n"
                     + "    if (-not (Test-Path -LiteralPath $modsDir -PathType Container)) { Write-Log ('Skipped missing directory ' + $modsDir); continue }\r\n"
                     + "    $targetJar = Join-Path $modsDir $targetName\r\n"
-                    + "    Get-ChildItem -LiteralPath $modsDir -Filter 'betterUC-*.jar' -File -ErrorAction SilentlyContinue | Remove-Item -Force\r\n"
-                    + "    Copy-Item -LiteralPath $downloadedJar -Destination $targetJar -Force\r\n"
+                    + "    $temporaryJar = $targetJar + '.new'\r\n"
+                    + "    Copy-Item -LiteralPath $downloadedJar -Destination $temporaryJar -Force\r\n"
+                    + "    $oldJars = @(Get-ChildItem -LiteralPath $modsDir -Filter 'betterUC-*.jar' -File -ErrorAction SilentlyContinue)\r\n"
+                    + "    foreach ($oldJar in $oldJars) {\r\n"
+                    + "      $backupName = ($directoryIndex.ToString() + '-' + $oldJar.Name)\r\n"
+                    + "      Copy-Item -LiteralPath $oldJar.FullName -Destination (Join-Path $backupDir $backupName) -Force\r\n"
+                    + "    }\r\n"
+                    + "    $oldJars | Remove-Item -Force\r\n"
+                    + "    Move-Item -LiteralPath $temporaryJar -Destination $targetJar -Force\r\n"
                     + "    $installed++\r\n"
+                    + "    $directoryIndex++\r\n"
                     + "    Write-Log ('Installed ' + $targetJar)\r\n"
                     + "  } catch { Write-Log ('Failed ' + $modsDir + ': ' + $_.Exception.Message) }\r\n"
                     + "}\r\n"
                     + "if ($installed -eq 0) { throw 'No betterUC installation could be updated.' }\r\n"
                     + "Remove-Item -LiteralPath $downloadedJar -Force -ErrorAction SilentlyContinue\r\n"
-                    + "Write-Log ('Update completed for ' + $installed + ' installation(s).')\r\n";
+                    + "Write-Log ('Update completed for ' + $installed + ' installation(s).')\r\n"
+                    + restartBlock;
             Files.writeString(script, content, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
             return script;
         }
@@ -655,6 +857,7 @@ public final class VersionChecker {
         Path script = stagingDir.resolve("install-betteruc-update.sh");
         Path logFile = stagingDir.resolve("install-betteruc-update.log");
         String installCalls = createShellInstallCalls(installDirectories);
+        String restartBlock = createShellRestartBlock(restartCommand);
         String content = "#!/bin/sh\n"
                 + "set -eu\n"
                 + "pid_to_wait=" + ProcessHandle.current().pid() + "\n"
@@ -677,7 +880,8 @@ public final class VersionChecker {
                 + installCalls
                 + "if [ \"$installed\" -eq 0 ]; then echo \"$(date -Iseconds) No betterUC installation could be updated.\" >> \"$log_file\"; exit 1; fi\n"
                 + "rm -f \"$downloaded_jar\"\n"
-                + "echo \"$(date -Iseconds) Update completed for $installed installation(s).\" >> \"$log_file\"\n";
+                + "echo \"$(date -Iseconds) Update completed for $installed installation(s).\" >> \"$log_file\"\n"
+                + restartBlock;
         Files.writeString(script, content, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
         script.toFile().setExecutable(true);
         return script;
@@ -689,6 +893,44 @@ public final class VersionChecker {
             quotedPaths.add(psQuote(path));
         }
         return String.join(", ", quotedPaths);
+    }
+
+    private static String createPowerShellRestartBlock(RestartCommand restartCommand) {
+        if (restartCommand == null) {
+            return "Write-Log 'Automatic restart is unavailable; waiting for a manual start.'\r\n"
+                    + "Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue\r\n";
+        }
+
+        List<String> quotedArguments = new ArrayList<>();
+        for (String argument : restartCommand.arguments()) {
+            quotedArguments.add(psQuote(argument));
+        }
+        return "$restartCommand = " + psQuote(restartCommand.command()) + "\r\n"
+                + "$restartArgs = @(" + String.join(", ", quotedArguments) + ")\r\n"
+                + "$restartDir = " + psQuote(restartCommand.workingDirectory()) + "\r\n"
+                + "try {\r\n"
+                + "  Set-Location -LiteralPath $restartDir\r\n"
+                + "  Write-Log ('Restarting Minecraft with ' + $restartCommand)\r\n"
+                + "  Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue\r\n"
+                + "  & $restartCommand @restartArgs\r\n"
+                + "} catch { Write-Log ('Automatic restart failed: ' + $_.Exception.Message) }\r\n";
+    }
+
+    private static String createShellRestartBlock(RestartCommand restartCommand) {
+        if (restartCommand == null) {
+            return "echo \"$(date -Iseconds) Automatic restart is unavailable; waiting for a manual start.\" >> \"$log_file\"\n"
+                    + "rm -f \"$0\"\n";
+        }
+
+        StringBuilder command = new StringBuilder();
+        command.append(shQuote(restartCommand.command()));
+        for (String argument : restartCommand.arguments()) {
+            command.append(' ').append(shQuote(argument));
+        }
+        return "cd " + shQuote(restartCommand.workingDirectory()) + "\n"
+                + "rm -f \"$0\"\n"
+                + "nohup " + command + " >/dev/null 2>&1 &\n"
+                + "echo \"$(date -Iseconds) Minecraft restart launched.\" >> \"$log_file\"\n";
     }
 
     private static String createShellInstallCalls(List<Path> paths) {
@@ -808,6 +1050,15 @@ public final class VersionChecker {
         return normalized.trim();
     }
 
+    private static String normalizeSha256(String value) {
+        if (value == null) return "";
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+        if (normalized.startsWith("sha256:")) {
+            normalized = normalized.substring("sha256:".length());
+        }
+        return normalized.matches("[0-9a-f]{64}") ? normalized : "";
+    }
+
     private static Component buildUpdateMessage(String currentVersion, LatestVersion latestVersion) {
         String normalizedCurrent = normalizeVersion(currentVersion);
         String normalizedLatest = normalizeVersion(latestVersion.version());
@@ -816,44 +1067,22 @@ public final class VersionChecker {
         MutableComponent link = Component.literal("\u00A7b" + latestVersion.url())
                 .setStyle(Style.EMPTY.withClickEvent(new ClickEvent.OpenUrl(URI.create(latestVersion.url()))));
 
-        message.append(Component.literal("\u00A77Download: ")).append(link);
+        message.append(Component.literal("\u00A77Details: ")).append(link);
         if (latestVersion.hasJarAsset()) {
-            MutableComponent command = Component.literal("\n\u00A7a[Auto installieren]")
+            MutableComponent command = Component.literal("\n\u00A7a[Jetzt installieren]")
                     .setStyle(Style.EMPTY.withClickEvent(new ClickEvent.RunCommand("/betterucupdate")));
             message.append(Component.literal("\u00A77 ")).append(command);
         }
         return message;
     }
 
-    private static void installUpdate(Minecraft client, LatestVersion latestVersion, boolean manual) {
-        if (client == null || latestVersion == null) {
-            return;
-        }
-        if (installRunning) {
-            return;
-        }
-
-        installRunning = true;
-        if (manual) {
-            sendLocalMessage(client, "\u00A77[betterUC] Update wird vorbereitet...");
-        } else {
-            sendLocalMessage(client, "\u00A77[betterUC] Auto-Updater l\u00E4dt die neue Version...");
-        }
-
-        CompletableFuture.supplyAsync(() -> prepareInstall(latestVersion))
-                .whenComplete((outcome, error) -> {
-                    installRunning = false;
-                    client.execute(() -> {
-                        if (error != null) {
-                            BetterUCMod.LOGGER.warn("Could not install betterUC update", error);
-                            sendLocalMessage(client, "\u00A7c[betterUC] Auto-Update fehlgeschlagen: " + safeError(error));
-                            return;
-                        }
-                        if (outcome != null && !outcome.message().isBlank()) {
-                            sendLocalMessage(client, outcome.message());
-                        }
-                    });
-                });
+    private static void sendReadyMessage(Minecraft client) {
+        if (client == null || client.player == null || preparedUpdate == null) return;
+        MutableComponent message = Component.literal("\u00A7a[betterUC] Update \u00A7f"
+                + preparedVersion() + "\u00A7a ist bereit. ");
+        MutableComponent action = Component.literal("\u00A7e[Installieren & neu starten]")
+                .setStyle(Style.EMPTY.withClickEvent(new ClickEvent.RunCommand("/betterucupdate")));
+        client.player.sendSystemMessage(message.append(action));
     }
 
     private static void sendLocalMessage(Minecraft client, String message) {
@@ -862,15 +1091,32 @@ public final class VersionChecker {
         }
     }
 
-    private record LatestVersion(String version, String url, String assetName, String assetDownloadUrl) {
+    private record LatestVersion(String version, String url, String assetName, String assetDownloadUrl, String sha256) {
         private boolean hasJarAsset() {
             return assetDownloadUrl != null && !assetDownloadUrl.isBlank();
         }
     }
 
-    private record InstallOutcome(String message) {
-        private static InstallOutcome message(String message) {
-            return new InstallOutcome(message == null ? "" : message);
+    private record PreparedUpdate(
+            LatestVersion latestVersion,
+            Path stagingDirectory,
+            List<Path> installDirectories,
+            Path downloadedJar,
+            String targetName,
+            RestartCommand restartCommand
+    ) {
+    }
+
+    private record RestartCommand(String command, List<String> arguments, String workingDirectory) {
+    }
+
+    private record PrepareOutcome(boolean ready, String message) {
+        private static PrepareOutcome prepared() {
+            return new PrepareOutcome(true, "");
+        }
+
+        private static PrepareOutcome message(String message) {
+            return new PrepareOutcome(false, message == null ? "" : message);
         }
     }
 }

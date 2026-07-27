@@ -723,6 +723,14 @@ public final class PingRelayClient {
                 return;
             }
 
+            if ("update_available".equals(type)) {
+                VersionChecker.onRelayUpdateAvailable(
+                        client,
+                        stringValue(json, "version", "")
+                );
+                return;
+            }
+
             if (!"ping".equals(type)) return;
 
             PingMarker marker = new PingMarker(
