@@ -6,6 +6,19 @@ public final class ChangelogContent {
 
     private static final Page[] LATEST_PAGES = new Page[]{
             new Page(
+                    "NEU IN 1.3.1",
+                    "Updates & Kontostände",
+                    "Aktualisierungen und Geldbewegungen werden zuverlässiger verarbeitet.",
+                    new String[]{
+                            "Neue Releases werden live gemeldet und sicher im Hintergrund vorbereitet.",
+                            "Ein Klick öffnet die Bestätigung für Installation und Neustart.",
+                            "Casino-Käufe ziehen den Dollarbetrag vom Bargeld-HUD ab.",
+                            "Casino-Verkäufe addieren nur die Auszahlung und ignorieren die Steuer.",
+                            "Daily-Reward-Geld wird automatisch dem Bank-HUD gutgeschrieben.",
+                            "Der Reichensteuer-Alert führt keinen automatischen Bank-Befehl mehr aus."
+                    }
+            ),
+            new Page(
                     "NEU IN 1.3.0",
                     "Bank & PayDay",
                     "Wichtige Bankinformationen fallen rechtzeitig auf.",
@@ -14,9 +27,7 @@ public final class ChangelogContent {
                             "Die Warnung erscheint, wenn mehr als 100.000$ auf der Bank liegen.",
                             "Ein Slide-in, ein Chat-Hinweis und ein optionaler Ton machen den Alert sichtbar.",
                             "Die Pruefung nutzt den letzten Bankwert und fuehrt keinen Bank-Befehl aus.",
-                            "Alert und Warnton lassen sich im Bank-Modul getrennt aktivieren.",
-                            "Neue Updates werden live gemeldet und im Hintergrund sicher vorbereitet.",
-                            "Ein Klick bestaetigt die Installation und startet Minecraft nach Moeglichkeit neu."
+                            "Alert und Warnton lassen sich im Bank-Modul getrennt aktivieren."
                     }
             ),
             new Page(
