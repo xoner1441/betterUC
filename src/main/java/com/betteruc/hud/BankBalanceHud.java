@@ -19,6 +19,7 @@ public class BankBalanceHud {
     private static final long AUTO_BANK_COMMAND_DEDUP_WINDOW_MS = 2000L;
     private static final long AUTO_BANK_COMMAND_DELAY_MS = 150L;
     private static final long AUTO_BANK_COMMAND_GAP_MS = 400L;
+    private static final long DAILY_REWARD_MONEY_WINDOW_MS = 5000L;
     private static final Pattern TEXT_FORMATTING_PATTERN = Pattern.compile("\\u00A7.");
     private static final Pattern CHAT_TIMESTAMP_PATTERN = Pattern.compile("^\\s*\\d{1,2}:\\d{2}:\\d{2}\\s+");
     private static final Pattern BANK_BALANCE_PATTERN = Pattern.compile(
@@ -39,12 +40,19 @@ public class BankBalanceHud {
     private static final Pattern BATTLE_PASS_REWARD_PATTERN = Pattern.compile(
             "(?i)\\[battle\\s+pass]\\s*\\+\\s*([0-9][0-9\\.]*)\\s*\\$\\s+erhalten\\s*\\.?"
     );
+    private static final Pattern DAILY_REWARD_HEADER_PATTERN = Pattern.compile(
+            "(?iu)(?:daily\\s+reward|ᴅᴀɪʟʏ\\s+ʀᴇᴡᴀʀᴅ).*?tag\\s+\\d+\\s+abgeholt\\s*!?"
+    );
+    private static final Pattern DAILY_REWARD_MONEY_PATTERN = Pattern.compile(
+            "^\\s*\\+?\\s*([0-9][0-9\\.]*)\\s*\\$\\s*$"
+    );
 
     private static int currentBankBalance = -1;
     private static long lastBalanceUpdateMs = 0L;
     private static String lastBankDeltaKey = "";
     private static long lastBankDeltaMs = 0L;
     private static long lastAutoBankFollowupMs = 0L;
+    private static long dailyRewardMoneyPendingUntilMs = 0L;
     private static final DecimalFormat MONEY_FORMAT = createMoneyFormat();
 
     public static void register() {
@@ -64,6 +72,27 @@ public class BankBalanceHud {
 
     private static void updateFromCleanLine(String raw) {
         if (raw == null || raw.isBlank()) return;
+
+        if (matchesDailyRewardHeader(raw)) {
+            dailyRewardMoneyPendingUntilMs = System.currentTimeMillis() + DAILY_REWARD_MONEY_WINDOW_MS;
+            return;
+        }
+
+        if (dailyRewardMoneyPendingUntilMs > 0L) {
+            if (System.currentTimeMillis() <= dailyRewardMoneyPendingUntilMs) {
+                Integer dailyRewardMoney = parseDailyRewardMoney(raw);
+                if (dailyRewardMoney != null) {
+                    dailyRewardMoneyPendingUntilMs = 0L;
+                    addBalanceAndPersist(
+                            dailyRewardMoney,
+                            "daily-reward:" + normalizeRawKey(raw)
+                    );
+                    return;
+                }
+            } else {
+                dailyRewardMoneyPendingUntilMs = 0L;
+            }
+        }
 
         Matcher transferSentMatcher = BANK_TRANSFER_SENT_PATTERN.matcher(raw);
         if (transferSentMatcher.find()) {
@@ -128,6 +157,7 @@ public class BankBalanceHud {
 
     public static void clear() {
         restoreFromConfig();
+        dailyRewardMoneyPendingUntilMs = 0L;
     }
 
     private static void render(GuiGraphicsExtractor context) {
@@ -219,6 +249,21 @@ public class BankBalanceHud {
         if (changed) {
             BetterUCConfig.save();
         }
+    }
+
+    static boolean matchesDailyRewardHeader(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        String cleaned = stripChatPrefix(stripFormatting(raw));
+        return DAILY_REWARD_HEADER_PATTERN.matcher(cleaned).find();
+    }
+
+    static Integer parseDailyRewardMoney(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String cleaned = stripChatPrefix(stripFormatting(raw));
+        Matcher matcher = DAILY_REWARD_MONEY_PATTERN.matcher(cleaned);
+        if (!matcher.matches()) return null;
+        Integer amount = parseMoneyValue(matcher.group(1));
+        return amount == null || amount <= 0 ? null : amount;
     }
 
     private static void subtractBalanceAndPersist(int amount, String rawKey) {
