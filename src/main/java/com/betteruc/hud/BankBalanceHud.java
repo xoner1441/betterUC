@@ -219,7 +219,6 @@ public class BankBalanceHud {
         if (changed) {
             BetterUCConfig.save();
         }
-        RichTaxAlertHud.onBankBalanceUpdated(Minecraft.getInstance(), newBalance);
     }
 
     private static void subtractBalanceAndPersist(int amount, String rawKey) {

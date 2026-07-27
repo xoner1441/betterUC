@@ -10,7 +10,7 @@
 - Ein Bestätigungsfenster installiert vorbereitete Updates und startet Minecraft nach Möglichkeit automatisch neu.
 
 ### Geändert
-- Unbekannte oder veraltete Bankwerte werden vor der Reichensteuer-Prüfung automatisch über `/bank` aktualisiert.
+- Der Reichensteuer-Alert verwendet den zuletzt bekannten Bankwert und führt keine automatische `/bank`-Abfrage aus.
 - Der Alert wird pro PayDay-Zyklus nur einmal ausgelöst und seine Einstellungen werden über das Cloud-Profil synchronisiert.
 - Der Auto-Updater lädt die passende JAR im Hintergrund, prüft Mod-ID, Version und optional SHA-256 und tauscht sie erst nach Bestätigung aus.
 - Der Relay meldet neue Releases live; eine periodische Client-Prüfung bleibt als Fallback aktiv.

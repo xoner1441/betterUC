@@ -1,7 +1,5 @@
 package com.betteruc.hud;
 
-import com.betteruc.client.ClientScheduler;
-import com.betteruc.client.ServerCommandUtil;
 import com.betteruc.config.BetterUCConfig;
 import java.text.Normalizer;
 import java.util.Locale;
@@ -20,9 +18,6 @@ public final class RichTaxAlertHud {
 
     private static final long DISPLAY_DURATION_MS = 8_000L;
     private static final long SLIDE_DURATION_MS = 220L;
-    private static final long BANK_VALUE_FRESHNESS_MS = 120_000L;
-    private static final long BANK_REFRESH_TIMEOUT_MS = 12_000L;
-    private static final long BANK_REFRESH_DELAY_MS = 150L;
     private static final int PANEL_WIDTH = 220;
     private static final int PANEL_HEIGHT = 50;
     private static final int BACKGROUND = 0xEC0D1117;
@@ -33,8 +28,6 @@ public final class RichTaxAlertHud {
     private static final int TRACK = 0xFF293241;
 
     private static boolean warningHandled;
-    private static boolean waitingForBankRefresh;
-    private static long bankRefreshDeadlineMs;
     private static long shownAtMs;
     private static long visibleUntilMs;
     private static int shownBalance = -1;
@@ -59,41 +52,15 @@ public final class RichTaxAlertHud {
         if (warningHandled || !matchesPaydayWarning(raw)) return;
 
         warningHandled = true;
-        int balance = BankBalanceHud.getCurrentBankBalance();
-        long balanceAgeMs = BankBalanceHud.getBalanceAgeMs();
-        if (balance >= 0 && balanceAgeMs <= BANK_VALUE_FRESHNESS_MS) {
-            evaluateBalance(client, balance);
-            return;
-        }
-
-        waitingForBankRefresh = true;
-        bankRefreshDeadlineMs = System.currentTimeMillis() + BANK_REFRESH_TIMEOUT_MS;
-        requestBankRefresh(client, 0);
-    }
-
-    public static void onBankBalanceUpdated(Minecraft client, int balance) {
-        if (!waitingForBankRefresh) return;
-        waitingForBankRefresh = false;
-        bankRefreshDeadlineMs = 0L;
-        evaluateBalance(client, balance);
-    }
-
-    public static void tick(Minecraft client) {
-        if (!waitingForBankRefresh) return;
-        if (System.currentTimeMillis() < bankRefreshDeadlineMs) return;
-        evaluateFallbackBalance(client);
+        evaluateBalance(client, BankBalanceHud.getCurrentBankBalance());
     }
 
     public static void resetForNewPayday() {
         warningHandled = false;
-        waitingForBankRefresh = false;
-        bankRefreshDeadlineMs = 0L;
     }
 
     public static void clear() {
         warningHandled = false;
-        waitingForBankRefresh = false;
-        bankRefreshDeadlineMs = 0L;
         shownAtMs = 0L;
         visibleUntilMs = 0L;
         shownBalance = -1;
@@ -104,33 +71,10 @@ public final class RichTaxAlertHud {
         return folded.contains("info du hast in 5 minuten deinen payday");
     }
 
-    private static void evaluateFallbackBalance(Minecraft client) {
-        waitingForBankRefresh = false;
-        bankRefreshDeadlineMs = 0L;
-        evaluateBalance(client, BankBalanceHud.getCurrentBankBalance());
-    }
-
     private static void evaluateBalance(Minecraft client, int balance) {
         if (!BetterUCConfig.INSTANCE.richTaxAlertEnabled) return;
         if (balance <= TAX_THRESHOLD) return;
         show(client, balance);
-    }
-
-    private static void requestBankRefresh(Minecraft client, int attempt) {
-        long delayMs = attempt == 0 ? BANK_REFRESH_DELAY_MS : 700L;
-        ClientScheduler.runDelayedOnClient(client, delayMs, () -> {
-            if (!waitingForBankRefresh || client.player == null) return;
-            if (System.currentTimeMillis() >= bankRefreshDeadlineMs) {
-                evaluateFallbackBalance(client);
-                return;
-            }
-            if (ServerCommandUtil.sendAutomatic(client, "bank")) return;
-            if (attempt < 5) {
-                requestBankRefresh(client, attempt + 1);
-            } else {
-                evaluateFallbackBalance(client);
-            }
-        });
     }
 
     private static void show(Minecraft client, int balance) {

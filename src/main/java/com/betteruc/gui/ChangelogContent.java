@@ -13,7 +13,7 @@ public final class ChangelogContent {
                             "Der neue Reichensteuer-Alert warnt 5 Minuten vor dem PayDay.",
                             "Die Warnung erscheint, wenn mehr als 100.000$ auf der Bank liegen.",
                             "Ein Slide-in, ein Chat-Hinweis und ein optionaler Ton machen den Alert sichtbar.",
-                            "Veraltete Bankwerte werden vor der Pruefung automatisch aktualisiert.",
+                            "Die Pruefung nutzt den letzten Bankwert und fuehrt keinen Bank-Befehl aus.",
                             "Alert und Warnton lassen sich im Bank-Modul getrennt aktivieren.",
                             "Neue Updates werden live gemeldet und im Hintergrund sicher vorbereitet.",
                             "Ein Klick bestaetigt die Installation und startet Minecraft nach Moeglichkeit neu."

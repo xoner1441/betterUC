@@ -938,7 +938,6 @@ public class BetterUCClient implements ClientModInitializer {
             HackTimerHud.tick();
             DealerTimerHud.tick();
             ProductionTimerHud.tick();
-            RichTaxAlertHud.tick(client);
             PlantageHud.tick();
             AmmoHud.tickReloadKey(client);
             RemoteFeatureFlagsClient.tick(client);
