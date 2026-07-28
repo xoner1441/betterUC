@@ -2,54 +2,61 @@
   "schema": 1,
   "development": {
     "label": "In Entwicklung",
-    "title": "Nächstes Update",
+    "title": "Nach Version 1.3.2",
     "date": "Aktueller Stand",
     "pages": [
       {
-        "eyebrow": "AKTUELLE ÄNDERUNGEN",
-        "title": "HUD-Profile",
-        "description": "Eigene HUD-Layouts lassen sich speichern und jederzeit gezielt auswählen.",
+        "eyebrow": "NÄCHSTE VERSION",
+        "title": "Weitere Verbesserungen folgen",
+        "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
         "lines": [
-          "Das bisherige HUD wird beim ersten Start automatisch als Profil Standard übernommen.",
-          "Profile speichern Positionen, Größen, Stile, Farben, Fonts, Farbverläufe und Sichtbarkeit.",
-          "Eine aufklappbare Liste zeigt alle Profile und wechselt direkt zum ausgewählten Layout.",
-          "Profile können erstellt, dupliziert, umbenannt oder auf Standardwerte zurückgesetzt werden.",
-          "Vor dem Löschen eines Profils ist eine zweite Bestätigung erforderlich.",
-          "HUD-Profile lassen sich als geprüfte JSON-Datei exportieren und wieder importieren.",
-          "Aktive HUD-Profile werden zusammen mit den Cloud-Einstellungen synchronisiert."
-        ]
-      },
-      {
-        "eyebrow": "AKTUELLE ÄNDERUNGEN",
-        "title": "Bedienung & Health HUD",
-        "description": "Das ClickGUI bleibt dort, wo du zuletzt gearbeitet hast.",
-        "lines": [
-          "Kategorie, Modul und Scrollposition werden beim Schließen gespeichert.",
-          "Das ClickGUI öffnet wieder exakt im zuletzt verwendeten Modul.",
-          "Absorptionsherzen lassen sich im Health-Modul ein- oder ausblenden.",
-          "Die Farbe der Absorptionsherzen ist unabhängig einstellbar.",
-          "Das Health HUD bleibt mit und ohne Absorption sauber zentriert."
-        ]
-      },
-      {
-        "eyebrow": "AKTUELLE ÄNDERUNGEN",
-        "title": "Updates & Kompatibilität",
-        "description": "Updates und unterstützte Minecraft-Versionen werden verständlicher dargestellt.",
-        "lines": [
-          "Der Update-Bereich zeigt Suche, Download und vorbereitete Version als Live-Status.",
-          "Downloads werden vor der Installation als passende betterUC-JAR geprüft.",
-          "Minecraft 1.21.10, 26.1.2 und 26.2 werden weiterhin getrennt gebaut und geprüft.",
-          "Ingame wird nur noch der aktuelle Changelog angezeigt.",
-          "Die vollständige Versionshistorie ist auf betteruc.de/changelog verfügbar."
+          "Version 1.3.2 enthält die zuletzt gesammelten HUD-, Bedienungs- und Update-Verbesserungen."
         ]
       }
     ]
   },
   "releases": [
     {
+      "version": "1.3.2",
+      "date": "28.07.2026",
+      "current": true,
+      "summary": [
+        {
+          "title": "Eigene HUD-Profile",
+          "description": "Speichere mehrere vollständige HUD-Layouts und wechsle sie direkt über eine übersichtliche Auswahlliste.",
+          "color": "cyan"
+        },
+        {
+          "title": "Besseres ClickGUI",
+          "description": "Das ClickGUI merkt sich Kategorie, Modul und Scrollposition und öffnet wieder an derselben Stelle.",
+          "color": "green"
+        },
+        {
+          "title": "Health HUD erweitert",
+          "description": "Absorptionsherzen sind einstellbar und bleiben zusammen mit den normalen Herzen automatisch zentriert.",
+          "color": "amber"
+        },
+        {
+          "title": "Klarere Updates",
+          "description": "Update-Status und Changelogs sind ingame, auf der Website und über Discord verständlicher verfügbar.",
+          "color": "green"
+        }
+      ],
+      "changes": [
+        "Eigene HUD-Profile speichern Positionen, Größen, Stile, Farben, Fonts, Farbverläufe und Sichtbarkeit.",
+        "HUD-Profile können erstellt, ausgewählt, dupliziert, umbenannt, zurückgesetzt, exportiert und importiert werden.",
+        "Das aktive HUD-Profil wird zusammen mit den Cloud-Einstellungen synchronisiert.",
+        "Das ClickGUI merkt sich die zuletzt geöffnete Kategorie, das Modul und die Scrollposition.",
+        "Absorptionsherzen lassen sich im Health HUD separat ein- und ausblenden sowie farblich anpassen.",
+        "Das Health HUD bleibt mit und ohne zusätzliche Herzen automatisch zentriert.",
+        "Der Update-Bereich zeigt Suche, Download und vorbereitete Version als verständlichen Live-Status.",
+        "Ingame wird nur der aktuelle Changelog angezeigt; die vollständige Historie bleibt auf der Website verfügbar.",
+        "Minecraft 1.21.10, 26.1.2 und 26.2 werden weiterhin mit passenden, getrennten Mod-Dateien unterstützt."
+      ]
+    },
+    {
       "version": "1.3.1",
       "date": "27.07.2026",
-      "current": true,
       "summary": [
         {
           "title": "Ein-Klick-Updates",
