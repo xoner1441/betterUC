@@ -444,8 +444,7 @@ form?.addEventListener("submit", async event => {
   tokenBox.hidden = true;
 
   const payload = {
-    minecraftName: document.querySelector("#minecraftName").value.trim(),
-    faction: document.querySelector("#faction").value.trim()
+    minecraftName: document.querySelector("#minecraftName").value.trim()
   };
 
   try {
