@@ -65,6 +65,7 @@ public class BetterUCScreen extends Screen {
     private int updatesScrollOffset = 0;
     private int updatesContentHeight = 0;
     private String hudProfileNameDraft;
+    private boolean hudProfileDropdownOpen = false;
 
     public BetterUCScreen() {
         super(Component.literal("betterUC"));
@@ -501,15 +502,36 @@ public class BetterUCScreen extends Screen {
         }
 
         y = addSectionHeader(x, y, width, "Aktives Profil", 0xFF38BDF8);
-        y = addInfo(x, y, width, "Profil", activeProfile);
-        y = addInfo(x, y, width, "Gespeichert", BetterUCConfig.hudProfileNames().size() + " Profile");
-        y = addButton(x, y, width, "N\u00E4chstes Profil: " + BetterUCConfig.nextHudProfileName(), b -> {
-            if (BetterUCConfig.switchHudProfile(BetterUCConfig.nextHudProfileName())) {
-                hudProfileNameDraft = BetterUCConfig.activeHudProfileName();
-                BetterUCFontManager.rebuildAndReload(minecraft);
+        y = addButton(
+                x,
+                y,
+                width,
+                "Profil: " + activeProfile + (hudProfileDropdownOpen ? " ^" : " v"),
+                b -> {
+                    hudProfileDropdownOpen = !hudProfileDropdownOpen;
+                    refreshWidgets();
+                }
+        );
+        if (hudProfileDropdownOpen) {
+            for (String profileName : BetterUCConfig.hudProfileNames()) {
+                boolean active = profileName.equals(activeProfile);
+                y = addButton(
+                        x + 8,
+                        y,
+                        Math.max(40, width - 8),
+                        (active ? "[Aktiv] " : "") + profileName,
+                        b -> {
+                            hudProfileDropdownOpen = false;
+                            if (BetterUCConfig.switchHudProfile(profileName)) {
+                                hudProfileNameDraft = BetterUCConfig.activeHudProfileName();
+                                BetterUCFontManager.rebuildAndReload(minecraft);
+                            }
+                            refreshWidgets();
+                        }
+                );
             }
-            refreshWidgets();
-        });
+        }
+        y = addInfo(x, y, width, "Gespeichert", BetterUCConfig.hudProfileNames().size() + " Profile");
 
         y = addSectionHeader(x, y, width, "Profil verwalten", 0xFFFACC15);
         y = addTextField(x, y, width, "Profilname", hudProfileNameDraft, 24,

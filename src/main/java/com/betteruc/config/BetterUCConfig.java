@@ -1488,13 +1488,6 @@ public class BetterUCConfig {
         return true;
     }
 
-    public static String nextHudProfileName() {
-        List<String> names = hudProfileNames();
-        if (names.isEmpty()) return "Standard";
-        int index = names.indexOf(INSTANCE.activeHudProfile);
-        return names.get((Math.max(0, index) + 1) % names.size());
-    }
-
     private static void ensureHudProfiles() {
         ensureRuntimeCollections();
         INSTANCE.activeHudProfile = sanitizeHudProfileName(INSTANCE.activeHudProfile);
