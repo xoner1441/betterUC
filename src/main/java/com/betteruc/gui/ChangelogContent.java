@@ -12,7 +12,10 @@ public final class ChangelogContent {
                     new String[]{
                             "Das bisherige HUD wird beim ersten Start automatisch als Profil Standard \u00FCbernommen.",
                             "Profile speichern Positionen, Gr\u00F6\u00DFen, Stile, Farben, Fonts, Gradients und Sichtbarkeit.",
-                            "Neue Profile k\u00F6nnen erstellt, dupliziert, umbenannt und gel\u00F6scht werden.",
+                            "Eine aufklappbare Liste zeigt alle Profile und wechselt direkt zum ausgew\u00E4hlten Layout.",
+                            "Profile k\u00F6nnen erstellt, dupliziert, umbenannt oder auf Standardwerte zur\u00FCckgesetzt werden.",
+                            "Vor dem L\u00F6schen eines Profils ist eine zweite Best\u00E4tigung erforderlich.",
+                            "HUD-Profile lassen sich als gepr\u00FCfte JSON-Datei exportieren und importieren.",
                             "Aktive HUD-Profile werden zusammen mit den Cloud-Einstellungen synchronisiert."
                     }
             ),

@@ -336,6 +336,7 @@ def transformLegacyJavaSource = { String source ->
             "addRenderableWidget("                                             : "addDrawableChild(",
             "onClose()"                                                        : "close()",
             "Util.getPlatform().openUri"                                       : "Util.getOperatingSystem().open",
+            "Util.getPlatform().openPath"                                      : "Util.getOperatingSystem().open",
             "extractRenderState("                                              : "render(",
             "centeredText("                                                    : "drawCenteredTextWithShadow(",
             "blitSprite("                                                      : "drawGuiTexture(",

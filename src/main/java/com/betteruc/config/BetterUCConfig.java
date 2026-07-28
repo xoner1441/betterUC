@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.betteruc.parser.FactionStatsParser;
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -13,8 +14,11 @@ import java.io.Writer;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,6 +32,12 @@ public class BetterUCConfig {
             .getConfigDir().resolve("betteruc.json").toFile();
     private static final File LEGACY_NAMETAG_CONFIG_FILE = FabricLoader.getInstance()
             .getConfigDir().resolve("nametagmod.json").toFile();
+    private static final Path HUD_PROFILE_DIRECTORY = FabricLoader.getInstance()
+            .getConfigDir().resolve("betteruc").resolve("hud-profiles");
+    private static final String HUD_PROFILE_FILE_FORMAT = "betteruc-hud-profile";
+    private static final int HUD_PROFILE_FILE_SCHEMA = 1;
+    private static final int MAX_HUD_PROFILES = 64;
+    private static final long MAX_HUD_PROFILE_FILE_BYTES = 256L * 1024L;
     private static final Set<String> CLOUD_SETTING_FIELDS = Set.of(
             "manualFactionPlayers", "manualBlacklistPlayers", "trackedFactionQueries", "hotkeyCommands",
             "timerX", "timerY", "hackTimerX", "hackTimerY", "plantTimerX", "plantTimerY",
@@ -1488,6 +1498,127 @@ public class BetterUCConfig {
         return true;
     }
 
+    public static boolean resetActiveHudProfile() {
+        ensureHudProfiles();
+        BetterUCConfig defaults = new BetterUCConfig();
+        applyHudProfile(hudProfileSnapshot(defaults));
+        save();
+        return true;
+    }
+
+    public static Path hudProfileDirectory() {
+        try {
+            Files.createDirectories(HUD_PROFILE_DIRECTORY);
+        } catch (Exception e) {
+            com.betteruc.BetterUCMod.LOGGER.warn(
+                    "Could not create HUD profile directory {}",
+                    HUD_PROFILE_DIRECTORY,
+                    e
+            );
+        }
+        return HUD_PROFILE_DIRECTORY;
+    }
+
+    public static Path exportActiveHudProfile() {
+        ensureHudProfiles();
+        saveActiveHudProfile();
+        try {
+            Files.createDirectories(HUD_PROFILE_DIRECTORY);
+            JsonObject document = new JsonObject();
+            document.addProperty("format", HUD_PROFILE_FILE_FORMAT);
+            document.addProperty("schema", HUD_PROFILE_FILE_SCHEMA);
+            document.addProperty("name", INSTANCE.activeHudProfile);
+            document.add("settings", INSTANCE.hudProfiles.get(INSTANCE.activeHudProfile).deepCopy());
+
+            Path target = HUD_PROFILE_DIRECTORY.resolve(
+                    sanitizeHudProfileFileName(INSTANCE.activeHudProfile) + ".json"
+            );
+            Files.writeString(
+                    target,
+                    GSON.toJson(document),
+                    StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING
+            );
+            return target;
+        } catch (Exception e) {
+            com.betteruc.BetterUCMod.LOGGER.warn("Could not export HUD profile", e);
+            return null;
+        }
+    }
+
+    public static HudProfileImportResult importHudProfiles() {
+        ensureHudProfiles();
+        int imported = 0;
+        int skipped = 0;
+        try {
+            Files.createDirectories(HUD_PROFILE_DIRECTORY);
+            List<Path> files;
+            try (var stream = Files.list(HUD_PROFILE_DIRECTORY)) {
+                files = stream
+                        .filter(Files::isRegularFile)
+                        .filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".json"))
+                        .sorted(Comparator.comparing(path -> path.getFileName().toString().toLowerCase(Locale.ROOT)))
+                        .toList();
+            }
+
+            for (Path file : files) {
+                if (INSTANCE.hudProfiles.size() >= MAX_HUD_PROFILES) {
+                    skipped += files.size() - imported - skipped;
+                    break;
+                }
+                try {
+                    if (Files.size(file) > MAX_HUD_PROFILE_FILE_BYTES) {
+                        skipped++;
+                        continue;
+                    }
+                    JsonElement parsed = JsonParser.parseString(Files.readString(file, StandardCharsets.UTF_8));
+                    if (!parsed.isJsonObject()) {
+                        skipped++;
+                        continue;
+                    }
+                    JsonObject document = parsed.getAsJsonObject();
+                    if (!HUD_PROFILE_FILE_FORMAT.equals(stringValue(document, "format"))
+                            || intValue(document, "schema", -1) != HUD_PROFILE_FILE_SCHEMA
+                            || !document.has("settings")
+                            || !document.get("settings").isJsonObject()) {
+                        skipped++;
+                        continue;
+                    }
+
+                    JsonObject settings = sanitizeImportedHudProfile(document.getAsJsonObject("settings"));
+                    if (settings.size() == 0) {
+                        skipped++;
+                        continue;
+                    }
+                    String requestedName = stringValue(document, "name");
+                    if (requestedName.isBlank()) {
+                        requestedName = stripJsonExtension(file.getFileName().toString());
+                    }
+                    String name = uniqueHudProfileName(requestedName, null);
+                    if (name.isBlank()) {
+                        skipped++;
+                        continue;
+                    }
+                    INSTANCE.hudProfiles.put(name, settings);
+                    imported++;
+                } catch (Exception e) {
+                    skipped++;
+                    com.betteruc.BetterUCMod.LOGGER.warn("Ignored invalid HUD profile file {}", file, e);
+                }
+            }
+
+            if (imported > 0) save();
+        } catch (Exception e) {
+            com.betteruc.BetterUCMod.LOGGER.warn("Could not import HUD profiles", e);
+            return new HudProfileImportResult(imported, skipped, false);
+        }
+        return new HudProfileImportResult(imported, skipped, true);
+    }
+
+    public record HudProfileImportResult(int imported, int skipped, boolean directoryReadable) {
+    }
+
     private static void ensureHudProfiles() {
         ensureRuntimeCollections();
         INSTANCE.activeHudProfile = sanitizeHudProfileName(INSTANCE.activeHudProfile);
@@ -1509,12 +1640,35 @@ public class BetterUCConfig {
     }
 
     private static JsonObject hudProfileSnapshot() {
+        return hudProfileSnapshot(INSTANCE);
+    }
+
+    private static JsonObject hudProfileSnapshot(BetterUCConfig source) {
         JsonObject result = new JsonObject();
-        JsonObject serialized = GSON.toJsonTree(INSTANCE).getAsJsonObject();
+        JsonObject serialized = GSON.toJsonTree(source).getAsJsonObject();
         for (String name : HUD_PROFILE_FIELDS) {
             if (serialized.has(name)) result.add(name, serialized.get(name).deepCopy());
         }
         return result;
+    }
+
+    private static JsonObject sanitizeImportedHudProfile(JsonObject source) {
+        JsonObject result = hudProfileSnapshot(new BetterUCConfig());
+        int importedFields = 0;
+        for (String name : HUD_PROFILE_FIELDS) {
+            JsonElement value = source.get(name);
+            if (value == null || value.isJsonNull()) continue;
+            try {
+                Field field = BetterUCConfig.class.getField(name);
+                Object parsed = GSON.fromJson(value, field.getGenericType());
+                if (parsed == null) continue;
+                result.add(name, GSON.toJsonTree(parsed, field.getGenericType()));
+                importedFields++;
+            } catch (Exception e) {
+                com.betteruc.BetterUCMod.LOGGER.debug("Ignored invalid imported HUD field {}", name);
+            }
+        }
+        return importedFields == 0 ? new JsonObject() : result;
     }
 
     private static void applyHudProfile(JsonObject profile) {
@@ -1558,6 +1712,38 @@ public class BetterUCConfig {
             if (existing.equalsIgnoreCase(name)) return true;
         }
         return false;
+    }
+
+    private static String stringValue(JsonObject object, String name) {
+        try {
+            JsonElement value = object.get(name);
+            return value == null || value.isJsonNull() ? "" : value.getAsString().trim();
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private static int intValue(JsonObject object, String name, int fallback) {
+        try {
+            JsonElement value = object.get(name);
+            return value == null || value.isJsonNull() ? fallback : value.getAsInt();
+        } catch (Exception ignored) {
+            return fallback;
+        }
+    }
+
+    private static String sanitizeHudProfileFileName(String value) {
+        String clean = sanitizeHudProfileName(value)
+                .replaceAll("[\\\\/:*?\"<>|]", "_")
+                .replaceAll("[. ]+$", "");
+        return clean.isBlank() ? "hud-profile" : clean;
+    }
+
+    private static String stripJsonExtension(String value) {
+        if (value == null) return "";
+        return value.toLowerCase(Locale.ROOT).endsWith(".json")
+                ? value.substring(0, value.length() - 5)
+                : value;
     }
 
     private static String sanitizeHudProfileName(String value) {

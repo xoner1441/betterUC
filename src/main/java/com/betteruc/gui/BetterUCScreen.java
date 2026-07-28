@@ -66,6 +66,7 @@ public class BetterUCScreen extends Screen {
     private int updatesContentHeight = 0;
     private String hudProfileNameDraft;
     private boolean hudProfileDropdownOpen = false;
+    private boolean hudProfileDeleteConfirmation = false;
 
     public BetterUCScreen() {
         super(Component.literal("betterUC"));
@@ -522,6 +523,7 @@ public class BetterUCScreen extends Screen {
                         (active ? "[Aktiv] " : "") + profileName,
                         b -> {
                             hudProfileDropdownOpen = false;
+                            hudProfileDeleteConfirmation = false;
                             if (BetterUCConfig.switchHudProfile(profileName)) {
                                 hudProfileNameDraft = BetterUCConfig.activeHudProfileName();
                                 BetterUCFontManager.rebuildAndReload(minecraft);
@@ -537,38 +539,91 @@ public class BetterUCScreen extends Screen {
         y = addTextField(x, y, width, "Profilname", hudProfileNameDraft, 24,
                 value -> hudProfileNameDraft = value);
         y = addButton(x, y, width, "Neues Profil erstellen", b -> {
+            hudProfileDeleteConfirmation = false;
             if (BetterUCConfig.createHudProfile(hudProfileNameDraft)) {
                 hudProfileNameDraft = BetterUCConfig.activeHudProfileName();
             }
             refreshWidgets();
         });
         y = addButton(x, y, width, "Aktives Profil duplizieren", b -> {
+            hudProfileDeleteConfirmation = false;
             if (BetterUCConfig.duplicateActiveHudProfile(hudProfileNameDraft)) {
                 hudProfileNameDraft = BetterUCConfig.activeHudProfileName();
             }
             refreshWidgets();
         });
         y = addButton(x, y, width, "Aktives Profil umbenennen", b -> {
+            hudProfileDeleteConfirmation = false;
             if (BetterUCConfig.renameActiveHudProfile(hudProfileNameDraft)) {
                 hudProfileNameDraft = BetterUCConfig.activeHudProfileName();
             }
             refreshWidgets();
         });
-        y = addButton(x, y, width, "Aktives Profil l\u00F6schen", b -> {
-            if (BetterUCConfig.deleteActiveHudProfile()) {
-                hudProfileNameDraft = BetterUCConfig.activeHudProfileName();
-                BetterUCFontManager.rebuildAndReload(minecraft);
-            } else if (minecraft != null && minecraft.player != null) {
-                minecraft.player.sendSystemMessage(Component.literal(
-                        "[betterUC] Das letzte HUD-Profil kann nicht gel\u00F6scht werden."
-                ));
+        y = addButton(x, y, width, "Aktives Profil zur\u00FCcksetzen", b -> {
+            hudProfileDeleteConfirmation = false;
+            BetterUCConfig.resetActiveHudProfile();
+            BetterUCFontManager.rebuildAndReload(minecraft);
+            notifyHudProfile("[betterUC] HUD-Profil auf Standardwerte zur\u00FCckgesetzt.");
+            refreshWidgets();
+        });
+        y = addButton(
+                x,
+                y,
+                width,
+                hudProfileDeleteConfirmation
+                        ? "L\u00F6schen best\u00E4tigen"
+                        : "Aktives Profil l\u00F6schen",
+                b -> {
+                    if (!hudProfileDeleteConfirmation) {
+                        hudProfileDeleteConfirmation = true;
+                        refreshWidgets();
+                        return;
+                    }
+                    hudProfileDeleteConfirmation = false;
+                    if (BetterUCConfig.deleteActiveHudProfile()) {
+                        hudProfileNameDraft = BetterUCConfig.activeHudProfileName();
+                        BetterUCFontManager.rebuildAndReload(minecraft);
+                    } else {
+                        notifyHudProfile("[betterUC] Das letzte HUD-Profil kann nicht gel\u00F6scht werden.");
+                    }
+                    refreshWidgets();
+                }
+        );
+
+        y = addSectionHeader(x, y, width, "Import & Export", 0xFF38BDF8);
+        y = addButton(x, y, width, "Aktives Profil exportieren", b -> {
+            var exported = BetterUCConfig.exportActiveHudProfile();
+            if (exported == null) {
+                notifyHudProfile("[betterUC] HUD-Profil konnte nicht exportiert werden.");
+            } else {
+                notifyHudProfile("[betterUC] HUD-Profil exportiert: " + exported.getFileName());
             }
             refreshWidgets();
         });
+        y = addButton(x, y, width, "JSON-Profile importieren", b -> {
+            BetterUCConfig.HudProfileImportResult result = BetterUCConfig.importHudProfiles();
+            if (!result.directoryReadable()) {
+                notifyHudProfile("[betterUC] Profilordner konnte nicht gelesen werden.");
+            } else {
+                notifyHudProfile(
+                        "[betterUC] " + result.imported() + " Profil(e) importiert"
+                                + (result.skipped() > 0 ? ", " + result.skipped() + " \u00FCbersprungen." : ".")
+                );
+            }
+            refreshWidgets();
+        });
+        y = addButton(x, y, width, "Profilordner \u00F6ffnen", b ->
+                Util.getPlatform().openPath(BetterUCConfig.hudProfileDirectory()));
 
         y = addSectionHeader(x, y, width, "Inhalt", 0xFF4ADE80);
         y = addInfo(x, y, width, "Enthalten", "Position, Stil, Farbe, Gr\u00F6\u00DFe");
         return addInfo(x, y, width, "Cloud Sync", "Profile werden synchronisiert");
+    }
+
+    private void notifyHudProfile(String message) {
+        if (minecraft != null && minecraft.player != null) {
+            minecraft.player.sendSystemMessage(Component.literal(message));
+        }
     }
 
     private int addButton(int x, int y, int width, String label, Button.OnPress action) {
