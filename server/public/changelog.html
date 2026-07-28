@@ -35,111 +35,14 @@
       </div>
     </section>
 
-    <section class="section changelog-timeline" aria-label="betterUC Versionshistorie">
+    <section id="changelogTimeline" class="section changelog-timeline" aria-label="betterUC Versionshistorie">
       <article class="changelog-release upcoming">
         <header>
           <div>
-            <span class="release-state">In Entwicklung</span>
-            <h2>Nächstes Update</h2>
-          </div>
-          <span class="release-date">Aktueller Stand</span>
-        </header>
-        <div class="change-grid">
-          <section>
-            <h3>HUD-Profile</h3>
-            <p>Eigene Layouts über eine Profilliste wechseln, zurücksetzen sowie sicher als JSON importieren und exportieren.</p>
-          </section>
-          <section>
-            <h3>ClickGUI</h3>
-            <p>Das zuletzt geöffnete Modul und seine Scrollposition bleiben über das Schließen hinaus erhalten.</p>
-          </section>
-          <section>
-            <h3>Health HUD</h3>
-            <p>Absorptionsherzen können separat ein- und ausgeblendet sowie farblich angepasst werden.</p>
-          </section>
-          <section>
-            <h3>Updates</h3>
-            <p>Der Updater zeigt seinen aktuellen Zustand verständlich an; ingame erscheint nur der neueste Changelog.</p>
-          </section>
-        </div>
-      </article>
-
-      <article class="changelog-release">
-        <header>
-          <div>
-            <span class="release-state">Release</span>
-            <h2>Version 1.3.1</h2>
-          </div>
-          <span class="release-date">Aktuell</span>
-        </header>
-        <ul>
-          <li>Ein-Klick-Updates mit Downloadprüfung und Neustart-Bestätigung.</li>
-          <li>Casino-Käufe und -Verkäufe aktualisieren das Bargeld-HUD korrekt.</li>
-          <li>Daily-Reward-Geld wird dem Bank-HUD gutgeschrieben.</li>
-          <li>Der Reichensteuer-Alert arbeitet ohne automatischen Bank-Befehl.</li>
-          <li>Absorptionsherzen werden im Health HUD angezeigt.</li>
-        </ul>
-      </article>
-
-      <article class="changelog-release">
-        <header>
-          <div>
-            <span class="release-state">Release</span>
-            <h2>Version 1.3.0</h2>
+            <span class="release-state">Changelog</span>
+            <h2>Änderungen werden geladen</h2>
           </div>
         </header>
-        <ul>
-          <li>Reichensteuer-Warnung fünf Minuten vor dem PayDay.</li>
-          <li>Command-Warteschlange stabilisiert automatische und stille Befehle.</li>
-          <li>Erste-Hilfe-Automatik mit bewusstem manuellen Start.</li>
-          <li>Verbessertes Fraktionstracking ohne Fehlwerte aus PayDay-Zeilen.</li>
-        </ul>
-      </article>
-
-      <article class="changelog-release">
-        <header>
-          <div>
-            <span class="release-state">Release</span>
-            <h2>Version 1.2.9</h2>
-          </div>
-        </header>
-        <ul>
-          <li>Job-Automationen lassen sich einzeln ein- und ausschalten.</li>
-          <li>Mülleimer-Filter markiert ausgewählte Fundstücke im Container.</li>
-          <li>Ammo HUD erkennt Waffenprofile und ignoriert fremde Actionbar-Texte.</li>
-          <li>Reinforcement-Nachrichten können farblich angepasst werden.</li>
-        </ul>
-      </article>
-
-      <article class="changelog-release">
-        <header>
-          <div>
-            <span class="release-state">Release</span>
-            <h2>Version 1.2.8</h2>
-          </div>
-        </header>
-        <ul>
-          <li>Cloud Sync für HUD-, Chat-, Ping- und Komforteinstellungen.</li>
-          <li>Globalchat, Fraktions- und Staatspings sowie Discord-Anbindung.</li>
-          <li>Render- und Cache-Optimierungen für HUD, Chat und Tablist.</li>
-          <li>Müllmann-Automation und globale Sortierbereiche.</li>
-        </ul>
-      </article>
-
-      <article class="changelog-release">
-        <header>
-          <div>
-            <span class="release-state">Release</span>
-            <h2>Versionen 1.2.4 bis 1.2.7</h2>
-          </div>
-        </header>
-        <ul>
-          <li>Multi-Version-Builds für Minecraft 1.21.10 und 26.x.</li>
-          <li>Eigene Download-Seite mit versionsabhängiger JAR-Auswahl.</li>
-          <li>Cloud-Datenbank, Userpanel und erweiterte Admin-Verwaltung.</li>
-          <li>Winzer-, Gärtner-, Fischer- und Produktionshilfen.</li>
-          <li>Neue HUD- und Command-Optionen wie Potion-Farben und /vm.</li>
-        </ul>
       </article>
     </section>
   </main>
@@ -151,5 +54,7 @@
       <a href="/datenschutz">Datenschutz</a>
     </span>
   </footer>
+
+  <script src="/app.js" defer></script>
 </body>
 </html>

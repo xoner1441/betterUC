@@ -1,0 +1,224 @@
+{
+  "schema": 1,
+  "development": {
+    "label": "In Entwicklung",
+    "title": "Nächstes Update",
+    "date": "Aktueller Stand",
+    "pages": [
+      {
+        "eyebrow": "AKTUELLE ÄNDERUNGEN",
+        "title": "HUD-Profile",
+        "description": "Eigene HUD-Layouts lassen sich speichern und jederzeit gezielt auswählen.",
+        "lines": [
+          "Das bisherige HUD wird beim ersten Start automatisch als Profil Standard übernommen.",
+          "Profile speichern Positionen, Größen, Stile, Farben, Fonts, Farbverläufe und Sichtbarkeit.",
+          "Eine aufklappbare Liste zeigt alle Profile und wechselt direkt zum ausgewählten Layout.",
+          "Profile können erstellt, dupliziert, umbenannt oder auf Standardwerte zurückgesetzt werden.",
+          "Vor dem Löschen eines Profils ist eine zweite Bestätigung erforderlich.",
+          "HUD-Profile lassen sich als geprüfte JSON-Datei exportieren und wieder importieren.",
+          "Aktive HUD-Profile werden zusammen mit den Cloud-Einstellungen synchronisiert."
+        ]
+      },
+      {
+        "eyebrow": "AKTUELLE ÄNDERUNGEN",
+        "title": "Bedienung & Health HUD",
+        "description": "Das ClickGUI bleibt dort, wo du zuletzt gearbeitet hast.",
+        "lines": [
+          "Kategorie, Modul und Scrollposition werden beim Schließen gespeichert.",
+          "Das ClickGUI öffnet wieder exakt im zuletzt verwendeten Modul.",
+          "Absorptionsherzen lassen sich im Health-Modul ein- oder ausblenden.",
+          "Die Farbe der Absorptionsherzen ist unabhängig einstellbar.",
+          "Das Health HUD bleibt mit und ohne Absorption sauber zentriert."
+        ]
+      },
+      {
+        "eyebrow": "AKTUELLE ÄNDERUNGEN",
+        "title": "Updates & Kompatibilität",
+        "description": "Updates und unterstützte Minecraft-Versionen werden verständlicher dargestellt.",
+        "lines": [
+          "Der Update-Bereich zeigt Suche, Download und vorbereitete Version als Live-Status.",
+          "Downloads werden vor der Installation als passende betterUC-JAR geprüft.",
+          "Minecraft 1.21.10, 26.1.2 und 26.2 werden weiterhin getrennt gebaut und geprüft.",
+          "Ingame wird nur noch der aktuelle Changelog angezeigt.",
+          "Die vollständige Versionshistorie ist auf betteruc.de/changelog verfügbar."
+        ]
+      }
+    ]
+  },
+  "releases": [
+    {
+      "version": "1.3.1",
+      "date": "27.07.2026",
+      "current": true,
+      "summary": [
+        {
+          "title": "Ein-Klick-Updates",
+          "description": "Neue Versionen werden ingame gemeldet, sicher vorbereitet und nach deiner Bestätigung installiert.",
+          "color": "green"
+        },
+        {
+          "title": "Casino im Bargeld-HUD",
+          "description": "Jeton-Käufe und -Verkäufe aktualisieren dein Bargeld anhand des tatsächlichen Dollarbetrags.",
+          "color": "amber"
+        },
+        {
+          "title": "Daily Rewards im Bank-HUD",
+          "description": "Geldbelohnungen aus dem Daily Reward werden deinem angezeigten Bankguthaben direkt gutgeschrieben.",
+          "color": "green"
+        },
+        {
+          "title": "Absorptionsherzen",
+          "description": "Das Health HUD zeigt zusätzliche Herzen an und bleibt dabei automatisch zentriert.",
+          "color": "cyan"
+        }
+      ],
+      "changes": [
+        "Ein-Klick-Updates mit Downloadprüfung und verständlicher Neustart-Bestätigung.",
+        "Casino-Käufe und -Verkäufe aktualisieren das Bargeld-HUD korrekt.",
+        "Daily-Reward-Geld wird dem Bank-HUD automatisch gutgeschrieben.",
+        "Der Reichensteuer-Alert arbeitet ohne automatischen Bank-Befehl.",
+        "Absorptionsherzen werden im Health HUD angezeigt."
+      ]
+    },
+    {
+      "version": "1.3.0",
+      "date": "26.07.2026",
+      "changes": [
+        "Eine Reichensteuer-Warnung erinnert dich fünf Minuten vor dem PayDay an ein Bankguthaben über 100.000$.",
+        "Die Command-Warteschlange stabilisiert automatische und stille Befehle.",
+        "Die Erste-Hilfe-Automatik beginnt bewusst erst nach deiner ersten manuellen Annahme.",
+        "Das Fraktionstracking übernimmt keine falschen Werte mehr aus PayDay-Zeilen."
+      ]
+    },
+    {
+      "version": "1.2.9",
+      "date": "22.07.2026",
+      "changes": [
+        "Job-Automationen lassen sich einzeln ein- und ausschalten.",
+        "Der Mülleimer-Filter markiert ausgewählte Fundstücke direkt im Container.",
+        "Das Ammo HUD erkennt Waffenprofile und ignoriert fremde Actionbar-Texte.",
+        "Reinforcement-Nachrichten können farblich angepasst werden."
+      ]
+    },
+    {
+      "version": "1.2.8",
+      "date": "22.07.2026",
+      "changes": [
+        "Globalchat, Discord-Synchronisierung und wichtige Broadcasts verbinden Mod-Nutzer miteinander.",
+        "Fraktions-, globale und gemeinsame Staatspings stehen als getrennte Kanäle bereit.",
+        "ClickGUI und Willkommensscreen zeigen Änderungen übersichtlicher an.",
+        "Render- und Cache-Optimierungen verbessern HUD, Chat und Tablist."
+      ]
+    },
+    {
+      "version": "1.2.7",
+      "date": "Juli 2026",
+      "changes": [
+        "Der Shortcut /vm setzt den Fahndungsgrund Versuchter Mord schneller.",
+        "Das Potion HUD besitzt eigene Farbeinstellungen.",
+        "Die Müllmann-Automation sortiert gesammelten Müll in festgelegten Bereichen.",
+        "Der betterUC Globalchat verbindet Spieler ingame und auf Discord."
+      ]
+    },
+    {
+      "version": "1.2.6",
+      "date": "Juli 2026",
+      "changes": [
+        "Mod-Einstellungen können über das persönliche Cloud-Profil synchronisiert werden.",
+        "Gespeicherte Revisionen schützen Einstellungen vor unbemerktem Überschreiben.",
+        "Das Adminpanel zeigt Cloud-Status, Sicherungen und Sync-Verlauf an.",
+        "Hotkeys können Befehle sofort senden oder nur im Chat zum Bestätigen vorbereiten."
+      ]
+    },
+    {
+      "version": "1.2.5",
+      "date": "Juni 2026",
+      "changes": [
+        "Der Produktionstimer merkt sich Startposition und Restzeit und setzt nach Ablauf eine Navigation.",
+        "Bank- und Bargeld-HUD reagieren auf weitere Überweisungs- und Zahlungsnachrichten.",
+        "Optionale Folgeabfragen können Kontostand, Fraktionsbank und ATM-Informationen aktualisieren.",
+        "Neue Command-Abkürzungen vereinfachen häufig verwendete Bankbefehle."
+      ]
+    },
+    {
+      "version": "1.2.4",
+      "date": "Juni 2026",
+      "changes": [
+        "Getrennte Mod-Dateien unterstützen Minecraft 1.21.10, 26.1.2 und 26.2.",
+        "Die Download-Seite wählt die passende JAR für deine Minecraft-Version.",
+        "Winzer- und Gärtner-Automationen unterstützen die jeweiligen Jobabläufe.",
+        "Mehrere Stabilitätskorrekturen verbessern HUD-Abstände, Fraktionstracking und Zoom-Kompatibilität."
+      ]
+    },
+    {
+      "version": "1.2.3",
+      "date": "15.06.2026",
+      "changes": [
+        "Der Befehl /adropdrink gibt Getränke automatisch im passenden Abstand ab.",
+        "Die Abgabe stoppt sicher, wenn du nicht in der Kneipe bist.",
+        "Die Fischer-Automation sucht Schwärme, wirft das Netz aus und gibt den Fang am Steg ab.",
+        "Die Getränke-Anzahl wird zuverlässig aus dem sichtbaren Scoreboard gelesen."
+      ]
+    },
+    {
+      "version": "1.2.2",
+      "date": "14.06.2026",
+      "changes": [
+        "WPS- und HQ-Nachrichten wirken kompakter und einheitlicher.",
+        "Mehrere Fahndungsgründe bleiben vollständig lesbar.",
+        "Drogenabgabe 5g, 10g und 15g wird platzsparend als DA abgekürzt.",
+        "Waffen- und Drogenabnahmen erscheinen als klare Einzeiler."
+      ]
+    },
+    {
+      "version": "1.2.1",
+      "date": "12.06.2026",
+      "changes": [
+        "WPS/HQ-, Reinforcement- und Pay-Nachrichten können kompakter dargestellt werden.",
+        "Der Shortcut /abbuchen vereinfacht Bankabbuchungen.",
+        "Helper und Admins können mit /buonline verbundene Mod-Nutzer sehen.",
+        "betterUC-Hologramme lassen sich im ClickGUI ein- und ausschalten."
+      ]
+    },
+    {
+      "version": "1.1.8",
+      "date": "07.06.2026",
+      "changes": [
+        "Das betterUC-Badge wird separat hinter dem Namen in der Tablist gezeichnet.",
+        "Icons und Prefixe anderer Clients bleiben sichtbar.",
+        "Fraktionsbank-Einzahlungen und -Auszahlungen aktualisieren das Bargeld-HUD.",
+        "Normale Mod-Nutzer erhalten nur das Tablist-Badge; Rollen behalten ihr Hologramm."
+      ]
+    },
+    {
+      "version": "1.1.7",
+      "date": "07.06.2026",
+      "changes": [
+        "Der Plant Timer reagiert auf sichtbare Plantage-Nachrichten aller Spieler.",
+        "Das Plant HUD kann im ClickGUI ein- und ausgeschaltet werden.",
+        "Die Partner-Rolle besitzt ein eigenes Hologramm und Tablist-Badge.",
+        "Fraktionspings verwenden das Relay und die Fraktion aus /stats."
+      ]
+    },
+    {
+      "version": "1.1.6",
+      "date": "05.06.2026",
+      "changes": [
+        "Ein Willkommensscreen zeigt den Changelog nach einer neuen Mod-Version einmalig an.",
+        "Die Helper-Rolle besitzt ein gelbes Hologramm und Tablist-Badge.",
+        "Der Discord-Bereich im ClickGUI öffnet den Community-Server.",
+        "Der Discord-Bot unterstützt Tickets, Update-Posts und Rollen-Synchronisierung."
+      ]
+    },
+    {
+      "version": "1.0.2",
+      "date": "03.05.2026",
+      "changes": [
+        "FPS-, Payday-, Ammo- und Bank-HUD erweitern die wichtigsten Spielinformationen.",
+        "Fullbright und Fahrzeugmarker erleichtern die Orientierung.",
+        "Payday und automatische Abfragen berücksichtigen den AFK-Modus.",
+        "Das ursprüngliche Settings-Fenster wurde übersichtlicher aufgebaut."
+      ]
+    }
+  ]
+}

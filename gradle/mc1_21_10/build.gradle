@@ -61,6 +61,9 @@ processResources {
     from(file("${betterucRootDir}/src/main/resources")) {
         exclude "betteruc.mixins.json"
     }
+    from(file("${betterucRootDir}/server/public/data/changelog.json")) {
+        into "betteruc"
+    }
     def overrideResourcesDir = file("${betterucRootDir}/src/mc1_21_10/resources")
     if (overrideResourcesDir.exists()) {
         from(overrideResourcesDir)

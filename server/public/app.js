@@ -24,6 +24,9 @@ const downloadSize = document.querySelector("#downloadSize");
 const downloadHint = document.querySelector("#downloadHint");
 const latestDownloadButton = document.querySelector("#latestDownloadButton");
 const latestDownloadButtonPanel = document.querySelector("#latestDownloadButtonPanel");
+const changelogTimeline = document.querySelector("#changelogTimeline");
+const latestChangesTitle = document.querySelector("#latestChangesTitle");
+const latestChangesList = document.querySelector("#latestChangesList");
 const PANEL_SESSION_KEY = "betteruc-panel-session";
 const DOWNLOAD_VERSIONS = [
   {
@@ -103,6 +106,130 @@ async function refreshDownloadInfo() {
     if (latestDownloadButtonPanel) latestDownloadButtonPanel.href = "/download/latest.jar";
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+function changelogItems(value) {
+  return Array.isArray(value) ? value.filter(item => item && typeof item === "object") : [];
+}
+
+function renderLatestChanges(changelog) {
+  if (!latestChangesTitle || !latestChangesList) return;
+  const releases = changelogItems(changelog?.releases);
+  const latest = releases.find(release => release.current) || releases[0];
+  const summary = changelogItems(latest?.summary);
+  if (!latest || summary.length === 0) {
+    latestChangesTitle.textContent = "Neu in betterUC";
+    latestChangesList.innerHTML = `
+      <article>
+        <span class="feature-icon cyan"></span>
+        <div>
+          <h3>Changelog nicht erreichbar</h3>
+          <p>Die vollständige Versionshistorie bleibt über den Changelog-Link verfügbar.</p>
+        </div>
+      </article>
+    `;
+    return;
+  }
+
+  latestChangesTitle.textContent = `Neu in ${latest.version || "betterUC"}`;
+  const allowedColors = new Set(["cyan", "green", "amber", "purple"]);
+  latestChangesList.innerHTML = summary.map((entry, index) => {
+    const requestedColor = String(entry.color || "").toLowerCase();
+    const color = allowedColors.has(requestedColor)
+      ? requestedColor
+      : ["cyan", "green", "amber"][index % 3];
+    return `
+      <article>
+        <span class="feature-icon ${color}"></span>
+        <div>
+          <h3>${escapeHtml(entry.title || "Neue Funktion")}</h3>
+          <p>${escapeHtml(entry.description || "")}</p>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+function renderChangelogTimeline(changelog) {
+  if (!changelogTimeline) return;
+  const development = changelog?.development && typeof changelog.development === "object"
+    ? changelog.development
+    : null;
+  const developmentPages = changelogItems(development?.pages);
+  const releases = changelogItems(changelog?.releases);
+  const blocks = [];
+
+  if (development && developmentPages.length > 0) {
+    blocks.push(`
+      <article class="changelog-release upcoming">
+        <header>
+          <div>
+            <span class="release-state">${escapeHtml(development.label || "In Entwicklung")}</span>
+            <h2>${escapeHtml(development.title || "Nächstes Update")}</h2>
+          </div>
+          <span class="release-date">${escapeHtml(development.date || "Aktueller Stand")}</span>
+        </header>
+        <div class="change-grid">
+          ${developmentPages.map(page => `
+            <section>
+              <h3>${escapeHtml(page.title || "Änderungen")}</h3>
+              <p>${escapeHtml(page.description || "")}</p>
+              <ul class="development-change-list">
+                ${(Array.isArray(page.lines) ? page.lines : []).map(line =>
+                  `<li>${escapeHtml(line)}</li>`
+                ).join("")}
+              </ul>
+            </section>
+          `).join("")}
+        </div>
+      </article>
+    `);
+  }
+
+  for (const release of releases) {
+    const changes = Array.isArray(release.changes) ? release.changes : [];
+    blocks.push(`
+      <article class="changelog-release">
+        <header>
+          <div>
+            <span class="release-state">Release</span>
+            <h2>Version ${escapeHtml(release.version || "unbekannt")}</h2>
+          </div>
+          ${release.current || release.date
+            ? `<span class="release-date">${escapeHtml(release.current ? "Aktuell" : release.date)}</span>`
+            : ""}
+        </header>
+        <ul>
+          ${changes.map(change => `<li>${escapeHtml(change)}</li>`).join("")}
+        </ul>
+      </article>
+    `);
+  }
+
+  changelogTimeline.innerHTML = blocks.length > 0
+    ? blocks.join("")
+    : `
+      <article class="changelog-release upcoming">
+        <header><div><span class="release-state">Changelog</span><h2>Keine Einträge gefunden</h2></div></header>
+      </article>
+    `;
+}
+
+async function refreshChangelog() {
+  if (!changelogTimeline && !latestChangesList) return;
+  try {
+    const response = await fetch("/data/changelog.json", { cache: "no-store" });
+    const changelog = await response.json();
+    if (!response.ok || Number(changelog.schema) !== 1) {
+      throw new Error("Ungültige Changelog-Daten");
+    }
+    renderLatestChanges(changelog);
+    renderChangelogTimeline(changelog);
+  } catch (error) {
+    console.warn("betterUC changelog could not be loaded", error);
+    renderLatestChanges(null);
+    renderChangelogTimeline(null);
   }
 }
 
@@ -556,6 +683,7 @@ panelLogout?.addEventListener("click", () => {
 refreshStatus();
 initDownloadModal();
 refreshDownloadInfo();
+refreshChangelog();
 if (panelLoginForm || panelDashboard) {
   fetchPanelSession();
 }

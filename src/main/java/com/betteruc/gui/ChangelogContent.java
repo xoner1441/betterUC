@@ -1,49 +1,22 @@
 package com.betteruc.gui;
 
+import com.betteruc.BetterUCMod;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public final class ChangelogContent {
 
-    private static final Page[] LATEST_PAGES = new Page[]{
-            new Page(
-                    "AKTUELLE \u00C4NDERUNGEN",
-                    "HUD-Profile",
-                    "Eigene HUD-Layouts lassen sich jetzt speichern und jederzeit wechseln.",
-                    new String[]{
-                            "Das bisherige HUD wird beim ersten Start automatisch als Profil Standard \u00FCbernommen.",
-                            "Profile speichern Positionen, Gr\u00F6\u00DFen, Stile, Farben, Fonts, Gradients und Sichtbarkeit.",
-                            "Eine aufklappbare Liste zeigt alle Profile und wechselt direkt zum ausgew\u00E4hlten Layout.",
-                            "Profile k\u00F6nnen erstellt, dupliziert, umbenannt oder auf Standardwerte zur\u00FCckgesetzt werden.",
-                            "Vor dem L\u00F6schen eines Profils ist eine zweite Best\u00E4tigung erforderlich.",
-                            "HUD-Profile lassen sich als gepr\u00FCfte JSON-Datei exportieren und importieren.",
-                            "Aktive HUD-Profile werden zusammen mit den Cloud-Einstellungen synchronisiert."
-                    }
-            ),
-            new Page(
-                    "AKTUELLE \u00C4NDERUNGEN",
-                    "Bedienung & Health HUD",
-                    "Das ClickGUI bleibt dort, wo du zuletzt gearbeitet hast.",
-                    new String[]{
-                            "Kategorie, Modul und Scrollposition werden beim Schlie\u00DFen gespeichert.",
-                            "Das ClickGUI \u00F6ffnet wieder exakt im zuletzt verwendeten Modul.",
-                            "Absorptionsherzen lassen sich im Health-Modul ein- oder ausblenden.",
-                            "Die Farbe der Absorptionsherzen ist unabh\u00E4ngig einstellbar.",
-                            "Das Health HUD bleibt mit und ohne Absorption sauber zentriert."
-                    }
-            ),
-            new Page(
-                    "AKTUELLE \u00C4NDERUNGEN",
-                    "Updates & Kompatibilit\u00E4t",
-                    "Updates und unterst\u00FCtzte Minecraft-Versionen werden transparenter.",
-                    new String[]{
-                            "Der Update-Bereich zeigt Suche, Download und vorbereitete Version als Live-Status.",
-                            "Downloads werden weiterhin vor der Installation als passende betterUC-Jar gepr\u00FCft.",
-                            "Minecraft 1.21.10, 26.1.2 und 26.2 werden weiterhin getrennt gebaut und gepr\u00FCft.",
-                            "Ingame wird nur noch der aktuelle Changelog angezeigt.",
-                            "Die vollst\u00E4ndige Versionshistorie ist auf betteruc.de/changelog verf\u00FCgbar."
-                    }
-            )
-    };
+    private static final String RESOURCE_PATH = "/betteruc/changelog.json";
+    private static final Page[] LATEST_PAGES = loadLatestPages();
 
     private ChangelogContent() {
     }
@@ -58,6 +31,87 @@ public final class ChangelogContent {
 
     public static Page[] clickGuiSections() {
         return latestPages();
+    }
+
+    private static Page[] loadLatestPages() {
+        try (InputStream stream = ChangelogContent.class.getResourceAsStream(RESOURCE_PATH)) {
+            if (stream == null) {
+                BetterUCMod.LOGGER.warn("Bundled changelog resource {} is missing", RESOURCE_PATH);
+                return fallbackPages();
+            }
+
+            JsonElement parsed = JsonParser.parseReader(
+                    new InputStreamReader(stream, StandardCharsets.UTF_8)
+            );
+            if (!parsed.isJsonObject()) return fallbackPages();
+
+            JsonObject root = parsed.getAsJsonObject();
+            JsonObject development = object(root, "development");
+            JsonArray pages = array(development, "pages");
+            List<Page> result = new ArrayList<>();
+
+            for (JsonElement element : pages) {
+                if (!element.isJsonObject()) continue;
+                JsonObject page = element.getAsJsonObject();
+                String title = text(page, "title");
+                if (title.isBlank()) continue;
+
+                JsonArray lineElements = array(page, "lines");
+                List<String> lines = new ArrayList<>();
+                for (JsonElement line : lineElements) {
+                    if (!line.isJsonPrimitive()) continue;
+                    String value = line.getAsString().trim();
+                    if (!value.isBlank()) lines.add(value);
+                }
+
+                result.add(new Page(
+                        textOr(page, "eyebrow", "AKTUELLE ÄNDERUNGEN"),
+                        title,
+                        text(page, "description"),
+                        lines.toArray(String[]::new)
+                ));
+            }
+
+            return result.isEmpty() ? fallbackPages() : result.toArray(Page[]::new);
+        } catch (Exception e) {
+            BetterUCMod.LOGGER.warn("Could not load bundled betterUC changelog", e);
+            return fallbackPages();
+        }
+    }
+
+    private static JsonObject object(JsonObject parent, String name) {
+        JsonElement value = parent == null ? null : parent.get(name);
+        return value != null && value.isJsonObject() ? value.getAsJsonObject() : new JsonObject();
+    }
+
+    private static JsonArray array(JsonObject parent, String name) {
+        JsonElement value = parent == null ? null : parent.get(name);
+        return value != null && value.isJsonArray() ? value.getAsJsonArray() : new JsonArray();
+    }
+
+    private static String text(JsonObject parent, String name) {
+        try {
+            JsonElement value = parent == null ? null : parent.get(name);
+            return value != null && value.isJsonPrimitive() ? value.getAsString().trim() : "";
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private static String textOr(JsonObject parent, String name, String fallback) {
+        String value = text(parent, name);
+        return value.isBlank() ? fallback : value;
+    }
+
+    private static Page[] fallbackPages() {
+        return new Page[]{
+                new Page(
+                        "AKTUELLE ÄNDERUNGEN",
+                        "Changelog nicht verfügbar",
+                        "Die eingebetteten Änderungen konnten nicht geladen werden.",
+                        new String[]{"Die vollständige Versionshistorie findest du auf betteruc.de/changelog."}
+                )
+        };
     }
 
     public record Page(String eyebrow, String title, String description, String[] lines) {

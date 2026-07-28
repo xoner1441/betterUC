@@ -1588,6 +1588,18 @@ select:focus {
   margin: 0;
 }
 
+.development-change-list {
+  color: var(--muted);
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding-left: 18px;
+}
+
+.development-change-list li::marker {
+  color: var(--cyan);
+}
+
 .row-actions {
   flex-wrap: wrap;
 }

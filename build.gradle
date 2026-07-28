@@ -60,6 +60,9 @@ dependencies {
 }
 
 processResources {
+    from("server/public/data/changelog.json") {
+        into "betteruc"
+    }
     inputs.property "version", project.version
     inputs.property "minecraft_dependency", project.findProperty("minecraft_dependency") ?: "~${project.minecraft_version}"
     inputs.property "loader_dependency", project.findProperty("loader_dependency") ?: ">=${project.loader_version}"
