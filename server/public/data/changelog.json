@@ -20,6 +20,46 @@
       "version": "1.3.2",
       "date": "28.07.2026",
       "current": true,
+      "pages": [
+        {
+          "eyebrow": "NEU IN 1.3.2",
+          "title": "HUD-Profile",
+          "description": "Eigene HUD-Layouts lassen sich speichern und jederzeit gezielt auswählen.",
+          "lines": [
+            "Das bisherige HUD wird beim ersten Start automatisch als Profil Standard übernommen.",
+            "Profile speichern Positionen, Größen, Stile, Farben, Fonts, Farbverläufe und Sichtbarkeit.",
+            "Eine aufklappbare Liste zeigt alle Profile und wechselt direkt zum ausgewählten Layout.",
+            "Profile können erstellt, dupliziert, umbenannt oder auf Standardwerte zurückgesetzt werden.",
+            "Vor dem Löschen eines Profils ist eine zweite Bestätigung erforderlich.",
+            "HUD-Profile lassen sich als geprüfte JSON-Datei exportieren und wieder importieren.",
+            "Aktive HUD-Profile werden zusammen mit den Cloud-Einstellungen synchronisiert."
+          ]
+        },
+        {
+          "eyebrow": "NEU IN 1.3.2",
+          "title": "Bedienung & Health HUD",
+          "description": "Das ClickGUI bleibt dort, wo du zuletzt gearbeitet hast.",
+          "lines": [
+            "Kategorie, Modul und Scrollposition werden beim Schließen gespeichert.",
+            "Das ClickGUI öffnet wieder exakt im zuletzt verwendeten Modul.",
+            "Absorptionsherzen lassen sich im Health-Modul ein- oder ausblenden.",
+            "Die Farbe der Absorptionsherzen ist unabhängig einstellbar.",
+            "Das Health HUD bleibt mit und ohne Absorption sauber zentriert."
+          ]
+        },
+        {
+          "eyebrow": "NEU IN 1.3.2",
+          "title": "Updates & Kompatibilität",
+          "description": "Updates und unterstützte Minecraft-Versionen werden verständlicher dargestellt.",
+          "lines": [
+            "Der Update-Bereich zeigt Suche, Download und vorbereitete Version als Live-Status.",
+            "Downloads werden vor der Installation als passende betterUC-JAR geprüft.",
+            "Minecraft 1.21.10, 26.1.2 und 26.2 werden weiterhin getrennt gebaut und geprüft.",
+            "Ingame wird ausschließlich der Changelog der installierten Version angezeigt.",
+            "Die vollständige Versionshistorie ist auf betteruc.de/changelog verfügbar."
+          ]
+        }
+      ],
       "summary": [
         {
           "title": "Eigene HUD-Profile",

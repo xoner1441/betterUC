@@ -46,8 +46,12 @@ public final class ChangelogContent {
             if (!parsed.isJsonObject()) return fallbackPages();
 
             JsonObject root = parsed.getAsJsonObject();
-            JsonObject development = object(root, "development");
-            JsonArray pages = array(development, "pages");
+            JsonObject release = currentRelease(root);
+            JsonArray pages = array(release, "pages");
+            if (pages.isEmpty()) {
+                pages = releasePages(release);
+            }
+
             List<Page> result = new ArrayList<>();
 
             for (JsonElement element : pages) {
@@ -77,6 +81,40 @@ public final class ChangelogContent {
             BetterUCMod.LOGGER.warn("Could not load bundled betterUC changelog", e);
             return fallbackPages();
         }
+    }
+
+    private static JsonObject currentRelease(JsonObject root) {
+        JsonArray releases = array(root, "releases");
+        JsonObject firstRelease = null;
+
+        for (JsonElement element : releases) {
+            if (!element.isJsonObject()) continue;
+            JsonObject release = element.getAsJsonObject();
+            if (firstRelease == null) firstRelease = release;
+
+            JsonElement current = release.get("current");
+            if (current != null && current.isJsonPrimitive() && current.getAsBoolean()) {
+                return release;
+            }
+        }
+
+        return firstRelease == null ? new JsonObject() : firstRelease;
+    }
+
+    private static JsonArray releasePages(JsonObject release) {
+        JsonArray changes = array(release, "changes");
+        if (changes.isEmpty()) return new JsonArray();
+
+        String version = textOr(release, "version", "betterUC");
+        JsonObject page = new JsonObject();
+        page.addProperty("eyebrow", "NEU IN " + version);
+        page.addProperty("title", "Änderungen in Version " + version);
+        page.addProperty("description", "Die wichtigsten Neuerungen und Verbesserungen dieses Updates.");
+        page.add("lines", changes);
+
+        JsonArray pages = new JsonArray();
+        pages.add(page);
+        return pages;
     }
 
     private static JsonObject object(JsonObject parent, String name) {
