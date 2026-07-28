@@ -302,10 +302,6 @@ public class BetterUCScreen extends Screen {
                     y = addButton(x, y, controlW, "Reinf Farben zur\u00FCcksetzen", b -> resetReinfColors());
                 }
 
-                y = addSectionHeader(x, y, controlW, "Globalchat", 0xFF4ADE80);
-                y = addToggle(x, y, controlW, "Globalchat", BetterUCConfig.INSTANCE.globalChatEnabled,
-                        () -> BetterUCConfig.INSTANCE.globalChatEnabled = !BetterUCConfig.INSTANCE.globalChatEnabled);
-
                 y = addSectionHeader(x, y, controlW, "Chat-Zeit", 0xFF94A3B8);
                 y = addToggle(x, y, controlW, "Zeitstempel", BetterUCConfig.INSTANCE.chatTimestampsEnabled,
                         () -> BetterUCConfig.INSTANCE.chatTimestampsEnabled = !BetterUCConfig.INSTANCE.chatTimestampsEnabled);
@@ -450,6 +446,13 @@ public class BetterUCScreen extends Screen {
     }
 
     private int addConnectionControls(int x, int y, int width) {
+        y = addSectionHeader(x, y, width, "Relay", 0xFF38BDF8);
+        y = addToggle(x, y, width, "Relay-Verbindung", BetterUCConfig.INSTANCE.pingRelayEnabled, () -> {
+            BetterUCConfig.INSTANCE.pingRelayEnabled = !BetterUCConfig.INSTANCE.pingRelayEnabled;
+            PingRelayClient.onDisconnect();
+            PingRelayClient.tick(minecraft);
+        });
+
         y = addSectionHeader(x, y, width, "Accountstatus", 0xFF4ADE80);
         y = addInfo(x, y, width, "Status", PingRelayClient.statusLabel());
         y = addInfo(x, y, width, "Spieler", currentPlayerName());
@@ -465,7 +468,12 @@ public class BetterUCScreen extends Screen {
 
         y = addSectionHeader(x, y, width, "Zugang", 0xFFFACC15);
         y = addTextField(x, y, width, "Access Code", BetterUCConfig.INSTANCE.pingRelayToken, 160,
-                value -> BetterUCConfig.INSTANCE.pingRelayToken = value.trim());
+                value -> {
+                    BetterUCConfig.INSTANCE.pingRelayToken = value.trim();
+                    if (!BetterUCConfig.INSTANCE.pingRelayToken.isEmpty()) {
+                        BetterUCConfig.INSTANCE.pingRelayEnabled = true;
+                    }
+                });
         y = addButton(x, y, width, "Access Code holen", b -> Util.getPlatform().openUri(URI.create("https://betteruc.de/access")));
         y = addButton(x, y, width, "Stats neu senden", b -> {
             UserStatsClient.uploadCurrentStats(minecraft);
@@ -486,6 +494,8 @@ public class BetterUCScreen extends Screen {
             refreshWidgetsWithoutFlushingTextFields();
         });
         return addButton(x, y, width, "Neu verbinden", b -> {
+            flushTextFields();
+            BetterUCConfig.INSTANCE.pingRelayEnabled = true;
             saveConfig();
             PingRelayClient.onDisconnect();
             PingRelayClient.tick(minecraft);
