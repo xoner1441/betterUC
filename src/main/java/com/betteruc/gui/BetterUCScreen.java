@@ -64,9 +64,16 @@ public class BetterUCScreen extends Screen {
     private int detailContentHeight = 0;
     private int updatesScrollOffset = 0;
     private int updatesContentHeight = 0;
+    private String hudProfileNameDraft;
 
     public BetterUCScreen() {
         super(Component.literal("betterUC"));
+        selectedCategory = parseCategory(BetterUCConfig.INSTANCE.clickGuiLastCategory);
+        selectedModule = parseModule(BetterUCConfig.INSTANCE.clickGuiLastModule, selectedCategory);
+        selectedCategory = selectedModule.category;
+        detailScrollOffset = storedDetailScroll(selectedModule);
+        updatesScrollOffset = Math.max(0, BetterUCConfig.INSTANCE.clickGuiUpdatesScrollOffset);
+        hudProfileNameDraft = BetterUCConfig.activeHudProfileName();
     }
 
     @Override
@@ -77,7 +84,7 @@ public class BetterUCScreen extends Screen {
         textFieldFlushers.clear();
         if (selectedModule.category != selectedCategory) {
             selectedModule = firstModuleFor(selectedCategory);
-            detailScrollOffset = 0;
+            detailScrollOffset = storedDetailScroll(selectedModule);
         }
 
         detailControls.clear();
@@ -106,7 +113,7 @@ public class BetterUCScreen extends Screen {
                 y = addCustomFontControls(x, y, controlW, selectedModule);
             }
         }
-        if (selectedModule.category == Category.HUD) {
+        if (selectedModule.category == Category.HUD && selectedModule != ModuleOption.HUD_PROFILES) {
             y = addHudGradientControls(x, y, controlW, selectedModule);
         }
         if (hasHudPrefix(selectedModule)) {
@@ -115,14 +122,22 @@ public class BetterUCScreen extends Screen {
         }
 
         switch (selectedModule) {
+            case HUD_PROFILES -> y = addHudProfileControls(x, y, controlW);
             case HEALTH -> {
                 y = addSectionHeader(x, y, controlW, "Anzeige", 0xFFFF5555);
                 y = addToggle(x, y, controlW, "Health HUD", BetterUCConfig.INSTANCE.showHealthHud,
                         () -> BetterUCConfig.INSTANCE.showHealthHud = !BetterUCConfig.INSTANCE.showHealthHud);
+                y = addToggle(x, y, controlW, "Absorptionsherzen", BetterUCConfig.INSTANCE.showHealthAbsorption,
+                        () -> BetterUCConfig.INSTANCE.showHealthAbsorption = !BetterUCConfig.INSTANCE.showHealthAbsorption);
                 y = addColorButton(x, y, controlW, "Herz Farbe", BetterUCConfig.INSTANCE.healthHudHeartColor,
                         color -> BetterUCConfig.INSTANCE.healthHudHeartColor = color);
                 y = addColorButton(x, y, controlW, "Zahl Farbe", BetterUCConfig.INSTANCE.healthHudTextColor,
                         color -> BetterUCConfig.INSTANCE.healthHudTextColor = color);
+                if (BetterUCConfig.INSTANCE.showHealthAbsorption) {
+                    y = addColorButton(x, y, controlW, "Absorption Farbe",
+                            BetterUCConfig.INSTANCE.healthHudAbsorptionColor,
+                            color -> BetterUCConfig.INSTANCE.healthHudAbsorptionColor = color);
+                }
             }
             case FPS -> {
                 y = addSectionHeader(x, y, controlW, "Anzeige", 0xFF22D3EE);
@@ -332,9 +347,12 @@ public class BetterUCScreen extends Screen {
             }
             case DISCORD -> y = addDiscordControls(x, y, controlW);
             case UPDATES -> {
+                y = addSectionHeader(x, y, controlW, "Updater", 0xFF38BDF8);
+                y = addInfo(x, y, controlW, "Status", VersionChecker.statusLabel());
                 y = addToggle(x, y, controlW, "Auto-Updater", BetterUCConfig.INSTANCE.autoUpdateEnabled,
                         () -> BetterUCConfig.INSTANCE.autoUpdateEnabled = !BetterUCConfig.INSTANCE.autoUpdateEnabled);
                 y = addButton(x, y, controlW, "Update installieren", b -> VersionChecker.installLatestUpdate(minecraft, true));
+                y = addSectionHeader(x, y, controlW, "Changelog", 0xFF4ADE80);
                 y = addButton(x, y, controlW, "Changelog öffnen", b -> openScreen(new ChangelogScreen(this)));
             }
         }
@@ -474,6 +492,61 @@ public class BetterUCScreen extends Screen {
         y = addInfo(x, y, width, "Discord", "betterUC Community");
         y = addButton(x, y, width, "Discord öffnen", b -> openDiscordInvite());
         return addButton(x, y, width, "Invite kopieren", b -> copyDiscordInvite());
+    }
+
+    private int addHudProfileControls(int x, int y, int width) {
+        String activeProfile = BetterUCConfig.activeHudProfileName();
+        if (hudProfileNameDraft == null || hudProfileNameDraft.isBlank()) {
+            hudProfileNameDraft = activeProfile;
+        }
+
+        y = addSectionHeader(x, y, width, "Aktives Profil", 0xFF38BDF8);
+        y = addInfo(x, y, width, "Profil", activeProfile);
+        y = addInfo(x, y, width, "Gespeichert", BetterUCConfig.hudProfileNames().size() + " Profile");
+        y = addButton(x, y, width, "N\u00E4chstes Profil: " + BetterUCConfig.nextHudProfileName(), b -> {
+            if (BetterUCConfig.switchHudProfile(BetterUCConfig.nextHudProfileName())) {
+                hudProfileNameDraft = BetterUCConfig.activeHudProfileName();
+                BetterUCFontManager.rebuildAndReload(minecraft);
+            }
+            refreshWidgets();
+        });
+
+        y = addSectionHeader(x, y, width, "Profil verwalten", 0xFFFACC15);
+        y = addTextField(x, y, width, "Profilname", hudProfileNameDraft, 24,
+                value -> hudProfileNameDraft = value);
+        y = addButton(x, y, width, "Neues Profil erstellen", b -> {
+            if (BetterUCConfig.createHudProfile(hudProfileNameDraft)) {
+                hudProfileNameDraft = BetterUCConfig.activeHudProfileName();
+            }
+            refreshWidgets();
+        });
+        y = addButton(x, y, width, "Aktives Profil duplizieren", b -> {
+            if (BetterUCConfig.duplicateActiveHudProfile(hudProfileNameDraft)) {
+                hudProfileNameDraft = BetterUCConfig.activeHudProfileName();
+            }
+            refreshWidgets();
+        });
+        y = addButton(x, y, width, "Aktives Profil umbenennen", b -> {
+            if (BetterUCConfig.renameActiveHudProfile(hudProfileNameDraft)) {
+                hudProfileNameDraft = BetterUCConfig.activeHudProfileName();
+            }
+            refreshWidgets();
+        });
+        y = addButton(x, y, width, "Aktives Profil l\u00F6schen", b -> {
+            if (BetterUCConfig.deleteActiveHudProfile()) {
+                hudProfileNameDraft = BetterUCConfig.activeHudProfileName();
+                BetterUCFontManager.rebuildAndReload(minecraft);
+            } else if (minecraft != null && minecraft.player != null) {
+                minecraft.player.sendSystemMessage(Component.literal(
+                        "[betterUC] Das letzte HUD-Profil kann nicht gel\u00F6scht werden."
+                ));
+            }
+            refreshWidgets();
+        });
+
+        y = addSectionHeader(x, y, width, "Inhalt", 0xFF4ADE80);
+        y = addInfo(x, y, width, "Enthalten", "Position, Stil, Farbe, Gr\u00F6\u00DFe");
+        return addInfo(x, y, width, "Cloud Sync", "Profile werden synchronisiert");
     }
 
     private int addButton(int x, int y, int width, String label, Button.OnPress action) {
@@ -880,6 +953,14 @@ public class BetterUCScreen extends Screen {
         boolean stylizedStyle = BetterUCConfig.isStylizedHudStyle(style);
         ModernHudRenderer.withHudGradient(getHudGradientEnabled(selectedModule), getHudGradientColor(selectedModule), () -> {
         switch (selectedModule) {
+            case HUD_PROFILES -> drawMiniInfo(
+                    context,
+                    previewX,
+                    previewY,
+                    "HUD-Profil",
+                    BetterUCConfig.activeHudProfileName(),
+                    true
+            );
             case HEALTH -> {
                 HealthHud.drawPreview(
                         context,
@@ -1264,6 +1345,7 @@ public class BetterUCScreen extends Screen {
                         0,
                         maxUpdatesScroll(updatesH)
                 );
+                BetterUCConfig.INSTANCE.clickGuiUpdatesScrollOffset = updatesScrollOffset;
                 return true;
             }
         }
@@ -1298,20 +1380,20 @@ public class BetterUCScreen extends Screen {
 
         Category category = categoryAt(mouseX, mouseY);
         if (category != null) {
+            rememberCurrentUiState();
             selectedCategory = category;
             selectedModule = firstModuleFor(category);
-            detailScrollOffset = 0;
-            updatesScrollOffset = 0;
+            restoreSelectedModuleScroll();
             refreshWidgets();
             return true;
         }
 
         ModuleOption module = moduleAt(mouseX, mouseY);
         if (module != null) {
+            rememberCurrentUiState();
             selectedCategory = module.category;
             selectedModule = module;
-            detailScrollOffset = 0;
-            updatesScrollOffset = 0;
+            restoreSelectedModuleScroll();
             refreshWidgets();
             return true;
         }
@@ -1357,6 +1439,42 @@ public class BetterUCScreen extends Screen {
             if (module.category == category) return module;
         }
         return ModuleOption.FPS;
+    }
+
+    private Category parseCategory(String value) {
+        try {
+            return Category.valueOf(value == null ? "" : value);
+        } catch (IllegalArgumentException ignored) {
+            return Category.HUD;
+        }
+    }
+
+    private ModuleOption parseModule(String value, Category fallbackCategory) {
+        try {
+            ModuleOption module = ModuleOption.valueOf(value == null ? "" : value);
+            return module.category == fallbackCategory ? module : firstModuleFor(fallbackCategory);
+        } catch (IllegalArgumentException ignored) {
+            return firstModuleFor(fallbackCategory);
+        }
+    }
+
+    private int storedDetailScroll(ModuleOption module) {
+        if (module == null || BetterUCConfig.INSTANCE.clickGuiScrollOffsets == null) return 0;
+        return Math.max(0, BetterUCConfig.INSTANCE.clickGuiScrollOffsets.getOrDefault(module.name(), 0));
+    }
+
+    private void restoreSelectedModuleScroll() {
+        detailScrollOffset = storedDetailScroll(selectedModule);
+        updatesScrollOffset = selectedModule == ModuleOption.UPDATES
+                ? Math.max(0, BetterUCConfig.INSTANCE.clickGuiUpdatesScrollOffset)
+                : updatesScrollOffset;
+    }
+
+    private void rememberCurrentUiState() {
+        BetterUCConfig.INSTANCE.clickGuiLastCategory = selectedCategory.name();
+        BetterUCConfig.INSTANCE.clickGuiLastModule = selectedModule.name();
+        BetterUCConfig.INSTANCE.clickGuiScrollOffsets.put(selectedModule.name(), Math.max(0, detailScrollOffset));
+        BetterUCConfig.INSTANCE.clickGuiUpdatesScrollOffset = Math.max(0, updatesScrollOffset);
     }
 
     private boolean isEnabled(ModuleOption module) {
@@ -1718,6 +1836,7 @@ public class BetterUCScreen extends Screen {
 
     private void setDetailScrollOffset(int scrollOffset) {
         detailScrollOffset = clamp(scrollOffset, 0, maxDetailScroll());
+        BetterUCConfig.INSTANCE.clickGuiScrollOffsets.put(selectedModule.name(), detailScrollOffset);
         applyDetailScrollPositions();
     }
 
@@ -1745,6 +1864,7 @@ public class BetterUCScreen extends Screen {
 
     private void saveConfig() {
         flushTextFields();
+        rememberCurrentUiState();
         BetterUCConfig.save();
     }
 
@@ -1904,6 +2024,7 @@ public class BetterUCScreen extends Screen {
     }
 
     private enum ModuleOption {
+        HUD_PROFILES(Category.HUD, "HUD-Profile", "Eigene Layouts speichern", 0xFF38BDF8, false),
         HEALTH(Category.HUD, "Health", "Transparentes Herz-HUD", 0xFFFF5555, true),
         FPS(Category.HUD, "FPS", "Performance-Modul", BetterUCConfig.DEFAULT_FPS_HUD_COLOR, true),
         PAYDAY(Category.HUD, "Payday", "Payday-Fortschritt", BetterUCConfig.DEFAULT_PAYDAY_HUD_COLOR, true),
@@ -1950,7 +2071,7 @@ public class BetterUCScreen extends Screen {
         }
 
         private boolean hasHudStyle() {
-            return category == Category.HUD || this == PING;
+            return (category == Category.HUD && this != HUD_PROFILES) || this == PING;
         }
     }
 

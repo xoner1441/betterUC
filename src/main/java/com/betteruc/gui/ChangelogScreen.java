@@ -1,11 +1,16 @@
 package com.betteruc.gui;
 
+import com.betteruc.BetterUCMod;
 import com.betteruc.client.ClientCompat;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.Util;
+
+import java.net.URI;
 
 public class ChangelogScreen extends Screen {
 
@@ -17,6 +22,10 @@ public class ChangelogScreen extends Screen {
     private static final int SOFT = 0xFFCBD5E1;
     private static final int MUTED = 0xFF94A3B8;
     private static final int BUTTON_H = 20;
+    private static final String MOD_VERSION = FabricLoader.getInstance()
+            .getModContainer(BetterUCMod.MOD_ID)
+            .map(container -> container.getMetadata().getVersion().getFriendlyString())
+            .orElse("dev");
 
     private final Screen parent;
     private final boolean welcomeMode;
@@ -33,7 +42,7 @@ public class ChangelogScreen extends Screen {
         super(Component.literal(welcomeMode ? "betterUC Willkommen" : "betterUC Changelog"));
         this.parent = parent;
         this.welcomeMode = welcomeMode;
-        this.pages = welcomeMode ? ChangelogContent.latestPages() : ChangelogContent.allPages();
+        this.pages = ChangelogContent.latestPages();
     }
 
     @Override
@@ -44,6 +53,10 @@ public class ChangelogScreen extends Screen {
         int panelH = panelH();
         int footerY = panelY + panelH - 31;
 
+        addRenderableWidget(Button.builder(Component.literal("Historie"), button ->
+                        Util.getPlatform().openUri(URI.create("https://betteruc.de/changelog")))
+                .bounds(panelX + 10, footerY, 72, BUTTON_H)
+                .build());
         addRenderableWidget(Button.builder(Component.literal("<"), button -> changePage(-1))
                 .bounds(panelX + panelW - 126, footerY, 24, BUTTON_H)
                 .build()).active = pageIndex > 0;
@@ -85,7 +98,9 @@ public class ChangelogScreen extends Screen {
                 x + 18, y + 15, ACCENT);
         context.text(font, Component.literal(welcomeMode ? "Was ist neu?" : "betterUC im Überblick"),
                 x + 18, y + 31, TEXT);
-        context.text(font, Component.literal("1.3.0"), x + width - 18 - font.width("1.3.0"), y + 23, 0xFF86EFAC);
+        String versionLabel = "v" + MOD_VERSION;
+        context.text(font, Component.literal(versionLabel),
+                x + width - 18 - font.width(versionLabel), y + 23, 0xFF86EFAC);
 
         int progressY = y + 50;
         int available = width - 36;

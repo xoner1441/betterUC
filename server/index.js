@@ -2391,6 +2391,9 @@ async function serveStatic(req, res, url) {
   if (pathname === "/download") {
     pathname = "/download.html";
   }
+  if (pathname === "/changelog") {
+    pathname = "/changelog.html";
+  }
   if (pathname === "/impressum") {
     pathname = "/impressum.html";
   }

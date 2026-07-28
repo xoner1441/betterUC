@@ -41,6 +41,7 @@ public class BetterUCConfig {
             "toggleSprintHudColor", "fpsHudColor", "paydayHudColor", "bankHudColor", "cashHudColor",
             "potionHudColor",
             "dealerTimerHudColor", "productionTimerHudColor", "healthHudHeartColor", "healthHudTextColor",
+            "healthHudAbsorptionColor", "showHealthAbsorption",
             "healthHudColor", "hudColorGradientEnabled", "hudGradientColor", "hudGradientConfigVersion",
             "healthHudGradientEnabled", "toggleSprintHudGradientEnabled", "fpsHudGradientEnabled",
             "paydayHudGradientEnabled", "ammoHudGradientEnabled", "bankHudGradientEnabled",
@@ -80,7 +81,46 @@ public class BetterUCConfig {
             "pingSoundEnabled", "pingSoundId", "autoUpdateEnabled", "blReasons",
             "trashFilterEnabled", "trashFilterCloseLockEnabled", "trashFilterRottenFlesh",
             "trashFilterPaper", "trashFilterPotato", "trashFilterCarrot", "trashFilterApple",
-            "trashFilterChest", "trashFilterTrappedChest", "trashFilterEnderChest"
+            "trashFilterChest", "trashFilterTrappedChest", "trashFilterEnderChest",
+            "hudProfiles", "activeHudProfile"
+    );
+    private static final Set<String> HUD_PROFILE_FIELDS = Set.of(
+            "healthHudX", "healthHudY", "toggleSprintHudX", "toggleSprintHudY", "fpsHudX", "fpsHudY",
+            "paydayHudX", "paydayHudY", "ammoHudX", "ammoHudY", "bankHudX", "bankHudY",
+            "cashHudX", "cashHudY", "potionHudX", "potionHudY", "hackTimerX", "hackTimerY",
+            "plantTimerX", "plantTimerY", "dealerTimerX", "dealerTimerY", "productionTimerX", "productionTimerY",
+            "healthHudScale", "toggleSprintHudScale", "fpsHudScale", "paydayHudScale", "ammoHudScale",
+            "bankHudScale", "cashHudScale", "potionHudScale", "hackTimerHudScale", "plantTimerHudScale",
+            "dealerTimerHudScale", "productionTimerHudScale",
+            "toggleSprintHudColor", "fpsHudColor", "paydayHudColor", "bankHudColor", "cashHudColor",
+            "potionHudColor", "dealerTimerHudColor", "productionTimerHudColor",
+            "healthHudHeartColor", "healthHudTextColor", "healthHudAbsorptionColor",
+            "healthHudGradientEnabled", "toggleSprintHudGradientEnabled", "fpsHudGradientEnabled",
+            "paydayHudGradientEnabled", "ammoHudGradientEnabled", "bankHudGradientEnabled",
+            "cashHudGradientEnabled", "potionHudGradientEnabled", "hackTimerHudGradientEnabled",
+            "plantTimerHudGradientEnabled", "dealerTimerHudGradientEnabled", "productionTimerHudGradientEnabled",
+            "healthHudGradientColor", "toggleSprintHudGradientColor", "fpsHudGradientColor",
+            "paydayHudGradientColor", "ammoHudGradientColor", "bankHudGradientColor", "cashHudGradientColor",
+            "potionHudGradientColor", "hackTimerHudGradientColor", "plantTimerHudGradientColor",
+            "dealerTimerHudGradientColor", "productionTimerHudGradientColor",
+            "healthHudStyle", "toggleSprintHudStyle", "fpsHudStyle", "paydayHudStyle", "ammoHudStyle",
+            "bankHudStyle", "cashHudStyle", "potionHudStyle", "hackTimerHudStyle", "plantTimerHudStyle",
+            "dealerTimerHudStyle", "productionTimerHudStyle",
+            "healthHudCustomFont", "toggleSprintHudCustomFont", "fpsHudCustomFont", "paydayHudCustomFont",
+            "ammoHudCustomFont", "bankHudCustomFont", "cashHudCustomFont", "potionHudCustomFont",
+            "hackTimerHudCustomFont", "plantTimerHudCustomFont", "dealerTimerHudCustomFont",
+            "productionTimerHudCustomFont",
+            "toggleSprintHudPrefixEnabled", "fpsHudPrefixEnabled", "paydayHudPrefixEnabled",
+            "ammoHudPrefixEnabled", "bankHudPrefixEnabled", "cashHudPrefixEnabled",
+            "hackTimerHudPrefixEnabled", "plantTimerHudPrefixEnabled", "dealerTimerHudPrefixEnabled",
+            "productionTimerHudPrefixEnabled", "toggleSprintHudPrefix", "fpsHudPrefix", "paydayHudPrefix",
+            "ammoHudPrefix", "bankHudPrefix", "cashHudPrefix", "hackTimerHudPrefix", "plantTimerHudPrefix",
+            "dealerTimerHudPrefix", "productionTimerHudPrefix",
+            "showHealthHud", "showHealthAbsorption", "showFpsHud", "showPaydayHud", "showAmmoHud",
+            "showBankHud", "showCashHud", "showPotionEffectsHud", "showPlantTimerHud",
+            "showDealerTimerHud", "showProductionTimerHud", "toggleSprintEnabled",
+            "ammoHudMagazineBarEnabled", "ammoHudLowAmmoWarningEnabled", "ammoHudLowAmmoSoundEnabled",
+            "ammoHudLowAmmoThresholdPercent", "ammoHudKr47MagazineSize"
     );
     private static Runnable saveListener = () -> { };
 
@@ -122,6 +162,7 @@ public class BetterUCConfig {
     public static final int DEFAULT_HEALTH_HUD_COLOR = 0xFFFF5555;
     public static final int DEFAULT_HEALTH_HUD_HEART_COLOR = DEFAULT_HEALTH_HUD_COLOR;
     public static final int DEFAULT_HEALTH_HUD_TEXT_COLOR = DEFAULT_HEALTH_HUD_COLOR;
+    public static final int DEFAULT_HEALTH_HUD_ABSORPTION_COLOR = 0xFFFFC83D;
     public static final int DEFAULT_HUD_GRADIENT_COLOR = 0xFFA855F7;
     public static final int DEFAULT_REINF_LABEL_COLOR = 0xFFFF5555;
     public static final int DEFAULT_REINF_TEXT_COLOR = 0xFF55FFFF;
@@ -241,6 +282,7 @@ public class BetterUCConfig {
     public int productionTimerHudColor = 0xFFFBBF24;
     public int healthHudHeartColor = 0;
     public int healthHudTextColor = 0;
+    public int healthHudAbsorptionColor = DEFAULT_HEALTH_HUD_ABSORPTION_COLOR;
     public int healthHudColor = DEFAULT_HEALTH_HUD_COLOR;
     public boolean hudColorGradientEnabled = false;
     public int hudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
@@ -321,6 +363,7 @@ public class BetterUCConfig {
     public int ammoHudLowAmmoThresholdPercent = 25;
     public int ammoHudKr47MagazineSize = 0;
     public boolean showHealthHud = true;
+    public boolean showHealthAbsorption = true;
     public boolean showFpsHud = true;
     public boolean showPaydayHud = true;
     public boolean showAmmoHud = true;
@@ -343,6 +386,12 @@ public class BetterUCConfig {
     public boolean autoMuellmannEnabled = true;
     public boolean autoFirstAidEnabled = false;
     public Map<String, PlantTimerState> plantTimerStates = new LinkedHashMap<>();
+    public Map<String, JsonObject> hudProfiles = new LinkedHashMap<>();
+    public String activeHudProfile = "Standard";
+    public String clickGuiLastCategory = "HUD";
+    public String clickGuiLastModule = "FPS";
+    public Map<String, Integer> clickGuiScrollOffsets = new LinkedHashMap<>();
+    public int clickGuiUpdatesScrollOffset = 0;
 
     public String factionUrl = "https://example.com/faction.json";
     public int reloadIntervalMinutes = 5;
@@ -1123,6 +1172,8 @@ public class BetterUCConfig {
         if (INSTANCE.manualBlacklistPlayerKeys == null) INSTANCE.manualBlacklistPlayerKeys = new LinkedHashSet<>();
         if (INSTANCE.chatBlacklistPlayerKeys == null) INSTANCE.chatBlacklistPlayerKeys = new LinkedHashSet<>();
         if (INSTANCE.vogelfreiPlayerKeys == null) INSTANCE.vogelfreiPlayerKeys = new LinkedHashSet<>();
+        if (INSTANCE.hudProfiles == null) INSTANCE.hudProfiles = new LinkedHashMap<>();
+        if (INSTANCE.clickGuiScrollOffsets == null) INSTANCE.clickGuiScrollOffsets = new LinkedHashMap<>();
     }
 
     private static void rebuildNameKeySet(List<String> source, Set<String> target) {
@@ -1257,6 +1308,7 @@ public class BetterUCConfig {
             INSTANCE.healthHudColor = sanitizeHudColor(INSTANCE.healthHudColor, DEFAULT_HEALTH_HUD_COLOR);
             INSTANCE.healthHudHeartColor = sanitizeHudColor(INSTANCE.healthHudHeartColor, INSTANCE.healthHudColor);
             INSTANCE.healthHudTextColor = sanitizeHudColor(INSTANCE.healthHudTextColor, INSTANCE.healthHudColor);
+            INSTANCE.healthHudAbsorptionColor = sanitizeHudColor(INSTANCE.healthHudAbsorptionColor, DEFAULT_HEALTH_HUD_ABSORPTION_COLOR);
             sanitizeReinfColors();
             sanitizeHudGradients();
             sanitizeHudStyles();
@@ -1272,6 +1324,7 @@ public class BetterUCConfig {
                 INSTANCE.plantTimerStates = new LinkedHashMap<>();
             }
             sanitizeTrackedFactions();
+            ensureHudProfiles();
             rebuildRemoteFactionUnion();
             refreshRuntimeNameCaches();
         } catch (Exception e) {
@@ -1294,6 +1347,8 @@ public class BetterUCConfig {
 
     public static void save() {
         boolean saved = false;
+        ensureRuntimeCollections();
+        saveActiveHudProfile();
         try (Writer w = new FileWriter(CONFIG_FILE)) {
             GSON.toJson(INSTANCE, w);
             saved = true;
@@ -1314,6 +1369,8 @@ public class BetterUCConfig {
     }
 
     public static JsonObject cloudSettingsSnapshot() {
+        ensureHudProfiles();
+        saveActiveHudProfile();
         JsonObject result = new JsonObject();
         JsonObject serialized = GSON.toJsonTree(INSTANCE).getAsJsonObject();
         for (String name : CLOUD_SETTING_FIELDS) {
@@ -1351,8 +1408,169 @@ public class BetterUCConfig {
         sanitizePingRelay();
         sanitizeDiscordInvite();
         sanitizeTrackedFactions();
+        ensureHudProfiles();
         rebuildRemoteFactionUnion();
         refreshRuntimeNameCaches();
+    }
+
+    public static List<String> hudProfileNames() {
+        ensureHudProfiles();
+        return new ArrayList<>(INSTANCE.hudProfiles.keySet());
+    }
+
+    public static String activeHudProfileName() {
+        ensureHudProfiles();
+        return INSTANCE.activeHudProfile;
+    }
+
+    public static boolean createHudProfile(String requestedName) {
+        ensureHudProfiles();
+        String name = uniqueHudProfileName(requestedName, null);
+        if (name.isBlank()) return false;
+        saveActiveHudProfile();
+        INSTANCE.hudProfiles.put(name, hudProfileSnapshot());
+        INSTANCE.activeHudProfile = name;
+        save();
+        return true;
+    }
+
+    public static boolean duplicateActiveHudProfile(String requestedName) {
+        ensureHudProfiles();
+        String fallback = INSTANCE.activeHudProfile + " Kopie";
+        String name = uniqueHudProfileName(
+                requestedName == null || requestedName.isBlank() ? fallback : requestedName,
+                null
+        );
+        if (name.isBlank()) return false;
+        saveActiveHudProfile();
+        INSTANCE.hudProfiles.put(name, INSTANCE.hudProfiles.get(INSTANCE.activeHudProfile).deepCopy());
+        INSTANCE.activeHudProfile = name;
+        save();
+        return true;
+    }
+
+    public static boolean renameActiveHudProfile(String requestedName) {
+        ensureHudProfiles();
+        String oldName = INSTANCE.activeHudProfile;
+        String name = uniqueHudProfileName(requestedName, oldName);
+        if (name.isBlank() || oldName.equals(name)) return false;
+
+        saveActiveHudProfile();
+        LinkedHashMap<String, JsonObject> renamed = new LinkedHashMap<>();
+        for (Map.Entry<String, JsonObject> entry : INSTANCE.hudProfiles.entrySet()) {
+            renamed.put(entry.getKey().equals(oldName) ? name : entry.getKey(), entry.getValue());
+        }
+        INSTANCE.hudProfiles = renamed;
+        INSTANCE.activeHudProfile = name;
+        save();
+        return true;
+    }
+
+    public static boolean deleteActiveHudProfile() {
+        ensureHudProfiles();
+        if (INSTANCE.hudProfiles.size() <= 1) return false;
+        INSTANCE.hudProfiles.remove(INSTANCE.activeHudProfile);
+        INSTANCE.activeHudProfile = INSTANCE.hudProfiles.keySet().iterator().next();
+        applyHudProfile(INSTANCE.hudProfiles.get(INSTANCE.activeHudProfile));
+        save();
+        return true;
+    }
+
+    public static boolean switchHudProfile(String profileName) {
+        ensureHudProfiles();
+        if (profileName == null || profileName.equals(INSTANCE.activeHudProfile)) return false;
+        JsonObject target = INSTANCE.hudProfiles.get(profileName);
+        if (target == null) return false;
+        saveActiveHudProfile();
+        INSTANCE.activeHudProfile = profileName;
+        applyHudProfile(target);
+        save();
+        return true;
+    }
+
+    public static String nextHudProfileName() {
+        List<String> names = hudProfileNames();
+        if (names.isEmpty()) return "Standard";
+        int index = names.indexOf(INSTANCE.activeHudProfile);
+        return names.get((Math.max(0, index) + 1) % names.size());
+    }
+
+    private static void ensureHudProfiles() {
+        ensureRuntimeCollections();
+        INSTANCE.activeHudProfile = sanitizeHudProfileName(INSTANCE.activeHudProfile);
+        if (INSTANCE.activeHudProfile.isBlank()) INSTANCE.activeHudProfile = "Standard";
+
+        INSTANCE.hudProfiles.entrySet().removeIf(entry ->
+                sanitizeHudProfileName(entry.getKey()).isBlank() || entry.getValue() == null);
+        if (INSTANCE.hudProfiles.isEmpty()) {
+            INSTANCE.hudProfiles.put(INSTANCE.activeHudProfile, hudProfileSnapshot());
+        } else if (!INSTANCE.hudProfiles.containsKey(INSTANCE.activeHudProfile)) {
+            INSTANCE.activeHudProfile = INSTANCE.hudProfiles.keySet().iterator().next();
+        }
+    }
+
+    private static void saveActiveHudProfile() {
+        ensureRuntimeCollections();
+        if (INSTANCE.activeHudProfile == null || INSTANCE.activeHudProfile.isBlank()) return;
+        INSTANCE.hudProfiles.put(INSTANCE.activeHudProfile, hudProfileSnapshot());
+    }
+
+    private static JsonObject hudProfileSnapshot() {
+        JsonObject result = new JsonObject();
+        JsonObject serialized = GSON.toJsonTree(INSTANCE).getAsJsonObject();
+        for (String name : HUD_PROFILE_FIELDS) {
+            if (serialized.has(name)) result.add(name, serialized.get(name).deepCopy());
+        }
+        return result;
+    }
+
+    private static void applyHudProfile(JsonObject profile) {
+        if (profile == null) return;
+        for (String name : HUD_PROFILE_FIELDS) {
+            JsonElement value = profile.get(name);
+            if (value == null || value.isJsonNull()) continue;
+            try {
+                Field field = BetterUCConfig.class.getField(name);
+                field.set(INSTANCE, GSON.fromJson(value, field.getGenericType()));
+            } catch (Exception e) {
+                com.betteruc.BetterUCMod.LOGGER.warn("Ignored invalid HUD profile setting {}", name, e);
+            }
+        }
+        sanitizeHudStyles();
+        sanitizeHudScales();
+        sanitizeHudPrefixes();
+        sanitizeHudGradients();
+        sanitizeAmmoHud();
+        INSTANCE.healthHudAbsorptionColor = sanitizeHudColor(
+                INSTANCE.healthHudAbsorptionColor,
+                DEFAULT_HEALTH_HUD_ABSORPTION_COLOR
+        );
+    }
+
+    private static String uniqueHudProfileName(String requestedName, String allowedExistingName) {
+        String base = sanitizeHudProfileName(requestedName);
+        if (base.isBlank()) return "";
+        String candidate = base;
+        int suffix = 2;
+        while (hudProfileNameExists(candidate, allowedExistingName)) {
+            String suffixText = " " + suffix++;
+            candidate = base.substring(0, Math.min(base.length(), 24 - suffixText.length())) + suffixText;
+        }
+        return candidate;
+    }
+
+    private static boolean hudProfileNameExists(String name, String allowedExistingName) {
+        for (String existing : INSTANCE.hudProfiles.keySet()) {
+            if (allowedExistingName != null && existing.equals(allowedExistingName)) continue;
+            if (existing.equalsIgnoreCase(name)) return true;
+        }
+        return false;
+    }
+
+    private static String sanitizeHudProfileName(String value) {
+        if (value == null) return "";
+        String clean = value.replaceAll("\\p{Cntrl}", "").trim().replaceAll("\\s+", " ");
+        return clean.substring(0, Math.min(clean.length(), 24));
     }
 
     public static boolean isFaction(String name) {

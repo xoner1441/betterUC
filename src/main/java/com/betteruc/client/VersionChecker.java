@@ -179,6 +179,17 @@ public final class VersionChecker {
         return update != null && update.restartCommand() != null;
     }
 
+    public static String statusLabel() {
+        if (restartTriggered) return "Installation wird angewendet";
+        PreparedUpdate update = preparedUpdate;
+        if (update != null) {
+            return "v" + normalizeVersion(update.latestVersion().version()) + " bereit";
+        }
+        if (installRunning) return "Download & Pr\u00FCfung laufen";
+        if (checkRunning) return "Suche nach Update";
+        return "Bereit";
+    }
+
     public static boolean confirmInstallAndRestart(Minecraft client) {
         PreparedUpdate update = preparedUpdate;
         if (client == null || update == null || restartTriggered) return false;

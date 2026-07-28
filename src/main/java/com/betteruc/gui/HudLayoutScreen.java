@@ -240,7 +240,7 @@ public class HudLayoutScreen extends Screen {
     private void setPosition(HudModule module, int x, int y) {
         switch (module) {
             case HEALTH -> {
-                BetterUCConfig.INSTANCE.healthHudX = x;
+                BetterUCConfig.INSTANCE.healthHudX = x + healthPreviewCenterOffset();
                 BetterUCConfig.INSTANCE.healthHudY = y;
             }
             case FPS -> {
@@ -814,13 +814,27 @@ public class HudLayoutScreen extends Screen {
     }
 
     private int resolveHealthX() {
-        if (BetterUCConfig.INSTANCE.healthHudX >= 0) return BetterUCConfig.INSTANCE.healthHudX;
-        return width / 2 - widthFor(HudModule.HEALTH) / 2;
+        if (BetterUCConfig.INSTANCE.healthHudX >= 0) {
+            return BetterUCConfig.INSTANCE.healthHudX - healthPreviewCenterOffset();
+        }
+        int previewWidth = ModernHudRenderer.scaledSize(
+                widthFor(HudModule.HEALTH),
+                BetterUCConfig.INSTANCE.healthHudScale
+        );
+        return width / 2 - previewWidth / 2;
     }
 
     private int resolveHealthY() {
         if (BetterUCConfig.INSTANCE.healthHudY >= 0) return BetterUCConfig.INSTANCE.healthHudY;
         return height / 2 + 15;
+    }
+
+    private int healthPreviewCenterOffset() {
+        return HealthHud.getPreviewCenterOffset(
+                font,
+                BetterUCConfig.INSTANCE.healthHudStyle,
+                BetterUCConfig.INSTANCE.healthHudScale
+        );
     }
 
     private int clamp(int value, int min, int max) {

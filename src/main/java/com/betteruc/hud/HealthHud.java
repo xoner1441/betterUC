@@ -12,14 +12,12 @@ import net.minecraft.world.entity.player.Player;
 
 public class HealthHud {
 
-    public static final int ABSORPTION_COLOR = 0xFFFFC83D;
-
     private static final Identifier HEART_TEXTURE = Identifier.withDefaultNamespace("hud/heart/full");
+    private static final Component EMPTY_TEXT = Component.literal("");
     private static final Component PREVIEW_HEALTH_TEXT = Component.literal("10");
     private static final Component PREVIEW_ABSORPTION_TEXT = Component.literal("2");
     private static int cachedHearts = Integer.MIN_VALUE;
     private static int cachedAbsorptionHearts = Integer.MIN_VALUE;
-    private static String cachedHealthString = "";
     private static Component cachedHealthText = Component.literal("");
     private static Component cachedAbsorptionText = Component.literal("");
 
@@ -37,7 +35,9 @@ public class HealthHud {
         Player player = client.player;
         int health = (int) Math.ceil(player.getHealth());
         int fullHearts = health / 2;
-        int absorptionHearts = Math.max(0, (int) Math.ceil(player.getAbsorptionAmount() / 2.0F));
+        int absorptionHearts = BetterUCConfig.INSTANCE.showHealthAbsorption
+                ? Math.max(0, (int) Math.ceil(player.getAbsorptionAmount() / 2.0F))
+                : 0;
         Component healthText = getHealthText(fullHearts);
         Component absorptionText = getAbsorptionText(absorptionHearts);
 
@@ -45,11 +45,12 @@ public class HealthHud {
         int centerY = client.getWindow().getGuiScaledHeight() / 2;
 
         String style = BetterUCConfig.INSTANCE.healthHudStyle;
+        int normalWidth = getHudWidth(client.font, style, healthText, EMPTY_TEXT);
         int totalWidth = getHudWidth(client.font, style, healthText, absorptionText);
         float scale = BetterUCConfig.INSTANCE.healthHudScale;
 
         int startX = BetterUCConfig.INSTANCE.healthHudX >= 0
-                ? BetterUCConfig.INSTANCE.healthHudX
+                ? BetterUCConfig.INSTANCE.healthHudX - centeredGrowthOffset(normalWidth, totalWidth, scale)
                 : centerX - ModernHudRenderer.scaledSize(totalWidth, scale) / 2;
         int y = BetterUCConfig.INSTANCE.healthHudY >= 0
                 ? BetterUCConfig.INSTANCE.healthHudY
@@ -75,7 +76,8 @@ public class HealthHud {
                         absorptionText,
                         totalWidth,
                         heartColor,
-                        textColor
+                        textColor,
+                        BetterUCConfig.INSTANCE.healthHudAbsorptionColor
                 )
         );
     }
@@ -83,8 +85,7 @@ public class HealthHud {
     private static Component getHealthText(int fullHearts) {
         if (fullHearts != cachedHearts) {
             cachedHearts = fullHearts;
-            cachedHealthString = String.valueOf(fullHearts);
-            cachedHealthText = Component.literal(cachedHealthString);
+            cachedHealthText = Component.literal(String.valueOf(fullHearts));
         }
         return cachedHealthText;
     }
@@ -100,7 +101,20 @@ public class HealthHud {
     }
 
     public static int getPreviewWidth(Font renderer, String style) {
-        return getHudWidth(renderer, style, PREVIEW_HEALTH_TEXT, PREVIEW_ABSORPTION_TEXT);
+        Component absorption = BetterUCConfig.INSTANCE.showHealthAbsorption ? PREVIEW_ABSORPTION_TEXT : EMPTY_TEXT;
+        return getHudWidth(renderer, style, PREVIEW_HEALTH_TEXT, absorption);
+    }
+
+    public static int getBasePreviewWidth(Font renderer, String style) {
+        return getHudWidth(renderer, style, PREVIEW_HEALTH_TEXT, EMPTY_TEXT);
+    }
+
+    public static int getPreviewCenterOffset(Font renderer, String style, float scale) {
+        return centeredGrowthOffset(
+                getBasePreviewWidth(renderer, style),
+                getPreviewWidth(renderer, style),
+                scale
+        );
     }
 
     public static void drawPreview(
@@ -114,6 +128,7 @@ public class HealthHud {
             int textColor
     ) {
         int width = getPreviewWidth(client.font, style);
+        Component absorption = BetterUCConfig.INSTANCE.showHealthAbsorption ? PREVIEW_ABSORPTION_TEXT : EMPTY_TEXT;
         drawValue(
                 context,
                 client,
@@ -122,10 +137,11 @@ public class HealthHud {
                 style,
                 fontId,
                 PREVIEW_HEALTH_TEXT,
-                PREVIEW_ABSORPTION_TEXT,
+                absorption,
                 width,
                 heartColor,
-                textColor
+                textColor,
+                BetterUCConfig.INSTANCE.healthHudAbsorptionColor
         );
     }
 
@@ -140,6 +156,12 @@ public class HealthHud {
         return 13 + healthWidth + absorptionWidth;
     }
 
+    private static int centeredGrowthOffset(int normalWidth, int expandedWidth, float scale) {
+        int normalScaledWidth = ModernHudRenderer.scaledSize(normalWidth, scale);
+        int expandedScaledWidth = ModernHudRenderer.scaledSize(expandedWidth, scale);
+        return Math.max(0, expandedScaledWidth - normalScaledWidth) / 2;
+    }
+
     private static void drawValue(
             GuiGraphicsExtractor context,
             Minecraft client,
@@ -151,7 +173,8 @@ public class HealthHud {
             Component absorptionText,
             int totalWidth,
             int heartColor,
-            int textColor
+            int textColor,
+            int absorptionColor
     ) {
         Font renderer = client.font;
         boolean modernStyle = BetterUCConfig.isModernHudStyle(style);
@@ -168,7 +191,8 @@ public class HealthHud {
                 if (hasAbsorption) {
                     int absorptionHeartX = cursor - 9;
                     int absorptionTextX = absorptionHeartX - absorptionWidth - 4;
-                    drawAbsorption(context, renderer, absorptionText, absorptionHeartX, y + 4, absorptionTextX, y + 4, false, style, fontId);
+                    drawAbsorption(context, renderer, absorptionText, absorptionHeartX, y + 4, absorptionTextX, y + 4,
+                            false, style, fontId, absorptionColor);
                     cursor = absorptionTextX - 6;
                 }
                 int heartX = cursor - 9;
@@ -194,7 +218,8 @@ public class HealthHud {
                         y + 4,
                         false,
                         style,
-                        fontId
+                        fontId,
+                        absorptionColor
                 );
             }
             return;
@@ -219,7 +244,8 @@ public class HealthHud {
                     y,
                     stylizedStyle,
                     style,
-                    fontId
+                    fontId,
+                    absorptionColor
             );
         }
     }
@@ -246,14 +272,15 @@ public class HealthHud {
             int textY,
             boolean stylizedStyle,
             String style,
-            String fontId
+            String fontId,
+            int absorptionColor
     ) {
-        ModernHudRenderer.withHudGradient(false, ABSORPTION_COLOR, () -> {
-            drawHeart(context, heartX, heartY, ABSORPTION_COLOR);
+        ModernHudRenderer.withHudGradient(false, absorptionColor, () -> {
+            drawHeart(context, heartX, heartY, absorptionColor);
             if (stylizedStyle) {
-                ModernHudRenderer.drawStyledText(context, renderer, style, fontId, text, textX, textY, ABSORPTION_COLOR);
+                ModernHudRenderer.drawStyledText(context, renderer, style, fontId, text, textX, textY, absorptionColor);
             } else {
-                ModernHudRenderer.drawHudTextWithShadow(context, renderer, text, textX, textY, ABSORPTION_COLOR);
+                ModernHudRenderer.drawHudTextWithShadow(context, renderer, text, textX, textY, absorptionColor);
             }
         });
     }
