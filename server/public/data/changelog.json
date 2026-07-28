@@ -6,11 +6,17 @@
     "date": "Aktueller Stand",
     "pages": [
       {
-        "eyebrow": "NÄCHSTE VERSION",
-        "title": "Weitere Verbesserungen folgen",
-        "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
+        "eyebrow": "NEUE AUTOMATION",
+        "title": "Einkäufe automatisch aufteilen",
+        "description": "Mit /abuy bereitest du einen Einkauf vor und wählst das gewünschte Produkt weiterhin selbst aus.",
         "lines": [
-          "Version 1.3.2 enthält die zuletzt gesammelten HUD-, Bedienungs- und Update-Verbesserungen."
+          "/abuy <Menge> automatisiert die Mengenwahl und die Kaufbestätigung.",
+          "Mengen über 64 werden automatisch in mehrere Einkäufe aufgeteilt.",
+          "Pfeilmunition wird wegen des Serverlimits automatisch in 25er-Batches gekauft.",
+          "Erst die Bestätigung des Verkäufers zählt einen Kauf als erfolgreich.",
+          "Ein roter Button über dem Shopfenster bricht den laufenden Auto-Kauf sofort ab.",
+          "Alternativ kannst du den Ablauf weiterhin mit /abuy stop beenden.",
+          "Die Funktion lässt sich im ClickGUI unter Automationen ein- oder ausschalten."
         ]
       }
     ]

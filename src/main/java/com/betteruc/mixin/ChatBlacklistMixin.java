@@ -3,6 +3,7 @@ package com.betteruc.mixin;
 import com.betteruc.BetterUCMod;
 import com.betteruc.BetterUCSuppressFlags;
 import com.betteruc.ServerGate;
+import com.betteruc.client.AutoBuyClient;
 import com.betteruc.client.AutoDropDrinkClient;
 import com.betteruc.client.AutoFisherClient;
 import com.betteruc.client.AutoFirstAidClient;
@@ -141,6 +142,7 @@ public class ChatBlacklistMixin {
         }
 
         String raw = message.getString();
+        AutoBuyClient.handleChatLine(Minecraft.getInstance(), raw);
         if (AutomationController.isDropDrinkEnabled()) {
             AutoDropDrinkClient.handleChatLine(Minecraft.getInstance(), raw);
         }

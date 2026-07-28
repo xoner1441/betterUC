@@ -1,21 +1,30 @@
 package com.betteruc.mixin;
 
+import com.betteruc.client.AutoBuyClient;
 import com.betteruc.client.TrashFilterClient;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.MenuAccess;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.Slot;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(AbstractContainerScreen.class)
 public abstract class TrashFilterScreenMixin {
+    private static final int BETTERUC_CANCEL_WIDTH = 150;
+    private static final int BETTERUC_CANCEL_HEIGHT = 18;
+
     @Shadow protected int leftPos;
     @Shadow protected int topPos;
+    @Shadow protected int imageWidth;
 
     @Inject(method = "extractContents", at = @At("TAIL"))
     private void betteruc$highlightTrashItems(
@@ -37,6 +46,8 @@ public abstract class TrashFilterScreenMixin {
             context.fill(x, y, x + 16, y + 16, 0x6634D399);
             context.outline(x, y, 16, 16, 0xFF4ADE80);
         }
+
+        betteruc$drawAutoBuyCancel(context, mouseX, mouseY, screen);
     }
 
     @Inject(method = "onClose", at = @At("HEAD"), cancellable = true)
@@ -44,5 +55,57 @@ public abstract class TrashFilterScreenMixin {
         if (TrashFilterClient.shouldPreventClose((Screen) (Object) this)) {
             ci.cancel();
         }
+    }
+
+    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
+    private void betteruc$clickAutoBuyCancel(
+            MouseButtonEvent event,
+            boolean doubleClick,
+            CallbackInfoReturnable<Boolean> cir
+    ) {
+        Screen screen = (Screen) (Object) this;
+        if (event.button() != 0 || !AutoBuyClient.shouldShowCancelButton(screen)) return;
+        if (!betteruc$isInsideCancel(event.x(), event.y())) return;
+
+        AutoBuyClient.cancel(Minecraft.getInstance(), true);
+        cir.setReturnValue(true);
+    }
+
+    private void betteruc$drawAutoBuyCancel(
+            GuiGraphicsExtractor context,
+            int mouseX,
+            int mouseY,
+            Screen screen
+    ) {
+        if (!AutoBuyClient.shouldShowCancelButton(screen)) return;
+
+        int x = betteruc$cancelX();
+        int y = betteruc$cancelY();
+        boolean hovered = betteruc$isInsideCancel(mouseX, mouseY);
+        int background = hovered ? 0xEE7F1D1D : 0xDD3F1717;
+        int border = hovered ? 0xFFFF6B6B : 0xFFDC4C4C;
+        String label = "Auto-Kauf abbrechen";
+        Minecraft client = Minecraft.getInstance();
+
+        context.nextStratum();
+        context.fill(x, y, x + BETTERUC_CANCEL_WIDTH, y + BETTERUC_CANCEL_HEIGHT, background);
+        context.outline(x, y, BETTERUC_CANCEL_WIDTH, BETTERUC_CANCEL_HEIGHT, border);
+        int textX = x + (BETTERUC_CANCEL_WIDTH - client.font.width(label)) / 2;
+        context.text(client.font, Component.literal(label), textX, y + 5, 0xFFFFFFFF);
+    }
+
+    private int betteruc$cancelX() {
+        return leftPos + Math.max(0, (imageWidth - BETTERUC_CANCEL_WIDTH) / 2);
+    }
+
+    private int betteruc$cancelY() {
+        return Math.max(4, topPos - BETTERUC_CANCEL_HEIGHT - 4);
+    }
+
+    private boolean betteruc$isInsideCancel(double mouseX, double mouseY) {
+        int x = betteruc$cancelX();
+        int y = betteruc$cancelY();
+        return mouseX >= x && mouseX < x + BETTERUC_CANCEL_WIDTH
+                && mouseY >= y && mouseY < y + BETTERUC_CANCEL_HEIGHT;
     }
 }

@@ -2,8 +2,10 @@ package com.betteruc;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import com.betteruc.client.AutoBuyClient;
 import com.betteruc.client.AutoDropDrinkClient;
 import com.betteruc.client.AutoFisherClient;
 import com.betteruc.client.AutoFirstAidClient;
@@ -258,6 +260,7 @@ public class BetterUCClient implements ClientModInitializer {
             registerUpdateCommand(dispatcher);
             registerBankShortcutCommands(dispatcher);
             registerAttemptedMurderShortcutCommand(dispatcher, playerSuggestions);
+            registerAutoBuyCommand(dispatcher);
             registerAutoDropDrinkCommand(dispatcher);
             registerMuellmannAreaCommand(dispatcher);
             registerGlobalChatCommand(dispatcher);
@@ -342,6 +345,17 @@ public class BetterUCClient implements ClientModInitializer {
                     AutoDropDrinkClient.start(Minecraft.getInstance());
                     return 1;
                 }));
+    }
+
+    private void registerAutoBuyCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
+        dispatcher.register(ClientCommands.literal("abuy")
+                .then(ClientCommands.literal("stop")
+                        .executes(context -> AutoBuyClient.cancel(Minecraft.getInstance(), true)))
+                .then(ClientCommands.argument("menge", IntegerArgumentType.integer(1, AutoBuyClient.MAX_REQUEST_AMOUNT))
+                        .executes(context -> AutoBuyClient.start(
+                                Minecraft.getInstance(),
+                                IntegerArgumentType.getInteger(context, "menge")
+                        ))));
     }
 
     private void registerMuellmannAreaCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
@@ -961,6 +975,7 @@ public class BetterUCClient implements ClientModInitializer {
                 AutoMuellmannClient.tick(client);
             }
             AutoFirstAidClient.tick(client);
+            AutoBuyClient.tick(client);
             TrashFilterClient.tick(client);
             tickStatsOnJoin(client);
             handleConfiguredHotkeys(client);
@@ -1179,6 +1194,7 @@ public class BetterUCClient implements ClientModInitializer {
         ProductionTimerHud.clear();
         RichTaxAlertHud.clear();
         AutoDropDrinkClient.reset();
+        AutoBuyClient.reset();
         AutoFisherClient.reset();
         AutoFirstAidClient.reset();
         AutoGaertnerClient.reset();

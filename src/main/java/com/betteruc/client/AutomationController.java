@@ -37,6 +37,10 @@ public final class AutomationController {
         return BetterUCConfig.INSTANCE.autoFirstAidEnabled;
     }
 
+    public static boolean isAutoBuyEnabled() {
+        return BetterUCConfig.INSTANCE.autoBuyEnabled;
+    }
+
     public static int localEnabledCount() {
         int count = 0;
         if (BetterUCConfig.INSTANCE.autoDropDrinkEnabled) count++;
@@ -45,6 +49,7 @@ public final class AutomationController {
         if (BetterUCConfig.INSTANCE.autoGaertnerEnabled) count++;
         if (BetterUCConfig.INSTANCE.autoMuellmannEnabled) count++;
         if (BetterUCConfig.INSTANCE.autoFirstAidEnabled) count++;
+        if (BetterUCConfig.INSTANCE.autoBuyEnabled) count++;
         return count;
     }
 

@@ -82,7 +82,7 @@ public class BetterUCConfig {
             "autoAtmInfoOnBalanceEnabled", "richTaxAlertEnabled", "richTaxAlertSoundEnabled",
             "chatTimestampsEnabled", "chatCustomizationEnabled",
             "autoDropDrinkEnabled", "autoFisherEnabled", "autoWinzerEnabled", "autoGaertnerEnabled",
-            "autoMuellmannEnabled", "autoFirstAidEnabled",
+            "autoMuellmannEnabled", "autoFirstAidEnabled", "autoBuyEnabled",
             "reinfCustomizationEnabled", "reinfUniformColorEnabled", "reinfLabelColor", "reinfTextColor",
             "reinfDistanceColor", "reinfUniformColor", "globalChatEnabled", "chatTimestampFormat", "maxChatHistory",
             "pingRelayEnabled", "showPingHud", "showRoleHolograms", "pingHudScale", "pingHudStyle",
@@ -395,6 +395,7 @@ public class BetterUCConfig {
     public boolean autoGaertnerEnabled = true;
     public boolean autoMuellmannEnabled = true;
     public boolean autoFirstAidEnabled = false;
+    public boolean autoBuyEnabled = true;
     public Map<String, PlantTimerState> plantTimerStates = new LinkedHashMap<>();
     public Map<String, JsonObject> hudProfiles = new LinkedHashMap<>();
     public String activeHudProfile = "Standard";
