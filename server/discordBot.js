@@ -62,10 +62,19 @@ const RELEASE_REPO = clean(process.env.DISCORD_RELEASE_REPO) || "xoner1441/bette
 const RELEASE_CHECK_MS = Math.max(5 * 60 * 1000, Number(process.env.DISCORD_RELEASE_CHECK_MS || 15 * 60 * 1000));
 const ANNOUNCE_EXISTING_RELEASE = String(process.env.DISCORD_ANNOUNCE_EXISTING_RELEASE || "false").toLowerCase() === "true";
 const PUBLIC_DOWNLOAD_URL = clean(process.env.PUBLIC_DOWNLOAD_URL) || "https://betteruc.de/download";
+const PUBLIC_CHANGELOG_URL = clean(process.env.PUBLIC_CHANGELOG_URL) || `${PUBLIC_BASE_URL}/changelog`;
+const CHANGELOG_DATA_URL = clean(process.env.DISCORD_CHANGELOG_DATA_URL) || `${PUBLIC_BASE_URL}/data/changelog.json`;
+const CHANGELOG_DATA_FILE = process.env.DISCORD_CHANGELOG_DATA_FILE
+  || path.join(__dirname, "public", "data", "changelog.json");
+const CHANGELOG_CACHE_MS = Math.max(30 * 1000, Number(process.env.DISCORD_CHANGELOG_CACHE_MS || 5 * 60 * 1000));
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 const BOT_STATE_FILE = process.env.DISCORD_BOT_STATE_FILE || path.join(DATA_DIR, "discord-bot-state.json");
 
 let botState = {};
+let changelogCache = {
+  loadedAt: 0,
+  value: null
+};
 
 function loadDiscord() {
   if (Client) return;
@@ -224,6 +233,14 @@ function buildCommands() {
       .addSubcommand(subcommand => subcommand
         .setName("post_latest")
         .setDescription("Postet das aktuelle betterUC-Release erneut in den Update-Channel.")),
+    new SlashCommandBuilder()
+      .setName("changelog")
+      .setDescription("Zeigt die Neuerungen einer betterUC-Version.")
+      .addStringOption(option => option
+        .setName("version")
+        .setDescription("Optional: zum Beispiel 1.3.1")
+        .setMaxLength(32)
+        .setRequired(false)),
     new SlashCommandBuilder()
       .setName("code")
       .setDescription("Access-Codes ueber Discord verwalten.")
@@ -387,19 +404,117 @@ function trimText(value, maxLength = 900) {
   return `${raw.slice(0, maxLength - 3).trim()}...`;
 }
 
-function releaseEmbed(release) {
-  const tag = display(release.tag_name || release.name, "neues Release");
-  const url = PUBLIC_DOWNLOAD_URL;
-  const body = trimText(release.body || "Keine Release Notes hinterlegt.");
-  return new EmbedBuilder()
-    .setTitle(`betterUC ${tag} ist verfügbar`)
-    .setURL(url)
+function normalizeVersion(value) {
+  return clean(value).replace(/^v/i, "");
+}
+
+function isChangelogData(value) {
+  return Boolean(value && Array.isArray(value.releases));
+}
+
+async function readCentralChangelog(options = {}) {
+  const force = Boolean(options.force);
+  if (!force
+      && changelogCache.value
+      && Date.now() - changelogCache.loadedAt < CHANGELOG_CACHE_MS) {
+    return changelogCache.value;
+  }
+
+  let localError;
+  try {
+    const raw = await fsp.readFile(CHANGELOG_DATA_FILE, "utf8");
+    const parsed = JSON.parse(raw);
+    if (!isChangelogData(parsed)) throw new Error("ungueltiges Changelog-Format");
+    changelogCache = { loadedAt: Date.now(), value: parsed };
+    return parsed;
+  } catch (error) {
+    localError = error;
+  }
+
+  try {
+    const response = await fetch(CHANGELOG_DATA_URL, {
+      headers: {
+        "User-Agent": "betterUC-discord-bot",
+        "Accept": "application/json"
+      }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const parsed = await response.json();
+    if (!isChangelogData(parsed)) throw new Error("ungueltiges Changelog-Format");
+    changelogCache = { loadedAt: Date.now(), value: parsed };
+    return parsed;
+  } catch (remoteError) {
+    console.warn(
+      "Could not load central betterUC changelog",
+      `local: ${localError?.message || "unknown"}; remote: ${remoteError.message}`
+    );
+    return null;
+  }
+}
+
+function findChangelogRelease(changelog, version) {
+  if (!isChangelogData(changelog)) return null;
+  const wanted = normalizeVersion(version);
+  if (wanted) {
+    return changelog.releases.find(entry => normalizeVersion(entry?.version) === wanted) || null;
+  }
+  return changelog.releases.find(entry => entry?.current)
+    || changelog.releases[0]
+    || null;
+}
+
+function changelogReleaseBody(entry) {
+  const changes = Array.isArray(entry?.changes)
+    ? entry.changes.map(change => clean(change)).filter(Boolean)
+    : [];
+  if (changes.length === 0) return "";
+  return trimText(changes.map(change => `\u2022 ${change}`).join("\n"), 3900);
+}
+
+function releaseEmbed(release, changelogEntry = null) {
+  const version = normalizeVersion(changelogEntry?.version || release?.tag_name || release?.name);
+  const tag = version ? `v${version}` : "neues Release";
+  const body = changelogReleaseBody(changelogEntry)
+    || trimText(release?.body || "Keine Release Notes hinterlegt.", 3900);
+  const embed = new EmbedBuilder()
+    .setTitle(`betterUC ${tag} ist verf\u00fcgbar`)
+    .setURL(PUBLIC_DOWNLOAD_URL)
     .setColor(0x38bdf8)
     .setDescription(body)
     .addFields(
-      { name: "Download", value: url, inline: false }
-    )
-    .setTimestamp(release.published_at ? new Date(release.published_at) : new Date());
+      { name: "Download", value: PUBLIC_DOWNLOAD_URL, inline: true },
+      { name: "Changelog", value: PUBLIC_CHANGELOG_URL, inline: true }
+    );
+
+  if (changelogEntry?.date) {
+    embed.setFooter({ text: `Release ${changelogEntry.date}` });
+  }
+  if (release?.published_at) {
+    embed.setTimestamp(new Date(release.published_at));
+  }
+  return embed;
+}
+
+function releaseLinks(release) {
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setLabel("Herunterladen")
+      .setStyle(ButtonStyle.Link)
+      .setURL(PUBLIC_DOWNLOAD_URL),
+    new ButtonBuilder()
+      .setLabel("Alle \u00c4nderungen")
+      .setStyle(ButtonStyle.Link)
+      .setURL(PUBLIC_CHANGELOG_URL)
+  );
+  if (/^https?:\/\//i.test(clean(release?.html_url))) {
+    row.addComponents(
+      new ButtonBuilder()
+        .setLabel("GitHub Release")
+        .setStyle(ButtonStyle.Link)
+        .setURL(release.html_url)
+    );
+  }
+  return row;
 }
 
 async function fetchLatestRelease() {
@@ -413,6 +528,28 @@ async function fetchLatestRelease() {
     throw new Error(`GitHub Release Check fehlgeschlagen: HTTP ${response.status}`);
   }
   return response.json();
+}
+
+async function fetchReleaseByVersion(version) {
+  const normalized = normalizeVersion(version);
+  if (!normalized) return fetchLatestRelease();
+  const tags = [`v${normalized}`, normalized];
+  for (const tag of tags) {
+    const response = await fetch(
+      `https://api.github.com/repos/${RELEASE_REPO}/releases/tags/${encodeURIComponent(tag)}`,
+      {
+        headers: {
+          "User-Agent": "betterUC-discord-bot",
+          "Accept": "application/vnd.github+json"
+        }
+      }
+    );
+    if (response.ok) return response.json();
+    if (response.status !== 404) {
+      throw new Error(`GitHub Release Check fehlgeschlagen: HTTP ${response.status}`);
+    }
+  }
+  return null;
 }
 
 async function findTextChannelByName(guild, name) {
@@ -512,7 +649,12 @@ async function checkGithubRelease(client, options = {}) {
     throw new Error(`Discord-Update-Channel '${UPDATE_CHANNEL_NAME}' nicht gefunden.`);
   }
 
-  await channel.send({ embeds: [releaseEmbed(release)] });
+  const changelog = await readCentralChangelog({ force: changed || options.forcePost });
+  const changelogEntry = findChangelogRelease(changelog, release.tag_name || release.name);
+  await channel.send({
+    embeds: [releaseEmbed(release, changelogEntry)],
+    components: [releaseLinks(release)]
+  });
   botState.latestReleasePendingPost = false;
   botState.latestReleasePostedAt = new Date().toISOString();
   await writeBotState(botState);
@@ -1401,6 +1543,52 @@ async function handleCommand(interaction, context) {
   if (interaction.commandName === "ticket-panel") {
     await interaction.channel.send(ticketPanelPayload());
     await interaction.reply({ content: "Ticket-Panel wurde gepostet.", ephemeral: true });
+    return;
+  }
+
+  if (interaction.commandName === "changelog") {
+    const requestedVersion = normalizeVersion(interaction.options.getString("version") || "");
+    await interaction.deferReply();
+    try {
+      const changelog = await readCentralChangelog();
+      const changelogEntry = findChangelogRelease(changelog, requestedVersion);
+      let release = changelogEntry
+        ? {
+            tag_name: `v${changelogEntry.version}`,
+            name: changelogEntry.version,
+            html_url: `https://github.com/${RELEASE_REPO}/releases/tag/v${changelogEntry.version}`
+          }
+        : null;
+
+      if (!release) {
+        try {
+          release = requestedVersion
+            ? await fetchReleaseByVersion(requestedVersion)
+            : await fetchLatestRelease();
+        } catch (error) {
+          throw new Error(`Der zentrale Changelog und der GitHub-Fallback sind nicht erreichbar: ${error.message}`);
+        }
+      }
+
+      if (!release) {
+        if (requestedVersion) {
+          await interaction.editReply({
+            content: `Die Version **${requestedVersion}** wurde im betterUC-Changelog nicht gefunden.`
+          });
+          return;
+        }
+        throw new Error("Der betterUC-Changelog ist derzeit nicht erreichbar.");
+      }
+
+      await interaction.editReply({
+        embeds: [releaseEmbed(release, changelogEntry)],
+        components: [releaseLinks(release)]
+      });
+    } catch (error) {
+      await interaction.editReply({
+        content: error.message || "Der betterUC-Changelog konnte nicht geladen werden."
+      });
+    }
     return;
   }
 

@@ -70,6 +70,8 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `DISCORD_RELEASE_REPO=xoner1441/betterUC`
 - `DISCORD_RELEASE_CHECK_MS=900000`
 - `DISCORD_ANNOUNCE_EXISTING_RELEASE=false`
+- `DISCORD_CHANGELOG_DATA_URL=https://betteruc.de/data/changelog.json`
+- `PUBLIC_CHANGELOG_URL=https://betteruc.de/changelog`
 
 Access codes are only shown once. The server stores SHA-256 hashes with a secret pepper.
 Account data is backed up automatically once per day and can also be backed up manually in the admin panel.
@@ -97,7 +99,9 @@ Slash commands:
 - The bot maintains one suggestion guide message below all proposals and user messages.
 - `/wochenstatistik` shows the last seven days of accounts, versions, chat, tickets, suggestions and Cloud activity.
 - `/updates check` checks GitHub releases.
-- `/updates post_latest` posts the latest GitHub release to the update channel.
+- `/updates post_latest` posts the latest release with the central betterUC changelog to the update channel.
+- `/changelog` shows the latest published betterUC changes.
+- `/changelog version:<version>` shows the changes for a specific published version.
 - `/code create`, `/code reset`, `/code revoke` manage access codes. Requires Discord `Manage Server`.
 
 Invite the bot with the scopes `bot` and `applications.commands`.

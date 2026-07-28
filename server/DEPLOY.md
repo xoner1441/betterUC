@@ -34,6 +34,8 @@ grep -q '^POSTGRES_BACKUP_DIR=' /etc/betteruc-relay.env || echo "POSTGRES_BACKUP
 # DISCORD_RELEASE_REPO=xoner1441/betterUC
 # DISCORD_RELEASE_CHECK_MS=900000
 # DISCORD_ANNOUNCE_EXISTING_RELEASE=false
+# DISCORD_CHANGELOG_DATA_URL=https://betteruc.de/data/changelog.json
+# PUBLIC_CHANGELOG_URL=https://betteruc.de/changelog
 
 cat > /etc/caddy/Caddyfile <<'EOF'
 betteruc.de, www.betteruc.de {
@@ -162,7 +164,8 @@ applications.commands
 The bot supports:
 
 - ticket channels through `/ticket` and `/ticket-panel`
-- automatic GitHub release posts in `DISCORD_UPDATE_CHANNEL_NAME`
+- automatic release posts in `DISCORD_UPDATE_CHANNEL_NAME` using the central betterUC changelog
+- public changelog access through `/changelog` and `/changelog version:<version>`
 - role sync for `Mod-User`, `VIP`, `Helper` and `Admin` based on linked betterUC accounts
 
 After changing the env file, restart:
