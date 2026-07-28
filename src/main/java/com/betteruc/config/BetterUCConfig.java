@@ -84,7 +84,7 @@ public class BetterUCConfig {
             "autoDropDrinkEnabled", "autoFisherEnabled", "autoWinzerEnabled", "autoGaertnerEnabled",
             "autoMuellmannEnabled", "autoFirstAidEnabled", "autoBuyEnabled",
             "reinfCustomizationEnabled", "reinfUniformColorEnabled", "reinfLabelColor", "reinfTextColor",
-            "reinfDistanceColor", "reinfUniformColor", "globalChatEnabled", "chatTimestampFormat", "maxChatHistory",
+            "reinfDistanceColor", "reinfUniformColor", "chatTimestampFormat", "maxChatHistory",
             "pingRelayEnabled", "showPingHud", "showRoleHolograms", "pingHudScale", "pingHudStyle",
             "pingHudCustomFont", "pingRelayScope", "pingRelayTtlSeconds", "pingRelayMaxDistance",
             "pingRelayColor", "pingNormalColor", "pingDangerColor", "pingGatherColor", "pingCooldownMs",
@@ -414,7 +414,6 @@ public class BetterUCConfig {
     public int reinfTextColor = DEFAULT_REINF_TEXT_COLOR;
     public int reinfDistanceColor = DEFAULT_REINF_DISTANCE_COLOR;
     public int reinfUniformColor = DEFAULT_REINF_UNIFORM_COLOR;
-    public boolean globalChatEnabled = true;
     public String chatTimestampFormat = "[HH:mm:ss]";
     public int maxChatHistory = 2000;
     public int lastKnownCash = -1;

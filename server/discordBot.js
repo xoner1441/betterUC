@@ -36,11 +36,6 @@ const UPDATE_NOTIFY_ROLE_NAME = clean(process.env.DISCORD_UPDATE_NOTIFY_ROLE_NAM
 const UPDATE_NOTIFY_ROLE_CREATE_MISSING = String(
   process.env.DISCORD_UPDATE_NOTIFY_ROLE_CREATE_MISSING || "true"
 ).toLowerCase() !== "false";
-const GLOBAL_CHAT_ENABLED = String(process.env.DISCORD_GLOBAL_CHAT_ENABLED || "false").toLowerCase() === "true";
-const GLOBAL_CHAT_CHANNEL_ID = clean(process.env.DISCORD_GLOBAL_CHAT_CHANNEL_ID);
-const GLOBAL_CHAT_CHANNEL_NAME = clean(process.env.DISCORD_GLOBAL_CHAT_CHANNEL_NAME) || "betteruc-chat";
-const GLOBAL_CHAT_LOG_CHANNEL_ID = clean(process.env.DISCORD_GLOBAL_CHAT_LOG_CHANNEL_ID);
-const GLOBAL_CHAT_LOG_CHANNEL_NAME = clean(process.env.DISCORD_GLOBAL_CHAT_LOG_CHANNEL_NAME) || "betteruc-chat-log";
 const ANNOUNCEMENT_CHANNEL_ID = clean(process.env.DISCORD_ANNOUNCEMENT_CHANNEL_ID);
 const ANNOUNCEMENT_CHANNEL_NAME = clean(process.env.DISCORD_ANNOUNCEMENT_CHANNEL_NAME) || "ank\u00fcndigungen";
 const TICKET_LOG_CHANNEL_ID = clean(process.env.DISCORD_TICKET_LOG_CHANNEL_ID);
@@ -684,40 +679,6 @@ function diagnosticEmbed(account, onlinePlayer) {
     )
     .setFooter({ text: "Es werden keine Access-Codes oder Passw\u00f6rter angezeigt." })
     .setTimestamp(new Date());
-}
-
-function globalChatEmbed(event) {
-  const origin = event.origin === "discord" ? "Discord" : "Minecraft";
-  return new EmbedBuilder()
-    .setAuthor({ name: `${origin} | ${display(event.sender, "Unbekannt")}` })
-    .setColor(roleColor(event.role))
-    .setDescription(trimText(event.message, 180))
-    .setFooter({ text: `betterUC ${roleLabel(event.role)}` })
-    .setTimestamp(event.createdAt ? new Date(event.createdAt) : new Date());
-}
-
-function globalChatLogEmbed(event) {
-  const announcement = event.type === "announcement";
-  const fields = [
-    { name: "Herkunft", value: event.origin === "discord" ? "Discord" : "Minecraft", inline: true },
-    { name: "Rolle", value: roleLabel(event.role), inline: true },
-    { name: "Account-ID", value: display(event.accountId), inline: false }
-  ];
-  if (event.discordId) {
-    fields.push({ name: "Discord", value: `${display(event.discordName)} | ${event.discordId}`, inline: false });
-  }
-  if (event.discordMessageUrl) {
-    fields.push({ name: "Discord-Nachricht", value: event.discordMessageUrl, inline: false });
-  }
-  return new EmbedBuilder()
-    .setTitle(announcement
-      ? `ANK\u00dcNDIGUNG | ${display(event.sender, "Unbekannt")}`
-      : display(event.sender, "Unbekannt"))
-    .setColor(roleColor(event.role))
-    .setDescription(trimText(event.message, announcement ? 300 : 180))
-    .addFields(fields)
-    .setFooter({ text: `Event ${display(event.id)}` })
-    .setTimestamp(event.createdAt ? new Date(event.createdAt) : new Date());
 }
 
 function announcementEmbed(event) {
@@ -1518,8 +1479,6 @@ function distributionLabel(entries) {
 }
 
 function weeklyStatsEmbed(stats, onlinePlayers) {
-  const chatMessages = Number(stats.activities["global_chat.minecraft"] || 0)
-    + Number(stats.activities["global_chat.discord"] || 0);
   return new EmbedBuilder()
     .setTitle("betterUC Wochenstatistik")
     .setColor(0x38bdf8)
@@ -1527,7 +1486,7 @@ function weeklyStatsEmbed(stats, onlinePlayers) {
     .addFields(
       { name: "Accounts", value: `Aktiv: **${stats.accounts.active}**\nDiscord-verkn\u00fcpft: **${stats.accounts.linked}**\nJetzt online: **${onlinePlayers.length}**`, inline: true },
       { name: "Rollen", value: `Admins: **${stats.accounts.admins}**\nHelper: **${stats.accounts.helpers}**\nPartner: **${stats.accounts.partners}**\nVIP: **${stats.accounts.vips}**`, inline: true },
-      { name: "Community", value: `Globalchat: **${chatMessages}**\nVorschl\u00e4ge: **${stats.suggestions.created}**\nStimmen: **${stats.suggestions.votes}**`, inline: true },
+      { name: "Community", value: `Vorschl\u00e4ge: **${stats.suggestions.created}**\nStimmen: **${stats.suggestions.votes}**`, inline: true },
       { name: "Support", value: `Tickets erstellt: **${stats.tickets.opened}**\nGeschlossen: **${stats.tickets.closed}**\n\u00d8 Abschluss: **${stats.tickets.averageCloseMinutes} Min.**`, inline: true },
       { name: "Cloud", value: `Syncs: **${stats.cloud.syncs}**\nKonflikte: **${stats.cloud.conflicts}**\nFehler: **${stats.cloud.errors}**`, inline: true },
       { name: "Mod-Versionen", value: distributionLabel(stats.versions), inline: true },
@@ -1949,8 +1908,6 @@ async function startDiscordBot(context) {
   if (!BOT_TOKEN) {
     return {
       notifyStateChanged() {},
-      publishGlobalChat() { return Promise.resolve(); },
-      logGlobalChat() { return Promise.resolve(); },
       publishAnnouncement() { return Promise.resolve(); },
       stop() {}
     };
@@ -1962,17 +1919,12 @@ async function startDiscordBot(context) {
     console.error("Discord bot is enabled, but discord.js is not installed. Run npm install in the server directory.", error.message);
     return {
       notifyStateChanged() {},
-      publishGlobalChat() { return Promise.resolve(); },
-      logGlobalChat() { return Promise.resolve(); },
       publishAnnouncement() { return Promise.resolve(); },
       stop() {}
     };
   }
 
   const intents = [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages];
-  if (GLOBAL_CHAT_ENABLED) {
-    intents.push(GatewayIntentBits.MessageContent);
-  }
   const client = new Client({
     intents
   });
@@ -1987,8 +1939,6 @@ async function startDiscordBot(context) {
   let weeklyTimer = null;
   let suggestionGuideTimer = null;
   let suggestionGuideRun = Promise.resolve();
-  let globalChatChannel = null;
-  let globalChatLogChannel = null;
   let announcementChannel = null;
   let ticketLogChannel = null;
   let suggestionChannel = null;
@@ -1996,32 +1946,12 @@ async function startDiscordBot(context) {
   let weeklyChannel = null;
   let changelogChannel = null;
 
-  const logGlobalChat = async event => {
-    if (!globalChatLogChannel) return;
-    if (globalChatChannel && globalChatLogChannel.id === globalChatChannel.id) return;
-    await globalChatLogChannel.send({
-      embeds: [globalChatLogEmbed(event)],
-      allowedMentions: { parse: [] }
-    });
-  };
-
-  const publishGlobalChat = async event => {
-    if (!GLOBAL_CHAT_ENABLED || !globalChatChannel) return;
-    await globalChatChannel.send({
-      embeds: [globalChatEmbed(event)],
-      allowedMentions: { parse: [] }
-    });
-    await logGlobalChat(event);
-  };
-
   const publishAnnouncement = async event => {
-    const target = announcementChannel || globalChatChannel;
-    if (!target) return;
-    await target.send({
+    if (!announcementChannel) return;
+    await announcementChannel.send({
       embeds: [announcementEmbed(event)],
       allowedMentions: { parse: [] }
     });
-    await logGlobalChat(event);
   };
 
   const updateSuggestionGuide = async () => {
@@ -2160,7 +2090,6 @@ async function startDiscordBot(context) {
         const guild = await client.guilds.fetch(GUILD_ID);
         await guild.commands.set(buildCommands());
         console.log(`betterUC Discord commands synced for ${guild.name}`);
-        globalChatLogChannel = await resolveTextChannel(guild, GLOBAL_CHAT_LOG_CHANNEL_ID, GLOBAL_CHAT_LOG_CHANNEL_NAME);
         announcementChannel = await resolveTextChannel(guild, ANNOUNCEMENT_CHANNEL_ID, ANNOUNCEMENT_CHANNEL_NAME);
         ticketLogChannel = await resolveTextChannel(guild, TICKET_LOG_CHANNEL_ID, TICKET_LOG_CHANNEL_NAME);
         suggestionChannel = await resolveTextChannel(guild, SUGGESTION_CHANNEL_ID, SUGGESTION_CHANNEL_NAME);
@@ -2170,19 +2099,8 @@ async function startDiscordBot(context) {
         await ensureUpdateNotificationRole(guild).catch(error => {
           console.warn("Discord update notification role setup failed", error.message);
         });
-        if (GLOBAL_CHAT_ENABLED) {
-          globalChatChannel = await resolveTextChannel(guild, GLOBAL_CHAT_CHANNEL_ID, GLOBAL_CHAT_CHANNEL_NAME);
-          if (!globalChatChannel) {
-            console.warn(`Discord Globalchat channel not found (${GLOBAL_CHAT_CHANNEL_ID || GLOBAL_CHAT_CHANNEL_NAME})`);
-          } else {
-            console.log(`betterUC Discord Globalchat connected to #${globalChatChannel.name}`);
-          }
-        }
-        if (!globalChatLogChannel) {
-          console.warn(`Discord moderation log channel not found (${GLOBAL_CHAT_LOG_CHANNEL_ID || GLOBAL_CHAT_LOG_CHANNEL_NAME})`);
-        }
         if (!announcementChannel) {
-          console.warn(`Discord announcement channel not found (${ANNOUNCEMENT_CHANNEL_ID || ANNOUNCEMENT_CHANNEL_NAME}); using Globalchat channel as fallback`);
+          console.warn(`Discord announcement channel not found (${ANNOUNCEMENT_CHANNEL_ID || ANNOUNCEMENT_CHANNEL_NAME})`);
         }
         if (!ticketLogChannel) console.warn(`Discord ticket log channel not found (${TICKET_LOG_CHANNEL_ID || TICKET_LOG_CHANNEL_NAME})`);
         if (!suggestionChannel) console.warn(`Discord suggestion channel not found (${SUGGESTION_CHANNEL_ID || SUGGESTION_CHANNEL_NAME})`);
@@ -2226,32 +2144,6 @@ async function startDiscordBot(context) {
         && !message.author.bot) {
       queueSuggestionGuide();
     }
-
-    if (!GLOBAL_CHAT_ENABLED || !globalChatChannel || message.author.bot) return;
-    if (!message.guild || message.guild.id !== GUILD_ID || message.channel.id !== globalChatChannel.id) return;
-    if (!message.content || !message.content.trim()) return;
-
-    try {
-      const result = await context.sendGlobalChatFromDiscord({
-        discordId: message.author.id,
-        discordName: message.member?.displayName || message.author.globalName || message.author.username,
-        discordMessageId: message.id,
-        discordMessageUrl: message.url,
-        message: message.content
-      });
-      if (!result.ok) {
-        await message.react("\u274c").catch(() => null);
-        await message.reply({
-          content: result.error || "Die Nachricht konnte nicht an betterUC gesendet werden.",
-          allowedMentions: { repliedUser: false, parse: [] }
-        }).catch(() => null);
-        return;
-      }
-      await logGlobalChat(result.event);
-    } catch (error) {
-      console.warn("Discord Globalchat relay failed", error.message);
-      await message.react("\u274c").catch(() => null);
-    }
   });
   client.on("error", error => console.error("Discord bot error", error));
   client.on("warn", message => console.warn("Discord bot warning", message));
@@ -2260,8 +2152,6 @@ async function startDiscordBot(context) {
 
   return {
     notifyStateChanged,
-    publishGlobalChat,
-    logGlobalChat,
     publishAnnouncement,
     stop() {
       clearTimeout(presenceTimer);

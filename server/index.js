@@ -42,8 +42,6 @@ const UPDATE_WATCH_INTERVAL_MS = Math.max(
 );
 const CLOUD_SETTINGS_SCHEMA_VERSION = 1;
 const CLOUD_SETTINGS_MAX_BYTES = 48 * 1024;
-const GLOBAL_CHAT_MAX_LENGTH = 180;
-const GLOBAL_CHAT_COOLDOWN_MS = 2000;
 const ANNOUNCEMENT_MAX_LENGTH = 300;
 const ANNOUNCEMENT_COOLDOWN_MS = 10000;
 const PG_DUMP_BIN = process.env.PG_DUMP_BIN || "pg_dump";
@@ -86,12 +84,9 @@ let latestKnownReleaseVersion = "";
 let wasteDropAreas = {};
 const clients = new Set();
 const rateLimits = new Map();
-const globalChatLastSent = new Map();
 let lastAnnouncementAt = 0;
 let discordBot = {
   notifyStateChanged() {},
-  publishGlobalChat() { return Promise.resolve(); },
-  logGlobalChat() { return Promise.resolve(); },
   publishAnnouncement() { return Promise.resolve(); },
   stop() {}
 };
@@ -177,102 +172,12 @@ function broadcastWasteDropAreas() {
   for (const client of clients) sendWasteDropAreas(client);
 }
 
-function cleanGlobalChatMessage(value) {
+function cleanRelayMessage(value) {
   return String(value || "")
     .replace(/\u00a7./g, "")
     .replace(/[\u0000-\u001f\u007f]/g, "")
     .replace(/\s+/g, " ")
     .trim();
-}
-
-function sendGlobalChatError(client, message) {
-  if (!client || client.ws.readyState !== client.ws.OPEN) return;
-  client.ws.send(JSON.stringify({
-    type: "global_chat_error",
-    message
-  }));
-}
-
-function broadcastGlobalChat(sender, message, origin = "minecraft", metadata = {}) {
-  const event = {
-    type: "global_chat",
-    id: crypto.randomUUID(),
-    sender: sender.name || (sender.account && sender.account.minecraftName) || "Unbekannt",
-    role: sender.role,
-    message,
-    origin,
-    accountId: sender.account && sender.account.id !== "legacy"
-      ? sender.account.id
-      : (sender.id || null),
-    discordId: metadata.discordId || null,
-    discordName: metadata.discordName || null,
-    discordMessageId: metadata.discordMessageId || null,
-    discordMessageUrl: metadata.discordMessageUrl || null,
-    createdAt: Date.now()
-  };
-  const raw = JSON.stringify({
-    type: event.type,
-    id: event.id,
-    sender: event.sender,
-    role: event.role,
-    message: event.message,
-    origin: event.origin,
-    createdAt: event.createdAt
-  });
-
-  for (const target of clients) {
-    if (target.ws.readyState !== target.ws.OPEN) continue;
-    if (target.authType === "legacy") continue;
-    target.ws.send(raw);
-  }
-  return event;
-}
-
-function globalChatRateLimit(accountId) {
-  const now = Date.now();
-  const remainingMs = GLOBAL_CHAT_COOLDOWN_MS - (now - (globalChatLastSent.get(accountId) || 0));
-  if (remainingMs > 0) {
-    return `Bitte warte noch ${Math.ceil(remainingMs / 1000)} Sekunde(n).`;
-  }
-  globalChatLastSent.set(accountId, now);
-  return null;
-}
-
-async function sendGlobalChatFromDiscord(input) {
-  const account = findAccountByDiscordId(input && input.discordId);
-  if (!account) {
-    return {
-      ok: false,
-      error: "Dein Discord-Konto ist nicht mit einem aktiven betterUC-Account verkn\u00fcpft. Nutze zuerst /link."
-    };
-  }
-
-  const message = cleanGlobalChatMessage(input.message);
-  if (!message) return { ok: false, error: "Die Globalchat-Nachricht ist leer." };
-  if (message.length > GLOBAL_CHAT_MAX_LENGTH) {
-    return {
-      ok: false,
-      error: `Die Globalchat-Nachricht darf maximal ${GLOBAL_CHAT_MAX_LENGTH} Zeichen lang sein.`
-    };
-  }
-
-  const rateLimitError = globalChatRateLimit(account.id);
-  if (rateLimitError) return { ok: false, error: rateLimitError };
-
-  const sender = {
-    id: account.id,
-    name: account.minecraftName || input.discordName || "Unbekannt",
-    role: cleanRole(account.role),
-    account
-  };
-  const event = broadcastGlobalChat(sender, message, "discord", {
-    discordId: input.discordId,
-    discordName: input.discordName,
-    discordMessageId: input.discordMessageId,
-    discordMessageUrl: input.discordMessageUrl
-  });
-  recordDiscordActivity("global_chat.discord", account.id).catch(() => {});
-  return { ok: true, event };
 }
 
 function announcementRateLimit() {
@@ -321,7 +226,7 @@ async function sendAnnouncementFromDiscord(input) {
   if (!account || cleanRole(account.role) !== "admin") {
     return { ok: false, error: "Nur verkn\u00fcpfte betterUC-Admins d\u00fcrfen Ank\u00fcndigungen senden." };
   }
-  const message = cleanGlobalChatMessage(input.message);
+  const message = cleanRelayMessage(input.message);
   if (!message) return { ok: false, error: "Die Ank\u00fcndigung ist leer." };
   if (message.length > ANNOUNCEMENT_MAX_LENGTH) {
     return { ok: false, error: `Eine Ank\u00fcndigung darf maximal ${ANNOUNCEMENT_MAX_LENGTH} Zeichen lang sein.` };
@@ -2564,37 +2469,6 @@ async function handleWsMessage(client, raw) {
     return;
   }
 
-  if (payload.type === "global_chat_send") {
-    if (client.authType === "legacy" || !client.account || client.account.id === "legacy") {
-      sendGlobalChatError(client, "F\u00fcr den Globalchat wird ein pers\u00f6nlicher Access Code ben\u00f6tigt.");
-      return;
-    }
-
-    const message = cleanGlobalChatMessage(payload.message);
-    if (!message) {
-      sendGlobalChatError(client, "Die Globalchat-Nachricht ist leer.");
-      return;
-    }
-    if (message.length > GLOBAL_CHAT_MAX_LENGTH) {
-      sendGlobalChatError(client, `Die Globalchat-Nachricht darf maximal ${GLOBAL_CHAT_MAX_LENGTH} Zeichen lang sein.`);
-      return;
-    }
-
-    const accountId = client.account.id;
-    const rateLimitError = globalChatRateLimit(accountId);
-    if (rateLimitError) {
-      sendGlobalChatError(client, rateLimitError);
-      return;
-    }
-
-    const event = broadcastGlobalChat(client, message, "minecraft");
-    recordDiscordActivity("global_chat.minecraft", accountId).catch(() => {});
-    discordBot.publishGlobalChat(event).catch(error => {
-      console.warn("Could not publish betterUC global chat to Discord", error.message);
-    });
-    return;
-  }
-
   if (payload.type === "announcement_send") {
     if (client.authType === "legacy" || client.role !== "admin" || !client.account || client.account.id === "legacy") {
       client.ws.send(JSON.stringify({
@@ -2603,7 +2477,7 @@ async function handleWsMessage(client, raw) {
       }));
       return;
     }
-    const message = cleanGlobalChatMessage(payload.message);
+    const message = cleanRelayMessage(payload.message);
     if (!message) {
       client.ws.send(JSON.stringify({ type: "announcement_error", message: "Die Ank\u00fcndigung ist leer." }));
       return;
@@ -2805,7 +2679,6 @@ async function main() {
     linkDiscordAccountByCode,
     unlinkDiscordAccount,
     findAccountByDiscordId,
-    sendGlobalChatFromDiscord,
     sendAnnouncementFromDiscord,
     getSystemSnapshot: discordSystemSnapshot,
     createDiscordTicket: ticket => database.createDiscordTicket(ticket),

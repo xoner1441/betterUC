@@ -64,11 +64,6 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `DISCORD_WEEKLY_CHANNEL_ID=...` channel for the automatic weekly report
 - `DISCORD_WEEKLY_REPORT_DAY=1` UTC weekday (`0` Sunday, `1` Monday)
 - `DISCORD_WEEKLY_REPORT_HOUR_UTC=8`
-- `DISCORD_GLOBAL_CHAT_ENABLED=false` enables the live bridge after Discord's Message Content Intent is enabled
-- `DISCORD_GLOBAL_CHAT_CHANNEL_ID=...` Discord channel bridged with `/buc`
-- `DISCORD_GLOBAL_CHAT_CHANNEL_NAME=betteruc-chat` fallback when no channel ID is configured
-- `DISCORD_GLOBAL_CHAT_LOG_CHANNEL_ID=...` optional private moderation log channel
-- `DISCORD_GLOBAL_CHAT_LOG_CHANNEL_NAME=betteruc-chat-log` fallback log channel name
 - `DISCORD_ANNOUNCEMENT_CHANNEL_ID=...` channel for important betterUC announcements
 - `DISCORD_ANNOUNCEMENT_CHANNEL_NAME=ankündigungen` fallback announcement channel name
 - `DISCORD_RELEASE_REPO=xoner1441/betterUC`
@@ -118,10 +113,3 @@ accounts lose the managed betterUC roles again.
 The update notification role is deliberately independent of account role synchronization and is only changed through
 `/update-benachrichtigung`. Every detected GitHub release is posted to the update channel and, with the full central
 release text, to the configured changelog channel.
-
-### Discord and `/buc` live chat
-
-Enable the **Message Content Intent** for the bot in the Discord Developer Portal, create the configured chat and log
-channels, and set `DISCORD_GLOBAL_CHAT_ENABLED=true`. Only Discord users linked to an active betterUC account through
-`/link` can forward messages into Minecraft. Messages are limited to 180 characters and share the two-second cooldown
-with ingame `/buc` messages. Bot messages are never forwarded and outgoing Discord messages cannot trigger mentions.
