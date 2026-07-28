@@ -2,30 +2,75 @@
   "schema": 1,
   "development": {
     "label": "In Entwicklung",
-    "title": "Nach Version 1.3.2",
+    "title": "Nach Version 1.3.3",
     "date": "Aktueller Stand",
     "pages": [
       {
-        "eyebrow": "NEUE AUTOMATION",
-        "title": "Einkäufe automatisch aufteilen",
-        "description": "Mit /abuy bereitest du einen Einkauf vor und wählst das gewünschte Produkt weiterhin selbst aus.",
+        "eyebrow": "NÄCHSTE VERSION",
+        "title": "Weitere Verbesserungen folgen",
+        "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
         "lines": [
-          "/abuy <Menge> automatisiert die Mengenwahl und die Kaufbestätigung.",
-          "Mengen über 64 werden automatisch in mehrere Einkäufe aufgeteilt.",
-          "Pfeilmunition wird wegen des Serverlimits automatisch in 25er-Batches gekauft.",
-          "Erst die Bestätigung des Verkäufers zählt einen Kauf als erfolgreich.",
-          "Ein roter Button über dem Shopfenster bricht den laufenden Auto-Kauf sofort ab.",
-          "Alternativ kannst du den Ablauf weiterhin mit /abuy stop beenden.",
-          "Die Funktion lässt sich im ClickGUI unter Automationen ein- oder ausschalten."
+          "Version 1.3.3 enthält die neue AutoBuy-Automation für komfortable Einkäufe."
         ]
       }
     ]
   },
   "releases": [
     {
-      "version": "1.3.2",
+      "version": "1.3.3",
       "date": "28.07.2026",
       "current": true,
+      "pages": [
+        {
+          "eyebrow": "NEU IN 1.3.3",
+          "title": "Einkäufe automatisch erledigen",
+          "description": "Mit /abuy bereitest du einen Einkauf vor und wählst das gewünschte Produkt weiterhin selbst aus.",
+          "lines": [
+            "/abuy <Menge> automatisiert anschließend die Mengenwahl und die Kaufbestätigung.",
+            "Normale Waren werden in Einkäufe mit höchstens 64 Stück aufgeteilt.",
+            "Pfeilmunition wird wegen des Serverlimits automatisch in 25er-Batches gekauft.",
+            "Nach jedem erfolgreichen Kauf öffnet betterUC den Shop erneut und setzt den Einkauf fort.",
+            "Erst die Bestätigung des Verkäufers zählt einen Teilkauf als erfolgreich.",
+            "Ein roter Button über dem Shopfenster bricht den laufenden Auto-Kauf sofort ab.",
+            "Alternativ kannst du die Automation weiterhin mit /abuy stop beenden.",
+            "AutoBuy lässt sich im ClickGUI unter Automationen ein- oder ausschalten."
+          ]
+        }
+      ],
+      "summary": [
+        {
+          "title": "Neue AutoBuy-Automation",
+          "description": "Wähle dein Produkt selbst aus und überlasse betterUC anschließend Mengenwahl, Bestätigung und weitere Teilkäufe.",
+          "color": "cyan"
+        },
+        {
+          "title": "Große Mengen",
+          "description": "Einkäufe über 64 Stück werden automatisch in mehrere sichere Teilkäufe aufgeteilt.",
+          "color": "green"
+        },
+        {
+          "title": "Munition berücksichtigt",
+          "description": "Pfeilmunition nutzt automatisch das besondere Serverlimit von 25 Stück pro Einkauf.",
+          "color": "amber"
+        },
+        {
+          "title": "Jederzeit abbrechbar",
+          "description": "Ein gut sichtbarer Button im Shopfenster oder /abuy stop beendet den laufenden Auto-Kauf.",
+          "color": "green"
+        }
+      ],
+      "changes": [
+        "Der neue Befehl /abuy <Menge> automatisiert Mengenwahl und Kaufbestätigung.",
+        "Normale Waren werden in 64er-Batches und Pfeilmunition in 25er-Batches aufgeteilt.",
+        "Weitere Teilkäufe werden nach der Bestätigung des Verkäufers automatisch fortgesetzt.",
+        "Ein roter Button über dem Shopfenster und /abuy stop brechen den Auto-Kauf sicher ab.",
+        "Die AutoBuy-Automation kann im ClickGUI separat ein- oder ausgeschaltet werden.",
+        "Die Mengensteuerung berücksichtigt die serverseitige Tooltip-Anzeige zuverlässig."
+      ]
+    },
+    {
+      "version": "1.3.2",
+      "date": "28.07.2026",
       "pages": [
         {
           "eyebrow": "NEU IN 1.3.2",

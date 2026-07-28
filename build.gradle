@@ -514,6 +514,7 @@ def isMinecraftRunning = {
 tasks.register("copyModToMinecraftMods", Copy) {
     group = "build"
     description = "Copies the mod jar into the local Minecraft mods folder."
+    outputs.upToDateWhen { false }
 
     dependsOn tasks.named("jar")
     from(tasks.named("jar").flatMap { it.archiveFile })
