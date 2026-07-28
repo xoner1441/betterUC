@@ -2785,6 +2785,20 @@ async function main() {
       const account = findAccountByMinecraftName(name);
       return account ? adminAccount(account) : null;
     },
+    getAccountDiagnostic: async name => {
+      const account = findAccountByMinecraftName(name);
+      if (!account) return null;
+      let cloudSettings = null;
+      if (database.enabled) {
+        try {
+          const metadata = await database.listCloudSettingsMetadata();
+          cloudSettings = metadata.find(entry => entry.accountId === account.id) || null;
+        } catch (error) {
+          console.warn("Could not load cloud metadata for Discord diagnosis", error.message);
+        }
+      }
+      return adminAccount(account, cloudSettings);
+    },
     createAccessAccount,
     resetAccessCodeByMinecraftName,
     revokeAccountByMinecraftName,

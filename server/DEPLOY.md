@@ -31,6 +31,10 @@ grep -q '^POSTGRES_BACKUP_DIR=' /etc/betteruc-relay.env || echo "POSTGRES_BACKUP
 # DISCORD_ADMIN_ROLE_NAME=Admin
 # DISCORD_ROLE_SYNC_MS=300000
 # DISCORD_UPDATE_CHANNEL_NAME=updates
+# DISCORD_CHANGELOG_CHANNEL_ID=
+# DISCORD_CHANGELOG_CHANNEL_NAME=changelog
+# DISCORD_UPDATE_NOTIFY_ROLE_NAME=betterUC Updates
+# DISCORD_UPDATE_NOTIFY_ROLE_CREATE_MISSING=true
 # DISCORD_RELEASE_REPO=xoner1441/betterUC
 # DISCORD_RELEASE_CHECK_MS=900000
 # DISCORD_ANNOUNCE_EXISTING_RELEASE=false
@@ -164,8 +168,11 @@ applications.commands
 The bot supports:
 
 - ticket channels through `/ticket` and `/ticket-panel`
-- automatic release posts in `DISCORD_UPDATE_CHANNEL_NAME` using the central betterUC changelog
+- automatic release posts in `DISCORD_UPDATE_CHANNEL_NAME` with an optional opt-in role mention
+- automatic full release notes in `DISCORD_CHANGELOG_CHANNEL_ID` or `DISCORD_CHANGELOG_CHANNEL_NAME`
 - public changelog access through `/changelog` and `/changelog version:<version>`
+- opt-in release notifications through `/update-benachrichtigung an|aus`
+- private team diagnostics through `/diagnose spieler:<name>`
 - role sync for `Mod-User`, `VIP`, `Helper` and `Admin` based on linked betterUC accounts
 
 After changing the env file, restart:

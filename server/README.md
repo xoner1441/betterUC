@@ -46,6 +46,11 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `DISCORD_ADMIN_ROLE_NAME=Admin`
 - `DISCORD_ROLE_SYNC_MS=300000`
 - `DISCORD_ROLE_SYNC_CREATE_MISSING=true` creates missing managed roles when the bot has Manage Roles
+- `DISCORD_UPDATE_CHANNEL_NAME=updates`
+- `DISCORD_CHANGELOG_CHANNEL_ID=...` channel receiving the complete changelog after every release
+- `DISCORD_CHANGELOG_CHANNEL_NAME=changelog` fallback changelog channel name
+- `DISCORD_UPDATE_NOTIFY_ROLE_NAME=betterUC Updates` opt-in role mentioned for new releases
+- `DISCORD_UPDATE_NOTIFY_ROLE_CREATE_MISSING=true` creates the opt-in role when necessary
 - `DISCORD_TICKET_LOG_CHANNEL_ID=...` private channel receiving ticket transcripts
 - `DISCORD_TICKET_TRANSCRIPT_DIR=/opt/betteruc-relay/data/ticket-transcripts`
 - `DISCORD_SUGGESTION_CHANNEL_ID=...` public channel for persistent suggestions and votes
@@ -59,7 +64,6 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `DISCORD_WEEKLY_CHANNEL_ID=...` channel for the automatic weekly report
 - `DISCORD_WEEKLY_REPORT_DAY=1` UTC weekday (`0` Sunday, `1` Monday)
 - `DISCORD_WEEKLY_REPORT_HOUR_UTC=8`
-- `DISCORD_UPDATE_CHANNEL_NAME=updates`
 - `DISCORD_GLOBAL_CHAT_ENABLED=false` enables the live bridge after Discord's Message Content Intent is enabled
 - `DISCORD_GLOBAL_CHAT_CHANNEL_ID=...` Discord channel bridged with `/buc`
 - `DISCORD_GLOBAL_CHAT_CHANNEL_NAME=betteruc-chat` fallback when no channel ID is configured
@@ -102,6 +106,8 @@ Slash commands:
 - `/updates post_latest` posts the latest release with the central betterUC changelog to the update channel.
 - `/changelog` shows the latest published betterUC changes.
 - `/changelog version:<version>` shows the changes for a specific published version.
+- `/update-benachrichtigung an|aus` manages the optional release notification role.
+- `/diagnose spieler:<name>` shows a private support diagnosis for team members.
 - `/code create`, `/code reset`, `/code revoke` manage access codes. Requires Discord `Manage Server`.
 
 Invite the bot with the scopes `bot` and `applications.commands`.
@@ -109,6 +115,9 @@ Invite the bot with the scopes `bot` and `applications.commands`.
 Linked accounts are synced to Discord roles. Every active linked account gets `DISCORD_MOD_USER_ROLE_NAME`.
 Accounts with betterUC roles `vip`, `partner`, `helper` and `admin` also get the configured role names above. Revoked or unlinked
 accounts lose the managed betterUC roles again.
+The update notification role is deliberately independent of account role synchronization and is only changed through
+`/update-benachrichtigung`. Every detected GitHub release is posted to the update channel and, with the full central
+release text, to the configured changelog channel.
 
 ### Discord and `/buc` live chat
 

@@ -30,6 +30,12 @@ const PARTNER_ROLE_NAME = clean(process.env.DISCORD_PARTNER_ROLE_NAME) || "Partn
 const HELPER_ROLE_NAME = clean(process.env.DISCORD_HELPER_ROLE_NAME) || "Helper";
 const ADMIN_ROLE_NAME = clean(process.env.DISCORD_ADMIN_ROLE_NAME) || "Admin";
 const UPDATE_CHANNEL_NAME = clean(process.env.DISCORD_UPDATE_CHANNEL_NAME) || "updates";
+const CHANGELOG_CHANNEL_ID = clean(process.env.DISCORD_CHANGELOG_CHANNEL_ID);
+const CHANGELOG_CHANNEL_NAME = clean(process.env.DISCORD_CHANGELOG_CHANNEL_NAME) || "changelog";
+const UPDATE_NOTIFY_ROLE_NAME = clean(process.env.DISCORD_UPDATE_NOTIFY_ROLE_NAME) || "betterUC Updates";
+const UPDATE_NOTIFY_ROLE_CREATE_MISSING = String(
+  process.env.DISCORD_UPDATE_NOTIFY_ROLE_CREATE_MISSING || "true"
+).toLowerCase() !== "false";
 const GLOBAL_CHAT_ENABLED = String(process.env.DISCORD_GLOBAL_CHAT_ENABLED || "false").toLowerCase() === "true";
 const GLOBAL_CHAT_CHANNEL_ID = clean(process.env.DISCORD_GLOBAL_CHAT_CHANNEL_ID);
 const GLOBAL_CHAT_CHANNEL_NAME = clean(process.env.DISCORD_GLOBAL_CHAT_CHANNEL_NAME) || "betteruc-chat";
@@ -241,6 +247,22 @@ function buildCommands() {
         .setDescription("Optional: zum Beispiel 1.3.1")
         .setMaxLength(32)
         .setRequired(false)),
+    new SlashCommandBuilder()
+      .setName("update-benachrichtigung")
+      .setDescription("Schaltet deine Benachrichtigung bei neuen betterUC-Versionen um.")
+      .addSubcommand(subcommand => subcommand
+        .setName("an")
+        .setDescription("Benachrichtigt dich bei neuen betterUC-Versionen."))
+      .addSubcommand(subcommand => subcommand
+        .setName("aus")
+        .setDescription("Deaktiviert deine Update-Benachrichtigung.")),
+    new SlashCommandBuilder()
+      .setName("diagnose")
+      .setDescription("Prueft den betterUC-Status eines Spielers fuer den Support.")
+      .addStringOption(option => option
+        .setName("spieler")
+        .setDescription("Minecraft-Name")
+        .setRequired(true)),
     new SlashCommandBuilder()
       .setName("code")
       .setDescription("Access-Codes ueber Discord verwalten.")
@@ -495,6 +517,28 @@ function releaseEmbed(release, changelogEntry = null) {
   return embed;
 }
 
+function changelogEmbed(release, changelogEntry = null) {
+  const version = normalizeVersion(changelogEntry?.version || release?.tag_name || release?.name);
+  const body = changelogReleaseBody(changelogEntry)
+    || trimText(release?.body || "Keine Release Notes hinterlegt.", 3900);
+  const embed = new EmbedBuilder()
+    .setTitle(`betterUC v${version || "unbekannt"} | Changelog`)
+    .setURL(PUBLIC_CHANGELOG_URL)
+    .setColor(0x22c55e)
+    .setDescription(body)
+    .addFields(
+      { name: "Download", value: PUBLIC_DOWNLOAD_URL, inline: true },
+      { name: "Alle Versionen", value: PUBLIC_CHANGELOG_URL, inline: true }
+    );
+  if (changelogEntry?.date) {
+    embed.setFooter({ text: `Ver\u00f6ffentlicht am ${changelogEntry.date}` });
+  }
+  if (release?.published_at) {
+    embed.setTimestamp(new Date(release.published_at));
+  }
+  return embed;
+}
+
 function releaseLinks(release) {
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -570,6 +614,78 @@ async function resolveTextChannel(guild, id, name) {
   return name ? findTextChannelByName(guild, name) : null;
 }
 
+async function ensureUpdateNotificationRole(guild) {
+  if (!guild || !UPDATE_NOTIFY_ROLE_NAME) return null;
+  await guild.roles.fetch().catch(() => null);
+  const existing = roleByName(guild, UPDATE_NOTIFY_ROLE_NAME);
+  if (existing || !UPDATE_NOTIFY_ROLE_CREATE_MISSING) return existing;
+
+  const botMember = guild.members.me || await guild.members.fetch(guild.client.user.id).catch(() => null);
+  if (!botMember?.permissions.has(PermissionFlagsBits.ManageRoles)) {
+    console.warn("Discord update role cannot be created: Manage Roles permission is missing");
+    return null;
+  }
+  return guild.roles.create({
+    name: UPDATE_NOTIFY_ROLE_NAME,
+    color: 0x38bdf8,
+    hoist: false,
+    mentionable: true,
+    reason: "betterUC opt-in update notifications"
+  });
+}
+
+function diagnosticAgeLabel(value) {
+  if (!value) return "nie";
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) return display(value);
+  const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
+  if (minutes < 2) return "gerade eben";
+  if (minutes < 60) return `vor ${minutes} Minuten`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `vor ${hours} Stunden`;
+  return `vor ${Math.floor(hours / 24)} Tagen`;
+}
+
+function diagnosticState(ok, good, bad) {
+  return `${ok ? "\u2705" : "\u274c"} ${ok ? good : bad}`;
+}
+
+function diagnosticEmbed(account, onlinePlayer) {
+  const cloud = account?.cloudSettings || null;
+  const cloudExists = Boolean(cloud && (cloud.exists ?? cloud.revision !== null));
+  const latestVersion = normalizeVersion(botState.latestReleaseTag);
+  const currentVersion = normalizeVersion(onlinePlayer?.version || account?.lastVersion);
+  const versionCurrent = Boolean(currentVersion) && (!latestVersion || currentVersion === latestVersion);
+  const statsAt = account?.lastStatsAt || account?.stats?.updatedAt;
+  const lines = [
+    diagnosticState(account?.status === "active", "Access aktiv", `Access ${display(account?.status, "unbekannt")}`),
+    diagnosticState(Boolean(onlinePlayer), "Relay verbunden", `Relay offline, letzter Kontakt ${diagnosticAgeLabel(account?.lastSeenAt)}`),
+    diagnosticState(Boolean(account?.discordId), "Discord verkn\u00fcpft", "Discord nicht verkn\u00fcpft"),
+    diagnosticState(Boolean(account?.hasWebPassword), "Webprofil eingerichtet", "Kein Webpasswort eingerichtet"),
+    diagnosticState(cloudExists, `Cloud-Sync Revision ${cloud?.revision ?? "-"}`, "Kein Cloud-Profil vorhanden"),
+    diagnosticState(Boolean(statsAt), `Stats aktualisiert ${diagnosticAgeLabel(statsAt)}`, "Noch keine Stats empfangen"),
+    diagnosticState(versionCurrent, `Mod-Version ${currentVersion || "nicht erkannt"}`, `Veraltet: ${currentVersion || "unbekannt"}, aktuell ${latestVersion}`)
+  ];
+  if (Number(cloud?.conflicts24h || 0) > 0 || Number(cloud?.errors24h || 0) > 0) {
+    lines.push(`\u26a0\ufe0f Cloud (24h): ${Number(cloud?.conflicts24h || 0)} Konflikte, ${Number(cloud?.errors24h || 0)} Fehler`);
+  }
+
+  return new EmbedBuilder()
+    .setTitle(`betterUC Diagnose | ${display(account?.minecraftName || onlinePlayer?.name)}`)
+    .setColor(lines.some(line => line.startsWith("\u274c")) ? 0xfacc15 : 0x22c55e)
+    .setDescription(lines.join("\n"))
+    .addFields(
+      { name: "Rolle", value: roleLabel(account?.role || onlinePlayer?.role), inline: true },
+      { name: "Fraktion", value: display(account?.stats?.factionDisplay || account?.faction || onlinePlayer?.faction), inline: true },
+      { name: "Minecraft", value: display(onlinePlayer?.gameVersion || account?.lastGameVersion, "nicht erkannt"), inline: true },
+      { name: "Server", value: display(account?.lastServer, "nicht erkannt"), inline: true },
+      { name: "Channel", value: display(account?.lastChannel, "nicht erkannt"), inline: true },
+      { name: "Letzter Weblogin", value: diagnosticAgeLabel(account?.lastPanelLoginAt), inline: true }
+    )
+    .setFooter({ text: "Es werden keine Access-Codes oder Passw\u00f6rter angezeigt." })
+    .setTimestamp(new Date());
+}
+
 function globalChatEmbed(event) {
   const origin = event.origin === "discord" ? "Discord" : "Minecraft";
   return new EmbedBuilder()
@@ -629,36 +745,87 @@ async function checkGithubRelease(client, options = {}) {
   const previousKey = botState.latestReleaseKey || "";
   const firstRun = !previousKey;
   const changed = previousKey !== releaseKey;
-  const pendingPost = Boolean(botState.latestReleasePendingPost && previousKey === releaseKey);
-  const shouldPost = options.forcePost || pendingPost || (changed && (!firstRun || ANNOUNCE_EXISTING_RELEASE || options.announceExisting));
+  const legacyPendingPost = Boolean(botState.latestReleasePendingPost && previousKey === releaseKey);
+  const pendingUpdatePost = Boolean(botState.latestReleasePendingUpdatePost && previousKey === releaseKey);
+  const pendingChangelogPost = Boolean(botState.latestReleasePendingChangelogPost && previousKey === releaseKey);
+  const newReleasePost = changed && (!firstRun || ANNOUNCE_EXISTING_RELEASE || options.announceExisting);
+  const shouldPostUpdate = options.forcePost || legacyPendingPost || pendingUpdatePost || newReleasePost;
+  const shouldPostChangelog = options.forcePost || pendingChangelogPost || newReleasePost;
 
   botState.latestReleaseKey = releaseKey;
   botState.latestReleaseTag = release.tag_name || "";
   botState.latestReleaseCheckedAt = new Date().toISOString();
 
-  if (!shouldPost) {
+  if (!shouldPostUpdate && !shouldPostChangelog) {
     await writeBotState(botState);
     return { status: firstRun ? "initialized" : "unchanged", release };
   }
 
   const guild = await client.guilds.fetch(GUILD_ID);
-  const channel = await findTextChannelByName(guild, UPDATE_CHANNEL_NAME);
-  if (!channel) {
-    botState.latestReleasePendingPost = true;
-    await writeBotState(botState);
-    throw new Error(`Discord-Update-Channel '${UPDATE_CHANNEL_NAME}' nicht gefunden.`);
-  }
-
   const changelog = await readCentralChangelog({ force: changed || options.forcePost });
   const changelogEntry = findChangelogRelease(changelog, release.tag_name || release.name);
-  await channel.send({
-    embeds: [releaseEmbed(release, changelogEntry)],
-    components: [releaseLinks(release)]
-  });
-  botState.latestReleasePendingPost = false;
-  botState.latestReleasePostedAt = new Date().toISOString();
+  const failures = [];
+  let updatePosted = false;
+  let changelogPosted = false;
+
+  if (shouldPostUpdate) {
+    const updateChannel = await findTextChannelByName(guild, UPDATE_CHANNEL_NAME);
+    if (!updateChannel) {
+      botState.latestReleasePendingUpdatePost = true;
+      failures.push(`Update-Channel '${UPDATE_CHANNEL_NAME}' nicht gefunden`);
+    } else {
+      try {
+        const updateRole = await ensureUpdateNotificationRole(guild).catch(error => {
+          console.warn("Discord update notification role unavailable", error.message);
+          return null;
+        });
+        await updateChannel.send({
+          content: updateRole ? `<@&${updateRole.id}>` : undefined,
+          embeds: [releaseEmbed(release, changelogEntry)],
+          components: [releaseLinks(release)],
+          allowedMentions: updateRole ? { roles: [updateRole.id] } : { parse: [] }
+        });
+        updatePosted = true;
+        botState.latestReleasePendingUpdatePost = false;
+        botState.latestReleasePostedAt = new Date().toISOString();
+      } catch (error) {
+        botState.latestReleasePendingUpdatePost = true;
+        failures.push(`Update-Post fehlgeschlagen: ${error.message}`);
+      }
+    }
+  }
+
+  if (shouldPostChangelog) {
+    const changelogChannel = await resolveTextChannel(guild, CHANGELOG_CHANNEL_ID, CHANGELOG_CHANNEL_NAME);
+    if (!changelogChannel) {
+      botState.latestReleasePendingChangelogPost = true;
+      failures.push(`Changelog-Channel '${CHANGELOG_CHANNEL_ID || CHANGELOG_CHANNEL_NAME}' nicht gefunden`);
+    } else {
+      const updateChannel = await findTextChannelByName(guild, UPDATE_CHANNEL_NAME);
+      try {
+        if (!updateChannel || changelogChannel.id !== updateChannel.id || !updatePosted) {
+          await changelogChannel.send({
+            embeds: [changelogEmbed(release, changelogEntry)],
+            components: [releaseLinks(release)],
+            allowedMentions: { parse: [] }
+          });
+        }
+        changelogPosted = true;
+        botState.latestReleasePendingChangelogPost = false;
+        botState.latestReleaseChangelogPostedAt = new Date().toISOString();
+      } catch (error) {
+        botState.latestReleasePendingChangelogPost = true;
+        failures.push(`Changelog-Post fehlgeschlagen: ${error.message}`);
+      }
+    }
+  }
+
+  delete botState.latestReleasePendingPost;
   await writeBotState(botState);
-  return { status: "posted", release };
+  if (failures.length) {
+    throw new Error(`Release teilweise ver\u00f6ffentlicht: ${failures.join("; ")}.`);
+  }
+  return { status: "posted", release, updatePosted, changelogPosted };
 }
 
 function ticketLabel(topic) {
@@ -1592,6 +1759,60 @@ async function handleCommand(interaction, context) {
     return;
   }
 
+  if (interaction.commandName === "update-benachrichtigung") {
+    if (!interaction.guild) {
+      await interaction.reply({ content: "Diese Einstellung ist nur auf dem betterUC Discord verf\u00fcgbar.", ephemeral: true });
+      return;
+    }
+    const member = await interactionMember(interaction);
+    const role = await ensureUpdateNotificationRole(interaction.guild);
+    if (!role || !member?.roles) {
+      await interaction.reply({
+        content: "Die Update-Rolle konnte nicht eingerichtet werden. Bitte melde das dem betterUC Team.",
+        ephemeral: true
+      });
+      return;
+    }
+    const enabled = interaction.options.getSubcommand() === "an";
+    try {
+      if (enabled) {
+        await member.roles.add(role, "betterUC update notifications enabled");
+      } else {
+        await member.roles.remove(role, "betterUC update notifications disabled");
+      }
+      await interaction.reply({
+        content: enabled
+          ? "Update-Benachrichtigungen sind jetzt **aktiv**."
+          : "Update-Benachrichtigungen sind jetzt **deaktiviert**.",
+        ephemeral: true
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: "Die Update-Rolle konnte nicht ge\u00e4ndert werden. Pr\u00fcfe bitte die Rollenreihenfolge des Bots.",
+        ephemeral: true
+      });
+    }
+    return;
+  }
+
+  if (interaction.commandName === "diagnose") {
+    if (!isTicketTeamMember(interaction)) {
+      await interaction.reply({ content: "Dieser Befehl ist nur f\u00fcr das betterUC Team verf\u00fcgbar.", ephemeral: true });
+      return;
+    }
+    await deferEphemeral(interaction);
+    const name = interaction.options.getString("spieler", true);
+    const account = await context.getAccountDiagnostic(name);
+    const onlinePlayer = context.getOnlinePlayers()
+      .find(player => String(player.name || "").toLowerCase() === name.toLowerCase());
+    if (!account && !onlinePlayer) {
+      await interaction.editReply({ content: "Zu diesem Spieler wurden keine betterUC-Daten gefunden." });
+      return;
+    }
+    await interaction.editReply({ embeds: [diagnosticEmbed(account, onlinePlayer)] });
+    return;
+  }
+
   if (interaction.commandName === "updates") {
     if (!hasManageGuild(interaction)) {
       await interaction.reply({ content: "Dafuer brauchst du Discord-Adminrechte.", ephemeral: true });
@@ -1773,6 +1994,7 @@ async function startDiscordBot(context) {
   let suggestionChannel = null;
   let monitorChannel = null;
   let weeklyChannel = null;
+  let changelogChannel = null;
 
   const logGlobalChat = async event => {
     if (!globalChatLogChannel) return;
@@ -1944,6 +2166,10 @@ async function startDiscordBot(context) {
         suggestionChannel = await resolveTextChannel(guild, SUGGESTION_CHANNEL_ID, SUGGESTION_CHANNEL_NAME);
         monitorChannel = await resolveTextChannel(guild, MONITOR_CHANNEL_ID, MONITOR_CHANNEL_NAME);
         weeklyChannel = await resolveTextChannel(guild, WEEKLY_CHANNEL_ID, WEEKLY_CHANNEL_NAME);
+        changelogChannel = await resolveTextChannel(guild, CHANGELOG_CHANNEL_ID, CHANGELOG_CHANNEL_NAME);
+        await ensureUpdateNotificationRole(guild).catch(error => {
+          console.warn("Discord update notification role setup failed", error.message);
+        });
         if (GLOBAL_CHAT_ENABLED) {
           globalChatChannel = await resolveTextChannel(guild, GLOBAL_CHAT_CHANNEL_ID, GLOBAL_CHAT_CHANNEL_NAME);
           if (!globalChatChannel) {
@@ -1962,6 +2188,7 @@ async function startDiscordBot(context) {
         if (!suggestionChannel) console.warn(`Discord suggestion channel not found (${SUGGESTION_CHANNEL_ID || SUGGESTION_CHANNEL_NAME})`);
         if (MONITOR_ENABLED && !monitorChannel) console.warn(`Discord monitor channel not found (${MONITOR_CHANNEL_ID || MONITOR_CHANNEL_NAME})`);
         if (!weeklyChannel) console.warn(`Discord weekly channel not found (${WEEKLY_CHANNEL_ID || WEEKLY_CHANNEL_NAME})`);
+        if (!changelogChannel) console.warn(`Discord changelog channel not found (${CHANGELOG_CHANNEL_ID || CHANGELOG_CHANNEL_NAME})`);
       } else {
         await client.application.commands.set(buildCommands());
         console.log("betterUC Discord commands synced globally");
