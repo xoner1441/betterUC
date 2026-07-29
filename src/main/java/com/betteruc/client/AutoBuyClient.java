@@ -43,6 +43,8 @@ public final class AutoBuyClient {
     private static int incrementClicksSent;
     private static int lastContainerId = -1;
     private static String productItemId = "";
+    private static String productNameKey = "";
+    private static int productShopSlotIndex = -1;
     private static String shopTitleKey = "";
     private static boolean specialLimitNotified;
     private static long nextActionAtMs;
@@ -65,6 +67,8 @@ public final class AutoBuyClient {
         incrementClicksSent = 0;
         lastContainerId = -1;
         productItemId = "";
+        productNameKey = "";
+        productShopSlotIndex = -1;
         shopTitleKey = "";
         specialLimitNotified = false;
         phase = Phase.WAITING_FOR_PRODUCT;
@@ -175,6 +179,22 @@ public final class AutoBuyClient {
         }
     }
 
+    public static void rememberProductSelection(Minecraft client, Screen screen, Slot slot) {
+        if (phase != Phase.WAITING_FOR_PRODUCT || client == null || client.player == null
+                || screen == null || slot == null || !slot.hasItem()) {
+            return;
+        }
+        if (slot.container == client.player.getInventory()) return;
+
+        String selectedItemId = itemId(slot.getItem());
+        if (selectedItemId.isEmpty()) return;
+
+        productItemId = selectedItemId;
+        productNameKey = key(slot.getItem().getHoverName().getString());
+        productShopSlotIndex = slot.index;
+        shopTitleKey = key(screen.getTitle().getString());
+    }
+
     public static void reset() {
         phase = Phase.IDLE;
         requestedAmount = 0;
@@ -183,6 +203,8 @@ public final class AutoBuyClient {
         incrementClicksSent = 0;
         lastContainerId = -1;
         productItemId = "";
+        productNameKey = "";
+        productShopSlotIndex = -1;
         shopTitleKey = "";
         specialLimitNotified = false;
         nextActionAtMs = 0L;
@@ -200,11 +222,12 @@ public final class AutoBuyClient {
         }
         if (productItemId.isEmpty()) {
             productItemId = selectedId;
-            notifySpecialLimit(client);
+            productNameKey = key(controls.selected.getItem().getHoverName().getString());
         } else if (!productItemId.equals(selectedId)) {
             fail(client, "Im Shop wurde ein anderes Produkt ge\u00F6ffnet.");
             return;
         }
+        notifySpecialLimit(client);
 
         phase = Phase.SETTING_QUANTITY;
         lastContainerId = menu.containerId;
@@ -282,12 +305,24 @@ public final class AutoBuyClient {
     }
 
     private static Slot findProductSlot(Minecraft client, AbstractContainerMenu menu) {
+        List<Slot> matchingSlots = new ArrayList<>();
         for (Slot slot : menu.slots) {
             if (slot == null || !slot.hasItem()) continue;
             if (client.player != null && slot.container == client.player.getInventory()) continue;
-            if (productItemId.equals(itemId(slot.getItem()))) return slot;
+            if (!productItemId.equals(itemId(slot.getItem()))) continue;
+
+            if (slot.index == productShopSlotIndex) return slot;
+            matchingSlots.add(slot);
         }
-        return null;
+
+        if (!productNameKey.isEmpty()) {
+            List<Slot> namedMatches = matchingSlots.stream()
+                    .filter(slot -> productNameKey.equals(key(slot.getItem().getHoverName().getString())))
+                    .toList();
+            if (namedMatches.size() == 1) return namedMatches.get(0);
+        }
+
+        return matchingSlots.size() == 1 ? matchingSlots.get(0) : null;
     }
 
     private static AbstractContainerMenu menu(Screen screen) {

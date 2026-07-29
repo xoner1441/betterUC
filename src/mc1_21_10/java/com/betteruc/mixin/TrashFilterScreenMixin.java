@@ -89,11 +89,18 @@ public abstract class TrashFilterScreenMixin {
             CallbackInfoReturnable<Boolean> cir
     ) {
         Screen screen = (Screen) (Object) this;
-        if (event.button() != 0 || !AutoBuyClient.shouldShowCancelButton(screen)) return;
-        if (!betteruc$isInsideCancel(event.x(), event.y())) return;
+        if (event.button() != 0) return;
+        if (AutoBuyClient.shouldShowCancelButton(screen)
+                && betteruc$isInsideCancel(event.x(), event.y())) {
+            AutoBuyClient.cancel(MinecraftClient.getInstance(), true);
+            cir.setReturnValue(true);
+            return;
+        }
 
-        AutoBuyClient.cancel(MinecraftClient.getInstance(), true);
-        cir.setReturnValue(true);
+        Slot clickedSlot = betteruc$slotAt(event.x(), event.y());
+        if (clickedSlot != null) {
+            AutoBuyClient.rememberProductSelection(MinecraftClient.getInstance(), screen, clickedSlot);
+        }
     }
 
     private int betteruc$cancelX() {
@@ -109,5 +116,17 @@ public abstract class TrashFilterScreenMixin {
         int buttonY = betteruc$cancelY();
         return mouseX >= buttonX && mouseX < buttonX + BETTERUC_CANCEL_WIDTH
                 && mouseY >= buttonY && mouseY < buttonY + BETTERUC_CANCEL_HEIGHT;
+    }
+
+    private Slot betteruc$slotAt(double mouseX, double mouseY) {
+        for (Slot slot : ((HandledScreen<?>) (Object) this).getScreenHandler().slots) {
+            int slotX = x + slot.x;
+            int slotY = y + slot.y;
+            if (mouseX >= slotX && mouseX < slotX + 16
+                    && mouseY >= slotY && mouseY < slotY + 16) {
+                return slot;
+            }
+        }
+        return null;
     }
 }

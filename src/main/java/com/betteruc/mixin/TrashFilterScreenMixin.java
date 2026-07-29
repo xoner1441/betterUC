@@ -64,11 +64,18 @@ public abstract class TrashFilterScreenMixin {
             CallbackInfoReturnable<Boolean> cir
     ) {
         Screen screen = (Screen) (Object) this;
-        if (event.button() != 0 || !AutoBuyClient.shouldShowCancelButton(screen)) return;
-        if (!betteruc$isInsideCancel(event.x(), event.y())) return;
+        if (event.button() != 0) return;
+        if (AutoBuyClient.shouldShowCancelButton(screen)
+                && betteruc$isInsideCancel(event.x(), event.y())) {
+            AutoBuyClient.cancel(Minecraft.getInstance(), true);
+            cir.setReturnValue(true);
+            return;
+        }
 
-        AutoBuyClient.cancel(Minecraft.getInstance(), true);
-        cir.setReturnValue(true);
+        Slot clickedSlot = betteruc$slotAt(event.x(), event.y(), screen);
+        if (clickedSlot != null) {
+            AutoBuyClient.rememberProductSelection(Minecraft.getInstance(), screen, clickedSlot);
+        }
     }
 
     private void betteruc$drawAutoBuyCancel(
@@ -107,5 +114,19 @@ public abstract class TrashFilterScreenMixin {
         int y = betteruc$cancelY();
         return mouseX >= x && mouseX < x + BETTERUC_CANCEL_WIDTH
                 && mouseY >= y && mouseY < y + BETTERUC_CANCEL_HEIGHT;
+    }
+
+    private Slot betteruc$slotAt(double mouseX, double mouseY, Screen screen) {
+        if (!(screen instanceof MenuAccess<?> access)) return null;
+
+        for (Slot slot : access.getMenu().slots) {
+            int slotX = leftPos + slot.x;
+            int slotY = topPos + slot.y;
+            if (mouseX >= slotX && mouseX < slotX + 16
+                    && mouseY >= slotY && mouseY < slotY + 16) {
+                return slot;
+            }
+        }
+        return null;
     }
 }

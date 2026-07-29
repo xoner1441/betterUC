@@ -11,7 +11,8 @@
         "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
         "lines": [
           "Version 1.3.3 enthält die neue AutoBuy-Automation für komfortable Einkäufe.",
-          "Der betterUC Globalchat und die Discord-Chat-Brücke wurden entfernt, damit die Kommunikation vollständig im Rollenspiel bleibt."
+          "Der betterUC Globalchat und die Discord-Chat-Brücke wurden entfernt, damit die Kommunikation vollständig im Rollenspiel bleibt.",
+          "AutoBuy merkt sich nun die ausgewählte Munitionsart und verwendet sie auch bei mehreren 25er-Käufen."
         ]
       }
     ]
