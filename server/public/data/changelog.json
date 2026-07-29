@@ -2,7 +2,7 @@
   "schema": 1,
   "development": {
     "label": "In Entwicklung",
-    "title": "Nach Version 1.3.3",
+    "title": "Nach Version 1.3.4",
     "date": "Aktueller Stand",
     "pages": [
       {
@@ -10,18 +10,78 @@
         "title": "Weitere Verbesserungen folgen",
         "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
         "lines": [
-          "Version 1.3.3 enthält die neue AutoBuy-Automation für komfortable Einkäufe.",
-          "Der betterUC Globalchat und die Discord-Chat-Brücke wurden entfernt, damit die Kommunikation vollständig im Rollenspiel bleibt.",
-          "AutoBuy merkt sich nun die ausgewählte Munitionsart und verwendet sie auch bei mehreren 25er-Käufen."
+          "Version 1.3.4 verbessert AutoBuy im Waffenladen und vereinfacht die Relay-Verbindung."
         ]
       }
     ]
   },
   "releases": [
     {
+      "version": "1.3.4",
+      "date": "29.07.2026",
+      "current": true,
+      "pages": [
+        {
+          "eyebrow": "NEU IN 1.3.4",
+          "title": "AutoBuy merkt sich deine Munition",
+          "description": "Auch bei mehreren gleichartigen Pfeil-Items bleibt genau die von dir ausgewählte Munitionsart aktiv.",
+          "lines": [
+            "betterUC speichert beim ersten manuellen Klick den ausgewählten Shop-Platz und den sichtbaren Produktnamen.",
+            "Weitere 25er-Teileinkäufe verwenden wieder exakt dieselbe Munitionsart.",
+            "Der erste Pfeil im Waffenladen wird nicht mehr automatisch als Ersatz ausgewählt.",
+            "Kann eine Auswahl nicht eindeutig zugeordnet werden, kauft AutoBuy nicht unbemerkt das falsche Produkt.",
+            "Normale Waren werden weiterhin in 64er- und Pfeilmunition in 25er-Teileinkäufe aufgeteilt."
+          ]
+        },
+        {
+          "eyebrow": "VERBESSERT IN 1.3.4",
+          "title": "Einfacher verbinden, passend zum Roleplay",
+          "description": "Die Relay-Einrichtung ist klarer und die Kommunikation bleibt in den vorgesehenen UnicaCity-Kanälen.",
+          "lines": [
+            "Im Verbindungsmodul gibt es einen sichtbaren Schalter für die Relay-Verbindung.",
+            "Beim Eintragen eines Access Codes wird die Relay-Verbindung automatisch aktiviert.",
+            "Neu verbinden aktiviert das Relay und übernimmt zuvor eingetragene Zugangsdaten zuverlässig.",
+            "Die Einrichtung funktioniert dadurch besser in getrennten Profilen von Lunar Client und anderen Clients.",
+            "Der betterUC Globalchat und die Discord-Chat-Brücke wurden entfernt.",
+            "Private Pings, Rollen, Cloud-Funktionen und die übrigen Relay-Funktionen bleiben erhalten."
+          ]
+        }
+      ],
+      "summary": [
+        {
+          "title": "Richtige Munitionsart",
+          "description": "AutoBuy merkt sich den ausgewählten Pfeil und verwendet ihn bei jedem weiteren Teileinkauf.",
+          "color": "cyan"
+        },
+        {
+          "title": "Sichere Teileinkäufe",
+          "description": "Bei mehreren identischen Item-Typen wird nicht mehr unbemerkt das erste Produkt gekauft.",
+          "color": "green"
+        },
+        {
+          "title": "Relay leichter aktivieren",
+          "description": "Access Code, Verbindungsschalter und Neu verbinden arbeiten jetzt verständlicher zusammen.",
+          "color": "amber"
+        },
+        {
+          "title": "Roleplay-konforme Kommunikation",
+          "description": "Der separate Globalchat wurde entfernt; die Kommunikation bleibt in den Serverkanälen.",
+          "color": "green"
+        }
+      ],
+      "changes": [
+        "AutoBuy merkt sich den ausgewählten Shop-Platz und Produktnamen.",
+        "Mehrere Munitionsarten mit demselben Minecraft-Item werden zuverlässig unterschieden.",
+        "Weitere 25er-Munitionskäufe verwenden dieselbe Auswahl wie der erste Einkauf.",
+        "Mehrdeutige Produkte werden nicht automatisch durch den ersten passenden Shop-Eintrag ersetzt.",
+        "Die Relay-Verbindung besitzt im ClickGUI einen sichtbaren Ein- und Ausschalter.",
+        "Access Code und Neu verbinden aktivieren das Relay automatisch.",
+        "Globalchat und Discord-Chat-Brücke wurden zugunsten der vorgesehenen Roleplay-Kanäle entfernt."
+      ]
+    },
+    {
       "version": "1.3.3",
       "date": "28.07.2026",
-      "current": true,
       "pages": [
         {
           "eyebrow": "NEU IN 1.3.3",
