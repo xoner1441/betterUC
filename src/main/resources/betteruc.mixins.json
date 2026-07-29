@@ -3,6 +3,7 @@
   "package": "com.betteruc.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
+    "ChatBadgeBoundaryMixin",
     "ChatBlacklistMixin",
     "InGameHudAmmoMixin",
     "PlayerEntityRendererMixin",

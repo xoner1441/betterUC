@@ -14,6 +14,10 @@ public final class TabBadgeRenderState {
         PLAYER_LIST_RENDER_DEPTH.set(Math.max(0, PLAYER_LIST_RENDER_DEPTH.get() - 1));
     }
 
+    public static void clearPlayerListRender() {
+        PLAYER_LIST_RENDER_DEPTH.remove();
+    }
+
     public static boolean isPlayerListRendering() {
         return PLAYER_LIST_RENDER_DEPTH.get() > 0;
     }
