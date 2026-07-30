@@ -52,6 +52,26 @@ class CashHudTest {
     }
 
     @Test
+    void fangComboAddsItsRewardToCash() {
+        Integer amount = CashHud.parseFangComboCashAmount(
+                "09:11:02 Combo! x66 Fang-Combo! +12$"
+        );
+
+        assertNotNull(amount);
+        assertEquals(12, amount);
+    }
+
+    @Test
+    void fangComboAcceptsGroupedRewardAmounts() {
+        Integer amount = CashHud.parseFangComboCashAmount(
+                "09:11:02 x120 Fang-Combo +1.250$"
+        );
+
+        assertNotNull(amount);
+        assertEquals(1_250, amount);
+    }
+
+    @Test
     void repeatedSignedPurchaseAmountsAreSeparateTransactions() {
         assertFalse(CashHud.isComplementarySourcePair(
                 CashHud.DeltaSource.SIGNED_LINE,

@@ -44,6 +44,9 @@ public class CashHud {
     private static final Pattern PLAYER_ITEM_SALE_PATTERN = Pattern.compile(
             "(?iu)\\bdu\\s+hast\\s+.+?\\s+f(?:ü|ue)r\\s+([0-9][0-9\\.]*)\\s*\\$\\s+verkauft\\b"
     );
+    private static final Pattern FANG_COMBO_PATTERN = Pattern.compile(
+            "(?iu)\\bx\\s*[0-9]+\\s+fang-?combo!?\\s*\\+\\s*([0-9][0-9\\.]*)\\s*\\$"
+    );
     private static final Pattern CASINO_PURCHASE_PATTERN = Pattern.compile(
             "(?iu)(?:casino|ᴄᴀsɪɴᴏ).*?gekauft\\s*:\\s*[0-9][0-9\\.]*\\s*jetons\\s*"
                     + "\\(\\s*-\\s*([0-9][0-9\\.]*)\\s*\\$"
@@ -122,6 +125,12 @@ public class CashHud {
         Integer itemSaleAmount = parsePlayerItemSaleAmount(raw);
         if (itemSaleAmount != null) {
             applyDeltaAndPersist('+', itemSaleAmount, "item-sale:" + normalizeRawKey(raw), DeltaSource.CONTEXT);
+            return;
+        }
+
+        Integer fangComboAmount = parseFangComboCashAmount(raw);
+        if (fangComboAmount != null) {
+            applyDeltaAndPersist('+', fangComboAmount, "fang-combo:" + normalizeRawKey(raw), DeltaSource.CONTEXT);
             return;
         }
 
@@ -306,6 +315,16 @@ public class CashHud {
         if (raw == null || raw.isBlank()) return null;
         String cleaned = stripChatPrefix(stripFormatting(raw));
         Matcher matcher = PLAYER_ITEM_SALE_PATTERN.matcher(cleaned);
+        if (!matcher.find()) return null;
+
+        Integer amount = parseMoneyValue(matcher.group(1));
+        return amount == null || amount <= 0 ? null : amount;
+    }
+
+    static Integer parseFangComboCashAmount(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String cleaned = stripChatPrefix(stripFormatting(raw));
+        Matcher matcher = FANG_COMBO_PATTERN.matcher(cleaned);
         if (!matcher.find()) return null;
 
         Integer amount = parseMoneyValue(matcher.group(1));
