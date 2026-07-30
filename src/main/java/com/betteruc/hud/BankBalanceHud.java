@@ -19,6 +19,8 @@ public class BankBalanceHud {
     private static final long AUTO_BANK_COMMAND_DEDUP_WINDOW_MS = 2000L;
     private static final long AUTO_BANK_COMMAND_DELAY_MS = 150L;
     private static final long AUTO_BANK_COMMAND_GAP_MS = 400L;
+    private static final long AUTO_FORCE_DEPOSIT_DEDUP_WINDOW_MS = 2500L;
+    private static final long AUTO_FORCE_DEPOSIT_DELAY_MS = 2000L;
     private static final long DAILY_REWARD_MONEY_WINDOW_MS = 5000L;
     private static final Pattern TEXT_FORMATTING_PATTERN = Pattern.compile("\\u00A7.");
     private static final Pattern CHAT_TIMESTAMP_PATTERN = Pattern.compile("^\\s*\\d{1,2}:\\d{2}:\\d{2}\\s+");
@@ -46,12 +48,17 @@ public class BankBalanceHud {
     private static final Pattern DAILY_REWARD_MONEY_PATTERN = Pattern.compile(
             "^\\s*\\+?\\s*([0-9][0-9\\.]*)\\s*\\$\\s*$"
     );
+    private static final Pattern FULL_ATM_PATTERN = Pattern.compile(
+            "(?iu)\\bdieser\\s+bankautomat\\s+ist\\s+voll\\s*\\.?\\s*"
+                    + "(?:\\[\\s*trotzdem\\s+einzahlen\\s*])?"
+    );
 
     private static int currentBankBalance = -1;
     private static long lastBalanceUpdateMs = 0L;
     private static String lastBankDeltaKey = "";
     private static long lastBankDeltaMs = 0L;
     private static long lastAutoBankFollowupMs = 0L;
+    private static long lastAutoForceDepositMs = 0L;
     private static long dailyRewardMoneyPendingUntilMs = 0L;
     private static final DecimalFormat MONEY_FORMAT = createMoneyFormat();
 
@@ -72,6 +79,8 @@ public class BankBalanceHud {
 
     private static void updateFromCleanLine(String raw) {
         if (raw == null || raw.isBlank()) return;
+
+        requestForcedDepositIfConfigured(raw);
 
         if (matchesDailyRewardHeader(raw)) {
             dailyRewardMoneyPendingUntilMs = System.currentTimeMillis() + DAILY_REWARD_MONEY_WINDOW_MS;
@@ -266,6 +275,12 @@ public class BankBalanceHud {
         return amount == null || amount <= 0 ? null : amount;
     }
 
+    static boolean matchesFullAtmMessage(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        String cleaned = stripChatPrefix(stripFormatting(raw));
+        return FULL_ATM_PATTERN.matcher(cleaned).find();
+    }
+
     private static void subtractBalanceAndPersist(int amount, String rawKey) {
         if (amount <= 0 || currentBankBalance < 0) return;
         if (isDuplicateBankDelta(rawKey)) return;
@@ -314,6 +329,18 @@ public class BankBalanceHud {
             ClientScheduler.runDelayedOnClient(client, nextDelayMs,
                     () -> ServerCommandUtil.send(client, "atminfo"));
         }
+    }
+
+    private static void requestForcedDepositIfConfigured(String raw) {
+        if (!BetterUCConfig.INSTANCE.autoForceDepositEnabled || !matchesFullAtmMessage(raw)) return;
+
+        long now = System.currentTimeMillis();
+        if (now - lastAutoForceDepositMs < AUTO_FORCE_DEPOSIT_DEDUP_WINDOW_MS) return;
+        lastAutoForceDepositMs = now;
+
+        Minecraft client = Minecraft.getInstance();
+        ClientScheduler.runDelayedOnClient(client, AUTO_FORCE_DEPOSIT_DELAY_MS,
+                () -> ServerCommandUtil.send(client, "einzahlen force"));
     }
 
     private static DecimalFormat createMoneyFormat() {

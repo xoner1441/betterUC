@@ -192,6 +192,12 @@ public class BetterUCScreen extends Screen {
                 y = addToggle(x, y, controlW, "Auto-/atminfo", BetterUCConfig.INSTANCE.autoAtmInfoOnBalanceEnabled,
                         () -> BetterUCConfig.INSTANCE.autoAtmInfoOnBalanceEnabled = !BetterUCConfig.INSTANCE.autoAtmInfoOnBalanceEnabled);
 
+                y = addSectionHeader(x, y, controlW, "Bankautomat", 0xFFFACC15);
+                y = addToggle(x, y, controlW, "Automatisch trotzdem einzahlen",
+                        BetterUCConfig.INSTANCE.autoForceDepositEnabled,
+                        () -> BetterUCConfig.INSTANCE.autoForceDepositEnabled =
+                                !BetterUCConfig.INSTANCE.autoForceDepositEnabled);
+
                 y = addSectionHeader(x, y, controlW, "Reichensteuer", 0xFFFF5555);
                 y = addToggle(x, y, controlW, "Reichensteuer-Alert", BetterUCConfig.INSTANCE.richTaxAlertEnabled,
                         () -> BetterUCConfig.INSTANCE.richTaxAlertEnabled = !BetterUCConfig.INSTANCE.richTaxAlertEnabled);

@@ -79,7 +79,8 @@ public class BetterUCConfig {
             "showHealthHud", "showFpsHud", "showPaydayHud", "showAmmoHud", "showBankHud", "showCashHud",
             "showPotionEffectsHud", "showPlantTimerHud", "showDealerTimerHud", "showProductionTimerHud",
             "toggleSprintEnabled", "autoStatsOnJoinEnabled", "autoFactionBankOnBalanceEnabled",
-            "autoAtmInfoOnBalanceEnabled", "richTaxAlertEnabled", "richTaxAlertSoundEnabled",
+            "autoAtmInfoOnBalanceEnabled", "autoForceDepositEnabled", "richTaxAlertEnabled",
+            "richTaxAlertSoundEnabled",
             "chatTimestampsEnabled", "chatCustomizationEnabled",
             "autoDropDrinkEnabled", "autoFisherEnabled", "autoWinzerEnabled", "autoGaertnerEnabled",
             "autoMuellmannEnabled", "autoFirstAidEnabled", "autoBuyEnabled",
@@ -387,6 +388,7 @@ public class BetterUCConfig {
     public boolean autoStatsOnJoinEnabled = true;
     public boolean autoFactionBankOnBalanceEnabled = false;
     public boolean autoAtmInfoOnBalanceEnabled = false;
+    public boolean autoForceDepositEnabled = false;
     public boolean richTaxAlertEnabled = true;
     public boolean richTaxAlertSoundEnabled = true;
     public boolean autoDropDrinkEnabled = true;

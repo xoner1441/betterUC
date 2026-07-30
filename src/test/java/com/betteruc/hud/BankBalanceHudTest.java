@@ -24,4 +24,17 @@ class BankBalanceHudTest {
         assertEquals(12_500, BankBalanceHud.parseDailyRewardMoney(" • + 12.500$"));
         assertNull(BankBalanceHud.parseDailyRewardMoney(" • + 50 XP"));
     }
+    @Test
+    void fullAtmMessageIsRecognizedWithTimestampAndAction() {
+        assertTrue(BankBalanceHud.matchesFullAtmMessage(
+                "12:34:56 Dieser Bankautomat ist voll. [Trotzdem einzahlen]"
+        ));
+    }
+
+    @Test
+    void unrelatedBankMessagesDoNotTriggerForcedDeposit() {
+        assertFalse(BankBalanceHud.matchesFullAtmMessage(
+                "12:34:56 Ihr Bankguthaben beträgt: 100.000$"
+        ));
+    }
 }
