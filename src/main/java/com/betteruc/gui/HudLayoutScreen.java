@@ -36,6 +36,8 @@ public class HudLayoutScreen extends Screen {
     private HudModule selectedModule;
     private Bounds resizeStartBounds;
     private float resizeStartScale;
+    private double resizeStartMouseX;
+    private double resizeStartMouseY;
     private Bounds dragStartBounds;
     private int dragOffsetX;
     private int dragOffsetY;
@@ -114,6 +116,8 @@ public class HudLayoutScreen extends Screen {
                 resizingModule = selectedModule;
                 resizeStartBounds = selectedBounds;
                 resizeStartScale = getScale(selectedModule);
+                resizeStartMouseX = event.x();
+                resizeStartMouseY = event.y();
                 return true;
             }
         }
@@ -831,9 +835,11 @@ public class HudLayoutScreen extends Screen {
 
         int baseWidth = widthFor(resizingModule);
         int baseHeight = heightFor(resizingModule);
-        double widthScale = (mouseX - resizeStartBounds.x) / Math.max(1.0D, baseWidth);
-        double heightScale = (mouseY - resizeStartBounds.y) / Math.max(1.0D, baseHeight);
-        double nextScale = Math.max(widthScale, heightScale);
+        double widthScale = (resizeStartBounds.width + mouseX - resizeStartMouseX) / Math.max(1.0D, baseWidth);
+        double heightScale = (resizeStartBounds.height + mouseY - resizeStartMouseY) / Math.max(1.0D, baseHeight);
+        double widthDelta = Math.abs(widthScale - resizeStartScale);
+        double heightDelta = Math.abs(heightScale - resizeStartScale);
+        double nextScale = widthDelta >= heightDelta ? widthScale : heightScale;
         float safeScale = BetterUCConfig.normalizeHudScale((float) nextScale);
         int nextWidth = ModernHudRenderer.scaledSize(baseWidth, safeScale);
         int nextHeight = ModernHudRenderer.scaledSize(baseHeight, safeScale);
@@ -959,6 +965,73 @@ public class HudLayoutScreen extends Screen {
         context.fill(centerX - half, centerY - half, centerX + half + 1, centerY + half + 1, fill);
     }
 
+    private void drawToolbarStatus(GuiGraphicsExtractor context) {
+        String selected = selectedModule == null
+                ? "Kein HUD ausgewählt"
+                : "Ausgewählt: " + selectedModule.label;
+        int color = selectedModule == null ? TEXT_MUTED : selectedModule.accent;
+        context.text(font, Component.literal(selected), 12, height - 42, color);
+    }
+
+    private void refreshToolbarButtons() {
+        boolean hasSelection = selectedModule != null;
+        if (scaleDownButton != null) scaleDownButton.active = hasSelection;
+        if (scaleResetButton != null) {
+            scaleResetButton.active = hasSelection;
+            String scale = hasSelection
+                    ? Math.round(getScale(selectedModule) * 100.0F) + "%"
+                    : "100%";
+            scaleResetButton.setMessage(Component.literal(scale));
+        }
+        if (scaleUpButton != null) scaleUpButton.active = hasSelection;
+        if (resetSelectedButton != null) resetSelectedButton.active = hasSelection;
+        if (resetAllButton != null) {
+            if (resetAllConfirmationUntil > 0L && resetAllConfirmationUntil <= System.currentTimeMillis()) {
+                resetAllConfirmationUntil = 0L;
+            }
+            resetAllButton.setMessage(Component.literal(
+                    resetAllConfirmationUntil > System.currentTimeMillis()
+                            ? "Wirklich alle?"
+                            : "Alle zurücksetzen"
+            ));
+        }
+    }
+
+    private boolean cancelCurrentOperation() {
+        if (resizingModule != null && resizeStartBounds != null) {
+            setScale(resizingModule, resizeStartScale);
+            setPosition(resizingModule, resizeStartBounds.x, resizeStartBounds.y);
+            resizingModule = null;
+            resizeStartBounds = null;
+            clearSnapGuides();
+            refreshToolbarButtons();
+            return true;
+        }
+        if (draggingModule != null && dragStartBounds != null) {
+            setPosition(draggingModule, dragStartBounds.x, dragStartBounds.y);
+            draggingModule = null;
+            dragStartBounds = null;
+            clearSnapGuides();
+            refreshToolbarButtons();
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isArrowKey(int keyCode) {
+        return keyCode == GLFW.GLFW_KEY_LEFT
+                || keyCode == GLFW.GLFW_KEY_RIGHT
+                || keyCode == GLFW.GLFW_KEY_UP
+                || keyCode == GLFW.GLFW_KEY_DOWN;
+    }
+
+    private boolean isShiftDown() {
+        if (minecraft == null) return false;
+        long window = minecraft.getWindow().handle();
+        return GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
+                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
+    }
+
     private void drawBorder(GuiGraphicsExtractor context, int x, int y, int w, int h, int color) {
         context.fill(x, y, x + w, y + 1, color);
         context.fill(x, y + h - 1, x + w, y + h, color);
@@ -1017,46 +1090,6 @@ public class HudLayoutScreen extends Screen {
         }
     }
 
-    private enum ResizeHandle {
-        NONE(false, false, false, false),
-        LEFT(true, false, false, false),
-        RIGHT(false, true, false, false),
-        TOP(false, false, true, false),
-        BOTTOM(false, false, false, true),
-        TOP_LEFT(true, false, true, false),
-        TOP_RIGHT(false, true, true, false),
-        BOTTOM_LEFT(true, false, false, true),
-        BOTTOM_RIGHT(false, true, false, true);
-
-        private final boolean left;
-        private final boolean right;
-        private final boolean top;
-        private final boolean bottom;
-
-        ResizeHandle(boolean left, boolean right, boolean top, boolean bottom) {
-            this.left = left;
-            this.right = right;
-            this.top = top;
-            this.bottom = bottom;
-        }
-
-        private boolean affectsLeft() {
-            return left;
-        }
-
-        private boolean affectsRight() {
-            return right;
-        }
-
-        private boolean affectsTop() {
-            return top;
-        }
-
-        private boolean affectsBottom() {
-            return bottom;
-        }
-    }
-
     private record Bounds(int x, int y, int width, int height) {
         private int right() {
             return x + width;
@@ -1067,8 +1100,8 @@ public class HudLayoutScreen extends Screen {
         }
 
         private boolean contains(double mouseX, double mouseY) {
-            return mouseX >= x - 4 && mouseX <= x + width + 4
-                    && mouseY >= y - 14 && mouseY <= y + height + 4;
+            return mouseX >= x - 3 && mouseX <= x + width + 3
+                    && mouseY >= y - 3 && mouseY <= y + height + 3;
         }
     }
 }
