@@ -5,6 +5,7 @@ import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.CashHud;
 import com.betteruc.hud.HealthHud;
 import com.betteruc.hud.ModernHudRenderer;
+import com.betteruc.hud.PotionEffectsHud;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -338,9 +339,15 @@ public class HudLayoutScreen extends Screen {
             case AMMO -> twoLineWidth(hudLabel(module), prefixedText(module, "20/96"), "TS19", BetterUCConfig.INSTANCE.ammoHudStyle);
             case BANK -> singleLineWidth(hudLabel(module), "88.375$", prefixedText(module, "88.375$"), BetterUCConfig.INSTANCE.bankHudStyle);
             case CASH -> singleLineWidth(hudLabel(module), previewCashValue(), prefixedText(module, previewCashValue()), BetterUCConfig.INSTANCE.cashHudStyle);
-            case POTION -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.potionHudStyle)
-                    ? 120
-                    : Math.max(renderer.width("Stärke II"), renderer.width("Speed")) + 4;
+            case POTION -> {
+                if (BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.potionHudStyle)) {
+                    yield 120;
+                }
+                if (BetterUCConfig.HUD_STYLE_TRANSPARENT.equals(BetterUCConfig.INSTANCE.potionHudStyle)) {
+                    yield PotionEffectsHud.transparentPreviewWidth(renderer);
+                }
+                yield Math.max(renderer.width("Stärke II"), renderer.width("Speed")) + 4;
+            }
             case SPRINT -> singleLineWidth(hudLabel(module), "ON", prefixedText(module, "ON"), BetterUCConfig.INSTANCE.toggleSprintHudStyle);
             case HACK_TIMER -> singleLineWidth(hudLabel(module), "02:39", prefixedText(module, "02:39"), BetterUCConfig.INSTANCE.hackTimerHudStyle);
             case DEALER_TIMER -> singleLineWidth(hudLabel(module), "00:15", prefixedText(module, "00:15"), BetterUCConfig.INSTANCE.dealerTimerHudStyle);
@@ -460,10 +467,7 @@ public class HudLayoutScreen extends Screen {
                     ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "Speed", x, y + 25, potionColor);
                     ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "0:49", x, y + 36, ModernHudRenderer.TEXT_DIM);
                 } else {
-                    ModernHudRenderer.drawHudTextWithShadow(context, minecraft.font, "Stärke II", x, y, potionColor);
-                    ModernHudRenderer.drawHudTextWithShadow(context, minecraft.font, "1:26", x, y + 10, ModernHudRenderer.TEXT_DIM);
-                    ModernHudRenderer.drawHudTextWithShadow(context, minecraft.font, "Speed", x, y + 24, potionColor);
-                    ModernHudRenderer.drawHudTextWithShadow(context, minecraft.font, "0:49", x, y + 34, ModernHudRenderer.TEXT_DIM);
+                    PotionEffectsHud.drawTransparentPreview(context, minecraft, x, y, potionColor);
                 }
             }
             case SPRINT -> renderSingleLine(context, minecraft, style, fontId, x, y, hudLabel(module), "ON", prefixedText(module, "ON"), BetterUCConfig.INSTANCE.toggleSprintHudColor);

@@ -18,6 +18,7 @@ import com.betteruc.hud.CashHud;
 import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.HealthHud;
 import com.betteruc.hud.ModernHudRenderer;
+import com.betteruc.hud.PotionEffectsHud;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
@@ -58,7 +59,9 @@ public class BetterUCScreen extends Screen {
     private ModuleOption selectedModule = ModuleOption.FPS;
     private final List<ScrollableControl> detailControls = new ArrayList<>();
     private final List<DetailSectionHeader> detailSectionHeaders = new ArrayList<>();
+    private final List<ControlTooltip> controlTooltips = new ArrayList<>();
     private final List<Runnable> textFieldFlushers = new ArrayList<>();
+    private String activeDetailSection = "";
     private boolean rebuildingWidgets = false;
     private int detailScrollOffset = 0;
     private int detailContentHeight = 0;
@@ -91,18 +94,26 @@ public class BetterUCScreen extends Screen {
 
         detailControls.clear();
         detailSectionHeaders.clear();
+        controlTooltips.clear();
         detailContentHeight = 0;
         addDetailControls();
-        addRenderableWidget(Button.builder(Component.literal("HUD Vorschau"), b -> openScreen(new HudLayoutScreen(this)))
+        Button hudPreviewButton = Button.builder(Component.literal("HUD Vorschau"), b -> openScreen(new HudLayoutScreen(this)))
                 .bounds(mainX() + 12, mainY() + mainH() - 28, 118, BUTTON_H)
-                .build());
-        addRenderableWidget(Button.builder(Component.literal("Speichern & Schließen"), b -> {
+                .build();
+        addRenderableWidget(hudPreviewButton);
+        registerTooltip(hudPreviewButton,
+                "Öffnet den HUD-Editor. Dort kannst du aktive HUDs verschieben, skalieren und einrasten lassen.");
+
+        Button saveButton = Button.builder(Component.literal("Speichern & Schließen"), b -> {
             saveConfig();
             onClose();
-        }).bounds(mainX() + mainW() - 150, mainY() + mainH() - 28, 138, BUTTON_H).build());
+        }).bounds(mainX() + mainW() - 150, mainY() + mainH() - 28, 138, BUTTON_H).build();
+        addRenderableWidget(saveButton);
+        registerTooltip(saveButton, "Speichert deine Änderungen und schließt das ClickGUI.");
     }
 
     private void addDetailControls() {
+        activeDetailSection = "";
         int x = detailX() + 14;
         int startY = detailControlsTop();
         int y = startY;
@@ -647,10 +658,133 @@ public class BetterUCScreen extends Screen {
     }
 
     private int addButton(int x, int y, int width, String label, Button.OnPress action) {
-        addScrollableControl(Button.builder(Component.literal(label), action)
+        Button button = Button.builder(Component.literal(label), action)
                 .bounds(x, y, width, BUTTON_H)
-                .build());
+                .build();
+        addScrollableControl(button);
+        registerTooltip(button, tooltipForControl(label, activeDetailSection));
         return y + 24;
+    }
+
+    private void registerTooltip(AbstractWidget widget, String text) {
+        if (widget == null || text == null || text.isBlank()) {
+            return;
+        }
+        controlTooltips.add(new ControlTooltip(widget, text));
+    }
+
+    private String tooltipForControl(String label, String section) {
+        String raw = label == null ? "" : label.trim();
+        String key = raw.replaceFirst(": (?:AN|AUS)$", "").trim();
+        String lower = key.toLowerCase(Locale.ROOT);
+
+        if (lower.startsWith("stil:")) {
+            return "Wechselt den Darstellungsstil dieses HUDs.";
+        }
+        if (lower.startsWith("font:")) {
+            return "Wählt die Custom-Schrift aus, die dieses HUD verwendet.";
+        }
+        if (lower.startsWith("profil:")) {
+            return "Öffnet die Profilauswahl und aktiviert das gewählte HUD-Layout.";
+        }
+        if (lower.startsWith("[aktiv] ")) {
+            return "Dieses HUD-Profil ist derzeit aktiv.";
+        }
+        if (raw.matches(".* #[0-9A-Fa-f]{6}$")) {
+            return "Öffnet den Farbwähler für diese Darstellung.";
+        }
+
+        return switch (key) {
+            case "Health HUD" -> "Zeigt deine aktuellen Herzen als frei positionierbares HUD.";
+            case "Absorptionsherzen" -> "Zeigt zusätzliche Absorptionsherzen neben deinen normalen Herzen.";
+            case "FPS HUD" -> "Zeigt deine aktuellen Bilder pro Sekunde.";
+            case "Payday HUD" -> "Zeigt den Fortschritt bis zu deinem nächsten PayDay.";
+            case "Ammo HUD" -> "Zeigt Munition, Magazinstand und die erkannte Waffe.";
+            case "Magazinbalken" -> "Ergänzt das moderne Ammo-HUD um einen Magazin-Fortschrittsbalken.";
+            case "Niedrige Munition" -> "Warnt dich, sobald das Magazin die eingestellte Schwelle erreicht.";
+            case "Warnsignal" -> "Spielt zusätzlich einen Ton bei niedriger Munition ab.";
+            case "Bank HUD" -> "Zeigt und aktualisiert dein erkanntes Bankguthaben.";
+            case "Auto-/fbank" -> "Sendet nach einer Kontostand-Abfrage automatisch /fbank.";
+            case "Auto-/atminfo" -> "Sendet nach einer Kontostand-Abfrage automatisch /atminfo.";
+            case "Automatisch trotzdem einzahlen" ->
+                    "Sendet bei einem vollen Bankautomaten nach 2 Sekunden automatisch /einzahlen force.";
+            case "Reichensteuer-Alert" ->
+                    "Warnt dich 5 Minuten vor dem PayDay, wenn mehr als 100.000$ auf deinem Konto liegen.";
+            case "Alert-Ton" -> "Spielt zusätzlich einen kurzen Ton für den Reichensteuer-Alert ab.";
+            case "Bargeld HUD" -> "Zeigt und aktualisiert dein erkanntes Bargeld.";
+            case "Potion HUD" -> "Zeigt aktive Trankeffekte und ihre verbleibende Dauer.";
+            case "ToggleSprint" -> "Hält Sprint nach einmaligem Drücken aktiv und zeigt den Status im HUD.";
+            case "Plant HUD" -> "Zeigt erkannte Plantagenzeiten und Reife-Fortschritte.";
+            case "Dealer Timer" -> "Zeigt nach einem Drogenverkauf den 15-Sekunden-Cooldown.";
+            case "Produktion Timer" -> "Zeigt die Produktionszeit und startet danach die gespeicherte Navigation.";
+            case "Auto-Stats Join" -> "Ruft beim Beitritt und nach AFK automatisch und unsichtbar /stats ab.";
+            case "Stats neu laden" -> "Fordert deine aktuellen Statistiken erneut vom Server an.";
+            case "Lieferant /adropdrink" -> "Automatisiert die Getränkeabgabe des Lieferanten-Jobs.";
+            case "Fischer" -> "Automatisiert Fischschwarm-Suche, Fangen und Abgabe.";
+            case "Winzer" -> "Sammelt in den Winzer-Inventaren automatisch alle Trauben ein.";
+            case "Gärtner" -> "Automatisiert Blumenabgabe und das Einsammeln verwelkter Büsche.";
+            case "Müllmann" -> "Automatisiert die Müllabgabe in den konfigurierten Müllhalden-Bereichen.";
+            case "Auto-Kauf /abuy" -> "Erlaubt automatische Mengenkäufe über /abuy <Menge>.";
+            case "Folgeannahmen" ->
+                    "Nimmt nach deiner ersten manuellen Bestätigung weitere Erste-Hilfe-Angebote automatisch an.";
+            case "Formatierung" -> "Reinf".equals(section)
+                    ? "Formatiert Verstärkungsrufe kompakter und mit deinen gewählten Farben."
+                    : "Formatiert WPS- und HQ-Servermeldungen kompakter und übersichtlicher.";
+            case "Einheitliche Reinf-Farbe" -> "Verwendet für den gesamten Verstärkungsruf nur eine Farbe.";
+            case "Reinf Farben zurücksetzen" -> "Setzt alle Farben der Verstärkungsrufe auf die Standardwerte zurück.";
+            case "Zeitstempel" -> "Blendet vor Chatnachrichten die aktuelle Uhrzeit ein.";
+            case "Blacklist Gründe" -> "Öffnet die Verwaltung der gespeicherten Blacklist-Gründe.";
+            case "Hotkey Commands" -> "Öffnet die Verwaltung eigener Nachrichten- und Command-Hotkeys.";
+            case "Command Menu" -> "Öffnet das Schnellmenü für betterUC-Commands.";
+            case "Mülleimer Filter" -> "Hebt ausgewählte Fundstücke im oberen Mülleimer-Inventar grün hervor.";
+            case "5s Schließsperre" ->
+                    "Verhindert 5 Sekunden lang das Schließen, wenn ein ausgewähltes Fundstück gefunden wurde.";
+            case "Verrottetes Fleisch", "Papier", "Kartoffel", "Karotte", "Apfel", "Truhe",
+                    "Redstone-Truhe", "Endertruhe" ->
+                    "Legt fest, ob dieses Fundstück im Mülleimer grün hervorgehoben wird.";
+            case "Auto-Updater" -> "Lädt neue betterUC-Versionen automatisch für deine Minecraft-Version vor.";
+            case "Update installieren" -> "Lädt das verfügbare Update und bereitet den Neustart vor.";
+            case "Changelog öffnen" -> "Öffnet die Neuerungen der aktuellen betterUC-Version.";
+            case "Ping System" -> "Aktiviert das private Ping-System zwischen verifizierten Mod-Nutzern.";
+            case "Ping Anzeige" -> "Legt fest, ob empfangene Pings in der Spielwelt angezeigt werden.";
+            case "Ping Ton" -> "Spielt beim Empfang eines sichtbaren Pings einen Ton ab.";
+            case "Ping testen" -> "Setzt einen normalen Test-Ping an deiner angesehenen Position.";
+            case "Relay-Verbindung" -> "Aktiviert oder deaktiviert die Verbindung zum betterUC-Relay.";
+            case "Hologramme" -> "Blendet betterUC-Rollen über den Köpfen anderer Mod-Nutzer ein oder aus.";
+            case "Access Code holen" -> "Öffnet die Website zum Erstellen deines persönlichen Access Codes.";
+            case "Stats neu senden" -> "Überträgt die zuletzt erkannten Spielerdaten erneut an dein Userpanel.";
+            case "Standardserver nutzen" -> "Setzt die Relay-Adresse auf den offiziellen betterUC-Server zurück.";
+            case "Neu verbinden" -> "Trennt die aktuelle Relay-Verbindung und baut sie neu auf.";
+            case "Discord öffnen" -> "Öffnet den permanenten Einladungslink zur betterUC Community.";
+            case "Invite kopieren" -> "Kopiert den Discord-Einladungslink in deine Zwischenablage.";
+            case "Neues Profil erstellen" -> "Erstellt ein neues HUD-Profil mit dem eingegebenen Namen.";
+            case "Aktives Profil duplizieren" -> "Erstellt eine Kopie des aktuellen HUD-Profils.";
+            case "Aktives Profil umbenennen" -> "Benennt das aktuelle HUD-Profil in den eingegebenen Namen um.";
+            case "Aktives Profil zurücksetzen" -> "Setzt das aktive HUD-Profil auf die Standardwerte zurück.";
+            case "Aktives Profil löschen", "Löschen bestätigen" -> "Löscht das aktive HUD-Profil nach Bestätigung.";
+            case "Aktives Profil exportieren" -> "Speichert das aktive HUD-Profil als JSON-Datei.";
+            case "JSON-Profile importieren" -> "Importiert alle gültigen JSON-Profile aus dem Profilordner.";
+            case "Profilordner öffnen" -> "Öffnet den Ordner für exportierte und importierbare HUD-Profile.";
+            case "Cloud Sync" -> "Synchronisiert deine unterstützten Mod-Einstellungen über dein betterUC-Konto.";
+            case "Cloud-Einstellungen laden" -> "Lädt deine zuletzt gespeicherten Einstellungen aus der Cloud.";
+            case "Aktuelle Einstellungen hochladen" -> "Speichert deine aktuellen Einstellungen in der Cloud.";
+            case "Farbverlauf" -> "Aktiviert für dieses HUD einen Farbverlauf von links nach rechts.";
+            case "Prefix anzeigen" -> "Blendet die Beschriftung vor dem HUD-Wert ein oder aus.";
+            case "Fonts neu laden" -> "Liest den Custom-Font-Ordner neu ein.";
+            case "Font Ordner" -> "Öffnet den Ordner, in den du eigene Schriftarten legen kannst.";
+            default -> {
+                if (lower.startsWith("ping ziel:")) {
+                    yield "Bestimmt, ob deine Pings global, nur für deine Fraktion oder für Staatsfraktionen sichtbar sind.";
+                }
+                if (lower.startsWith("sound:")) {
+                    yield "Wechselt den Sound, der bei sichtbaren Pings abgespielt wird.";
+                }
+                if (lower.startsWith("gradient farbe")) {
+                    yield "Legt die rechte Zielfarbe des HUD-Farbverlaufs fest.";
+                }
+                yield "Klicke, um diese Einstellung zu ändern.";
+            }
+        };
     }
 
     private int addInfo(int x, int y, int width, String label, String value) {
@@ -662,6 +796,7 @@ public class BetterUCScreen extends Screen {
     }
 
     private int addSectionHeader(int x, int y, int width, String label, int color) {
+        activeDetailSection = label;
         detailSectionHeaders.add(new DetailSectionHeader(label, x, y, width, color));
         return y + 18;
     }
@@ -728,7 +863,7 @@ public class BetterUCScreen extends Screen {
     private int addIntSlider(int x, int y, int width, String label, int current, int max, IntConsumer setter) {
         int safeMax = Math.max(1, max);
         int safeCurrent = clamp(current, 0, safeMax);
-        addScrollableControl(new AbstractSliderButton(
+        AbstractSliderButton slider = new AbstractSliderButton(
                 x,
                 y,
                 width,
@@ -745,7 +880,9 @@ public class BetterUCScreen extends Screen {
             protected void applyValue() {
                 setter.accept(sliderIntValue(value, safeMax));
             }
-        });
+        };
+        addScrollableControl(slider);
+        registerTooltip(slider, tooltipForField(label));
         return y + 24;
     }
 
@@ -762,7 +899,7 @@ public class BetterUCScreen extends Screen {
         int safeMin = Math.max(0, min);
         int safeMax = Math.max(safeMin + 1, max);
         int safeCurrent = clamp(current, safeMin, safeMax);
-        addScrollableControl(new AbstractSliderButton(
+        AbstractSliderButton slider = new AbstractSliderButton(
                 x,
                 y,
                 width,
@@ -779,7 +916,9 @@ public class BetterUCScreen extends Screen {
             protected void applyValue() {
                 setter.accept(sliderRangeIntValue(value, safeMin, safeMax));
             }
-        });
+        };
+        addScrollableControl(slider);
+        registerTooltip(slider, tooltipForField(label));
         return y + 24;
     }
 
@@ -794,7 +933,7 @@ public class BetterUCScreen extends Screen {
             DoubleConsumer setter
     ) {
         double normalized = clamp01((current - min) / Math.max(0.0001, max - min));
-        addScrollableControl(new AbstractSliderButton(
+        AbstractSliderButton slider = new AbstractSliderButton(
                 x,
                 y,
                 width,
@@ -811,7 +950,9 @@ public class BetterUCScreen extends Screen {
             protected void applyValue() {
                 setter.accept(sliderDoubleValue(value, min, max));
             }
-        });
+        };
+        addScrollableControl(slider);
+        registerTooltip(slider, tooltipForField(label));
         return y + 24;
     }
 
@@ -829,6 +970,7 @@ public class BetterUCScreen extends Screen {
         timestampField.setResponder(text -> BetterUCConfig.INSTANCE.chatTimestampFormat = text);
         textFieldFlushers.add(() -> BetterUCConfig.INSTANCE.chatTimestampFormat = timestampField.getValue());
         addScrollableControl(timestampField);
+        registerTooltip(timestampField, "Legt das Format des Chat-Zeitstempels fest, zum Beispiel [HH:mm:ss].");
         return y + 24;
     }
 
@@ -847,7 +989,23 @@ public class BetterUCScreen extends Screen {
         field.setResponder(setter::accept);
         textFieldFlushers.add(() -> setter.accept(field.getValue()));
         addScrollableControl(field);
+        registerTooltip(field, tooltipForField(label));
         return y + 24;
+    }
+
+    private String tooltipForField(String label) {
+        return switch (label) {
+            case "Warnschwelle %" -> "Legt fest, ab welchem Magazinstand die Munitionswarnung erscheint.";
+            case "Ping Größe" -> "Skaliert die Darstellung aller Pings in der Spielwelt.";
+            case "Sichtweite" -> "Pings außerhalb dieser Entfernung werden weder angezeigt noch abgespielt.";
+            case "Cooldown ms" -> "Bestimmt die Mindestpause zwischen zwei eigenen Pings.";
+            case "Access Code" -> "Dein persönlicher Code verbindet diese Mod-Installation mit deinem Account.";
+            case "Ping Gruppe" -> "Erweiterte Relay-Gruppe. Normalerweise sollte hier global stehen.";
+            case "Relay Server" -> "Erweiterte WebSocket-Adresse des betterUC-Relay-Servers.";
+            case "Profilname" -> "Name für ein neues, dupliziertes oder umbenanntes HUD-Profil.";
+            case "Prefix Text" -> "Ändert die Beschriftung, die vor dem Wert dieses HUDs steht.";
+            default -> "Ziehe oder bearbeite den Wert, um diese Einstellung anzupassen.";
+        };
     }
 
     private <T extends AbstractWidget> T addScrollableControl(T widget) {
@@ -861,6 +1019,93 @@ public class BetterUCScreen extends Screen {
         context.fill(0, 0, width, height, 0x66000000);
         renderFrame(context, mouseX, mouseY);
         super.extractRenderState(context, mouseX, mouseY, delta);
+        renderHoveredTooltip(context, mouseX, mouseY);
+    }
+
+    private void renderHoveredTooltip(GuiGraphicsExtractor context, int mouseX, int mouseY) {
+        String tooltip = null;
+
+        for (ControlTooltip entry : controlTooltips) {
+            AbstractWidget widget = entry.widget();
+            if (widget.visible && inBounds(mouseX, mouseY, widget.getX(), widget.getY(),
+                    widget.getWidth(), widget.getHeight())) {
+                tooltip = entry.text();
+                break;
+            }
+        }
+
+        if (tooltip == null) {
+            tooltip = hoveredModuleDescription(mouseX, mouseY);
+        }
+        if (tooltip == null || tooltip.isBlank()) {
+            return;
+        }
+
+        int maxTextWidth = Math.max(100, Math.min(230, width - 24));
+        List<String> lines = wrapTooltipText(tooltip, maxTextWidth);
+        int textWidth = 0;
+        for (String line : lines) {
+            textWidth = Math.max(textWidth, font.width(line));
+        }
+
+        int padding = 6;
+        int tooltipW = textWidth + padding * 2;
+        int tooltipH = lines.size() * 10 + padding * 2 - 1;
+        int tooltipX = mouseX + 12;
+        int tooltipY = mouseY + 12;
+        if (tooltipX + tooltipW > width - 4) {
+            tooltipX = mouseX - tooltipW - 8;
+        }
+        if (tooltipY + tooltipH > height - 4) {
+            tooltipY = mouseY - tooltipH - 8;
+        }
+        tooltipX = clamp(tooltipX, 4, Math.max(4, width - tooltipW - 4));
+        tooltipY = clamp(tooltipY, 4, Math.max(4, height - tooltipH - 4));
+
+        drawSoftRect(context, tooltipX, tooltipY, tooltipW, tooltipH, 0xF0151B24);
+        drawBorder(context, tooltipX, tooltipY, tooltipW, tooltipH, withAlpha(selectedModule.accent, 0xEE));
+        for (int i = 0; i < lines.size(); i++) {
+            context.text(font, Component.literal(lines.get(i)),
+                    tooltipX + padding, tooltipY + padding + i * 10, TEXT_SOFT);
+        }
+    }
+
+    private String hoveredModuleDescription(int mouseX, int mouseY) {
+        int x = mainX() + 10;
+        int y = moduleListY();
+        int w = sidebarW() - 20;
+        for (ModuleOption module : ModuleOption.values()) {
+            if (module.category != selectedCategory) {
+                continue;
+            }
+            if (inBounds(mouseX, mouseY, x, y, w, MODULE_H)) {
+                return module.description;
+            }
+            y += MODULE_H + MODULE_GAP;
+        }
+        return null;
+    }
+
+    private List<String> wrapTooltipText(String text, int maxWidth) {
+        List<String> lines = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        for (String word : text.trim().split("\\s+")) {
+            String candidate = current.isEmpty() ? word : current + " " + word;
+            if (!current.isEmpty() && font.width(candidate) > maxWidth) {
+                lines.add(current.toString());
+                current.setLength(0);
+                current.append(word);
+            } else {
+                if (!current.isEmpty()) {
+                    current.append(' ');
+                }
+                current.append(word);
+            }
+        }
+        if (!current.isEmpty()) {
+            lines.add(current.toString());
+        }
+        return lines.isEmpty() ? List.of(text) : lines;
     }
 
     private void renderFrame(GuiGraphicsExtractor context, int mouseX, int mouseY) {
@@ -1150,10 +1395,7 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "Speed", previewX, previewY + 25, potionColor);
                     ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, "0:49", previewX, previewY + 36, TEXT_MUTED);
                 } else {
-                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, "Stärke II", previewX, previewY, potionColor);
-                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, "1:26", previewX, previewY + 10, TEXT_MUTED);
-                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, "Speed", previewX, previewY + 24, potionColor);
-                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, "0:49", previewX, previewY + 34, TEXT_MUTED);
+                    PotionEffectsHud.drawTransparentPreview(context, minecraft, previewX, previewY, potionColor);
                 }
             }
             case SPRINT -> {
@@ -2173,6 +2415,9 @@ public class BetterUCScreen extends Screen {
     }
 
     private record ScrollableControl(AbstractWidget widget, int baseY) {
+    }
+
+    private record ControlTooltip(AbstractWidget widget, String text) {
     }
 
     private record DetailSectionHeader(String label, int x, int baseY, int sectionWidth, int color) {
