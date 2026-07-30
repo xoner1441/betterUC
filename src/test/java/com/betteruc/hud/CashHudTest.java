@@ -32,6 +32,26 @@ class CashHudTest {
     }
 
     @Test
+    void itemSaleAddsTheDollarAmountToCash() {
+        Integer amount = CashHud.parsePlayerItemSaleAmount(
+                "08:08:49 [Holzfäller] Du hast 38x Super-Holz für 228$ verkauft."
+        );
+
+        assertNotNull(amount);
+        assertEquals(228, amount);
+    }
+
+    @Test
+    void itemSaleAlsoAcceptsUeSpelling() {
+        Integer amount = CashHud.parsePlayerItemSaleAmount(
+                "08:08:49 [Holzfaeller] Du hast 2x Holz fuer 1.200$ verkauft."
+        );
+
+        assertNotNull(amount);
+        assertEquals(1_200, amount);
+    }
+
+    @Test
     void repeatedSignedPurchaseAmountsAreSeparateTransactions() {
         assertFalse(CashHud.isComplementarySourcePair(
                 CashHud.DeltaSource.SIGNED_LINE,
