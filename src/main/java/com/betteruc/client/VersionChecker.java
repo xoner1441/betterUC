@@ -465,6 +465,9 @@ public final class VersionChecker {
 
     private static String preferredReleaseTarget() {
         String minecraftVersion = getMinecraftVersion().toLowerCase(Locale.ROOT);
+        if (minecraftVersion.startsWith("1.21.11")) {
+            return "mc1.21.11";
+        }
         if (minecraftVersion.startsWith("1.21.10")) {
             return "mc1.21.10";
         }
@@ -493,6 +496,11 @@ public final class VersionChecker {
     private static boolean matchesReleaseTarget(String lowerValue, String target) {
         String value = lowerValue == null ? "" : lowerValue.toLowerCase(Locale.ROOT);
         String cleanedTarget = target == null ? "" : target.toLowerCase(Locale.ROOT);
+        if ("mc1.21.11".equals(cleanedTarget)) {
+            return value.contains("mc1.21.11")
+                    || value.contains("mc1_21_11")
+                    || value.contains("1.21.11");
+        }
         if ("mc1.21.10".equals(cleanedTarget)) {
             return value.contains("mc1.21.10")
                     || value.contains("mc1_21_10")
@@ -513,7 +521,8 @@ public final class VersionChecker {
         return value.contains("mc26")
                 || value.contains("mc1.21")
                 || value.contains("mc1_21")
-                || value.contains("1.21.10");
+                || value.contains("1.21.10")
+                || value.contains("1.21.11");
     }
 
     private static Optional<String> fetchVersionFromGradleProperties(URI uri) {

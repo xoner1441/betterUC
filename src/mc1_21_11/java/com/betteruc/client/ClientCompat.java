@@ -40,6 +40,6 @@ public final class ClientCompat {
     }
 
     public static Vec3d cameraPosition(Camera camera) {
-        return camera == null ? Vec3d.ZERO : camera.getPos();
+        return camera == null ? Vec3d.ZERO : camera.getCameraPos();
     }
 }

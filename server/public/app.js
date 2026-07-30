@@ -42,6 +42,12 @@ const DOWNLOAD_VERSIONS = [
     note: "Fabric 26.x"
   },
   {
+    label: "1.21.11",
+    minecraft: "1.21.11",
+    target: "mc1.21.11",
+    note: "LabyMod- und Fabric-Version"
+  },
+  {
     label: "1.21.10",
     minecraft: "1.21.10",
     target: "mc1.21.10",
@@ -389,9 +395,11 @@ function updateDownloadModalState(releaseInfo = null) {
     return;
   }
 
-  const downloadUrl = selectedDownloadVersion.target === "mc1.21.10"
-    ? "/download/latest-mc1.21.10.jar"
-    : "/download/latest-mc26.x.jar";
+  const downloadUrl = selectedDownloadVersion.target === "mc1.21.11"
+    ? "/download/latest-mc1.21.11.jar"
+    : selectedDownloadVersion.target === "mc1.21.10"
+      ? "/download/latest-mc1.21.10.jar"
+      : "/download/latest-mc26.x.jar";
   if (label) label.textContent = `Game version: ${selectedDownloadVersion.label}`;
   if (result) result.hidden = false;
   if (button) button.href = releaseInfo?.downloadUrl || downloadUrl;

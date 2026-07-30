@@ -203,7 +203,7 @@ public final class PingHud {
         if (camera == null) return Long.MIN_VALUE;
 
         Vec3 target = new Vec3(marker.x(), marker.y(), marker.z());
-        Vec3 cameraPos = camera.position();
+        Vec3 cameraPos = ClientCompat.cameraPosition(camera);
         Vec3 toTarget = target.subtract(cameraPos);
         if (toTarget.lengthSqr() < 0.0001D) return Long.MIN_VALUE;
 

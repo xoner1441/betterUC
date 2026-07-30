@@ -33,11 +33,12 @@ if (betterucBuildDir.present) {
 def generatedJavaDir = providers.gradleProperty("betterucLegacyGeneratedJavaDir")
         .map { file(it) }
         .orElse(file("${betterucRootDir}/build/generated/sources/betterucLegacy/java"))
+def legacySourceSet = (project.findProperty("betterucLegacySourceSet") ?: "mc1_21_10").toString()
 
 sourceSets {
     main {
         java.setSrcDirs([generatedJavaDir.get()])
-        def overrideJavaDir = file("${betterucRootDir}/src/mc1_21_10/java")
+        def overrideJavaDir = file("${betterucRootDir}/src/${legacySourceSet}/java")
         if (overrideJavaDir.exists()) {
             java.srcDir overrideJavaDir
         }
@@ -64,7 +65,7 @@ processResources {
     from(file("${betterucRootDir}/server/public/data/changelog.json")) {
         into "betteruc"
     }
-    def overrideResourcesDir = file("${betterucRootDir}/src/mc1_21_10/resources")
+    def overrideResourcesDir = file("${betterucRootDir}/src/${legacySourceSet}/resources")
     if (overrideResourcesDir.exists()) {
         from(overrideResourcesDir)
     }

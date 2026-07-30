@@ -1327,6 +1327,7 @@ function normalizeReleaseVersion(value) {
 
 function releaseTargetForMinecraftVersion(value) {
   const raw = String(value || "").trim().toLowerCase();
+  if (raw.startsWith("1.21.11")) return "mc1.21.11";
   if (raw.startsWith("1.21.10")) return "mc1.21.10";
   if (raw.startsWith("26.")) return "mc26.x";
   return "mc26.x";
@@ -1334,6 +1335,9 @@ function releaseTargetForMinecraftVersion(value) {
 
 function cleanReleaseTarget(value, fallback = "mc26.x") {
   const raw = String(value || "").trim().toLowerCase();
+  if (raw === "mc1.21.11" || raw === "mc1_21_11" || raw === "1.21.11") {
+    return "mc1.21.11";
+  }
   if (raw === "mc1.21.10" || raw === "mc1_21_10" || raw === "1.21.10" || raw === "legacy") {
     return "mc1.21.10";
   }
@@ -1345,6 +1349,9 @@ function cleanReleaseTarget(value, fallback = "mc26.x") {
 
 function releaseTargetFromRequest(url) {
   const pathname = String(url && url.pathname || "").toLowerCase();
+  if (pathname.includes("mc1.21.11") || pathname.includes("mc1_21_11")) {
+    return "mc1.21.11";
+  }
   if (pathname.includes("mc1.21.10") || pathname.includes("mc1_21_10")) {
     return "mc1.21.10";
   }
@@ -1359,6 +1366,9 @@ function releaseTargetFromRequest(url) {
 
 function releaseDownloadPathForTarget(target) {
   const cleanedTarget = cleanReleaseTarget(target);
+  if (cleanedTarget === "mc1.21.11") {
+    return "/download/latest-mc1.21.11.jar";
+  }
   return cleanedTarget === "mc1.21.10"
     ? "/download/latest-mc1.21.10.jar"
     : "/download/latest-mc26.x.jar";
@@ -1380,6 +1390,9 @@ function releaseAssetValue(asset) {
 function releaseAssetMatchesTarget(asset, target) {
   const value = releaseAssetValue(asset);
   const cleanedTarget = cleanReleaseTarget(target);
+  if (cleanedTarget === "mc1.21.11") {
+    return value.includes("mc1.21.11") || value.includes("mc1_21_11") || value.includes("1.21.11");
+  }
   if (cleanedTarget === "mc1.21.10") {
     return value.includes("mc1.21.10") || value.includes("mc1_21_10") || value.includes("1.21.10");
   }
@@ -1395,7 +1408,8 @@ function releaseAssetHasTargetMarker(asset) {
   return value.includes("mc26")
     || value.includes("mc1.21")
     || value.includes("mc1_21")
-    || value.includes("1.21.10");
+    || value.includes("1.21.10")
+    || value.includes("1.21.11");
 }
 
 function releaseAssetForTarget(release, target) {
@@ -1411,6 +1425,7 @@ function releaseAvailableTargets(release) {
   const targets = new Set();
   for (const asset of assets) {
     if (releaseAssetMatchesTarget(asset, "mc26.x")) targets.add("mc26.x");
+    if (releaseAssetMatchesTarget(asset, "mc1.21.11")) targets.add("mc1.21.11");
     if (releaseAssetMatchesTarget(asset, "mc1.21.10")) targets.add("mc1.21.10");
   }
   return [...targets];
@@ -2353,7 +2368,7 @@ async function handleHttp(req, res) {
     return;
   }
 
-  if (/^\/download\/latest(?:-(?:mc26\.x|mc1\.21\.10))?\.jar$/i.test(url.pathname)) {
+  if (/^\/download\/latest(?:-(?:mc26\.x|mc1\.21\.10|mc1\.21\.11))?\.jar$/i.test(url.pathname)) {
     await handleLatestJarDownload(req, res);
     return;
   }

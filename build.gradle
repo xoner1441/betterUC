@@ -627,11 +627,29 @@ def minecraftBuildVariants = [
                 modsDir             : "C:/Users/huhns/AppData/Roaming/.minecraft/installations/fabric-loader-26.1.2/mods"
         ],
         [
+                id                  : "mc1_21_11",
+                taskName            : "buildMc1_21_11",
+                description         : "Builds betterUC for Minecraft 1.21.11 and copies it into the 1.21.11 mods folder.",
+                minecraftVersion    : "1.21.11",
+                minecraftDependency : "1.21.11",
+                fabricVersion       : "0.141.6+1.21.11",
+                loaderVersion       : "0.19.3",
+                loaderDependency    : ">=0.19.3",
+                targetJavaVersion   : "21",
+                javaDependency      : ">=21",
+                archiveClassifier   : "mc1.21.11",
+                variantSourceSet    : "mc1_21_11",
+                useLegacyGeneratedSources: true,
+                legacyBuildProjectDir: "gradle/mc1_21_10",
+                yarnMappings        : "1.21.11+build.6",
+                modsDir             : "C:/Users/huhns/AppData/Roaming/.minecraft/installations/fabric-loader-1.21.11/mods"
+        ],
+        [
                 id                  : "mc1_21_10",
                 taskName            : "buildMc1_21_10",
                 description         : "Builds betterUC for Minecraft 1.21.10 and copies it into the 1.21.10 mods folder.",
                 minecraftVersion    : "1.21.10",
-                minecraftDependency : "~1.21.10",
+                minecraftDependency : "1.21.10",
                 fabricVersion       : "0.138.4+1.21.10",
                 loaderVersion       : "0.19.3",
                 loaderDependency    : ">=0.19.3",
@@ -674,6 +692,7 @@ def variantProjectProperties = { variant ->
             "modArchiveClassifier" : variant.archiveClassifier,
             "fabric_api_modules"   : variant.fabricApiModules ?: "",
             "betterucVariantSourceSet": variant.variantSourceSet ?: "",
+            "betterucLegacySourceSet": variant.variantSourceSet ?: "mc1_21_10",
             "betterucUseLegacyGeneratedSources": (variant.useLegacyGeneratedSources ?: false).toString(),
             "betterucLegacyGeneratedJavaDir": betterucLegacyGeneratedJavaDir.get().asFile.absolutePath,
             "copyToMinecraftMods"  : "true"
@@ -716,6 +735,10 @@ minecraftBuildVariants.each { variant ->
     }
 }
 
+tasks.named("buildMc1_21_11") {
+    mustRunAfter "buildMc1_21_10"
+}
+
 tasks.register("buildAllModernMinecraftVersions") {
     group = "multi-version"
     description = "Builds the currently supported 26.x betterUC jars."
@@ -731,7 +754,7 @@ tasks.register("buildMc26_x") {
 tasks.register("buildReleaseJars") {
     group = "multi-version"
     description = "Builds the release jars that should be uploaded to GitHub."
-    dependsOn "buildMc26_x", "buildMc1_21_10"
+    dependsOn "buildMc26_x", "buildMc1_21_10", "buildMc1_21_11"
     doLast {
         def releaseDir = layout.buildDirectory.dir("release").get().asFile
         if (!releaseDir.exists() && !releaseDir.mkdirs()) {
@@ -752,21 +775,29 @@ tasks.register("buildReleaseJars") {
         if (!legacyJar.isFile()) {
             throw new GradleException("Legacy 1.21.10 release jar was not built: ${legacyJar}")
         }
+        def legacy111Jar = layout.buildDirectory
+                .file("versions/mc1_21_11/libs/${project.base.archivesName.get()}-${project.version}-mc1.21.11.jar")
+                .get()
+                .asFile
+        if (!legacy111Jar.isFile()) {
+            throw new GradleException("Legacy 1.21.11 release jar was not built: ${legacy111Jar}")
+        }
 
         copy {
-            from modernJar, legacyJar
+            from modernJar, legacyJar, legacy111Jar
             into releaseDir
         }
 
         logger.lifecycle("Release jar ready: ${new File(releaseDir, modernJar.name)}")
         logger.lifecycle("Release jar ready: ${new File(releaseDir, legacyJar.name)}")
+        logger.lifecycle("Release jar ready: ${new File(releaseDir, legacy111Jar.name)}")
     }
 }
 
 tasks.register("buildAllMinecraftVersions") {
     group = "multi-version"
     description = "Builds every supported betterUC jar."
-    dependsOn "buildAllModernMinecraftVersions", "buildMc1_21_10"
+    dependsOn "buildAllModernMinecraftVersions", "buildMc1_21_10", "buildMc1_21_11"
 }
 
 tasks.register("buildAllConfiguredMinecraftVersions") {

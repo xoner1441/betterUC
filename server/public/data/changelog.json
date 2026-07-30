@@ -2,15 +2,18 @@
   "schema": 1,
   "development": {
     "label": "In Entwicklung",
-    "title": "Nach Version 1.3.4",
+    "title": "Kompatibilität erweitert",
     "date": "Aktueller Stand",
     "pages": [
       {
         "eyebrow": "NÄCHSTE VERSION",
-        "title": "Weitere Verbesserungen folgen",
-        "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
+        "title": "Minecraft 1.21.11 wird unterstützt",
+        "description": "betterUC erhält eine eigene, geprüfte Mod-Datei für Minecraft 1.21.11.",
         "lines": [
-          "Version 1.3.4 verbessert AutoBuy im Waffenladen und vereinfacht die Relay-Verbindung."
+          "Minecraft 1.21.11 wird als eigener Build neben 1.21.10 und 26.x angeboten.",
+          "Der Mülleimerfilter wurde an die geänderte Inventar-Darstellung von 1.21.11 angepasst.",
+          "Website und Auto-Updater wählen automatisch die zur Minecraft-Version passende JAR.",
+          "Die 1.21.10-JAR wird unter 1.21.11 nicht mehr fälschlich als kompatibel behandelt."
         ]
       }
     ]

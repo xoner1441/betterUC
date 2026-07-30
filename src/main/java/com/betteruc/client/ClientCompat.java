@@ -6,6 +6,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.world.phys.Vec3;
 
 public final class ClientCompat {
     private static final long HUD_SCREEN_CACHE_NS = 2_000_000L;
@@ -137,6 +138,10 @@ public final class ClientCompat {
         } catch (NoSuchMethodException ignored) {
             return null;
         }
+    }
+
+    public static Vec3 cameraPosition(Camera camera) {
+        return camera == null ? Vec3.ZERO : camera.position();
     }
 
     private static Object invokeNoArg(Method method, Object target) {
