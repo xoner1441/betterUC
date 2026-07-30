@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 
 public class CashHud {
     private static final long SIGNED_DELTA_DEDUP_WINDOW_MS = 3500L;
-    private static final long RAW_DELTA_DEDUP_WINDOW_MS = 1200L;
+    private static final long RAW_DELTA_DEDUP_WINDOW_MS = 150L;
     private static final Pattern TEXT_FORMATTING_PATTERN = Pattern.compile("\\u00A7.");
     private static final Pattern CHAT_TIMESTAMP_PATTERN = Pattern.compile("^\\s*\\d{1,2}:\\d{2}:\\d{2}\\s+");
     private static final Pattern CASH_STATS_PATTERN = Pattern.compile(
@@ -57,6 +57,7 @@ public class CashHud {
     private static int currentCash = -1;
     private static int lastSemanticDeltaAmount = -1;
     private static char lastSemanticDeltaSign = '\0';
+    private static DeltaSource lastSemanticDeltaSource = DeltaSource.CONTEXT;
     private static long lastSemanticDeltaMs = 0L;
     private static String lastRawDeltaKey = "";
     private static long lastRawDeltaMs = 0L;
@@ -83,7 +84,7 @@ public class CashHud {
         if (factionDepositMatcher.find() && isCurrentPlayer(factionDepositMatcher.group(1))) {
             Integer parsed = parseMoneyValue(factionDepositMatcher.group(2));
             if (parsed != null) {
-                applyDeltaAndPersist('-', parsed, "fbank-deposit:" + normalizeRawKey(raw));
+                applyDeltaAndPersist('-', parsed, "fbank-deposit:" + normalizeRawKey(raw), DeltaSource.CONTEXT);
             }
             return;
         }
@@ -92,7 +93,7 @@ public class CashHud {
         if (factionWithdrawMatcher.find() && isCurrentPlayer(factionWithdrawMatcher.group(1))) {
             Integer parsed = parseMoneyValue(factionWithdrawMatcher.group(2));
             if (parsed != null) {
-                applyDeltaAndPersist('+', parsed, "fbank-withdraw:" + normalizeRawKey(raw));
+                applyDeltaAndPersist('+', parsed, "fbank-withdraw:" + normalizeRawKey(raw), DeltaSource.CONTEXT);
             }
             return;
         }
@@ -101,7 +102,7 @@ public class CashHud {
         if (moneySentMatcher.find()) {
             Integer parsed = parseMoneyValue(moneySentMatcher.group(2));
             if (parsed != null) {
-                applyDeltaAndPersist('-', parsed, "pay-sent:" + normalizeRawKey(raw));
+                applyDeltaAndPersist('-', parsed, "pay-sent:" + normalizeRawKey(raw), DeltaSource.CONTEXT);
             }
             return;
         }
@@ -110,7 +111,7 @@ public class CashHud {
         if (moneyReceivedMatcher.find()) {
             Integer parsed = parseMoneyValue(moneyReceivedMatcher.group(2));
             if (parsed != null) {
-                applyDeltaAndPersist('+', parsed, "pay-received:" + normalizeRawKey(raw));
+                applyDeltaAndPersist('+', parsed, "pay-received:" + normalizeRawKey(raw), DeltaSource.CONTEXT);
             }
             return;
         }
@@ -120,7 +121,8 @@ public class CashHud {
             applyDeltaAndPersist(
                     casinoDelta.sign(),
                     casinoDelta.amount(),
-                    "casino:" + normalizeRawKey(raw)
+                    "casino:" + normalizeRawKey(raw),
+                    DeltaSource.CONTEXT
             );
             return;
         }
@@ -131,7 +133,7 @@ public class CashHud {
             if (parsed != null) {
                 if (currentCash >= 0 && currentCash != parsed) {
                     int amount = Math.abs(parsed - currentCash);
-                    recordSemanticDelta(parsed > currentCash ? '+' : '-', amount);
+                    recordSemanticDelta(parsed > currentCash ? '+' : '-', amount, DeltaSource.ABSOLUTE_BALANCE);
                 }
                 setCashAndPersist(Math.max(0, parsed));
             }
@@ -143,7 +145,7 @@ public class CashHud {
             Integer parsed = parseMoneyValue(payoutMatcher.group(1));
             if (parsed != null) {
                 int amount = Math.abs(parsed);
-                applyDeltaAndPersist('+', amount, "payout:" + normalizeRawKey(raw));
+                applyDeltaAndPersist('+', amount, "payout:" + normalizeRawKey(raw), DeltaSource.CONTEXT);
             }
             return;
         }
@@ -153,7 +155,7 @@ public class CashHud {
             Integer parsed = parseMoneyValue(depositMatcher.group(1));
             if (parsed != null) {
                 int amount = Math.abs(parsed);
-                applyDeltaAndPersist('-', amount, "deposit:" + normalizeRawKey(raw));
+                applyDeltaAndPersist('-', amount, "deposit:" + normalizeRawKey(raw), DeltaSource.CONTEXT);
             }
             return;
         }
@@ -163,10 +165,12 @@ public class CashHud {
             Integer parsed = parseMoneyValue(signedDeltaMatcher.group(2));
             if (parsed != null) {
                 char sign = signedDeltaMatcher.group(1).charAt(0);
-                if (isDuplicateSemanticDelta(sign, parsed)) {
-                    return;
-                }
-                applyDeltaAndPersist(sign, parsed, "signed:" + normalizeRawKey(raw));
+                applyDeltaAndPersist(
+                        sign,
+                        parsed,
+                        "signed:" + normalizeRawKey(raw),
+                        DeltaSource.SIGNED_LINE
+                );
             }
             return;
         }
@@ -178,7 +182,7 @@ public class CashHud {
         if (parsed != null) {
             if (currentCash >= 0 && currentCash != parsed) {
                 int amount = Math.abs(parsed - currentCash);
-                recordSemanticDelta(parsed > currentCash ? '+' : '-', amount);
+                recordSemanticDelta(parsed > currentCash ? '+' : '-', amount, DeltaSource.ABSOLUTE_BALANCE);
             }
             setCashAndPersist(Math.max(0, parsed));
         }
@@ -317,10 +321,10 @@ public class CashHud {
         setCashAndPersist(Math.max(0, currentCash - amount));
     }
 
-    private static void applyDeltaAndPersist(char sign, int amount, String rawKey) {
+    private static void applyDeltaAndPersist(char sign, int amount, String rawKey, DeltaSource source) {
         if (amount <= 0 || currentCash < 0) return;
         if (isDuplicateRawDelta(rawKey)) return;
-        if (isDuplicateSemanticDelta(sign, amount)) return;
+        if (isDuplicateSemanticDelta(sign, amount, source)) return;
 
         if (sign == '+') {
             addCashAndPersist(amount);
@@ -328,23 +332,30 @@ public class CashHud {
             subtractCashAndPersist(amount);
         }
         recordRawDelta(rawKey);
-        recordSemanticDelta(sign, amount);
+        recordSemanticDelta(sign, amount, source);
     }
 
-    private static void recordSemanticDelta(char sign, int amount) {
+    private static void recordSemanticDelta(char sign, int amount, DeltaSource source) {
         if (amount <= 0) return;
         lastSemanticDeltaSign = sign;
         lastSemanticDeltaAmount = amount;
+        lastSemanticDeltaSource = source;
         lastSemanticDeltaMs = System.currentTimeMillis();
     }
 
-    private static boolean isDuplicateSemanticDelta(char sign, int amount) {
+    private static boolean isDuplicateSemanticDelta(char sign, int amount, DeltaSource source) {
         if (amount <= 0) return false;
         long age = System.currentTimeMillis() - lastSemanticDeltaMs;
         return age >= 0L
                 && age <= SIGNED_DELTA_DEDUP_WINDOW_MS
                 && lastSemanticDeltaSign == sign
-                && lastSemanticDeltaAmount == amount;
+                && lastSemanticDeltaAmount == amount
+                && isComplementarySourcePair(lastSemanticDeltaSource, source);
+    }
+
+    static boolean isComplementarySourcePair(DeltaSource previous, DeltaSource current) {
+        if (previous == null || current == null || previous == current) return false;
+        return previous == DeltaSource.SIGNED_LINE || current == DeltaSource.SIGNED_LINE;
     }
 
     private static boolean isDuplicateRawDelta(String rawKey) {
@@ -379,5 +390,11 @@ public class CashHud {
         DecimalFormat format = new DecimalFormat("#,###", symbols);
         format.setGroupingUsed(true);
         return format;
+    }
+
+    enum DeltaSource {
+        SIGNED_LINE,
+        CONTEXT,
+        ABSOLUTE_BALANCE
     }
 }

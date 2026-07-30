@@ -3,7 +3,9 @@ package com.betteruc.hud;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CashHudTest {
 
@@ -27,5 +29,33 @@ class CashHudTest {
         assertNotNull(delta);
         assertEquals('+', delta.sign());
         assertEquals(9_000, delta.amount());
+    }
+
+    @Test
+    void repeatedSignedPurchaseAmountsAreSeparateTransactions() {
+        assertFalse(CashHud.isComplementarySourcePair(
+                CashHud.DeltaSource.SIGNED_LINE,
+                CashHud.DeltaSource.SIGNED_LINE
+        ));
+    }
+
+    @Test
+    void signedAndContextLinesCanRepresentTheSameTransaction() {
+        assertTrue(CashHud.isComplementarySourcePair(
+                CashHud.DeltaSource.SIGNED_LINE,
+                CashHud.DeltaSource.CONTEXT
+        ));
+        assertTrue(CashHud.isComplementarySourcePair(
+                CashHud.DeltaSource.CONTEXT,
+                CashHud.DeltaSource.SIGNED_LINE
+        ));
+    }
+
+    @Test
+    void repeatedContextTransactionsAreNotCollapsed() {
+        assertFalse(CashHud.isComplementarySourcePair(
+                CashHud.DeltaSource.CONTEXT,
+                CashHud.DeltaSource.CONTEXT
+        ));
     }
 }
