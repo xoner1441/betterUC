@@ -3,6 +3,7 @@ package com.betteruc.hud;
 import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.Holder;
@@ -51,6 +52,7 @@ public class PotionEffectsHud {
         String style = BetterUCConfig.INSTANCE.potionHudStyle;
         float tickRate = client.level == null ? 20.0F : client.level.tickRateManager().tickrate();
         int effectSpacing = spacing;
+        int transparentWidth = transparentEffectsWidth(client.font, tickRate);
 
         ModernHudRenderer.drawScaledWithGradient(
                 context,
@@ -76,8 +78,22 @@ public class PotionEffectsHud {
                 }
 
                 if (!BetterUCConfig.isModernHudStyle(style)) {
-                    ModernHudRenderer.drawHudTextWithShadow(context, client.font, effectName, 0, currentY, accentColor);
-                    ModernHudRenderer.drawHudTextWithShadow(context, client.font, durationText, 0, currentY + 10, ModernHudRenderer.TEXT_DIM);
+                    if (BetterUCConfig.HUD_STYLE_TRANSPARENT.equals(style)) {
+                        drawTransparentEffect(
+                                context,
+                                client,
+                                effectIcon,
+                                effectName,
+                                durationText,
+                                0,
+                                currentY,
+                                transparentWidth,
+                                accentColor
+                        );
+                    } else {
+                        ModernHudRenderer.drawHudTextWithShadow(context, client.font, effectName, 0, currentY, accentColor);
+                        ModernHudRenderer.drawHudTextWithShadow(context, client.font, durationText, 0, currentY + 10, ModernHudRenderer.TEXT_DIM);
+                    }
                     currentY += Math.max(21, effectSpacing - 11);
                     continue;
                 }
@@ -110,6 +126,103 @@ public class PotionEffectsHud {
                 currentY += effectSpacing;
             }
         });
+    }
+
+    private static int transparentEffectsWidth(Font renderer, float tickRate) {
+        int widestText = 0;
+        for (MobEffectInstance effect : ACTIVE_EFFECTS) {
+            Component name = buildEffectName(effect);
+            Component duration = MobEffectUtil.formatDuration(effect, 1.0F, tickRate);
+            widestText = Math.max(widestText, Math.max(renderer.width(name), renderer.width(duration)));
+        }
+        return EFFECT_ICON_SIZE + 6 + widestText;
+    }
+
+    public static int transparentPreviewWidth(Font renderer) {
+        int strengthWidth = Math.max(renderer.width("Stärke II"), renderer.width("1:26"));
+        int speedWidth = Math.max(renderer.width("Speed"), renderer.width("0:49"));
+        return EFFECT_ICON_SIZE + 6 + Math.max(strengthWidth, speedWidth);
+    }
+
+    public static void drawTransparentPreview(
+            GuiGraphicsExtractor context,
+            Minecraft client,
+            int x,
+            int y,
+            int accentColor
+    ) {
+        int previewWidth = transparentPreviewWidth(client.font);
+        drawTransparentEffect(
+                context,
+                client,
+                Identifier.withDefaultNamespace("mob_effect/strength"),
+                Component.literal("Stärke II"),
+                Component.literal("1:26"),
+                x,
+                y,
+                previewWidth,
+                accentColor
+        );
+        drawTransparentEffect(
+                context,
+                client,
+                Identifier.withDefaultNamespace("mob_effect/speed"),
+                Component.literal("Speed"),
+                Component.literal("0:49"),
+                x,
+                y + 24,
+                previewWidth,
+                accentColor
+        );
+    }
+
+    private static void drawTransparentEffect(
+            GuiGraphicsExtractor context,
+            Minecraft client,
+            Identifier icon,
+            Component effectName,
+            Component durationText,
+            int x,
+            int y,
+            int width,
+            int accentColor
+    ) {
+        int safeWidth = Math.max(EFFECT_ICON_SIZE + 6, width);
+        boolean rightAligned = ModernHudRenderer.isRightAligned(x, safeWidth);
+
+        if (rightAligned) {
+            int iconX = x + safeWidth - EFFECT_ICON_SIZE;
+            int textRight = iconX - 6;
+            context.blitSprite(RenderPipelines.GUI_TEXTURED, icon, iconX, y + 1, EFFECT_ICON_SIZE, EFFECT_ICON_SIZE);
+            ModernHudRenderer.drawHudTextWithShadow(
+                    context,
+                    client.font,
+                    effectName,
+                    textRight - client.font.width(effectName),
+                    y,
+                    accentColor
+            );
+            ModernHudRenderer.drawHudTextWithShadow(
+                    context,
+                    client.font,
+                    durationText,
+                    textRight - client.font.width(durationText),
+                    y + 10,
+                    ModernHudRenderer.TEXT_DIM
+            );
+            return;
+        }
+
+        context.blitSprite(RenderPipelines.GUI_TEXTURED, icon, x, y + 1, EFFECT_ICON_SIZE, EFFECT_ICON_SIZE);
+        ModernHudRenderer.drawHudTextWithShadow(context, client.font, effectName, x + EFFECT_ICON_SIZE + 6, y, accentColor);
+        ModernHudRenderer.drawHudTextWithShadow(
+                context,
+                client.font,
+                durationText,
+                x + EFFECT_ICON_SIZE + 6,
+                y + 10,
+                ModernHudRenderer.TEXT_DIM
+        );
     }
 
     private static Component buildEffectName(MobEffectInstance effect) {

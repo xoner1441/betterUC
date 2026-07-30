@@ -14,25 +14,39 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import org.lwjgl.glfw.GLFW;
 
 public class HudLayoutScreen extends Screen {
 
     private static final int TEXT_PRIMARY = 0xFFF8FAFC;
     private static final int TEXT_MUTED = 0xFF94A3B8;
     private static final int HANDLE_SIZE = 7;
+    private static final int HANDLE_HIT_RADIUS = 5;
     private static final int SNAP_DISTANCE = 8;
     private static final int SNAP_GAP = 2;
+    private static final int TOOLBAR_HEIGHT = 48;
+    private static final float SCALE_STEP = 0.05F;
+    private static final long RESET_CONFIRMATION_MS = 5_000L;
     private final Screen parent;
     private HudModule draggingModule;
     private HudModule resizingModule;
     private HudModule selectedModule;
-    private ResizeHandle resizeHandle;
     private Bounds resizeStartBounds;
     private float resizeStartScale;
+    private Bounds dragStartBounds;
     private int dragOffsetX;
     private int dragOffsetY;
+    private Integer snapGuideX;
+    private Integer snapGuideY;
+    private long resetAllConfirmationUntil;
+    private Button scaleDownButton;
+    private Button scaleResetButton;
+    private Button scaleUpButton;
+    private Button resetSelectedButton;
+    private Button resetAllButton;
 
     public HudLayoutScreen(Screen parent) {
         super(Component.literal("HUD Vorschau"));
@@ -41,9 +55,26 @@ public class HudLayoutScreen extends Screen {
 
     @Override
     protected void init() {
+        int controlsY = height - 27;
+        scaleDownButton = addRenderableWidget(Button.builder(Component.literal("-"), b -> adjustSelectedScale(-SCALE_STEP))
+                .bounds(12, controlsY, 24, 20)
+                .build());
+        scaleResetButton = addRenderableWidget(Button.builder(Component.literal("100%"), b -> setSelectedScale(BetterUCConfig.DEFAULT_HUD_SCALE))
+                .bounds(40, controlsY, 52, 20)
+                .build());
+        scaleUpButton = addRenderableWidget(Button.builder(Component.literal("+"), b -> adjustSelectedScale(SCALE_STEP))
+                .bounds(96, controlsY, 24, 20)
+                .build());
+        resetSelectedButton = addRenderableWidget(Button.builder(Component.literal("HUD zurücksetzen"), b -> resetSelectedLayout())
+                .bounds(126, controlsY, 112, 20)
+                .build());
+        resetAllButton = addRenderableWidget(Button.builder(Component.literal("Alle zurücksetzen"), b -> requestResetAllLayouts())
+                .bounds(244, controlsY, 112, 20)
+                .build());
         addRenderableWidget(Button.builder(Component.literal("Fertig"), b -> onClose())
                 .bounds(width - 92, height - 28, 80, 20)
                 .build());
+        refreshToolbarButtons();
     }
 
     @Override
@@ -59,13 +90,16 @@ public class HudLayoutScreen extends Screen {
 
         for (HudModule module : modules) {
             Bounds bounds = boundsFor(module);
-            ResizeHandle hoveredHandle = findResizeHandle(bounds, mouseX, mouseY);
-            boolean hovered = bounds.contains(mouseX, mouseY) || hoveredHandle != ResizeHandle.NONE;
+            boolean handleHovered = module == selectedModule && resizeHandleContains(bounds, mouseX, mouseY);
+            boolean hovered = bounds.contains(mouseX, mouseY) || handleHovered;
             boolean selected = module == selectedModule || module == draggingModule || module == resizingModule;
-            drawDragBounds(context, module, bounds, hovered || selected, hoveredHandle);
+            drawDragBounds(context, module, bounds, hovered || selected, handleHovered);
             renderHudModule(context, module, bounds.x, bounds.y);
         }
 
+        drawSnapGuides(context);
+        drawToolbarStatus(context);
+        refreshToolbarButtons();
         super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
@@ -74,28 +108,32 @@ public class HudLayoutScreen extends Screen {
         if (super.mouseClicked(event, doubleClick)) return true;
         if (event.button() != 0) return false;
 
+        if (selectedModule != null) {
+            Bounds selectedBounds = boundsFor(selectedModule);
+            if (resizeHandleContains(selectedBounds, event.x(), event.y())) {
+                resizingModule = selectedModule;
+                resizeStartBounds = selectedBounds;
+                resizeStartScale = getScale(selectedModule);
+                return true;
+            }
+        }
+
         List<HudModule> modules = activeModules();
         for (int i = modules.size() - 1; i >= 0; i--) {
             HudModule module = modules.get(i);
             Bounds bounds = boundsFor(module);
-            ResizeHandle handle = findResizeHandle(bounds, event.x(), event.y());
-            if (handle != ResizeHandle.NONE) {
-                resizingModule = module;
-                resizeHandle = handle;
-                resizeStartBounds = bounds;
-                resizeStartScale = getScale(module);
-                selectedModule = module;
-                return true;
-            }
-
             if (!bounds.contains(event.x(), event.y())) continue;
 
             draggingModule = module;
             selectedModule = module;
+            dragStartBounds = bounds;
             dragOffsetX = (int) Math.round(event.x()) - bounds.x;
             dragOffsetY = (int) Math.round(event.y()) - bounds.y;
+            refreshToolbarButtons();
             return true;
         }
+        selectedModule = null;
+        refreshToolbarButtons();
         return false;
     }
 
@@ -124,18 +162,46 @@ public class HudLayoutScreen extends Screen {
     public boolean mouseReleased(MouseButtonEvent click) {
         if (resizingModule != null) {
             resizingModule = null;
-            resizeHandle = null;
             resizeStartBounds = null;
             BetterUCConfig.save();
+            refreshToolbarButtons();
             return true;
         }
 
         if (draggingModule != null) {
             draggingModule = null;
+            dragStartBounds = null;
+            clearSnapGuides();
             BetterUCConfig.save();
+            refreshToolbarButtons();
             return true;
         }
         return super.mouseReleased(click);
+    }
+
+    @Override
+    public boolean keyPressed(KeyEvent input) {
+        int keyCode = input.input();
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE && cancelCurrentOperation()) {
+            return true;
+        }
+
+        if (selectedModule != null && isArrowKey(keyCode)) {
+            int step = isShiftDown() ? 10 : 1;
+            Bounds bounds = boundsFor(selectedModule);
+            int nextX = bounds.x;
+            int nextY = bounds.y;
+            if (keyCode == GLFW.GLFW_KEY_LEFT) nextX -= step;
+            if (keyCode == GLFW.GLFW_KEY_RIGHT) nextX += step;
+            if (keyCode == GLFW.GLFW_KEY_UP) nextY -= step;
+            if (keyCode == GLFW.GLFW_KEY_DOWN) nextY += step;
+            nextX = clamp(nextX, 0, Math.max(0, width - bounds.width));
+            nextY = clamp(nextY, 0, Math.max(0, height - bounds.height));
+            setPosition(selectedModule, nextX, nextY);
+            BetterUCConfig.save();
+            return true;
+        }
+        return super.keyPressed(input);
     }
 
     @Override
@@ -166,7 +232,7 @@ public class HudLayoutScreen extends Screen {
             context.fill(0, y, width, y + 1, 0x1FFFFFFF);
         }
         context.fill(0, 0, width, 38, 0xAA0D1117);
-        context.fill(0, height - 36, width, height, 0xAA0D1117);
+        context.fill(0, height - TOOLBAR_HEIGHT, width, height, 0xD00D1117);
     }
 
     private List<HudModule> activeModules() {
@@ -646,73 +712,157 @@ public class HudLayoutScreen extends Screen {
         return text.substring(separator + 1).trim();
     }
 
+    private void adjustSelectedScale(float delta) {
+        if (selectedModule == null) return;
+        setSelectedScale(getScale(selectedModule) + delta);
+    }
+
+    private void setSelectedScale(float scale) {
+        if (selectedModule == null) return;
+        scaleAroundCenter(selectedModule, scale);
+        BetterUCConfig.save();
+        refreshToolbarButtons();
+    }
+
+    private void scaleAroundCenter(HudModule module, float scale) {
+        Bounds before = boundsFor(module);
+        int centerX = before.x + before.width / 2;
+        int centerY = before.y + before.height / 2;
+        float safeScale = BetterUCConfig.normalizeHudScale(scale);
+        setScale(module, safeScale);
+
+        Bounds after = boundsFor(module);
+        int nextX = clamp(centerX - after.width / 2, 0, Math.max(0, width - after.width));
+        int nextY = clamp(centerY - after.height / 2, 0, Math.max(0, height - after.height));
+        setPosition(module, nextX, nextY);
+    }
+
+    private void resetSelectedLayout() {
+        if (selectedModule == null) return;
+        applyDefaultLayout(selectedModule, new BetterUCConfig());
+        BetterUCConfig.save();
+        refreshToolbarButtons();
+    }
+
+    private void requestResetAllLayouts() {
+        long now = System.currentTimeMillis();
+        if (resetAllConfirmationUntil > now) {
+            BetterUCConfig defaults = new BetterUCConfig();
+            for (HudModule module : HudModule.values()) {
+                applyDefaultLayout(module, defaults);
+            }
+            resetAllConfirmationUntil = 0L;
+            BetterUCConfig.save();
+        } else {
+            resetAllConfirmationUntil = now + RESET_CONFIRMATION_MS;
+        }
+        refreshToolbarButtons();
+    }
+
+    private void applyDefaultLayout(HudModule module, BetterUCConfig defaults) {
+        switch (module) {
+            case HEALTH -> {
+                BetterUCConfig.INSTANCE.healthHudX = defaults.healthHudX;
+                BetterUCConfig.INSTANCE.healthHudY = defaults.healthHudY;
+                BetterUCConfig.INSTANCE.healthHudScale = defaults.healthHudScale;
+            }
+            case FPS -> {
+                BetterUCConfig.INSTANCE.fpsHudX = defaults.fpsHudX;
+                BetterUCConfig.INSTANCE.fpsHudY = defaults.fpsHudY;
+                BetterUCConfig.INSTANCE.fpsHudScale = defaults.fpsHudScale;
+            }
+            case PAYDAY -> {
+                BetterUCConfig.INSTANCE.paydayHudX = defaults.paydayHudX;
+                BetterUCConfig.INSTANCE.paydayHudY = defaults.paydayHudY;
+                BetterUCConfig.INSTANCE.paydayHudScale = defaults.paydayHudScale;
+            }
+            case AMMO -> {
+                BetterUCConfig.INSTANCE.ammoHudX = defaults.ammoHudX;
+                BetterUCConfig.INSTANCE.ammoHudY = defaults.ammoHudY;
+                BetterUCConfig.INSTANCE.ammoHudScale = defaults.ammoHudScale;
+            }
+            case BANK -> {
+                BetterUCConfig.INSTANCE.bankHudX = defaults.bankHudX;
+                BetterUCConfig.INSTANCE.bankHudY = defaults.bankHudY;
+                BetterUCConfig.INSTANCE.bankHudScale = defaults.bankHudScale;
+            }
+            case CASH -> {
+                BetterUCConfig.INSTANCE.cashHudX = defaults.cashHudX;
+                BetterUCConfig.INSTANCE.cashHudY = defaults.cashHudY;
+                BetterUCConfig.INSTANCE.cashHudScale = defaults.cashHudScale;
+            }
+            case POTION -> {
+                BetterUCConfig.INSTANCE.potionHudX = defaults.potionHudX;
+                BetterUCConfig.INSTANCE.potionHudY = defaults.potionHudY;
+                BetterUCConfig.INSTANCE.potionHudScale = defaults.potionHudScale;
+            }
+            case SPRINT -> {
+                BetterUCConfig.INSTANCE.toggleSprintHudX = defaults.toggleSprintHudX;
+                BetterUCConfig.INSTANCE.toggleSprintHudY = defaults.toggleSprintHudY;
+                BetterUCConfig.INSTANCE.toggleSprintHudScale = defaults.toggleSprintHudScale;
+            }
+            case HACK_TIMER -> {
+                BetterUCConfig.INSTANCE.hackTimerX = defaults.hackTimerX;
+                BetterUCConfig.INSTANCE.hackTimerY = defaults.hackTimerY;
+                BetterUCConfig.INSTANCE.hackTimerHudScale = defaults.hackTimerHudScale;
+            }
+            case PLANT_TIMER -> {
+                BetterUCConfig.INSTANCE.plantTimerX = defaults.plantTimerX;
+                BetterUCConfig.INSTANCE.plantTimerY = defaults.plantTimerY;
+                BetterUCConfig.INSTANCE.plantTimerHudScale = defaults.plantTimerHudScale;
+            }
+            case DEALER_TIMER -> {
+                BetterUCConfig.INSTANCE.dealerTimerX = defaults.dealerTimerX;
+                BetterUCConfig.INSTANCE.dealerTimerY = defaults.dealerTimerY;
+                BetterUCConfig.INSTANCE.dealerTimerHudScale = defaults.dealerTimerHudScale;
+            }
+            case PRODUCTION_TIMER -> {
+                BetterUCConfig.INSTANCE.productionTimerX = defaults.productionTimerX;
+                BetterUCConfig.INSTANCE.productionTimerY = defaults.productionTimerY;
+                BetterUCConfig.INSTANCE.productionTimerHudScale = defaults.productionTimerHudScale;
+            }
+        }
+    }
+
     private void resizeSelectedModule(double mouseX, double mouseY) {
-        if (resizingModule == null || resizeHandle == null || resizeStartBounds == null) {
+        if (resizingModule == null || resizeStartBounds == null) {
             return;
         }
 
         int baseWidth = widthFor(resizingModule);
         int baseHeight = heightFor(resizingModule);
-        boolean horizontal = resizeHandle.affectsLeft() || resizeHandle.affectsRight();
-        boolean vertical = resizeHandle.affectsTop() || resizeHandle.affectsBottom();
-        double widthScale = resizeStartScale;
-        double heightScale = resizeStartScale;
-
-        if (resizeHandle.affectsLeft()) {
-            widthScale = (resizeStartBounds.right() - mouseX) / Math.max(1.0D, baseWidth);
-        } else if (resizeHandle.affectsRight()) {
-            widthScale = (mouseX - resizeStartBounds.x) / Math.max(1.0D, baseWidth);
-        }
-
-        if (resizeHandle.affectsTop()) {
-            heightScale = (resizeStartBounds.bottom() - mouseY) / Math.max(1.0D, baseHeight);
-        } else if (resizeHandle.affectsBottom()) {
-            heightScale = (mouseY - resizeStartBounds.y) / Math.max(1.0D, baseHeight);
-        }
-
-        double nextScale;
-        if (horizontal && vertical) {
-            nextScale = (widthScale + heightScale) / 2.0D;
-        } else if (horizontal) {
-            nextScale = widthScale;
-        } else {
-            nextScale = heightScale;
-        }
-
+        double widthScale = (mouseX - resizeStartBounds.x) / Math.max(1.0D, baseWidth);
+        double heightScale = (mouseY - resizeStartBounds.y) / Math.max(1.0D, baseHeight);
+        double nextScale = Math.max(widthScale, heightScale);
         float safeScale = BetterUCConfig.normalizeHudScale((float) nextScale);
         int nextWidth = ModernHudRenderer.scaledSize(baseWidth, safeScale);
         int nextHeight = ModernHudRenderer.scaledSize(baseHeight, safeScale);
-        int nextX = resizeHandle.affectsLeft()
-                ? resizeStartBounds.right() - nextWidth
-                : resizeStartBounds.x;
-        int nextY = resizeHandle.affectsTop()
-                ? resizeStartBounds.bottom() - nextHeight
-                : resizeStartBounds.y;
-
-        nextX = clamp(nextX, 0, Math.max(0, width - nextWidth));
-        nextY = clamp(nextY, 0, Math.max(0, height - nextHeight));
+        int nextX = clamp(resizeStartBounds.x, 0, Math.max(0, width - nextWidth));
+        int nextY = clamp(resizeStartBounds.y, 0, Math.max(0, height - nextHeight));
         setScale(resizingModule, safeScale);
         setPosition(resizingModule, nextX, nextY);
+        refreshToolbarButtons();
     }
 
-    private ResizeHandle findResizeHandle(Bounds bounds, double mouseX, double mouseY) {
-        int midX = bounds.x + bounds.width / 2;
-        int midY = bounds.y + bounds.height / 2;
-        int right = bounds.right();
-        int bottom = bounds.bottom();
+    private boolean resizeHandleContains(Bounds bounds, double mouseX, double mouseY) {
+        int centerX = resizeHandleX(bounds);
+        int centerY = resizeHandleY(bounds);
+        return mouseX >= centerX - HANDLE_HIT_RADIUS && mouseX <= centerX + HANDLE_HIT_RADIUS
+                && mouseY >= centerY - HANDLE_HIT_RADIUS && mouseY <= centerY + HANDLE_HIT_RADIUS;
+    }
 
-        if (handleContains(mouseX, mouseY, bounds.x, bounds.y)) return ResizeHandle.TOP_LEFT;
-        if (handleContains(mouseX, mouseY, right, bounds.y)) return ResizeHandle.TOP_RIGHT;
-        if (handleContains(mouseX, mouseY, bounds.x, bottom)) return ResizeHandle.BOTTOM_LEFT;
-        if (handleContains(mouseX, mouseY, right, bottom)) return ResizeHandle.BOTTOM_RIGHT;
-        if (handleContains(mouseX, mouseY, midX, bounds.y)) return ResizeHandle.TOP;
-        if (handleContains(mouseX, mouseY, midX, bottom)) return ResizeHandle.BOTTOM;
-        if (handleContains(mouseX, mouseY, bounds.x, midY)) return ResizeHandle.LEFT;
-        if (handleContains(mouseX, mouseY, right, midY)) return ResizeHandle.RIGHT;
-        return ResizeHandle.NONE;
+    private int resizeHandleX(Bounds bounds) {
+        int outside = bounds.right() + 5;
+        return outside <= width - 5 ? outside : bounds.right() - 4;
+    }
+
+    private int resizeHandleY(Bounds bounds) {
+        int outside = bounds.bottom() + 5;
+        return outside <= height - TOOLBAR_HEIGHT - 5 ? outside : bounds.bottom() - 4;
     }
 
     private Bounds snapBounds(HudModule movingModule, Bounds moving) {
+        clearSnapGuides();
         int snapX = moving.x;
         int snapY = moving.y;
         int bestXDistance = SNAP_DISTANCE + 1;
@@ -735,6 +885,7 @@ public class HudLayoutScreen extends Screen {
                     if (distance <= SNAP_DISTANCE && distance < bestXDistance) {
                         snapX = candidate;
                         bestXDistance = distance;
+                        snapGuideX = candidate;
                     }
                 }
             }
@@ -752,6 +903,7 @@ public class HudLayoutScreen extends Screen {
                     if (distance <= SNAP_DISTANCE && distance < bestYDistance) {
                         snapY = candidate;
                         bestYDistance = distance;
+                        snapGuideY = candidate;
                     }
                 }
             }
@@ -768,13 +920,22 @@ public class HudLayoutScreen extends Screen {
         return startA <= endB + SNAP_DISTANCE && startB <= endA + SNAP_DISTANCE;
     }
 
-    private boolean handleContains(double mouseX, double mouseY, int centerX, int centerY) {
-        int half = HANDLE_SIZE;
-        return mouseX >= centerX - half && mouseX <= centerX + half
-                && mouseY >= centerY - half && mouseY <= centerY + half;
+    private void clearSnapGuides() {
+        snapGuideX = null;
+        snapGuideY = null;
     }
 
-    private void drawDragBounds(GuiGraphicsExtractor context, HudModule module, Bounds bounds, boolean active, ResizeHandle hoveredHandle) {
+    private void drawSnapGuides(GuiGraphicsExtractor context) {
+        int color = 0xAA38BDF8;
+        if (snapGuideX != null) {
+            context.fill(snapGuideX, 38, snapGuideX + 1, height - TOOLBAR_HEIGHT, color);
+        }
+        if (snapGuideY != null) {
+            context.fill(0, snapGuideY, width, snapGuideY + 1, color);
+        }
+    }
+
+    private void drawDragBounds(GuiGraphicsExtractor context, HudModule module, Bounds bounds, boolean active, boolean handleHovered) {
         int borderColor = active ? module.accent : 0x668899AA;
         context.fill(bounds.x - 3, bounds.y - 3, bounds.x + bounds.width + 3, bounds.y + bounds.height + 3, active ? 0x22000000 : 0x12000000);
         drawBorder(context, bounds.x - 3, bounds.y - 3, bounds.width + 6, bounds.height + 6, borderColor);
@@ -782,25 +943,13 @@ public class HudLayoutScreen extends Screen {
             String label = String.format(Locale.ROOT, "%s %d%%", module.label, Math.round(getScale(module) * 100.0F));
             context.text(font, Component.literal(label), bounds.x, Math.max(0, bounds.y - 12), borderColor | 0xFF000000);
         }
-        if (active) {
-            drawResizeHandles(context, bounds, module.accent, hoveredHandle);
+        if (module == selectedModule) {
+            drawResizeHandle(context, bounds, module.accent, handleHovered);
         }
     }
 
-    private void drawResizeHandles(GuiGraphicsExtractor context, Bounds bounds, int color, ResizeHandle hoveredHandle) {
-        int midX = bounds.x + bounds.width / 2;
-        int midY = bounds.y + bounds.height / 2;
-        int right = bounds.right();
-        int bottom = bounds.bottom();
-
-        drawHandle(context, bounds.x, bounds.y, color, hoveredHandle == ResizeHandle.TOP_LEFT);
-        drawHandle(context, midX, bounds.y, color, hoveredHandle == ResizeHandle.TOP);
-        drawHandle(context, right, bounds.y, color, hoveredHandle == ResizeHandle.TOP_RIGHT);
-        drawHandle(context, bounds.x, midY, color, hoveredHandle == ResizeHandle.LEFT);
-        drawHandle(context, right, midY, color, hoveredHandle == ResizeHandle.RIGHT);
-        drawHandle(context, bounds.x, bottom, color, hoveredHandle == ResizeHandle.BOTTOM_LEFT);
-        drawHandle(context, midX, bottom, color, hoveredHandle == ResizeHandle.BOTTOM);
-        drawHandle(context, right, bottom, color, hoveredHandle == ResizeHandle.BOTTOM_RIGHT);
+    private void drawResizeHandle(GuiGraphicsExtractor context, Bounds bounds, int color, boolean hovered) {
+        drawHandle(context, resizeHandleX(bounds), resizeHandleY(bounds), color, hovered);
     }
 
     private void drawHandle(GuiGraphicsExtractor context, int centerX, int centerY, int color, boolean hovered) {
