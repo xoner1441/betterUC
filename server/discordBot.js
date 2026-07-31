@@ -484,15 +484,31 @@ function changelogReleaseBody(entry) {
   const changes = Array.isArray(entry?.changes)
     ? entry.changes.map(change => clean(change)).filter(Boolean)
     : [];
-  if (changes.length === 0) return "";
-  return trimText(changes.map(change => `\u2022 ${change}`).join("\n"), 3900);
+  if (changes.length > 0) {
+    return trimText(changes.map(change => `\u2022 ${change}`).join("\n"), 3900);
+  }
+
+  const pageLines = Array.isArray(entry?.pages)
+    ? entry.pages.flatMap(page => {
+        const title = clean(page?.title);
+        const lines = Array.isArray(page?.lines)
+          ? page.lines.map(line => clean(line)).filter(Boolean)
+          : [];
+        if (lines.length === 0) return [];
+        return [
+          title ? `**${title}**` : "",
+          ...lines.map(line => `\u2022 ${line}`)
+        ].filter(Boolean);
+      })
+    : [];
+  return trimText(pageLines.join("\n"), 3900);
 }
 
 function releaseEmbed(release, changelogEntry = null) {
   const version = normalizeVersion(changelogEntry?.version || release?.tag_name || release?.name);
   const tag = version ? `v${version}` : "neues Release";
   const body = changelogReleaseBody(changelogEntry)
-    || trimText(release?.body || "Keine Release Notes hinterlegt.", 3900);
+    || "Die vollst\u00e4ndigen Neuerungen findest du im betterUC-Changelog.";
   const embed = new EmbedBuilder()
     .setTitle(`betterUC ${tag} ist verf\u00fcgbar`)
     .setURL(PUBLIC_DOWNLOAD_URL)
@@ -515,7 +531,7 @@ function releaseEmbed(release, changelogEntry = null) {
 function changelogEmbed(release, changelogEntry = null) {
   const version = normalizeVersion(changelogEntry?.version || release?.tag_name || release?.name);
   const body = changelogReleaseBody(changelogEntry)
-    || trimText(release?.body || "Keine Release Notes hinterlegt.", 3900);
+    || "F\u00fcr diese Version sind noch keine zentralen Changelog-Eintr\u00e4ge verf\u00fcgbar.";
   const embed = new EmbedBuilder()
     .setTitle(`betterUC v${version || "unbekannt"} | Changelog`)
     .setURL(PUBLIC_CHANGELOG_URL)
@@ -722,9 +738,25 @@ async function checkGithubRelease(client, options = {}) {
     return { status: firstRun ? "initialized" : "unchanged", release };
   }
 
-  const guild = await client.guilds.fetch(GUILD_ID);
-  const changelog = await readCentralChangelog({ force: changed || options.forcePost });
+  const changelog = await readCentralChangelog({
+    force: changed
+      || options.forcePost
+      || legacyPendingPost
+      || pendingUpdatePost
+      || pendingChangelogPost
+  });
   const changelogEntry = findChangelogRelease(changelog, release.tag_name || release.name);
+  if (!changelogEntry) {
+    if (shouldPostUpdate) botState.latestReleasePendingUpdatePost = true;
+    if (shouldPostChangelog) botState.latestReleasePendingChangelogPost = true;
+    await writeBotState(botState);
+    console.warn(
+      `Release ${release.tag_name || release.name || releaseKey} wartet auf den zentralen Changelog.`
+    );
+    return { status: "waiting_for_changelog", release };
+  }
+
+  const guild = await client.guilds.fetch(GUILD_ID);
   const failures = [];
   let updatePosted = false;
   let changelogPosted = false;
@@ -1785,6 +1817,11 @@ async function handleCommand(interaction, context) {
       });
       if (result.status === "posted") {
         await interaction.reply({ content: "Update wurde im Discord-Update-Channel gepostet.", ephemeral: true });
+      } else if (result.status === "waiting_for_changelog") {
+        await interaction.reply({
+          content: "Das Release wurde erkannt, aber der passende zentrale Changelog ist noch nicht auf dem Server angekommen. Der Bot versucht es automatisch erneut.",
+          ephemeral: true
+        });
       } else if (result.status === "unchanged" || result.status === "initialized") {
         await interaction.reply({
           content: `Kein neues Release. Aktuell erkannt: ${result.release?.tag_name || "unbekannt"}.`,
