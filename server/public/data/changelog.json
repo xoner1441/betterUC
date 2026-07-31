@@ -2,27 +2,102 @@
   "schema": 1,
   "development": {
     "label": "In Entwicklung",
-    "title": "Kompatibilität erweitert",
+    "title": "Weitere Verbesserungen folgen",
     "date": "Aktueller Stand",
     "pages": [
       {
         "eyebrow": "NÄCHSTE VERSION",
-        "title": "Minecraft 1.21.11 wird unterstützt",
-        "description": "betterUC erhält eine eigene, geprüfte Mod-Datei für Minecraft 1.21.11.",
+        "title": "Weitere Verbesserungen folgen",
+        "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
         "lines": [
-          "Minecraft 1.21.11 wird als eigener Build neben 1.21.10 und 26.x angeboten.",
-          "Der Mülleimerfilter wurde an die geänderte Inventar-Darstellung von 1.21.11 angepasst.",
-          "Website und Auto-Updater wählen automatisch die zur Minecraft-Version passende JAR.",
-          "Die 1.21.10-JAR wird unter 1.21.11 nicht mehr fälschlich als kompatibel behandelt."
+          "Version 1.3.5 enthält den neuen HUD-Editor, zusätzliche Komfortfunktionen und erweiterten Minecraft-Support."
         ]
       }
     ]
   },
   "releases": [
     {
+      "version": "1.3.5",
+      "date": "31.07.2026",
+      "current": true,
+      "pages": [
+        {
+          "eyebrow": "NEU IN 1.3.5",
+          "title": "HUD-Editor 2.0",
+          "description": "Die HUD-Vorschau ist übersichtlicher und schützt besser vor versehentlichem Skalieren.",
+          "lines": [
+            "HUDs lassen sich präziser verschieben und über klar getrennte Bedienelemente skalieren.",
+            "Die Größe des ausgewählten HUDs kann schrittweise angepasst oder auf 100 Prozent zurückgesetzt werden.",
+            "Ein einzelnes HUD oder das vollständige Layout kann auf die Standardpositionen zurückgesetzt werden.",
+            "Das Zurücksetzen aller HUDs benötigt eine Bestätigung, damit kein Layout versehentlich verloren geht.",
+            "Erklärende Tooltips im ClickGUI beschreiben Einstellungen direkt beim Darüberfahren."
+          ]
+        },
+        {
+          "eyebrow": "HUDS & KOMFORT",
+          "title": "Mehr Informationen, zuverlässigere Werte",
+          "description": "Effekte, Bargeld und Bankaktionen werden verständlicher dargestellt und sicherer erkannt.",
+          "lines": [
+            "Der transparente Potion-Stil zeigt jetzt die passenden Effekt-Icons und richtet sie sauber am Bildschirmrand aus.",
+            "Schnelle, wiederholte Käufe und Verkäufe werden vom Bargeld-HUD zuverlässiger verarbeitet.",
+            "Erlöse aus Verkäufen und Fang-Combo-Belohnungen werden automatisch zum Bargeld addiert.",
+            "Wenn ein Bankautomat voll ist, kann betterUC nach zwei Sekunden automatisch /einzahlen force senden.",
+            "Die automatische Zwangseinzahlung lässt sich im ClickGUI ein- oder ausschalten."
+          ]
+        },
+        {
+          "eyebrow": "KOMPATIBILITÄT",
+          "title": "Bereit für weitere Minecraft-Versionen",
+          "description": "betterUC besitzt passende Builds und Laufzeitanpassungen für alle aktuell unterstützten Versionen.",
+          "lines": [
+            "Minecraft 1.21.11 wird mit einer eigenen Mod-Datei vollständig unterstützt.",
+            "Website und Auto-Updater wählen für 1.21.10, 1.21.11 und 26.x automatisch die passende JAR.",
+            "Mülleimerfilter, Tab-Badges, Hologramme und eigene Fonts wurden an 1.21.11 angepasst.",
+            "Die Actionbar-Erkennung des Ammo-HUDs funktioniert wieder unter Minecraft 26.2.",
+            "betterUC-Badges bleiben auf die Tablist begrenzt und erscheinen nicht mehr in Chatnachrichten.",
+            "Das Discord-Serverwidget ist jetzt kompakt in die betterUC-Website eingebunden."
+          ]
+        }
+      ],
+      "summary": [
+        {
+          "title": "HUD-Editor 2.0",
+          "description": "HUDs lassen sich präziser verschieben, kontrolliert skalieren und einzeln oder vollständig zurücksetzen.",
+          "color": "cyan"
+        },
+        {
+          "title": "Mehr Minecraft-Support",
+          "description": "Eigene Builds für 1.21.10, 1.21.11 und 26.x halten betterUC auf allen unterstützten Versionen einsatzbereit.",
+          "color": "green"
+        },
+        {
+          "title": "Zuverlässigere HUD-Werte",
+          "description": "Bargeldaktionen, Fang-Combos und Effektanzeigen werden vollständiger und übersichtlicher verarbeitet.",
+          "color": "amber"
+        },
+        {
+          "title": "Mehr Bedienkomfort",
+          "description": "Tooltips und die optionale automatische Zwangseinzahlung erklären und vereinfachen wichtige Abläufe.",
+          "color": "green"
+        }
+      ],
+      "changes": [
+        "HUD-Editor 2.0 mit präziserem Verschieben und getrennten Skalierungsaktionen.",
+        "Ausgewählte HUDs und vollständige Layouts können auf ihre Standardwerte zurückgesetzt werden.",
+        "ClickGUI-Einstellungen besitzen erklärende Tooltips.",
+        "Der transparente Potion-Stil zeigt Effekt-Icons mit verbesserter Ausrichtung.",
+        "Das Bargeld-HUD erkennt schnelle Käufe, Verkäufe und Fang-Combo-Belohnungen zuverlässiger.",
+        "Volle Bankautomaten können optional automatisch mit /einzahlen force verarbeitet werden.",
+        "Minecraft 1.21.11 wird durch eine eigene JAR unterstützt.",
+        "Auto-Updater und Website wählen die passende Datei für 1.21.10, 1.21.11 und 26.x.",
+        "Das Ammo-HUD verarbeitet Actionbar-Nachrichten unter Minecraft 26.2 wieder korrekt.",
+        "betterUC-Badges werden nicht mehr versehentlich im Chat gerendert.",
+        "Das Discord-Serverwidget wurde kompakt in die Website integriert."
+      ]
+    },
+    {
       "version": "1.3.4",
       "date": "29.07.2026",
-      "current": true,
       "pages": [
         {
           "eyebrow": "NEU IN 1.3.4",
