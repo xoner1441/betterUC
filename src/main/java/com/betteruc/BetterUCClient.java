@@ -394,7 +394,7 @@ public class BetterUCClient implements ClientModInitializer {
             SuggestionProvider<FabricClientCommandSource> playerSuggestions
     ) {
         dispatcher.register(ClientCommands.literal("vm")
-                .then(ClientCommands.argument("spieler", StringArgumentType.word())
+                .then(ClientCommands.argument("spieler", StringArgumentType.greedyString())
                         .suggests(playerSuggestions)
                         .executes(context -> {
                             Minecraft client = Minecraft.getInstance();
@@ -402,7 +402,16 @@ public class BetterUCClient implements ClientModInitializer {
                             if (!ensureAllowedServerForManualCommand(client)) return 0;
 
                             String spieler = StringArgumentType.getString(context, "spieler");
-                            sendServerCommand(client, "asu " + spieler + " Versuchter Mord");
+                            String serverCommand =
+                                    CommandShortcutClient.buildAttemptedMurderServerCommand(spieler);
+                            if (serverCommand == null) {
+                                client.player.sendSystemMessage(Component.literal(
+                                        "§cNutze: /vm <Spieler> [weitere Spieler] (maximal 6)"
+                                ));
+                                return 0;
+                            }
+
+                            sendServerCommand(client, serverCommand);
                             return 1;
                         })));
     }
