@@ -5,6 +5,7 @@
   "mixins": [
     "ChatBadgeBoundaryMixin",
     "ChatBlacklistMixin",
+    "ChatScreenCommandShortcutMixin",
     "InGameHudAmmoMixin",
     "PlayerEntityRendererMixin",
     "PlayerListHudRenderContextMixin",

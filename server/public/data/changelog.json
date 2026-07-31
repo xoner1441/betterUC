@@ -2,14 +2,16 @@
   "schema": 1,
   "development": {
     "label": "In Entwicklung",
-    "title": "Weitere Verbesserungen folgen",
+    "title": "Kompatibilitätskorrekturen",
     "date": "Aktueller Stand",
     "pages": [
       {
         "eyebrow": "NÄCHSTE VERSION",
-        "title": "Weitere Verbesserungen folgen",
-        "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
+        "title": "LabyMod VoiceChat und /vm",
+        "description": "Der betterUC-Shortcut funktioniert jetzt auch, wenn LabyMod VoiceChat denselben Befehl verwendet.",
         "lines": [
+          "/vm <Spieler> wird zuverlässig als Versuchter-Mord-Befehl ausgeführt, ohne das LabyMod Voice-Menü zu öffnen.",
+          "/vm ohne Spielernamen bleibt für das Voice-Menü anderer Clients verfügbar.",
           "Version 1.3.5 enthält den neuen HUD-Editor, zusätzliche Komfortfunktionen und erweiterten Minecraft-Support."
         ]
       }

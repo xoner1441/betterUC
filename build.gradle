@@ -443,6 +443,13 @@ def transformLegacyJavaSource = { String source ->
         text = text.replaceAll(/(?s)\s*@Shadow\s+private List<ChatHudLine> allMessages;\s+@Shadow\s+private void refreshTrimmedMessages\(\) \{\s*\}\s+/, "\n\n")
         text = text.replaceAll(/(?s)\n\s*@Inject\(method = "addMessage\(Lnet\/minecraft\/client\/gui\/hud\/ChatHudLine;\)V", at = @At\("TAIL"\), require = 0\)\s+private void extendMessageHistory\(ChatHudLine message, CallbackInfo ci\) \{.*?\n\s*\}\s+\n\s*private boolean isLingeringSilentStatsLine/, "\n    private boolean isLingeringSilentStatsLine")
     }
+    if (text.contains("class ChatScreenCommandShortcutMixin")) {
+        text = text.replace(
+                "net.minecraft.client.gui.screens.ChatScreen",
+                "net.minecraft.client.gui.screen.ChatScreen"
+        )
+        text = text.replace('method = "handleChatInput"', 'method = "sendMessage"')
+    }
     return text
 }
 
