@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.betteruc.client.AutoBuyClient;
 import com.betteruc.client.AutoDropDrinkClient;
@@ -325,19 +326,29 @@ public class BetterUCClient implements ClientModInitializer {
                     .then(ClientCommands.argument("spieler", StringArgumentType.word())
                             .suggests((context, builder) -> SharedSuggestionProvider.suggest(collectSuggestedPlayerNames(), builder))
                             .then(ClientCommands.argument("summe", StringArgumentType.word())
+                                    .executes(context -> executeBankTransferCommand(context, false))
                                     .then(ClientCommands.argument("grund", StringArgumentType.greedyString())
-                                            .executes(context -> {
-                                                Minecraft client = Minecraft.getInstance();
-                                                if (client.player == null) return 0;
-                                                if (!ensureAllowedServerForManualCommand(client)) return 0;
-
-                                                String spieler = StringArgumentType.getString(context, "spieler");
-                                                String summe = StringArgumentType.getString(context, "summe");
-                                                String grund = StringArgumentType.getString(context, "grund");
-                                                sendServerCommand(client, "bank überweisen " + spieler + " " + summe + " " + grund);
-                                                return 1;
-                                            })))));
+                                            .executes(context -> executeBankTransferCommand(context, true))))));
         }
+    }
+
+    private int executeBankTransferCommand(
+            CommandContext<FabricClientCommandSource> context,
+            boolean includesReason
+    ) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.player == null) return 0;
+        if (!ensureAllowedServerForManualCommand(client)) return 0;
+
+        String spieler = StringArgumentType.getString(context, "spieler");
+        String summe = StringArgumentType.getString(context, "summe");
+        String serverCommand = "bank überweisen " + spieler + " " + summe;
+        if (includesReason) {
+            serverCommand += " " + StringArgumentType.getString(context, "grund");
+        }
+
+        sendServerCommand(client, serverCommand);
+        return 1;
     }
 
     private void registerAutoDropDrinkCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
