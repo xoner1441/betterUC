@@ -15,6 +15,18 @@
           "/überweisen funktioniert jetzt wahlweise mit oder ohne Verwendungsgrund.",
           "Version 1.3.5 enthält den neuen HUD-Editor, zusätzliche Komfortfunktionen und erweiterten Minecraft-Support."
         ]
+      },
+      {
+        "eyebrow": "NEUES HUD",
+        "title": "Masken-Timer mit Ablaufwarnung",
+        "description": "Die verbleibende Dauer deiner Maskierung bleibt direkt im HUD sichtbar.",
+        "lines": [
+          "Die Maskenzeit wird automatisch aus der Servernachricht übernommen.",
+          "Kurz vor Ablauf wechselt der Timer in einen deutlich sichtbaren Warnzustand.",
+          "Beim Ablauf oder manuellen Ablegen der Maske verschwindet der Timer sofort.",
+          "Position, Größe, Stil, Farbe, Schrift, Farbverlauf und Beschriftung sind frei einstellbar.",
+          "Der Masken-Timer wird in HUD-Profilen und über die Cloud-Synchronisierung gespeichert."
+        ]
       }
     ]
   },

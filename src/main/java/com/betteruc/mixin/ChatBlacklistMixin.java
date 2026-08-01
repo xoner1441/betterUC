@@ -24,6 +24,7 @@ import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.CashHud;
 import com.betteruc.hud.DealerTimerHud;
 import com.betteruc.hud.HackTimerHud;
+import com.betteruc.hud.MaskTimerHud;
 import com.betteruc.hud.PaydayHud;
 import com.betteruc.hud.PlantageHud;
 import com.betteruc.hud.ProductionTimerHud;
@@ -162,6 +163,7 @@ public class ChatBlacklistMixin {
         CarFindTracker.handleIncomingChat(Minecraft.getInstance(), raw);
         CommunicationDeviceTracker.handleChatLine(Minecraft.getInstance(), raw);
         DealerTimerHud.handleChatLine(Minecraft.getInstance(), raw);
+        MaskTimerHud.handleChatLine(Minecraft.getInstance(), raw);
         PlantageHud.handleChatMessage(Minecraft.getInstance(), raw);
         ProductionTimerHud.handleChatLine(Minecraft.getInstance(), raw);
         RichTaxAlertHud.handleChatLine(Minecraft.getInstance(), raw);

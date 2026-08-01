@@ -2425,9 +2425,10 @@ function sameAudience(sender, target, payload) {
 }
 
 function broadcastPing(sender, payload) {
+  const requestedId = String(payload.id || "").trim();
   const marker = {
     type: "ping",
-    id: crypto.randomUUID(),
+    id: /^[0-9a-fA-F-]{36}$/.test(requestedId) ? requestedId : crypto.randomUUID(),
     pingType: cleanPingType(payload.pingType),
     sender: sender.name || "unknown",
     label: cleanSmallLabel(payload.label || "Ping", "Ping"),

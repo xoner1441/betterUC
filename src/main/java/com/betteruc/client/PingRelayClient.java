@@ -36,6 +36,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -168,23 +169,41 @@ public final class PingRelayClient {
         }
 
         PingTarget target = targetFromCrosshair(client);
+        String pingId = UUID.randomUUID().toString();
+        String dimension = currentDimension(client);
+        String color = colorForType(safeType);
+        long expiresAt = now + Math.max(5, Math.min(60, BetterUCConfig.INSTANCE.pingRelayTtlSeconds)) * 1000L;
         JsonObject payload = new JsonObject();
         payload.addProperty("type", "ping");
+        payload.addProperty("id", pingId);
         payload.addProperty("pingType", safeType.id());
         payload.addProperty("sender", playerName(client));
         payload.addProperty("server", currentServerId(client));
         payload.addProperty("channel", channel());
-        payload.addProperty("scope", "state".equals(scope) ? "faction" : scope);
+        payload.addProperty("scope", scope);
         payload.addProperty("audience", scope);
-        payload.addProperty("dimension", currentDimension(client));
+        payload.addProperty("dimension", dimension);
         payload.addProperty("x", target.pos.x);
         payload.addProperty("y", target.pos.y);
         payload.addProperty("z", target.pos.z);
         payload.addProperty("label", target.label);
-        payload.addProperty("color", colorForType(safeType));
+        payload.addProperty("color", color);
 
         try {
             webSocket.sendText(GSON.toJson(payload), true);
+            storeMarker(new PingMarker(
+                    pingId,
+                    playerName(client),
+                    target.label,
+                    safeType.id(),
+                    dimension,
+                    target.pos.x,
+                    target.pos.y,
+                    target.pos.z,
+                    color,
+                    now,
+                    expiresAt
+            ));
             lastPingSentMs = now;
             playPingSelectionSound(client, safeType);
             return true;
@@ -704,13 +723,7 @@ public final class PingRelayClient {
                 return;
             }
 
-            synchronized (LOCK) {
-                ACTIVE_PINGS.removeIf(existing -> !existing.id().isEmpty() && existing.id().equals(marker.id()));
-                ACTIVE_PINGS.add(marker);
-                while (ACTIVE_PINGS.size() > 12) {
-                    ACTIVE_PINGS.remove(0);
-                }
-            }
+            storeMarker(marker);
             if (!isOwnMarker(client, marker)) {
                 playPingSound(client, PingType.fromId(marker.pingType()));
             }
@@ -738,7 +751,32 @@ public final class PingRelayClient {
     private static boolean shouldAcceptMarker(Minecraft client, PingMarker marker) {
         if (client == null || client.player == null || client.level == null || marker == null) return false;
         if (!sameDimension(currentDimension(client), marker.dimension())) return false;
-        return distanceToPlayer(client, marker) <= effectiveReceiveDistance();
+        return distanceToPlayer(client, marker) <= effectiveReceiveDistance() + 0.25D;
+    }
+
+    private static void storeMarker(PingMarker marker) {
+        if (marker == null) return;
+        synchronized (LOCK) {
+            ACTIVE_PINGS.removeIf(existing -> isSameMarker(existing, marker));
+            ACTIVE_PINGS.add(marker);
+            while (ACTIVE_PINGS.size() > 12) {
+                ACTIVE_PINGS.remove(0);
+            }
+        }
+    }
+
+    private static boolean isSameMarker(PingMarker existing, PingMarker incoming) {
+        if (existing == null || incoming == null) return false;
+        if (!incoming.id().isEmpty() && existing.id().equals(incoming.id())) return true;
+        if (!existing.sender().equalsIgnoreCase(incoming.sender())) return false;
+        if (!existing.pingType().equalsIgnoreCase(incoming.pingType())) return false;
+        if (!sameDimension(existing.dimension(), incoming.dimension())) return false;
+        if (Math.abs(existing.createdAt() - incoming.createdAt()) > 2000L) return false;
+
+        double dx = existing.x() - incoming.x();
+        double dy = existing.y() - incoming.y();
+        double dz = existing.z() - incoming.z();
+        return dx * dx + dy * dy + dz * dz <= 0.0001D;
     }
 
     private static double effectiveReceiveDistance() {

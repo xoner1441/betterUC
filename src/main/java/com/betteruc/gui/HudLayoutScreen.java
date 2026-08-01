@@ -261,6 +261,7 @@ public class HudLayoutScreen extends Screen {
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintEnabled;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.showPlantTimerHud;
             case DEALER_TIMER -> BetterUCConfig.INSTANCE.showDealerTimerHud;
+            case MASK_TIMER -> BetterUCConfig.INSTANCE.showMaskTimerHud;
             case PRODUCTION_TIMER -> BetterUCConfig.INSTANCE.showProductionTimerHud;
             case HACK_TIMER -> true;
         };
@@ -287,6 +288,7 @@ public class HudLayoutScreen extends Screen {
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerX;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerX;
             case DEALER_TIMER -> BetterUCConfig.INSTANCE.dealerTimerX;
+            case MASK_TIMER -> BetterUCConfig.INSTANCE.maskTimerX;
             case PRODUCTION_TIMER -> BetterUCConfig.INSTANCE.productionTimerX;
         };
     }
@@ -304,6 +306,7 @@ public class HudLayoutScreen extends Screen {
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerY;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerY;
             case DEALER_TIMER -> BetterUCConfig.INSTANCE.dealerTimerY;
+            case MASK_TIMER -> BetterUCConfig.INSTANCE.maskTimerY;
             case PRODUCTION_TIMER -> BetterUCConfig.INSTANCE.productionTimerY;
         };
     }
@@ -354,6 +357,10 @@ public class HudLayoutScreen extends Screen {
                 BetterUCConfig.INSTANCE.dealerTimerX = x;
                 BetterUCConfig.INSTANCE.dealerTimerY = y;
             }
+            case MASK_TIMER -> {
+                BetterUCConfig.INSTANCE.maskTimerX = x;
+                BetterUCConfig.INSTANCE.maskTimerY = y;
+            }
             case PRODUCTION_TIMER -> {
                 BetterUCConfig.INSTANCE.productionTimerX = x;
                 BetterUCConfig.INSTANCE.productionTimerY = y;
@@ -374,6 +381,7 @@ public class HudLayoutScreen extends Screen {
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudScale;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudScale;
             case DEALER_TIMER -> BetterUCConfig.INSTANCE.dealerTimerHudScale;
+            case MASK_TIMER -> BetterUCConfig.INSTANCE.maskTimerHudScale;
             case PRODUCTION_TIMER -> BetterUCConfig.INSTANCE.productionTimerHudScale;
         };
     }
@@ -392,6 +400,7 @@ public class HudLayoutScreen extends Screen {
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudScale = safeScale;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudScale = safeScale;
             case DEALER_TIMER -> BetterUCConfig.INSTANCE.dealerTimerHudScale = safeScale;
+            case MASK_TIMER -> BetterUCConfig.INSTANCE.maskTimerHudScale = safeScale;
             case PRODUCTION_TIMER -> BetterUCConfig.INSTANCE.productionTimerHudScale = safeScale;
         }
     }
@@ -421,6 +430,10 @@ public class HudLayoutScreen extends Screen {
             case SPRINT -> singleLineWidth(hudLabel(module), "ON", prefixedText(module, "ON"), BetterUCConfig.INSTANCE.toggleSprintHudStyle);
             case HACK_TIMER -> singleLineWidth(hudLabel(module), "02:39", prefixedText(module, "02:39"), BetterUCConfig.INSTANCE.hackTimerHudStyle);
             case DEALER_TIMER -> singleLineWidth(hudLabel(module), "00:15", prefixedText(module, "00:15"), BetterUCConfig.INSTANCE.dealerTimerHudStyle);
+            case MASK_TIMER -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.maskTimerHudStyle)
+                    ? progressWidth(hudLabel(module), "18:42")
+                    : singleLineWidth(hudLabel(module), "18:42", prefixedText(module, "18:42"),
+                    BetterUCConfig.INSTANCE.maskTimerHudStyle);
             case PRODUCTION_TIMER -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.productionTimerHudStyle)
                     ? progressWidth(hudLabel(module), "19:59")
                     : singleLineWidth(hudLabel(module), "19:59", prefixedText(module, "19:59"), BetterUCConfig.INSTANCE.productionTimerHudStyle);
@@ -443,6 +456,8 @@ public class HudLayoutScreen extends Screen {
             case SPRINT -> singleLineHeight(BetterUCConfig.INSTANCE.toggleSprintHudStyle);
             case HACK_TIMER -> singleLineHeight(BetterUCConfig.INSTANCE.hackTimerHudStyle);
             case DEALER_TIMER -> singleLineHeight(BetterUCConfig.INSTANCE.dealerTimerHudStyle);
+            case MASK_TIMER -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.maskTimerHudStyle)
+                    ? 24 : singleLineHeight(BetterUCConfig.INSTANCE.maskTimerHudStyle);
             case PRODUCTION_TIMER -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.productionTimerHudStyle) ? 24 : singleLineHeight(BetterUCConfig.INSTANCE.productionTimerHudStyle);
         };
     }
@@ -543,6 +558,15 @@ public class HudLayoutScreen extends Screen {
             case SPRINT -> renderSingleLine(context, minecraft, style, fontId, x, y, hudLabel(module), "ON", prefixedText(module, "ON"), BetterUCConfig.INSTANCE.toggleSprintHudColor);
             case HACK_TIMER -> renderSingleLine(context, minecraft, style, fontId, x, y, hudLabel(module), "02:39", prefixedText(module, "02:39"), 0xFF60A5FA);
             case DEALER_TIMER -> renderSingleLine(context, minecraft, style, fontId, x, y, hudLabel(module), "00:15", prefixedText(module, "00:15"), BetterUCConfig.INSTANCE.dealerTimerHudColor);
+            case MASK_TIMER -> {
+                if (modernStyle) {
+                    ModernHudRenderer.drawProgressModule(context, minecraft, x, y, hudLabel(module), "18:42",
+                            0.07F, BetterUCConfig.INSTANCE.maskTimerHudColor);
+                } else {
+                    renderSingleLine(context, minecraft, style, fontId, x, y, hudLabel(module), "18:42",
+                            prefixedText(module, "18:42"), BetterUCConfig.INSTANCE.maskTimerHudColor);
+                }
+            }
             case PRODUCTION_TIMER -> {
                 if (modernStyle) {
                     ModernHudRenderer.drawProgressModule(context, minecraft, x, y, hudLabel(module), "19:59", 0.35F, BetterUCConfig.INSTANCE.productionTimerHudColor);
@@ -613,6 +637,7 @@ public class HudLayoutScreen extends Screen {
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudStyle;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudStyle;
             case DEALER_TIMER -> BetterUCConfig.INSTANCE.dealerTimerHudStyle;
+            case MASK_TIMER -> BetterUCConfig.INSTANCE.maskTimerHudStyle;
             case PRODUCTION_TIMER -> BetterUCConfig.INSTANCE.productionTimerHudStyle;
         };
     }
@@ -630,6 +655,7 @@ public class HudLayoutScreen extends Screen {
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudCustomFont;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudCustomFont;
             case DEALER_TIMER -> BetterUCConfig.INSTANCE.dealerTimerHudCustomFont;
+            case MASK_TIMER -> BetterUCConfig.INSTANCE.maskTimerHudCustomFont;
             case PRODUCTION_TIMER -> BetterUCConfig.INSTANCE.productionTimerHudCustomFont;
         };
     }
@@ -647,6 +673,7 @@ public class HudLayoutScreen extends Screen {
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientEnabled;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudGradientEnabled;
             case DEALER_TIMER -> BetterUCConfig.INSTANCE.dealerTimerHudGradientEnabled;
+            case MASK_TIMER -> BetterUCConfig.INSTANCE.maskTimerHudGradientEnabled;
             case PRODUCTION_TIMER -> BetterUCConfig.INSTANCE.productionTimerHudGradientEnabled;
         };
     }
@@ -664,6 +691,7 @@ public class HudLayoutScreen extends Screen {
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientColor;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudGradientColor;
             case DEALER_TIMER -> BetterUCConfig.INSTANCE.dealerTimerHudGradientColor;
+            case MASK_TIMER -> BetterUCConfig.INSTANCE.maskTimerHudGradientColor;
             case PRODUCTION_TIMER -> BetterUCConfig.INSTANCE.productionTimerHudGradientColor;
         };
     }
@@ -684,6 +712,7 @@ public class HudLayoutScreen extends Screen {
             case HACK_TIMER -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.hackTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.hackTimerHudPrefix);
             case PLANT_TIMER -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.plantTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.plantTimerHudPrefix);
             case DEALER_TIMER -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.dealerTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.dealerTimerHudPrefix);
+            case MASK_TIMER -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.maskTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.maskTimerHudPrefix);
             case PRODUCTION_TIMER -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.productionTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.productionTimerHudPrefix);
             default -> "";
         };
@@ -700,6 +729,7 @@ public class HudLayoutScreen extends Screen {
             case HACK_TIMER -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.hackTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.hackTimerHudPrefix, value);
             case PLANT_TIMER -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.plantTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.plantTimerHudPrefix, value);
             case DEALER_TIMER -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.dealerTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.dealerTimerHudPrefix, value);
+            case MASK_TIMER -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.maskTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.maskTimerHudPrefix, value);
             case PRODUCTION_TIMER -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.productionTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.productionTimerHudPrefix, value);
             default -> value;
         };
@@ -819,6 +849,11 @@ public class HudLayoutScreen extends Screen {
                 BetterUCConfig.INSTANCE.dealerTimerX = defaults.dealerTimerX;
                 BetterUCConfig.INSTANCE.dealerTimerY = defaults.dealerTimerY;
                 BetterUCConfig.INSTANCE.dealerTimerHudScale = defaults.dealerTimerHudScale;
+            }
+            case MASK_TIMER -> {
+                BetterUCConfig.INSTANCE.maskTimerX = defaults.maskTimerX;
+                BetterUCConfig.INSTANCE.maskTimerY = defaults.maskTimerY;
+                BetterUCConfig.INSTANCE.maskTimerHudScale = defaults.maskTimerHudScale;
             }
             case PRODUCTION_TIMER -> {
                 BetterUCConfig.INSTANCE.productionTimerX = defaults.productionTimerX;
@@ -1078,6 +1113,7 @@ public class HudLayoutScreen extends Screen {
         SPRINT("Sprint", BetterUCConfig.DEFAULT_TOGGLE_SPRINT_HUD_COLOR),
         HACK_TIMER("Hack Timer", 0xFF60A5FA),
         DEALER_TIMER("Dealer Timer", 0xFFD946EF),
+        MASK_TIMER("Masken Timer", 0xFF22D3EE),
         PRODUCTION_TIMER("Produktion", 0xFFFBBF24),
         PLANT_TIMER("Plant Timer", 0xFF6CF27D);
 

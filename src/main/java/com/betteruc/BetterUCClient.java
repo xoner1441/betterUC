@@ -43,6 +43,7 @@ import com.betteruc.hud.DealerTimerHud;
 import com.betteruc.hud.FpsHud;
 import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.HealthHud;
+import com.betteruc.hud.MaskTimerHud;
 import com.betteruc.hud.PaydayHud;
 import com.betteruc.hud.PingHud;
 import com.betteruc.hud.PlantageHud;
@@ -197,6 +198,7 @@ public class BetterUCClient implements ClientModInitializer {
         BankBalanceHud.register();
         CashHud.register();
         DealerTimerHud.register();
+        MaskTimerHud.register();
         ProductionTimerHud.register();
         RichTaxAlertHud.register();
         HealthHud.register();
@@ -219,6 +221,7 @@ public class BetterUCClient implements ClientModInitializer {
             BankBalanceHud.clear();
             CashHud.clear();
             DealerTimerHud.clear();
+            MaskTimerHud.clear();
             ProductionTimerHud.clear();
             RichTaxAlertHud.clear();
             CommunicationDeviceTracker.reset();
@@ -992,6 +995,7 @@ public class BetterUCClient implements ClientModInitializer {
             VersionChecker.tick(client);
             HackTimerHud.tick();
             DealerTimerHud.tick();
+            MaskTimerHud.tick();
             ProductionTimerHud.tick();
             PlantageHud.tick();
             AmmoHud.tickReloadKey(client);
@@ -1232,6 +1236,7 @@ public class BetterUCClient implements ClientModInitializer {
         BankBalanceHud.clear();
         CashHud.clear();
         DealerTimerHud.clear();
+        MaskTimerHud.clear();
         ProductionTimerHud.clear();
         RichTaxAlertHud.clear();
         AutoDropDrinkClient.reset();
