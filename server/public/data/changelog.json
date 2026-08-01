@@ -10,7 +10,7 @@
         "title": "LabyMod VoiceChat und /vm",
         "description": "Der betterUC-Shortcut funktioniert jetzt auch, wenn LabyMod VoiceChat denselben Befehl verwendet.",
         "lines": [
-          "/vm unterstützt jetzt bis zu sechs Spielernamen gleichzeitig und bleibt mit LabyMod VoiceChat kompatibel.",
+          "/vm unterstützt jetzt bis zu sechs Spielernamen gleichzeitig; jeder weitere Name lässt sich per Tab vervollständigen.",
           "/vm ohne Spielernamen bleibt für das Voice-Menü anderer Clients verfügbar.",
           "/überweisen funktioniert jetzt wahlweise mit oder ohne Verwendungsgrund.",
           "Version 1.3.5 enthält den neuen HUD-Editor, zusätzliche Komfortfunktionen und erweiterten Minecraft-Support."

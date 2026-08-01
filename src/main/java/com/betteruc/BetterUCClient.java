@@ -6,6 +6,8 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.betteruc.client.AutoBuyClient;
 import com.betteruc.client.AutoDropDrinkClient;
 import com.betteruc.client.AutoFisherClient;
@@ -75,6 +77,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -262,7 +265,7 @@ public class BetterUCClient implements ClientModInitializer {
             registerUserPanelCommand(dispatcher);
             registerUpdateCommand(dispatcher);
             registerBankShortcutCommands(dispatcher);
-            registerAttemptedMurderShortcutCommand(dispatcher, playerSuggestions);
+            registerAttemptedMurderShortcutCommand(dispatcher);
             registerAutoBuyCommand(dispatcher);
             registerAutoDropDrinkCommand(dispatcher);
             registerMuellmannAreaCommand(dispatcher);
@@ -401,12 +404,11 @@ public class BetterUCClient implements ClientModInitializer {
     }
 
     private void registerAttemptedMurderShortcutCommand(
-            CommandDispatcher<FabricClientCommandSource> dispatcher,
-            SuggestionProvider<FabricClientCommandSource> playerSuggestions
+            CommandDispatcher<FabricClientCommandSource> dispatcher
     ) {
         dispatcher.register(ClientCommands.literal("vm")
                 .then(ClientCommands.argument("spieler", StringArgumentType.greedyString())
-                        .suggests(playerSuggestions)
+                        .suggests(this::suggestAttemptedMurderPlayers)
                         .executes(context -> {
                             Minecraft client = Minecraft.getInstance();
                             if (client.player == null) return 0;
@@ -425,6 +427,33 @@ public class BetterUCClient implements ClientModInitializer {
                             sendServerCommand(client, serverCommand);
                             return 1;
                         })));
+    }
+
+    private CompletableFuture<Suggestions> suggestAttemptedMurderPlayers(
+            CommandContext<FabricClientCommandSource> context,
+            SuggestionsBuilder builder
+    ) {
+        String remaining = builder.getRemaining();
+        int currentNameStart = remaining.lastIndexOf(' ') + 1;
+        String selectedInput = remaining.substring(0, currentNameStart).trim();
+        Set<String> selectedNames = new HashSet<>();
+
+        if (!selectedInput.isEmpty()) {
+            String[] names = selectedInput.split("\\s+");
+            if (names.length >= 6) {
+                return builder.createOffset(builder.getStart() + currentNameStart).buildFuture();
+            }
+            for (String name : names) {
+                selectedNames.add(name.toLowerCase(Locale.ROOT));
+            }
+        }
+
+        SuggestionsBuilder currentNameBuilder =
+                builder.createOffset(builder.getStart() + currentNameStart);
+        List<String> availableNames = collectSuggestedPlayerNames().stream()
+                .filter(name -> !selectedNames.contains(name.toLowerCase(Locale.ROOT)))
+                .toList();
+        return SharedSuggestionProvider.suggest(availableNames, currentNameBuilder);
     }
 
     private void registerBetterUcOnlineCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
