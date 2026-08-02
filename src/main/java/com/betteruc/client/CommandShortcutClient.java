@@ -3,6 +3,7 @@ package com.betteruc.client;
 import com.betteruc.ServerGate;
 import net.minecraft.client.Minecraft;
 
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 public final class CommandShortcutClient {
@@ -23,14 +24,14 @@ public final class CommandShortcutClient {
         String command = (slashPrefixed ? input.substring(1) : input).trim();
         String[] parts = command.split("\\s+");
         if (parts.length < 2 || !parts[0].equalsIgnoreCase("vm")) {
-            return input;
+            return lowercaseCommandName(input);
         }
 
         StringBuilder players = new StringBuilder();
         for (int index = 1; index < parts.length; index++) {
             if (index > MAX_ATTEMPTED_MURDER_PLAYERS
                     || !PLAYER_NAME_PATTERN.matcher(parts[index]).matches()) {
-                return input;
+                return lowercaseCommandName(input);
             }
             if (!players.isEmpty()) {
                 players.append(' ');
@@ -38,7 +39,34 @@ public final class CommandShortcutClient {
             players.append(parts[index]);
         }
 
-        return (slashPrefixed ? "/" : "") + buildAttemptedMurderServerCommand(players.toString());
+        return lowercaseCommandName(
+                (slashPrefixed ? "/" : "") + buildAttemptedMurderServerCommand(players.toString())
+        );
+    }
+
+    static String lowercaseCommandName(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
+        }
+
+        int commandStart = input.charAt(0) == '/' ? 1 : 0;
+        int commandEnd = commandStart;
+        while (commandEnd < input.length() && !Character.isWhitespace(input.charAt(commandEnd))) {
+            commandEnd++;
+        }
+        if (commandEnd == commandStart) {
+            return input;
+        }
+
+        String commandName = input.substring(commandStart, commandEnd);
+        String lowercaseName = commandName.toLowerCase(Locale.ROOT);
+        if (commandName.equals(lowercaseName)) {
+            return input;
+        }
+
+        return input.substring(0, commandStart)
+                + lowercaseName
+                + input.substring(commandEnd);
     }
 
     public static String buildAttemptedMurderServerCommand(String playerInput) {
