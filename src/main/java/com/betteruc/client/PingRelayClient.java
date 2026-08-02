@@ -756,13 +756,50 @@ public final class PingRelayClient {
 
     private static void storeMarker(PingMarker marker) {
         if (marker == null) return;
+        long now = System.currentTimeMillis();
+        long minimumExpiry = now + configuredPingLifetimeMs();
+        PingMarker normalized = markerWithExpiry(marker, Math.max(marker.expiresAt(), minimumExpiry));
+
         synchronized (LOCK) {
-            ACTIVE_PINGS.removeIf(existing -> isSameMarker(existing, marker));
-            ACTIVE_PINGS.add(marker);
+            PingMarker existingMatch = null;
+            for (PingMarker existing : ACTIVE_PINGS) {
+                if (isSameMarker(existing, normalized)) {
+                    existingMatch = existing;
+                    break;
+                }
+            }
+            if (existingMatch != null) {
+                normalized = markerWithExpiry(
+                        normalized,
+                        Math.max(existingMatch.expiresAt(), normalized.expiresAt())
+                );
+                ACTIVE_PINGS.remove(existingMatch);
+            }
+            ACTIVE_PINGS.add(normalized);
             while (ACTIVE_PINGS.size() > 12) {
                 ACTIVE_PINGS.remove(0);
             }
         }
+    }
+
+    private static long configuredPingLifetimeMs() {
+        return Math.max(5, Math.min(60, BetterUCConfig.INSTANCE.pingRelayTtlSeconds)) * 1000L;
+    }
+
+    private static PingMarker markerWithExpiry(PingMarker marker, long expiresAt) {
+        return new PingMarker(
+                marker.id(),
+                marker.sender(),
+                marker.label(),
+                marker.pingType(),
+                marker.dimension(),
+                marker.x(),
+                marker.y(),
+                marker.z(),
+                marker.color(),
+                marker.createdAt(),
+                expiresAt
+        );
     }
 
     private static boolean isSameMarker(PingMarker existing, PingMarker incoming) {

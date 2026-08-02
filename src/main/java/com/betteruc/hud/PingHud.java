@@ -212,11 +212,6 @@ public final class PingHud {
             return Long.MIN_VALUE;
         }
 
-        Vec3 look = client.player.getViewVector(1.0F);
-        if (toTarget.normalize().dot(look.normalize()) <= 0.05D) {
-            return Long.MIN_VALUE;
-        }
-
         Vec3 projected = client.gameRenderer.projectPointToScreen(target);
         if (!Double.isFinite(projected.x) || !Double.isFinite(projected.y)) return Long.MIN_VALUE;
 

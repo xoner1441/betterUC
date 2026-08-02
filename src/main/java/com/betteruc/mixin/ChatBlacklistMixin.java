@@ -32,6 +32,7 @@ import com.betteruc.hud.RichTaxAlertHud;
 import com.betteruc.parser.BlacklistParser;
 import com.betteruc.parser.FactionStatsParser;
 import com.betteruc.parser.StatsLineClassifier;
+import net.minecraft.ChatFormatting;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -654,7 +655,9 @@ public class ChatBlacklistMixin {
         try {
             String timestamp = java.time.LocalTime.now()
                     .format(java.time.format.DateTimeFormatter.ofPattern(format));
-            Component newMessage = Component.literal("\u00A77" + timestamp + " ").append(message);
+            Component newMessage = Component.empty()
+                    .append(Component.literal(timestamp + " ").withStyle(ChatFormatting.GRAY))
+                    .append(message.copy());
             ci.cancel();
             addingTimestamp = true;
             ((ChatComponent) (Object) this).addClientSystemMessage(newMessage);
@@ -686,7 +689,9 @@ public class ChatBlacklistMixin {
         try {
             String timestamp = java.time.LocalTime.now()
                     .format(java.time.format.DateTimeFormatter.ofPattern(format));
-            return Component.literal("\u00A77" + timestamp + " ").append(base);
+            return Component.empty()
+                    .append(Component.literal(timestamp + " ").withStyle(ChatFormatting.GRAY))
+                    .append(base.copy());
         } catch (Exception ignored) {
             return base;
         }
@@ -716,14 +721,25 @@ public class ChatBlacklistMixin {
     private void extendMessageHistory(GuiMessage message, CallbackInfo ci) {
         if (allMessages == null) return;
 
-        boolean removedStatsLine = allMessages.removeIf(this::isLingeringSilentStatsLine);
-        if (removedStatsLine) {
-            markStatsLineSuppressed();
-            refreshTrimmedMessages();
+        if (shouldCleanLingeringStatsLines()) {
+            boolean removedStatsLine = allMessages.removeIf(this::isLingeringSilentStatsLine);
+            if (removedStatsLine) {
+                markStatsLineSuppressed();
+                refreshTrimmedMessages();
+            }
         }
         while (allMessages.size() > BetterUCConfig.INSTANCE.maxChatHistory) {
             allMessages.remove(allMessages.size() - 1);
         }
+    }
+
+    private boolean shouldCleanLingeringStatsLines() {
+        return capturingStats
+                || activeStatsCaptureIsSilent
+                || BetterUCSuppressFlags.suppressStatsOutput
+                || BetterUCSuppressFlags.pendingSilentStatsRequests > 0
+                || BetterUCSuppressFlags.isSilentStatsCaptureActive()
+                || isStatsHideWindowActive();
     }
 
     private boolean isLingeringSilentStatsLine(GuiMessage line) {

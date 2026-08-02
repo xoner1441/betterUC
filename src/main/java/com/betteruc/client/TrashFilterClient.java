@@ -60,6 +60,10 @@ public final class TrashFilterClient {
         return isSelected(slot.getItem());
     }
 
+    public static boolean shouldRenderHighlights(Screen screen) {
+        return BetterUCConfig.INSTANCE.trashFilterEnabled && isTrashScreen(screen);
+    }
+
     public static boolean shouldPreventClose(Screen screen) {
         return BetterUCConfig.INSTANCE.trashFilterEnabled
                 && BetterUCConfig.INSTANCE.trashFilterCloseLockEnabled

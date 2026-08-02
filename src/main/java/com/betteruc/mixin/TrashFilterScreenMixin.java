@@ -36,18 +36,25 @@ public abstract class TrashFilterScreenMixin {
     ) {
         Screen screen = (Screen) (Object) this;
         if (!(screen instanceof MenuAccess<?> access)) return;
+        boolean renderHighlights = TrashFilterClient.shouldRenderHighlights(screen);
+        boolean renderAutoBuyCancel = AutoBuyClient.shouldShowCancelButton(screen);
+        if (!renderHighlights && !renderAutoBuyCancel) return;
 
         context.nextStratum();
-        for (Slot slot : access.getMenu().slots) {
-            if (!TrashFilterClient.shouldHighlight(screen, slot)) continue;
+        if (renderHighlights) {
+            for (Slot slot : access.getMenu().slots) {
+                if (!TrashFilterClient.shouldHighlight(screen, slot)) continue;
 
-            int x = leftPos + slot.x;
-            int y = topPos + slot.y;
-            context.fill(x, y, x + 16, y + 16, 0x6634D399);
-            context.outline(x, y, 16, 16, 0xFF4ADE80);
+                int x = leftPos + slot.x;
+                int y = topPos + slot.y;
+                context.fill(x, y, x + 16, y + 16, 0x6634D399);
+                context.outline(x, y, 16, 16, 0xFF4ADE80);
+            }
         }
 
-        betteruc$drawAutoBuyCancel(context, mouseX, mouseY, screen);
+        if (renderAutoBuyCancel) {
+            betteruc$drawAutoBuyCancel(context, mouseX, mouseY);
+        }
     }
 
     @Inject(method = "onClose", at = @At("HEAD"), cancellable = true)
@@ -72,6 +79,8 @@ public abstract class TrashFilterScreenMixin {
             return;
         }
 
+        if (!AutoBuyClient.shouldShowCancelButton(screen)) return;
+
         Slot clickedSlot = betteruc$slotAt(event.x(), event.y(), screen);
         if (clickedSlot != null) {
             AutoBuyClient.rememberProductSelection(Minecraft.getInstance(), screen, clickedSlot);
@@ -81,11 +90,8 @@ public abstract class TrashFilterScreenMixin {
     private void betteruc$drawAutoBuyCancel(
             GuiGraphicsExtractor context,
             int mouseX,
-            int mouseY,
-            Screen screen
+            int mouseY
     ) {
-        if (!AutoBuyClient.shouldShowCancelButton(screen)) return;
-
         int x = betteruc$cancelX();
         int y = betteruc$cancelY();
         boolean hovered = betteruc$isInsideCancel(mouseX, mouseY);
@@ -94,7 +100,6 @@ public abstract class TrashFilterScreenMixin {
         String label = "Auto-Kauf abbrechen";
         Minecraft client = Minecraft.getInstance();
 
-        context.nextStratum();
         context.fill(x, y, x + BETTERUC_CANCEL_WIDTH, y + BETTERUC_CANCEL_HEIGHT, background);
         context.outline(x, y, BETTERUC_CANCEL_WIDTH, BETTERUC_CANCEL_HEIGHT, border);
         int textX = x + (BETTERUC_CANCEL_WIDTH - client.font.width(label)) / 2;

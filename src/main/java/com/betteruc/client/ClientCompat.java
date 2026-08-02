@@ -9,7 +9,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.world.phys.Vec3;
 
 public final class ClientCompat {
-    private static final long HUD_SCREEN_CACHE_NS = 2_000_000L;
+    private static final long HUD_SCREEN_CACHE_NS = 16_000_000L;
     private static Method guiScreenMethod;
     private static boolean guiScreenMethodResolved;
     private static Field minecraftScreenField;
