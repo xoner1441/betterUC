@@ -2,39 +2,93 @@
   "schema": 1,
   "development": {
     "label": "In Entwicklung",
-    "title": "Kompatibilitätskorrekturen",
+    "title": "Weitere Verbesserungen folgen",
     "date": "Aktueller Stand",
     "pages": [
       {
         "eyebrow": "NÄCHSTE VERSION",
-        "title": "LabyMod VoiceChat und /vm",
-        "description": "Der betterUC-Shortcut funktioniert jetzt auch, wenn LabyMod VoiceChat denselben Befehl verwendet.",
+        "title": "Weitere Verbesserungen folgen",
+        "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
         "lines": [
-          "/vm unterstützt jetzt bis zu sechs Spielernamen gleichzeitig; jeder weitere Name lässt sich per Tab vervollständigen.",
-          "/vm ohne Spielernamen bleibt für das Voice-Menü anderer Clients verfügbar.",
-          "/überweisen funktioniert jetzt wahlweise mit oder ohne Verwendungsgrund.",
-          "Version 1.3.5 enthält den neuen HUD-Editor, zusätzliche Komfortfunktionen und erweiterten Minecraft-Support."
-        ]
-      },
-      {
-        "eyebrow": "NEUES HUD",
-        "title": "Masken-Timer mit Ablaufwarnung",
-        "description": "Die verbleibende Dauer deiner Maskierung bleibt direkt im HUD sichtbar.",
-        "lines": [
-          "Die Maskenzeit wird automatisch aus der Servernachricht übernommen.",
-          "Kurz vor Ablauf wechselt der Timer in einen deutlich sichtbaren Warnzustand.",
-          "Beim Ablauf oder manuellen Ablegen der Maske verschwindet der Timer sofort.",
-          "Position, Größe, Stil, Farbe, Schrift, Farbverlauf und Beschriftung sind frei einstellbar.",
-          "Der Masken-Timer wird in HUD-Profilen und über die Cloud-Synchronisierung gespeichert."
+          "Version 1.3.6 enthält den neuen Masken-Timer, komfortablere Befehle und zuverlässigere Pings."
         ]
       }
     ]
   },
   "releases": [
     {
+      "version": "1.3.6",
+      "date": "02.08.2026",
+      "current": true,
+      "pages": [
+        {
+          "eyebrow": "NEU IN 1.3.6",
+          "title": "Masken-Timer mit Ablaufwarnung",
+          "description": "Die verbleibende Dauer deiner Maskierung bleibt direkt im HUD sichtbar.",
+          "lines": [
+            "Die Maskenzeit wird automatisch aus der Servernachricht übernommen.",
+            "Kurz vor Ablauf wechselt der Timer in einen deutlich sichtbaren Warnzustand.",
+            "Beim Ablauf oder manuellen Ablegen der Maske verschwindet der Timer sofort.",
+            "Position, Größe, Stil, Farbe, Schrift, Farbverlauf und Beschriftung sind frei einstellbar.",
+            "Der Masken-Timer wird in HUD-Profilen und über die Cloud-Synchronisierung gespeichert."
+          ]
+        },
+        {
+          "eyebrow": "BEFEHLE & KOMFORT",
+          "title": "Schneller und flexibler schreiben",
+          "description": "betterUC verarbeitet wichtige Kurzbefehle zuverlässiger und nimmt dir unnötige Eingaben ab.",
+          "lines": [
+            "/vm unterstützt jetzt bis zu sechs Spielernamen gleichzeitig; jeder weitere Name lässt sich per Tab vervollständigen.",
+            "/vm ohne Spielernamen bleibt für das Voice-Menü von LabyMod und anderen Clients verfügbar.",
+            "/überweisen funktioniert jetzt wahlweise mit oder ohne Verwendungsgrund.",
+            "Befehlsnamen werden vor dem Absenden automatisch kleingeschrieben: Aus /AFk oder /EINZAHLEN wird /afk beziehungsweise /einzahlen.",
+            "Spielernamen, Nachrichten, Gründe und alle weiteren Argumente bleiben dabei unverändert."
+          ]
+        },
+        {
+          "eyebrow": "PING & COMMUNITY",
+          "title": "Zuverlässigere Rückmeldungen",
+          "description": "Pings reagieren unmittelbarer und Release-Informationen werden vollständiger bereitgestellt.",
+          "lines": [
+            "Eigene Pings erscheinen sofort an der markierten Position, ohne auf die Rückmeldung des Relays zu warten.",
+            "Die anschließende Relay-Rückmeldung wird sicher zusammengeführt und erzeugt keine doppelte Markierung.",
+            "Staats-, Fraktions- und globale Ping-Kanäle behalten ihre gewählte Zielgruppe zuverlässig bei.",
+            "Der Discord-Bot übernimmt die verständlichen Änderungen wieder korrekt aus dem zentralen betterUC-Changelog."
+          ]
+        }
+      ],
+      "summary": [
+        {
+          "title": "Neuer Masken-Timer",
+          "description": "Maskenzeit, Ablaufwarnung und individuelles HUD-Design sind direkt im Spiel verfügbar.",
+          "color": "cyan"
+        },
+        {
+          "title": "Komfortablere Befehle",
+          "description": "Mehrere Spieler bei /vm, ein optionaler Überweisungsgrund und automatische Kleinschreibung sparen Eingaben.",
+          "color": "green"
+        },
+        {
+          "title": "Zuverlässigere Pings",
+          "description": "Eigene Markierungen erscheinen sofort und werden ohne Doppelanzeige mit dem Relay abgeglichen.",
+          "color": "amber"
+        }
+      ],
+      "changes": [
+        "Neuer Masken-Timer mit dynamischer Restzeit und deutlich sichtbarer Ablaufwarnung.",
+        "Der Masken-Timer lässt sich vollständig gestalten, positionieren und in HUD-Profilen speichern.",
+        "/vm unterstützt bis zu sechs Spieler mit wiederholter Tab-Vervollständigung.",
+        "/vm bleibt mit dem Voice-Menü von LabyMod und anderen Clients kompatibel.",
+        "/überweisen akzeptiert den Verwendungsgrund jetzt optional.",
+        "Befehlsnamen werden automatisch kleingeschrieben, während alle Argumente unverändert bleiben.",
+        "Eigene Pings werden sofort lokal dargestellt und mit der Relay-Antwort zusammengeführt.",
+        "Ping-Zielgruppen werden zuverlässig an das Relay übertragen.",
+        "Der Discord-Bot liest Release-Inhalte wieder korrekt aus dem zentralen Changelog."
+      ]
+    },
+    {
       "version": "1.3.5",
       "date": "31.07.2026",
-      "current": true,
       "pages": [
         {
           "eyebrow": "NEU IN 1.3.5",
