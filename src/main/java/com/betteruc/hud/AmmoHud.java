@@ -56,6 +56,18 @@ public class AmmoHud {
     }
 
     public static void updateFromOverlay(Component overlayMessage) {
+        if (overlayMessage == null) return;
+
+        Minecraft client = Minecraft.getInstance();
+        try {
+            // Packet callbacks can run on Netty with optimization mods. Player, item and sound access belongs on the client thread.
+            client.execute(() -> updateFromOverlayOnClientThread(overlayMessage));
+        } catch (RuntimeException | LinkageError error) {
+            logRuntimeFailure("Clientthread-Planung", error);
+        }
+    }
+
+    private static void updateFromOverlayOnClientThread(Component overlayMessage) {
         try {
             updateFromOverlayInternal(overlayMessage);
         } catch (RuntimeException | LinkageError error) {
@@ -307,6 +319,10 @@ public class AmmoHud {
 
     private static void handleRuntimeFailure(String phase, Throwable error) {
         invalidateDisplayedAmmo();
+        logRuntimeFailure(phase, error);
+    }
+
+    private static void logRuntimeFailure(String phase, Throwable error) {
         long now = System.currentTimeMillis();
         if (now - lastFailureLogMs < FAILURE_LOG_COOLDOWN_MS) return;
 
