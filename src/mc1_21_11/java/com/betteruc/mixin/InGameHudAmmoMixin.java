@@ -16,6 +16,10 @@ public class InGameHudAmmoMixin {
             require = 0
     )
     private void captureAmmoOverlay(Text message, boolean tinted, CallbackInfo ci) {
-        AmmoHud.updateFromOverlay(message);
+        try {
+            AmmoHud.updateFromOverlay(message);
+        } catch (RuntimeException | LinkageError ignored) {
+            AmmoHud.clear();
+        }
     }
 }

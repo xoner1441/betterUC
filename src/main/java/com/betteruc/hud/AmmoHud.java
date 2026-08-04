@@ -1,5 +1,6 @@
 package com.betteruc.hud;
 
+import com.betteruc.BetterUCMod;
 import com.betteruc.client.ClientCompat;
 import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -28,6 +29,7 @@ public class AmmoHud {
     private static final int NORMAL_AMMO_COLOR = 0xFFFFAA33;
     private static final int LOW_AMMO_COLOR = 0xFFFF4D5A;
     private static final int WEAPON_COLOR = 0xFF7CFF8A;
+    private static final long FAILURE_LOG_COOLDOWN_MS = 30_000L;
 
     private static int clipAmmo = -1;
     private static int reserveAmmo = -1;
@@ -43,14 +45,25 @@ public class AmmoHud {
     private static WeaponProfile activeWeaponProfile = WeaponProfile.UNKNOWN;
     private static boolean lowAmmoActive = false;
     private static final Set<String> learnedWeaponFingerprints = new HashSet<>();
+    private static long lastFailureLogMs = 0L;
 
     public static void register() {
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betteruc", "ammo"), (context, tickCounter) -> {
-            if (ModernHudRenderer.shouldRenderGameplayHud()) render(context);
+            if (ModernHudRenderer.shouldRenderGameplayHud()) {
+                renderSafely(context);
+            }
         });
     }
 
     public static void updateFromOverlay(Component overlayMessage) {
+        try {
+            updateFromOverlayInternal(overlayMessage);
+        } catch (RuntimeException | LinkageError error) {
+            handleRuntimeFailure("Actionbar-Auswertung", error);
+        }
+    }
+
+    private static void updateFromOverlayInternal(Component overlayMessage) {
         if (overlayMessage == null) return;
 
         String raw = overlayMessage.getString();
@@ -76,7 +89,7 @@ public class AmmoHud {
         String heldFingerprint = itemFingerprint(heldItem);
         if (heldFingerprint.isBlank()) return;
 
-        WeaponProfile profile = WeaponProfile.fromItemName(heldItem.getHoverName().getString());
+        WeaponProfile profile = WeaponProfile.fromItemName(itemDisplayName(heldItem));
         boolean reloadConfirmed = reloadAwaitingConfirmation;
         learnKr47Magazine(profile, parsedClip, reloadConfirmed);
         int magazineSize = magazineSize(profile);
@@ -102,6 +115,15 @@ public class AmmoHud {
     }
 
     public static void tickReloadKey(Minecraft client) {
+        try {
+            tickReloadKeyInternal(client);
+        } catch (RuntimeException | LinkageError error) {
+            reloadKeyWasDown = false;
+            handleRuntimeFailure("Nachlade-Erkennung", error);
+        }
+    }
+
+    private static void tickReloadKeyInternal(Minecraft client) {
         if (client == null || client.player == null) {
             reloadKeyWasDown = false;
             return;
@@ -146,6 +168,14 @@ public class AmmoHud {
         activeWeaponProfile = WeaponProfile.UNKNOWN;
         lowAmmoActive = false;
         learnedWeaponFingerprints.clear();
+    }
+
+    private static void renderSafely(GuiGraphicsExtractor context) {
+        try {
+            render(context);
+        } catch (RuntimeException | LinkageError error) {
+            handleRuntimeFailure("HUD-Rendering", error);
+        }
     }
 
     private static void render(GuiGraphicsExtractor context) {
@@ -266,7 +296,26 @@ public class AmmoHud {
 
         Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (id == null) return "";
-        return id + "|" + normalizeWeaponName(stack.getHoverName().getString());
+        return id + "|" + normalizeWeaponName(itemDisplayName(stack));
+    }
+
+    private static String itemDisplayName(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return "";
+        Component hoverName = stack.getHoverName();
+        return hoverName == null ? "" : hoverName.getString();
+    }
+
+    private static void handleRuntimeFailure(String phase, Throwable error) {
+        invalidateDisplayedAmmo();
+        long now = System.currentTimeMillis();
+        if (now - lastFailureLogMs < FAILURE_LOG_COOLDOWN_MS) return;
+
+        lastFailureLogMs = now;
+        BetterUCMod.LOGGER.warn(
+                "Ammo-HUD wurde nach einem Fehler bei {} fuer diesen Moment zurueckgesetzt",
+                phase,
+                error
+        );
     }
 
     private static void invalidateDisplayedAmmo() {

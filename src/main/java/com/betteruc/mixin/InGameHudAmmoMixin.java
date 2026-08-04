@@ -13,9 +13,15 @@ public class InGameHudAmmoMixin {
 
     @Inject(
             method = "setActionBarText(Lnet/minecraft/network/protocol/game/ClientboundSetActionBarTextPacket;)V",
-            at = @At("HEAD")
+            at = @At("HEAD"),
+            require = 0
     )
     private void captureAmmoOverlay(ClientboundSetActionBarTextPacket packet, CallbackInfo ci) {
-        AmmoHud.updateFromOverlay(packet.text());
+        if (packet == null) return;
+        try {
+            AmmoHud.updateFromOverlay(packet.text());
+        } catch (RuntimeException | LinkageError ignored) {
+            AmmoHud.clear();
+        }
     }
 }
