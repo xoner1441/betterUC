@@ -17,6 +17,8 @@ import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.RemoteFeatureFlagsClient;
+import com.betteruc.client.SecondChatManager;
+import com.betteruc.client.SecondChatTextCompat;
 import com.betteruc.client.ServerCommandUtil;
 import com.betteruc.client.UserStatsClient;
 import com.betteruc.config.BetterUCConfig;
@@ -86,6 +88,12 @@ public class ChatBlacklistMixin {
     private static boolean addingTimestamp = false;
     private static int expectedBlacklistEntries = -1;
 
+    private enum ChatMessageOrigin {
+        CLIENT_SYSTEM,
+        SERVER_SYSTEM,
+        PLAYER
+    }
+
     private static long lastAfkExitStatsRefreshMs = 0L;
     private static final long AFK_EXIT_STATS_REFRESH_COOLDOWN_MS = 3000L;
     private static final long AFK_EXIT_STATS_REFRESH_DELAY_MS = 750L;
@@ -111,7 +119,7 @@ public class ChatBlacklistMixin {
             require = 0
     )
     private void scanForBlacklistTextOnly(Component message, CallbackInfo ci) {
-        scanForBlacklistInternal(message, ci);
+        scanForBlacklistInternal(message, ci, ChatMessageOrigin.CLIENT_SYSTEM, null, null);
     }
 
     @Inject(
@@ -121,7 +129,7 @@ public class ChatBlacklistMixin {
             require = 0
     )
     private void scanForServerSystemMessage(Component message, CallbackInfo ci) {
-        scanForBlacklistInternal(message, ci);
+        scanForBlacklistInternal(message, ci, ChatMessageOrigin.SERVER_SYSTEM, null, null);
     }
 
     @Inject(
@@ -131,10 +139,16 @@ public class ChatBlacklistMixin {
             require = 0
     )
     private void scanForBlacklistWithSignature(Component message, MessageSignature signatureData, GuiMessageTag indicator, CallbackInfo ci) {
-        scanForBlacklistInternal(message, ci);
+        scanForBlacklistInternal(message, ci, ChatMessageOrigin.PLAYER, signatureData, indicator);
     }
 
-    private void scanForBlacklistInternal(Component message, CallbackInfo ci) {
+    private void scanForBlacklistInternal(
+            Component message,
+            CallbackInfo ci,
+            ChatMessageOrigin origin,
+            MessageSignature signatureData,
+            GuiMessageTag indicator
+    ) {
         if (addingTimestamp) return;
         if (!ServerGate.isAllowedServer(Minecraft.getInstance())) return;
         BetterUCSuppressFlags.cleanupStaleSilentStatsState();
@@ -170,7 +184,7 @@ public class ChatBlacklistMixin {
         RichTaxAlertHud.handleChatLine(Minecraft.getInstance(), raw);
 
         if (BetterUCSuppressFlags.consumeBlacklistInfoLocalMessageBypass()) {
-            appendTimestampIfConfigured(message, ci);
+            appendTimestampIfConfigured(message, ci, origin, signatureData, indicator);
             return;
         }
 
@@ -184,7 +198,7 @@ public class ChatBlacklistMixin {
                 && RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.REINF_CUSTOMIZATION);
         if (wpsHqCustomizationEnabled || reinfCustomizationEnabled) {
             ChatCustomizationFormatter.Result customized = ChatCustomizationFormatter.transform(
-                    raw,
+                    message,
                     wpsHqCustomizationEnabled,
                     reinfCustomizationEnabled
             );
@@ -228,7 +242,7 @@ public class ChatBlacklistMixin {
         if (handleBlacklistHeader(raw, ci)) return;
         if (capturingBlacklist && handleCapturingBlacklist(raw, ci)) return;
 
-        appendTimestampIfConfigured(message, ci);
+        appendTimestampIfConfigured(message, ci, origin, signatureData, indicator);
     }
 
     private boolean handleHackTimer(String raw) {
@@ -647,21 +661,28 @@ public class ChatBlacklistMixin {
         }
     }
 
-    private void appendTimestampIfConfigured(Component message, CallbackInfo ci) {
-        if (!BetterUCConfig.INSTANCE.chatTimestampsEnabled) return;
-        String format = BetterUCConfig.INSTANCE.chatTimestampFormat;
-        if (format == null || format.isEmpty()) return;
+    private void appendTimestampIfConfigured(
+            Component message,
+            CallbackInfo ci,
+            ChatMessageOrigin origin,
+            MessageSignature signatureData,
+            GuiMessageTag indicator
+    ) {
+        Component finalMessage = withTimestampIfEnabled(message);
+        SecondChatManager.RouteResult routed = SecondChatManager.route(finalMessage);
+        boolean timestampAdded = finalMessage != message;
+        if (!timestampAdded && !routed.suppressMain()) return;
 
+        ci.cancel();
+        if (routed.suppressMain()) return;
+
+        addingTimestamp = true;
         try {
-            String timestamp = java.time.LocalTime.now()
-                    .format(java.time.format.DateTimeFormatter.ofPattern(format));
-            Component newMessage = Component.empty()
-                    .append(Component.literal(timestamp + " ").withStyle(ChatFormatting.GRAY))
-                    .append(message.copy());
-            ci.cancel();
-            addingTimestamp = true;
-            ((ChatComponent) (Object) this).addClientSystemMessage(newMessage);
-        } catch (Exception ignored) {
+            switch (origin) {
+                case SERVER_SYSTEM -> ((ChatComponent) (Object) this).addServerSystemMessage(finalMessage);
+                case PLAYER -> ((ChatComponent) (Object) this).addPlayerMessage(finalMessage, signatureData, indicator);
+                case CLIENT_SYSTEM -> ((ChatComponent) (Object) this).addClientSystemMessage(finalMessage);
+            }
         } finally {
             addingTimestamp = false;
         }
@@ -674,7 +695,11 @@ public class ChatBlacklistMixin {
         addingTimestamp = true;
         try {
             for (Component line : messages) {
-                ((ChatComponent) (Object) this).addClientSystemMessage(withTimestampIfEnabled(line));
+                Component finalMessage = withTimestampIfEnabled(line);
+                SecondChatManager.RouteResult routed = SecondChatManager.route(finalMessage);
+                if (!routed.suppressMain()) {
+                    ((ChatComponent) (Object) this).addClientSystemMessage(finalMessage);
+                }
             }
         } finally {
             addingTimestamp = false;
@@ -691,7 +716,7 @@ public class ChatBlacklistMixin {
                     .format(java.time.format.DateTimeFormatter.ofPattern(format));
             return Component.empty()
                     .append(Component.literal(timestamp + " ").withStyle(ChatFormatting.GRAY))
-                    .append(base.copy());
+                    .append(SecondChatTextCompat.copyWithResolvedStyles(base));
         } catch (Exception ignored) {
             return base;
         }
