@@ -33,6 +33,9 @@ public final class SecondChatManager {
     private static final Pattern REINFORCEMENT_DISTANCE_PATTERN = Pattern.compile(
             "^.+ \\d+m$"
     );
+    private static final Pattern WANTED_LIST_ENTRY_PATTERN = Pattern.compile(
+            "^(?:\\[[a-z0-9_]+\\] )*[a-z0-9_]{1,32} \\d+ wps(?: .+)?$"
+    );
     private static final Map<String, Deque<Entry>> HISTORIES = new LinkedHashMap<>();
     private static final Map<String, Integer> UNREAD_COUNTS = new LinkedHashMap<>();
     private static final Map<String, Long> FIRST_UNREAD_AT = new LinkedHashMap<>();
@@ -808,7 +811,8 @@ public final class SecondChatManager {
     }
 
     private static boolean isHqOrWpsLine(String text) {
-        return containsAny(text,
+        return WANTED_LIST_ENTRY_PATTERN.matcher(text).matches()
+                || containsAny(text,
                 " hq ", "wantedlevel", "wantedpunkte", "fahndungsgrund", "fahndungszeit",
                 "gesuchter", "getotet", "eingesperrt", "akten geloscht", "waffen abnahme",
                 "drogen abnahme", "verandert");
