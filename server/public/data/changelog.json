@@ -10,16 +10,92 @@
         "title": "Weitere Verbesserungen folgen",
         "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
         "lines": [
-          "Version 1.3.6 enthält den neuen Masken-Timer, komfortablere Befehle und zuverlässigere Pings."
+          "Version 1.3.7 enthält das neue Chat-System, präzisere Filter und ein stabileres Ammo-HUD."
         ]
       }
     ]
   },
   "releases": [
     {
+      "version": "1.3.7",
+      "date": "06.08.2026",
+      "current": true,
+      "pages": [
+        {
+          "eyebrow": "NEU IN 1.3.7",
+          "title": "Mehrere Chats, Tabs und Fenster",
+          "description": "Nachrichten lassen sich jetzt in frei konfigurierbaren Chatbereichen übersichtlich voneinander trennen.",
+          "lines": [
+            "Zusätzliche Chat-Tabs und eigenständige Chatfenster können direkt über das Chatmenü erstellt werden.",
+            "Tabs lassen sich per Drag-and-drop zwischen dem Hauptchat und zusätzlichen Fenstern verschieben.",
+            "Chatfenster können frei positioniert, in ihrer Größe verändert und bei Bedarf dupliziert oder gelöscht werden.",
+            "Das Rechtsklickmenü bündelt Einstellungen, Verwaltung und neue Chats an einer zentralen Stelle.",
+            "Zusätzliche Chats blenden sich wie der Minecraft-Chat automatisch aus, wenn keine neuen Nachrichten eintreffen."
+          ]
+        },
+        {
+          "eyebrow": "FILTER & DARSTELLUNG",
+          "title": "Nachrichten gezielt sortieren",
+          "description": "Überarbeitete Filter erfassen zusammengehörige Nachrichten vollständiger und behalten wichtige Interaktionen bei.",
+          "lines": [
+            "Ein Stichwortfilter kann mehrere Suchbegriffe gleichzeitig enthalten.",
+            "Gefilterte Nachrichten können wahlweise nur im passenden Zusatzchat erscheinen und aus dem Hauptchat ausgeblendet werden.",
+            "Reinforcements, WPS/HQ-Meldungen und vollständige PayDay-Blöcke werden als zusammengehörige Nachrichten erkannt.",
+            "Farben, Formatierungen und klickbare Aktionen bleiben beim Filtern erhalten.",
+            "Die Filter- und Chat-Einstellungen wurden übersichtlicher gegliedert."
+          ]
+        },
+        {
+          "eyebrow": "AMMO-HUD & STABILITÄT",
+          "title": "Intelligentere Waffen-Erkennung",
+          "description": "Das Ammo-HUD erkennt Waffen zuverlässiger und arbeitet sicherer mit Minecraft 26.2 und Optimierungsmods zusammen.",
+          "lines": [
+            "Das Ammo-HUD zeigt wieder Waffenname, Magazinstand und Reservemunition an.",
+            "Waffenprofile werden anhand des tatsächlich gehaltenen Gegenstands gelernt und nicht mehr nur aus der Magazingröße abgeleitet.",
+            "AUG und KR47 werden dadurch trotz gleicher Magazingröße getrennt erkannt.",
+            "Die Munitionswarnung spielt Sounds ausschließlich auf dem Minecraft-Client-Thread ab und verhindert damit C2ME-Verbindungsabbrüche.",
+            "Weitere Start-, Chat- und HUD-Probleme unter Minecraft 26.2 wurden behoben."
+          ]
+        }
+      ],
+      "summary": [
+        {
+          "title": "Mehrere Chatfenster",
+          "description": "Tabs und frei platzierbare Fenster sorgen für eine bessere Übersicht im Spiel.",
+          "color": "cyan"
+        },
+        {
+          "title": "Stärkere Chatfilter",
+          "description": "Mehrere Stichwörter und vollständige Nachrichtenblöcke lassen sich gezielt sortieren.",
+          "color": "green"
+        },
+        {
+          "title": "Intelligenteres Ammo-HUD",
+          "description": "Waffen werden genauer erkannt und auch bei identischen Magazingrößen richtig unterschieden.",
+          "color": "amber"
+        },
+        {
+          "title": "Stabiler unter 26.2",
+          "description": "Thread-, Start- und Darstellungsprobleme wurden für die aktuelle Minecraft-Version korrigiert.",
+          "color": "green"
+        }
+      ],
+      "changes": [
+        "Mehrere Chat-Tabs und frei positionierbare Zusatzfenster wurden hinzugefügt.",
+        "Chat-Tabs können per Drag-and-drop zwischen Fenstern verschoben werden.",
+        "Chatfenster lassen sich verschieben, skalieren, duplizieren und löschen.",
+        "Stichwortfilter unterstützen mehrere Suchbegriffe und können Nachrichten aus dem Hauptchat ausblenden.",
+        "Reinforcement-, WPS/HQ- und PayDay-Nachrichten werden als vollständige Blöcke gefiltert.",
+        "Formatierungen, Farben und klickbare Chataktionen bleiben in Zusatzchats erhalten.",
+        "Das Ammo-HUD wurde optisch und technisch überarbeitet.",
+        "Waffenprofile unterscheiden AUG und KR47 jetzt unabhängig von ihrer gleichen Magazingröße.",
+        "Ammo-HUD-Sounds werden sicher auf dem Client-Thread abgespielt und verursachen keine C2ME-Verbindungsabbrüche mehr.",
+        "Mehrere Kompatibilitäts- und Stabilitätsprobleme unter Minecraft 26.2 wurden behoben."
+      ]
+    },
+    {
       "version": "1.3.6",
       "date": "02.08.2026",
-      "current": true,
       "pages": [
         {
           "eyebrow": "NEU IN 1.3.6",
