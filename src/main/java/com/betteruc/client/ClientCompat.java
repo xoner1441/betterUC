@@ -6,7 +6,10 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Style;
 import net.minecraft.world.phys.Vec3;
+import org.lwjgl.glfw.GLFW;
 
 public final class ClientCompat {
     private static final long HUD_SCREEN_CACHE_NS = 16_000_000L;
@@ -47,6 +50,28 @@ public final class ClientCompat {
         return currentScreen(client) != null;
     }
 
+    public static boolean hasWindow(Minecraft client) {
+        return client != null && client.getWindow() != null;
+    }
+
+    public static int scaledWindowWidth(Minecraft client, int fallback) {
+        return hasWindow(client)
+                ? Math.max(1, client.getWindow().getGuiScaledWidth())
+                : Math.max(1, fallback);
+    }
+
+    public static int scaledWindowHeight(Minecraft client, int fallback) {
+        return hasWindow(client)
+                ? Math.max(1, client.getWindow().getGuiScaledHeight())
+                : Math.max(1, fallback);
+    }
+
+    public static boolean isLeftMouseDown(Minecraft client) {
+        return hasWindow(client)
+                && GLFW.glfwGetMouseButton(client.getWindow().handle(), GLFW.GLFW_MOUSE_BUTTON_LEFT)
+                == GLFW.GLFW_PRESS;
+    }
+
     public static boolean suppressGameplayHud(Minecraft client) {
         long now = System.nanoTime();
         if (now - lastHudScreenCheckNs < HUD_SCREEN_CACHE_NS) {
@@ -73,6 +98,19 @@ public final class ClientCompat {
         if (client != null) {
             setScreen(client, new ChatScreen(text == null ? "" : text, false));
         }
+    }
+
+    public static boolean handleTextClick(Minecraft client, Style style) {
+        if (client == null || style == null || style.getClickEvent() == null) {
+            return false;
+        }
+        Screen screen = currentScreen(client);
+        if (screen == null) {
+            return false;
+        }
+        ClickEvent event = style.getClickEvent();
+        return invokeDefaultClick("defaultHandleGameClickEvent", event, client, screen)
+                || invokeDefaultClick("defaultHandleClickEvent", event, client, screen);
     }
 
     public static Camera mainCamera(Minecraft client) {
@@ -158,6 +196,27 @@ public final class ClientCompat {
         try {
             method.invoke(target, argument);
             return true;
+        } catch (ReflectiveOperationException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean invokeDefaultClick(
+            String methodName,
+            ClickEvent event,
+            Minecraft client,
+            Screen screen
+    ) {
+        try {
+            Method method = Screen.class.getDeclaredMethod(
+                    methodName,
+                    ClickEvent.class,
+                    Minecraft.class,
+                    Screen.class
+            );
+            method.setAccessible(true);
+            Object result = method.invoke(null, event, client, screen);
+            return !(result instanceof Boolean handled) || handled;
         } catch (ReflectiveOperationException ignored) {
             return false;
         }

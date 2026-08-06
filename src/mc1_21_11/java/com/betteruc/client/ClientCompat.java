@@ -1,10 +1,14 @@
 package com.betteruc.client;
 
+import java.lang.reflect.Method;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.render.Camera;
+import net.minecraft.text.ClickEvent;
+import net.minecraft.text.Style;
 import net.minecraft.util.math.Vec3d;
+import org.lwjgl.glfw.GLFW;
 
 public final class ClientCompat {
     private ClientCompat() {
@@ -16,6 +20,28 @@ public final class ClientCompat {
 
     public static boolean hasScreen(MinecraftClient client) {
         return currentScreen(client) != null;
+    }
+
+    public static boolean hasWindow(MinecraftClient client) {
+        return client != null && client.getWindow() != null;
+    }
+
+    public static int scaledWindowWidth(MinecraftClient client, int fallback) {
+        return hasWindow(client)
+                ? Math.max(1, client.getWindow().getScaledWidth())
+                : Math.max(1, fallback);
+    }
+
+    public static int scaledWindowHeight(MinecraftClient client, int fallback) {
+        return hasWindow(client)
+                ? Math.max(1, client.getWindow().getScaledHeight())
+                : Math.max(1, fallback);
+    }
+
+    public static boolean isLeftMouseDown(MinecraftClient client) {
+        return hasWindow(client)
+                && GLFW.glfwGetMouseButton(client.getWindow().getHandle(), GLFW.GLFW_MOUSE_BUTTON_LEFT)
+                == GLFW.GLFW_PRESS;
     }
 
     public static boolean suppressGameplayHud(MinecraftClient client) {
@@ -31,6 +57,26 @@ public final class ClientCompat {
     public static void openChatWithText(MinecraftClient client, String text) {
         if (client != null) {
             client.setScreen(new ChatScreen(text == null ? "" : text, false));
+        }
+    }
+
+    public static boolean handleTextClick(MinecraftClient client, Style style) {
+        if (client == null || client.currentScreen == null
+                || style == null || style.getClickEvent() == null) {
+            return false;
+        }
+        try {
+            Method method = Screen.class.getDeclaredMethod(
+                    "handleClickEvent",
+                    ClickEvent.class,
+                    MinecraftClient.class,
+                    Screen.class
+            );
+            method.setAccessible(true);
+            method.invoke(null, style.getClickEvent(), client, client.currentScreen);
+            return true;
+        } catch (ReflectiveOperationException ignored) {
+            return false;
         }
     }
 

@@ -82,6 +82,19 @@ public final class ChatCustomizationFormatter {
         return transform(raw, true, true);
     }
 
+    public static Result transform(
+            Component original,
+            boolean wpsHqEnabled,
+            boolean reinfEnabled
+    ) {
+        Result result = transform(
+                original == null ? "" : original.getString(),
+                wpsHqEnabled,
+                reinfEnabled
+        );
+        return result == null ? null : result.withInteractionFrom(original);
+    }
+
     public static Result transform(String raw, boolean wpsHqEnabled, boolean reinfEnabled) {
         String clean = normalize(raw);
         if (clean.isEmpty()) return null;
@@ -447,6 +460,20 @@ public final class ChatCustomizationFormatter {
     private record Pending(PendingType type, String actor, String target, String reason, long createdAtMs) {
     }
 
+    private static Style findInteractiveStyle(Component component) {
+        if (component == null) return null;
+        if (component.getStyle().getClickEvent() != null) {
+            return component.getStyle();
+        }
+        for (Component sibling : component.getSiblings()) {
+            Style style = findInteractiveStyle(sibling);
+            if (style != null) {
+                return style;
+            }
+        }
+        return null;
+    }
+
     public static final class Result {
         private final boolean cancelOriginal;
         private final List<Component> replacementMessages;
@@ -470,6 +497,22 @@ public final class ChatCustomizationFormatter {
 
         public List<Component> replacementMessages() {
             return replacementMessages;
+        }
+
+        private Result withInteractionFrom(Component original) {
+            Style sourceStyle = findInteractiveStyle(original);
+            if (sourceStyle == null || sourceStyle.getClickEvent() == null
+                    || replacementMessages.isEmpty()) {
+                return this;
+            }
+
+            List<Component> interactiveMessages = new ArrayList<>(replacementMessages.size());
+            for (Component replacement : replacementMessages) {
+                MutableComponent interactive = replacement.copy();
+                interactive.setStyle(interactive.getStyle().withClickEvent(sourceStyle.getClickEvent()));
+                interactiveMessages.add(interactive);
+            }
+            return new Result(cancelOriginal, List.copyOf(interactiveMessages));
         }
     }
 }

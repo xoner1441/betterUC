@@ -38,6 +38,7 @@ import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
 import java.util.function.IntConsumer;
+import java.util.function.Supplier;
 
 public class BetterUCScreen extends Screen {
 
@@ -700,7 +701,6 @@ public class BetterUCScreen extends Screen {
         if (raw.matches(".* #[0-9A-Fa-f]{6}$")) {
             return "Öffnet den Farbwähler für diese Darstellung.";
         }
-
         return switch (key) {
             case "Health HUD" -> "Zeigt deine aktuellen Herzen als frei positionierbares HUD.";
             case "Absorptionsherzen" -> "Zeigt zusätzliche Absorptionsherzen neben deinen normalen Herzen.";
@@ -1012,6 +1012,8 @@ public class BetterUCScreen extends Screen {
             case "Relay Server" -> "Erweiterte WebSocket-Adresse des betterUC-Relay-Servers.";
             case "Profilname" -> "Name für ein neues, dupliziertes oder umbenanntes HUD-Profil.";
             case "Prefix Text" -> "Ändert die Beschriftung, die vor dem Wert dieses HUDs steht.";
+            case "Filter 1", "Filter 2", "Filter 3" ->
+                    "Eigener Textfilter. Mit ^ am Anfang wird nur der Nachrichtenanfang geprüft.";
             default -> "Ziehe oder bearbeite den Wert, um diese Einstellung anzupassen.";
         };
     }

@@ -370,6 +370,8 @@ def transformLegacyJavaSource = { String source ->
             ".dot("                                                            : ".dotProduct(",
             "client.gameRenderer.projectPointToScreen("                        : "client.gameRenderer.project(",
             "addClientSystemMessage("                                         : "addMessage(",
+            "addServerSystemMessage("                                         : "addMessage(",
+            "addPlayerMessage("                                               : "addMessage(",
             "SoundEvents.NOTE_BLOCK_PLING"                                     : "SoundEvents.BLOCK_NOTE_BLOCK_PLING",
             "SoundEvents.NOTE_BLOCK_BELL"                                      : "SoundEvents.BLOCK_NOTE_BLOCK_BELL",
             "SoundEvents.NOTE_BLOCK_CHIME"                                     : "SoundEvents.BLOCK_NOTE_BLOCK_CHIME",
@@ -393,6 +395,7 @@ def transformLegacyJavaSource = { String source ->
     text = text.replaceAll(/\bFont\b/, "TextRenderer")
     text = text.replaceAll(/\bComponent\b/, "Text")
     text = text.replaceAll(/\bChatFormatting\b/, "Formatting")
+    text = text.replaceAll(/\.withStyle\((net\.minecraft\.util\.Formatting\.[^)]+)\)/, ".formatted(\$1)")
     text = text.replaceAll(/\.withStyle\((Formatting\.[^)]+)\)/, ".formatted(\$1)")
     text = text.replaceAll(/\.withStyle\((Formatting\.[^,]+),\s*(Formatting\.[^)]+)\)/, ".formatted(\$1, \$2)")
     text = text.replace(".withStyle(color, Formatting.BOLD)", ".formatted(color, Formatting.BOLD)")
@@ -402,6 +405,7 @@ def transformLegacyJavaSource = { String source ->
     text = text.replace(".styled(style -> style.withFont(BUC_BADGE_FONT))", ".styled(style -> style.withFont(new net.minecraft.text.StyleSpriteSource.Font(BUC_BADGE_FONT)))")
     text = text.replaceAll(/\b([a-z][A-Za-z0-9_]*)ButtonWidget\b/, "\$1Button")
     text = text.replace("timestampField.getValue()", "timestampField.getText()")
+    text = text.replace("testMessage.getValue()", "testMessage.getText()")
     text = text.replace("field.getValue()", "field.getText()")
     text = text.replace("killsFields.get(i).getValue()", "killsFields.get(i).getText()")
     text = text.replace("priceFields.get(i).getValue()", "priceFields.get(i).getText()")

@@ -85,6 +85,15 @@ public class BetterUCConfig {
             "autoAtmInfoOnBalanceEnabled", "autoForceDepositEnabled", "richTaxAlertEnabled",
             "richTaxAlertSoundEnabled",
             "chatTimestampsEnabled", "chatCustomizationEnabled",
+            "secondChatEnabled", "secondChatLocked", "secondChatBackgroundEnabled",
+            "secondChatX", "secondChatY", "secondChatWidth", "secondChatHeight",
+            "secondChatPrimaryCustomSize",
+            "secondChatBackgroundOpacity", "secondChatAccentColor", "secondChatHighlightColor",
+            "secondChatMentionSoundEnabled", "secondChatHqMode", "secondChatReinfMode",
+            "secondChatPrivateMode", "secondChatServerInfoMode", "secondChatBetterUcMode",
+            "secondChatOwnNameMode", "secondChatCustom1Mode", "secondChatCustom2Mode",
+            "secondChatCustom3Mode", "secondChatCustom1Text", "secondChatCustom2Text",
+            "secondChatCustom3Text", "secondChatTabs", "secondChatWindows", "secondChatActiveTabId",
             "autoDropDrinkEnabled", "autoFisherEnabled", "autoWinzerEnabled", "autoGaertnerEnabled",
             "autoMuellmannEnabled", "autoFirstAidEnabled", "autoBuyEnabled",
             "reinfCustomizationEnabled", "reinfUniformColorEnabled", "reinfLabelColor", "reinfTextColor",
@@ -434,6 +443,34 @@ public class BetterUCConfig {
     public int reinfUniformColor = DEFAULT_REINF_UNIFORM_COLOR;
     public String chatTimestampFormat = "[HH:mm:ss]";
     public int maxChatHistory = 2000;
+    public boolean secondChatEnabled = false;
+    public boolean secondChatLocked = true;
+    public boolean secondChatBackgroundEnabled = true;
+    public int secondChatX = 8;
+    public int secondChatY = 62;
+    public int secondChatWidth = 330;
+    public int secondChatHeight = 120;
+    public boolean secondChatPrimaryCustomSize = false;
+    public int secondChatBackgroundOpacity = 150;
+    public int secondChatAccentColor = 0xFF38BDF8;
+    public int secondChatHighlightColor = 0xFFFFD54A;
+    public boolean secondChatMentionSoundEnabled = true;
+    public String secondChatHqMode = "copy";
+    public String secondChatReinfMode = "copy";
+    public String secondChatPrivateMode = "copy";
+    public String secondChatServerInfoMode = "off";
+    public String secondChatBetterUcMode = "copy";
+    public String secondChatOwnNameMode = "highlight";
+    public String secondChatCustom1Mode = "off";
+    public String secondChatCustom2Mode = "off";
+    public String secondChatCustom3Mode = "off";
+    public String secondChatCustom1Text = "";
+    public String secondChatCustom2Text = "";
+    public String secondChatCustom3Text = "";
+    public List<SecondChatTabConfig> secondChatTabs = new ArrayList<>();
+    public List<SecondChatWindowConfig> secondChatWindows = new ArrayList<>();
+    public String secondChatActiveTabId = "main";
+    public boolean secondChatTabsMigrated = false;
     public int lastKnownCash = -1;
     public String currentPlayerFaction = "";
     public String currentPlayerFactionLabel = "";
@@ -651,6 +688,127 @@ public class BetterUCConfig {
         INSTANCE.reinfTextColor = sanitizeHudColor(INSTANCE.reinfTextColor, DEFAULT_REINF_TEXT_COLOR);
         INSTANCE.reinfDistanceColor = sanitizeHudColor(INSTANCE.reinfDistanceColor, DEFAULT_REINF_DISTANCE_COLOR);
         INSTANCE.reinfUniformColor = sanitizeHudColor(INSTANCE.reinfUniformColor, DEFAULT_REINF_UNIFORM_COLOR);
+    }
+
+    public static void sanitizeSecondChat() {
+        INSTANCE.secondChatX = Math.max(0, INSTANCE.secondChatX);
+        INSTANCE.secondChatY = Math.max(0, INSTANCE.secondChatY);
+        INSTANCE.secondChatWidth = Math.max(180, Math.min(600, INSTANCE.secondChatWidth));
+        INSTANCE.secondChatHeight = Math.max(60, Math.min(320, INSTANCE.secondChatHeight));
+        INSTANCE.secondChatBackgroundOpacity = Math.max(0, Math.min(255, INSTANCE.secondChatBackgroundOpacity));
+        INSTANCE.secondChatAccentColor = sanitizeHudColor(INSTANCE.secondChatAccentColor, 0xFF38BDF8);
+        INSTANCE.secondChatHighlightColor = sanitizeHudColor(INSTANCE.secondChatHighlightColor, 0xFFFFD54A);
+        INSTANCE.secondChatHqMode = sanitizeSecondChatMode(INSTANCE.secondChatHqMode);
+        INSTANCE.secondChatReinfMode = sanitizeSecondChatMode(INSTANCE.secondChatReinfMode);
+        INSTANCE.secondChatPrivateMode = sanitizeSecondChatMode(INSTANCE.secondChatPrivateMode);
+        INSTANCE.secondChatServerInfoMode = sanitizeSecondChatMode(INSTANCE.secondChatServerInfoMode);
+        INSTANCE.secondChatBetterUcMode = sanitizeSecondChatMode(INSTANCE.secondChatBetterUcMode);
+        INSTANCE.secondChatOwnNameMode = sanitizeSecondChatMode(INSTANCE.secondChatOwnNameMode);
+        INSTANCE.secondChatCustom1Mode = sanitizeSecondChatMode(INSTANCE.secondChatCustom1Mode);
+        INSTANCE.secondChatCustom2Mode = sanitizeSecondChatMode(INSTANCE.secondChatCustom2Mode);
+        INSTANCE.secondChatCustom3Mode = sanitizeSecondChatMode(INSTANCE.secondChatCustom3Mode);
+        INSTANCE.secondChatCustom1Text = sanitizeSecondChatFilter(INSTANCE.secondChatCustom1Text);
+        INSTANCE.secondChatCustom2Text = sanitizeSecondChatFilter(INSTANCE.secondChatCustom2Text);
+        INSTANCE.secondChatCustom3Text = sanitizeSecondChatFilter(INSTANCE.secondChatCustom3Text);
+        ensureSecondChatTabs();
+        ensureSecondChatWindows();
+    }
+
+    private static void ensureSecondChatTabs() {
+        if (INSTANCE.secondChatTabs == null) {
+            INSTANCE.secondChatTabs = new ArrayList<>();
+        }
+        INSTANCE.secondChatTabs.removeIf(tab -> tab == null);
+        if (!INSTANCE.secondChatTabsMigrated) {
+            if (INSTANCE.secondChatTabs.isEmpty()) {
+                SecondChatTabConfig migrated = new SecondChatTabConfig("Chat 2");
+                migrated.hqMode = INSTANCE.secondChatHqMode;
+                migrated.reinfMode = INSTANCE.secondChatReinfMode;
+                migrated.privateMode = INSTANCE.secondChatPrivateMode;
+                migrated.serverInfoMode = INSTANCE.secondChatServerInfoMode;
+                migrated.betterUcMode = INSTANCE.secondChatBetterUcMode;
+                migrated.ownNameMode = INSTANCE.secondChatOwnNameMode;
+                migrated.custom1Mode = INSTANCE.secondChatCustom1Mode;
+                migrated.custom2Mode = INSTANCE.secondChatCustom2Mode;
+                migrated.custom3Mode = INSTANCE.secondChatCustom3Mode;
+                migrated.custom1Text = INSTANCE.secondChatCustom1Text;
+                migrated.custom2Text = INSTANCE.secondChatCustom2Text;
+                migrated.custom3Text = INSTANCE.secondChatCustom3Text;
+                INSTANCE.secondChatTabs.add(migrated);
+            }
+            INSTANCE.secondChatTabsMigrated = true;
+        }
+        while (INSTANCE.secondChatTabs.size() > 8) {
+            INSTANCE.secondChatTabs.remove(INSTANCE.secondChatTabs.size() - 1);
+        }
+        for (int i = 0; i < INSTANCE.secondChatTabs.size(); i++) {
+            INSTANCE.secondChatTabs.get(i).sanitize(i);
+        }
+        if (INSTANCE.secondChatActiveTabId == null || INSTANCE.secondChatActiveTabId.isBlank()) {
+            INSTANCE.secondChatActiveTabId = "main";
+        }
+        boolean known = "main".equals(INSTANCE.secondChatActiveTabId);
+        if (!known) {
+            for (SecondChatTabConfig tab : INSTANCE.secondChatTabs) {
+                if (tab.id.equals(INSTANCE.secondChatActiveTabId)) {
+                    known = true;
+                    break;
+                }
+            }
+        }
+        if (!known) {
+            INSTANCE.secondChatActiveTabId = "main";
+        }
+    }
+
+    private static void ensureSecondChatWindows() {
+        if (INSTANCE.secondChatWindows == null) {
+            INSTANCE.secondChatWindows = new ArrayList<>();
+        }
+        INSTANCE.secondChatWindows.removeIf(window -> window == null);
+        while (INSTANCE.secondChatWindows.size() > 4) {
+            INSTANCE.secondChatWindows.remove(INSTANCE.secondChatWindows.size() - 1);
+        }
+        for (int i = 0; i < INSTANCE.secondChatWindows.size(); i++) {
+            INSTANCE.secondChatWindows.get(i).sanitize(i);
+        }
+
+        Set<String> windowIds = new LinkedHashSet<>();
+        windowIds.add("primary");
+        for (SecondChatWindowConfig window : INSTANCE.secondChatWindows) {
+            windowIds.add(window.id);
+        }
+        for (SecondChatTabConfig tab : INSTANCE.secondChatTabs) {
+            if (!windowIds.contains(tab.windowId)) {
+                tab.windowId = "primary";
+            }
+        }
+        INSTANCE.secondChatWindows.removeIf(window -> INSTANCE.secondChatTabs.stream()
+                .noneMatch(tab -> window.id.equals(tab.windowId)));
+        for (SecondChatWindowConfig window : INSTANCE.secondChatWindows) {
+            boolean activeKnown = INSTANCE.secondChatTabs.stream()
+                    .anyMatch(tab -> window.id.equals(tab.windowId) && tab.id.equals(window.activeTabId));
+            if (!activeKnown) {
+                window.activeTabId = INSTANCE.secondChatTabs.stream()
+                        .filter(tab -> window.id.equals(tab.windowId))
+                        .map(tab -> tab.id)
+                        .findFirst()
+                        .orElse("");
+            }
+        }
+    }
+
+    private static String sanitizeSecondChatMode(String value) {
+        String normalized = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+        return switch (normalized) {
+            case "copy", "move", "highlight", "ignore" -> normalized;
+            default -> "off";
+        };
+    }
+
+    private static String sanitizeSecondChatFilter(String value) {
+        String normalized = value == null ? "" : value.trim();
+        return normalized.length() <= 96 ? normalized : normalized.substring(0, 96).trim();
     }
 
     private static String sanitizeHudPrefix(String value, String fallback) {
@@ -1208,6 +1366,8 @@ public class BetterUCConfig {
         if (INSTANCE.vogelfreiPlayerKeys == null) INSTANCE.vogelfreiPlayerKeys = new LinkedHashSet<>();
         if (INSTANCE.hudProfiles == null) INSTANCE.hudProfiles = new LinkedHashMap<>();
         if (INSTANCE.clickGuiScrollOffsets == null) INSTANCE.clickGuiScrollOffsets = new LinkedHashMap<>();
+        if (INSTANCE.secondChatTabs == null) INSTANCE.secondChatTabs = new ArrayList<>();
+        if (INSTANCE.secondChatWindows == null) INSTANCE.secondChatWindows = new ArrayList<>();
     }
 
     private static void rebuildNameKeySet(List<String> source, Set<String> target) {
@@ -1262,6 +1422,7 @@ public class BetterUCConfig {
         sanitizeHudPrefixes();
         sanitizeHudGradients();
         sanitizeReinfColors();
+        sanitizeSecondChat();
         sanitizePingRelay();
         sanitizeDiscordInvite();
         sanitizeTrackedFactions();
@@ -1345,6 +1506,7 @@ public class BetterUCConfig {
             INSTANCE.healthHudTextColor = sanitizeHudColor(INSTANCE.healthHudTextColor, INSTANCE.healthHudColor);
             INSTANCE.healthHudAbsorptionColor = sanitizeHudColor(INSTANCE.healthHudAbsorptionColor, DEFAULT_HEALTH_HUD_ABSORPTION_COLOR);
             sanitizeReinfColors();
+            sanitizeSecondChat();
             sanitizeHudGradients();
             sanitizeHudStyles();
             sanitizeHudScales();
@@ -1439,6 +1601,7 @@ public class BetterUCConfig {
         sanitizeHudPrefixes();
         sanitizeHudGradients();
         sanitizeReinfColors();
+        sanitizeSecondChat();
         sanitizeAmmoHud();
         sanitizePingRelay();
         sanitizeDiscordInvite();
