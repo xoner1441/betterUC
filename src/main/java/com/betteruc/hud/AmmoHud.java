@@ -13,8 +13,11 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 
+import java.text.Normalizer;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -45,6 +48,8 @@ public class AmmoHud {
     private static WeaponProfile activeWeaponProfile = WeaponProfile.UNKNOWN;
     private static boolean lowAmmoActive = false;
     private static final Set<String> learnedWeaponFingerprints = new HashSet<>();
+    private static final Map<String, WeaponProfile> learnedWeaponProfiles = new HashMap<>();
+    private static final Map<String, String> learnedWeaponNames = new HashMap<>();
     private static long lastFailureLogMs = 0L;
 
     public static void register() {
@@ -101,7 +106,14 @@ public class AmmoHud {
         String heldFingerprint = itemFingerprint(heldItem);
         if (heldFingerprint.isBlank()) return;
 
+        String overlayWeaponName = sanitizeWeaponDisplayName(extractWeaponName(raw));
         WeaponProfile profile = WeaponProfile.fromItemName(itemDisplayName(heldItem));
+        if (profile == WeaponProfile.UNKNOWN) {
+            profile = WeaponProfile.fromItemName(overlayWeaponName);
+        }
+        if (profile == WeaponProfile.UNKNOWN) {
+            profile = learnedWeaponProfiles.getOrDefault(heldFingerprint, WeaponProfile.UNKNOWN);
+        }
         boolean reloadConfirmed = reloadAwaitingConfirmation;
         learnKr47Magazine(profile, parsedClip, reloadConfirmed);
         int magazineSize = magazineSize(profile);
@@ -111,9 +123,12 @@ public class AmmoHud {
 
         clipAmmo = parsedClip;
         reserveAmmo = parsedReserve;
-        weaponName = extractWeaponName(raw);
-        if (weaponName.isBlank() && profile != WeaponProfile.UNKNOWN) {
-            weaponName = profile.displayName;
+        weaponName = resolveWeaponName(overlayWeaponName, profile, heldItem, heldFingerprint);
+        if (profile != WeaponProfile.UNKNOWN) {
+            learnedWeaponProfiles.put(heldFingerprint, profile);
+        }
+        if (!weaponName.isBlank() && !"Waffe".equals(weaponName)) {
+            learnedWeaponNames.put(heldFingerprint, weaponName);
         }
         learnedWeaponFingerprints.add(heldFingerprint);
         activeWeaponFingerprint = heldFingerprint;
@@ -180,6 +195,8 @@ public class AmmoHud {
         activeWeaponProfile = WeaponProfile.UNKNOWN;
         lowAmmoActive = false;
         learnedWeaponFingerprints.clear();
+        learnedWeaponProfiles.clear();
+        learnedWeaponNames.clear();
     }
 
     private static void renderSafely(GuiGraphicsExtractor context) {
@@ -296,11 +313,87 @@ public class AmmoHud {
     }
 
     private static String normalizeWeaponName(String raw) {
-        return raw == null
-                ? ""
-                : raw.trim()
+        if (raw == null || raw.isBlank()) return "";
+
+        String normalized = Normalizer.normalize(raw, Normalizer.Form.NFKD)
                 .toLowerCase(Locale.ROOT)
-                .replaceAll("[^a-z0-9]+", "");
+                .replaceAll("\\p{M}+", "");
+        StringBuilder ascii = new StringBuilder(normalized.length());
+        for (int i = 0; i < normalized.length(); i++) {
+            ascii.append(toAsciiWeaponCharacter(normalized.charAt(i)));
+        }
+        return ascii.toString().replaceAll("[^a-z0-9]+", "");
+    }
+
+    private static char toAsciiWeaponCharacter(char value) {
+        return switch (value) {
+            case 'ᴀ' -> 'a';
+            case 'ʙ' -> 'b';
+            case 'ᴄ' -> 'c';
+            case 'ᴅ' -> 'd';
+            case 'ᴇ' -> 'e';
+            case 'ꜰ' -> 'f';
+            case 'ɢ' -> 'g';
+            case 'ʜ' -> 'h';
+            case 'ɪ' -> 'i';
+            case 'ᴊ' -> 'j';
+            case 'ᴋ' -> 'k';
+            case 'ʟ' -> 'l';
+            case 'ᴍ' -> 'm';
+            case 'ɴ' -> 'n';
+            case 'ᴏ' -> 'o';
+            case 'ᴘ' -> 'p';
+            case 'ʀ' -> 'r';
+            case 'ꜱ' -> 's';
+            case 'ᴛ' -> 't';
+            case 'ᴜ' -> 'u';
+            case 'ᴠ' -> 'v';
+            case 'ᴡ' -> 'w';
+            case 'ʏ' -> 'y';
+            case 'ᴢ' -> 'z';
+            default -> value;
+        };
+    }
+
+    private static String resolveWeaponName(
+            String overlayWeaponName,
+            WeaponProfile profile,
+            ItemStack heldItem,
+            String heldFingerprint
+    ) {
+        if (!overlayWeaponName.isBlank()) return overlayWeaponName;
+        if (profile != WeaponProfile.UNKNOWN) return profile.displayName;
+
+        String learnedName = learnedWeaponNames.getOrDefault(heldFingerprint, "");
+        if (!learnedName.isBlank()) return learnedName;
+
+        String heldName = sanitizeWeaponDisplayName(itemDisplayName(heldItem));
+        return isUsefulWeaponDisplayName(heldName) ? heldName : "Waffe";
+    }
+
+    private static String sanitizeWeaponDisplayName(String raw) {
+        if (raw == null) return "";
+        return raw.replaceAll("§[0-9A-FK-ORa-fk-or]", "")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    private static boolean isUsefulWeaponDisplayName(String value) {
+        String normalized = normalizeWeaponName(value);
+        if (normalized.isBlank()) return false;
+
+        return !normalized.equals("air")
+                && !normalized.equals("stick")
+                && !normalized.equals("stock")
+                && !normalized.equals("bow")
+                && !normalized.equals("bogen")
+                && !normalized.equals("crossbow")
+                && !normalized.equals("armbrust")
+                && !normalized.equals("fishingrod")
+                && !normalized.equals("angel")
+                && !normalized.equals("carrotonastick")
+                && !normalized.equals("karottenrute")
+                && !normalized.equals("warpedfungusonastick");
     }
 
     private static String itemFingerprint(ItemStack stack) {
@@ -420,7 +513,7 @@ public class AmmoHud {
         if (profile != WeaponProfile.KR47) return;
 
         int learned = BetterUCConfig.INSTANCE.ammoHudKr47MagazineSize;
-        if (parsedClip == 30 && learned != 30) {
+        if (parsedClip > 25 && parsedClip <= 30 && learned != 30) {
             BetterUCConfig.INSTANCE.ammoHudKr47MagazineSize = 30;
             BetterUCConfig.save();
         } else if (parsedClip == 25 && learned == 0 && reloadConfirmed) {
@@ -436,6 +529,7 @@ public class AmmoHud {
         EXTENSO18("Extenso18", 5, "extenso18"),
         VIPER9("Viper9", 5, "viper9"),
         KR47("KR47", 0, "kr47"),
+        AUG("AUG", 30, "aug"),
         AX12("AX12", 25, "ax12"),
         UNKNOWN("", 0, "");
 
@@ -458,5 +552,6 @@ public class AmmoHud {
             }
             return UNKNOWN;
         }
+
     }
 }
