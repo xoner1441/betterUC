@@ -15,8 +15,10 @@ import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ChatCustomizationFormatter;
 import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.CommunicationDeviceTracker;
+import com.betteruc.client.DutyRejoinClient;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.RemoteFeatureFlagsClient;
+import com.betteruc.client.ReinforcementAcceptClient;
 import com.betteruc.client.SecondChatManager;
 import com.betteruc.client.SecondChatTextCompat;
 import com.betteruc.client.ServerCommandUtil;
@@ -158,6 +160,8 @@ public class ChatBlacklistMixin {
         }
 
         String raw = message.getString();
+        ReinforcementAcceptClient.handleChatMessage(Minecraft.getInstance(), message);
+        DutyRejoinClient.handleChatLine(raw);
         AutoBuyClient.handleChatLine(Minecraft.getInstance(), raw);
         if (AutomationController.isDropDrinkEnabled()) {
             AutoDropDrinkClient.handleChatLine(Minecraft.getInstance(), raw);
@@ -262,12 +266,14 @@ public class ChatBlacklistMixin {
         String lower = raw.toLowerCase(Locale.ROOT);
         if (lower.contains("du bist nun im afk-modus")) {
             PaydayHud.setPausedByAfk(true);
+            ReinforcementAcceptClient.setAfk(true);
             return;
         }
         if (lower.contains("du bist nun nicht mehr im afk-modus")
                 || (lower.contains("payday-zeit")
                 && (lower.contains("laeuft nun weiter") || lower.contains("l\u00e4uft nun weiter")))) {
             PaydayHud.setPausedByAfk(false);
+            ReinforcementAcceptClient.setAfk(false);
             forceHideAfkExitTailUntilMs = System.currentTimeMillis() + FORCE_HIDE_AFK_EXIT_TAIL_WINDOW_MS;
             requestSilentStatsRefreshOnAfkExit();
         }

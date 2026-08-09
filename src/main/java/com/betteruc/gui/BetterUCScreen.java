@@ -334,6 +334,39 @@ public class BetterUCScreen extends Screen {
                     y = addButton(x, y, controlW, "Reinf Farben zur\u00FCcksetzen", b -> resetReinfColors());
                 }
 
+                y = addSectionHeader(x, y, controlW, "Reinf-Annahme", 0xFFFBBF24);
+                y = addToggle(x, y, controlW, "Reinfs annehmen", BetterUCConfig.INSTANCE.reinfAcceptEnabled,
+                        () -> BetterUCConfig.INSTANCE.reinfAcceptEnabled = !BetterUCConfig.INSTANCE.reinfAcceptEnabled);
+                if (BetterUCConfig.INSTANCE.reinfAcceptEnabled) {
+                    y = addToggle(x, y, controlW, "Automatisch annehmen",
+                            BetterUCConfig.INSTANCE.reinfAcceptAutomatic,
+                            () -> BetterUCConfig.INSTANCE.reinfAcceptAutomatic =
+                                    !BetterUCConfig.INSTANCE.reinfAcceptAutomatic);
+                    y = addRangeIntSlider(x, y, controlW, "Cooldown (Sek.)",
+                            BetterUCConfig.INSTANCE.reinfAcceptCooldownSeconds, 1, 10,
+                            value -> BetterUCConfig.INSTANCE.reinfAcceptCooldownSeconds = value);
+
+                    y = addSectionHeader(x, y, controlW, "Reinf-Typen", 0xFF38BDF8);
+                    y = addToggle(x, y, controlW, "Normal", BetterUCConfig.INSTANCE.reinfAcceptNormal,
+                            () -> BetterUCConfig.INSTANCE.reinfAcceptNormal = !BetterUCConfig.INSTANCE.reinfAcceptNormal);
+                    y = addToggle(x, y, controlW, "Dringend", BetterUCConfig.INSTANCE.reinfAcceptUrgent,
+                            () -> BetterUCConfig.INSTANCE.reinfAcceptUrgent = !BetterUCConfig.INSTANCE.reinfAcceptUrgent);
+                    y = addToggle(x, y, controlW, "Medic", BetterUCConfig.INSTANCE.reinfAcceptMedic,
+                            () -> BetterUCConfig.INSTANCE.reinfAcceptMedic = !BetterUCConfig.INSTANCE.reinfAcceptMedic);
+                    y = addToggle(x, y, controlW, "Geiselnahme", BetterUCConfig.INSTANCE.reinfAcceptHostage,
+                            () -> BetterUCConfig.INSTANCE.reinfAcceptHostage = !BetterUCConfig.INSTANCE.reinfAcceptHostage);
+                    y = addToggle(x, y, controlW, "Contract", BetterUCConfig.INSTANCE.reinfAcceptContract,
+                            () -> BetterUCConfig.INSTANCE.reinfAcceptContract = !BetterUCConfig.INSTANCE.reinfAcceptContract);
+                    y = addToggle(x, y, controlW, "Training", BetterUCConfig.INSTANCE.reinfAcceptTraining,
+                            () -> BetterUCConfig.INSTANCE.reinfAcceptTraining = !BetterUCConfig.INSTANCE.reinfAcceptTraining);
+                    y = addToggle(x, y, controlW, "Drogenabnahme", BetterUCConfig.INSTANCE.reinfAcceptDrugs,
+                            () -> BetterUCConfig.INSTANCE.reinfAcceptDrugs = !BetterUCConfig.INSTANCE.reinfAcceptDrugs);
+                    y = addToggle(x, y, controlW, "Leichenbewachung", BetterUCConfig.INSTANCE.reinfAcceptBodyGuard,
+                            () -> BetterUCConfig.INSTANCE.reinfAcceptBodyGuard = !BetterUCConfig.INSTANCE.reinfAcceptBodyGuard);
+                    y = addToggle(x, y, controlW, "Bombe", BetterUCConfig.INSTANCE.reinfAcceptBomb,
+                            () -> BetterUCConfig.INSTANCE.reinfAcceptBomb = !BetterUCConfig.INSTANCE.reinfAcceptBomb);
+                }
+
                 y = addSectionHeader(x, y, controlW, "Chat-Zeit", 0xFF94A3B8);
                 y = addToggle(x, y, controlW, "Zeitstempel", BetterUCConfig.INSTANCE.chatTimestampsEnabled,
                         () -> BetterUCConfig.INSTANCE.chatTimestampsEnabled = !BetterUCConfig.INSTANCE.chatTimestampsEnabled);
