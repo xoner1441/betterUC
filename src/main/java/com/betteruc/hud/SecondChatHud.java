@@ -264,6 +264,29 @@ public final class SecondChatHud {
             return;
         }
 
+        boolean hasTitle = tab == null || !tab.name.isBlank();
+        int contentOffset = dockedPrimary || !hasTitle ? 3 : TITLE_HEIGHT + 2;
+        int bottom = y + height - 4;
+        int lineHeight = scaledLineHeight(tab);
+        int scrollOffset = editorPreview || chatOpen || tab == null
+                ? (tab == null ? 0 : SecondChatManager.scrollOffset(tab.id))
+                : 0;
+        int startIndex = Math.max(-1, lines.size() - 1 - scrollOffset);
+        int maximumVisibleLines = Math.max(1, (bottom - (y + contentOffset)) / lineHeight);
+        int visibleLineCount = countVisibleLines(
+                lines,
+                startIndex,
+                maximumVisibleLines,
+                now,
+                fadeMs,
+                editorPreview || chatOpen
+        );
+        boolean compact = !editorPreview && !chatOpen;
+        int panelY = compact
+                ? bottom - visibleLineCount * lineHeight - contentOffset
+                : y;
+        int panelHeight = y + height - panelY;
+
         boolean showBackground = tab == null ? config.secondChatBackgroundEnabled : tab.background;
         if (showBackground || editorPreview) {
             int configuredAlpha = tab == null
@@ -271,33 +294,28 @@ public final class SecondChatHud {
                     : tab.backgroundOpacity;
             int alpha = editorPreview ? Math.max(110, configuredAlpha) : configuredAlpha;
             int background = withAlpha(0x000D1117, scaleAlpha(alpha, windowAlpha));
-            context.fill(x, y, x + width, y + height, background);
-            drawOutline(context, x, y, width, height, scaleColorAlpha(BORDER, windowAlpha));
+            context.fill(x, panelY, x + width, panelY + panelHeight, background);
+            drawOutline(context, x, panelY, width, panelHeight, scaleColorAlpha(BORDER, windowAlpha));
         }
 
         if (!dockedPrimary) {
             String tabName = tab == null ? "Chat 2" : tab.name;
             if (!tabName.isBlank()) {
-                context.text(client.font, Component.literal(tabName), x + 8, y + 5,
+                context.text(client.font, Component.literal(tabName), x + 8, panelY + 5,
                         scaleColorAlpha(TEXT_PRIMARY, windowAlpha));
                 int messageCount = tab == null ? 0 : SecondChatManager.snapshot(tab.id).size();
                 if (messageCount > 0) {
                     String count = Integer.toString(messageCount);
                     context.text(client.font, Component.literal(count),
-                            x + width - 7 - client.font.width(count), y + 5,
+                            x + width - 7 - client.font.width(count), panelY + 5,
                             scaleColorAlpha(TEXT_MUTED, windowAlpha));
                 }
             }
         }
 
-        boolean hasTitle = tab == null || !tab.name.isBlank();
-        int top = dockedPrimary || !hasTitle ? y + 3 : y + TITLE_HEIGHT + 2;
-        int bottom = y + height - 4;
-        int lineHeight = scaledLineHeight(tab);
+        int top = panelY + contentOffset;
         int lineY = bottom - lineHeight;
-        int scrollOffset = tab == null ? 0 : SecondChatManager.scrollOffset(tab.id);
         long firstUnreadAt = tab == null ? 0L : SecondChatManager.firstUnreadAt(tab.id);
-        int startIndex = Math.max(-1, lines.size() - 1 - scrollOffset);
         for (int i = startIndex; i >= 0 && lineY >= top; i--) {
             RenderLine line = lines.get(i);
             int lineAlpha = editorPreview || chatOpen ? 255 : visibilityAlpha(line.createdAtMs, now, fadeMs);
@@ -362,6 +380,23 @@ public final class SecondChatHud {
                     "newest"
             ));
         }
+    }
+
+    private static int countVisibleLines(
+            List<RenderLine> lines,
+            int startIndex,
+            int maximum,
+            long now,
+            int fadeMs,
+            boolean forceVisible
+    ) {
+        int visible = 0;
+        for (int i = startIndex; i >= 0 && visible < maximum; i--) {
+            if (forceVisible || visibilityAlpha(lines.get(i).createdAtMs, now, fadeMs) > 0) {
+                visible++;
+            }
+        }
+        return visible;
     }
 
     private static List<RenderLine> renderLines(
