@@ -4,8 +4,10 @@ import com.betteruc.config.BetterUCConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 
 import java.util.Objects;
+import java.util.Optional;
 
 public final class ReinforcementAcceptClient {
 
@@ -42,7 +44,7 @@ public final class ReinforcementAcceptClient {
         if (latestType == null || now - latestHeadlineAtMs > HEADLINE_MATCH_WINDOW_MS) return;
         if (!isTypeEnabled(latestType)) return;
 
-        String command = findRunCommand(message);
+        String command = findRunCommandForLabel(message, "unterwegs");
         if (command == null || command.isBlank()) return;
 
         String fingerprint = latestType.name() + '|' + latestHeadline + '|' + command;
@@ -127,16 +129,20 @@ public final class ReinforcementAcceptClient {
         notify(client, "\u00A7a[betterUC] " + acceptedType.label() + "-Reinf angenommen.");
     }
 
-    private static String findRunCommand(Component component) {
-        ClickEvent clickEvent = component.getStyle().getClickEvent();
-        if (clickEvent instanceof ClickEvent.RunCommand runCommand) {
-            return runCommand.command();
-        }
-        for (Component sibling : component.getSiblings()) {
-            String command = findRunCommand(sibling);
-            if (command != null) return command;
-        }
-        return null;
+    static String findRunCommandForLabel(Component component, String label) {
+        if (component == null || label == null || label.isBlank()) return null;
+
+        String normalizedLabel = ReinforcementTypeMatcher.normalize(label);
+        return component.visit((style, text) -> {
+            if (!ReinforcementTypeMatcher.normalize(text).contains(normalizedLabel)) {
+                return Optional.empty();
+            }
+            ClickEvent clickEvent = style.getClickEvent();
+            if (clickEvent instanceof ClickEvent.RunCommand runCommand) {
+                return Optional.of(runCommand.command());
+            }
+            return Optional.empty();
+        }, Style.EMPTY).orElse(null);
     }
 
     private static boolean isTypeEnabled(ReinforcementTypeMatcher.Type type) {
