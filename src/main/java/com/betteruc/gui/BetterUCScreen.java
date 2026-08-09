@@ -30,6 +30,8 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -705,11 +707,29 @@ public class BetterUCScreen extends Screen {
     }
 
     private int addButton(int x, int y, int width, String label, Button.OnPress action) {
-        Button button = Button.builder(Component.literal(label), action)
+        return addButton(
+                x,
+                y,
+                width,
+                Component.literal(label),
+                tooltipForControl(label, activeDetailSection),
+                action
+        );
+    }
+
+    private int addButton(
+            int x,
+            int y,
+            int width,
+            Component label,
+            String tooltip,
+            Button.OnPress action
+    ) {
+        Button button = Button.builder(label, action)
                 .bounds(x, y, width, BUTTON_H)
                 .build();
         addScrollableControl(button);
-        registerTooltip(button, tooltipForControl(label, activeDetailSection));
+        registerTooltip(button, tooltip);
         return y + 24;
     }
 
@@ -858,13 +878,24 @@ public class BetterUCScreen extends Screen {
             int color,
             ColorPickerScreen.ColorApplyTarget target
     ) {
-        return addButton(x, y, width, label + " #" + hex(color), b -> openScreen(new ColorPickerScreen(
+        MutableComponent buttonLabel = Component.literal(label + "  ");
+        buttonLabel.append(Component.literal("\u2588")
+                .setStyle(Style.EMPTY.withColor(color & 0xFFFFFF)));
+
+        return addButton(
+                x,
+                y,
+                width,
+                buttonLabel,
+                "Öffnet den Farbwähler für diese Darstellung.",
+                b -> openScreen(new ColorPickerScreen(
                 this,
                 label,
                 label + " wählen",
                 color,
                 target
-        )));
+                ))
+        );
     }
 
     private void resetReinfColors() {
