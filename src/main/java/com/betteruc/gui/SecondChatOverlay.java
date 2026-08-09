@@ -15,12 +15,14 @@ import net.minecraft.network.chat.Component;
 
 public final class SecondChatOverlay {
 
-    private static final int TAB_HEIGHT = 17;
+    private static final int TAB_HEIGHT = 15;
     private static final int MENU_WIDTH = 146;
     private static final int MENU_ITEM_HEIGHT = 19;
-    private static final int BACKGROUND = 0xE6121821;
-    private static final int BACKGROUND_HOVER = 0xF0222D3B;
-    private static final int BORDER = 0xFF334155;
+    private static final int BACKGROUND = 0x66121821;
+    private static final int BACKGROUND_HOVER = 0x99222D3B;
+    private static final int ACTIVE_BACKGROUND = 0xA0202B38;
+    private static final int ATTENTION_BACKGROUND = 0x997C2D12;
+    private static final int BORDER = 0x66334155;
     private static final int TEXT = 0xFFF8FAFC;
     private static final int MUTED = 0xFF94A3B8;
     private static final int DRAG_THRESHOLD = 4;
@@ -42,6 +44,11 @@ public final class SecondChatOverlay {
             int mouseX,
             int mouseY
     ) {
+        if (!BetterUCConfig.INSTANCE.secondChatEnabled) {
+            clearInteractionState();
+            return;
+        }
+
         Minecraft client = Minecraft.getInstance();
         List<TabHitbox> rebuiltTabs = new ArrayList<>();
         List<MenuButtonHitbox> rebuiltMenus = new ArrayList<>();
@@ -59,21 +66,19 @@ public final class SecondChatOverlay {
                 rebuiltMenus,
                 rebuiltItems
         );
-        if (BetterUCConfig.INSTANCE.secondChatEnabled) {
-            for (SecondChatWindowConfig window : SecondChatManager.windows()) {
-                renderWindowStrip(
-                        client,
-                        context,
-                        window.id,
-                        SecondChatHud.configuredBounds(window.id),
-                        false,
-                        mouseX,
-                        mouseY,
-                        rebuiltTabs,
-                        rebuiltMenus,
-                        rebuiltItems
-                );
-            }
+        for (SecondChatWindowConfig window : SecondChatManager.windows()) {
+            renderWindowStrip(
+                    client,
+                    context,
+                    window.id,
+                    SecondChatHud.configuredBounds(window.id),
+                    false,
+                    mouseX,
+                    mouseY,
+                    rebuiltTabs,
+                    rebuiltMenus,
+                    rebuiltItems
+            );
         }
 
         tabHitboxes = List.copyOf(rebuiltTabs);
@@ -85,6 +90,9 @@ public final class SecondChatOverlay {
     }
 
     public static boolean mouseClicked(Screen chatScreen, double mouseX, double mouseY, int button) {
+        if (!BetterUCConfig.INSTANCE.secondChatEnabled) {
+            return false;
+        }
         if (button != 0 && button != 1) {
             return false;
         }
@@ -157,6 +165,9 @@ public final class SecondChatOverlay {
     }
 
     public static boolean mouseDragged(double mouseX, double mouseY, int button) {
+        if (!BetterUCConfig.INSTANCE.secondChatEnabled) {
+            return false;
+        }
         if (button != 0 || tabDrag == null) {
             return false;
         }
@@ -170,6 +181,9 @@ public final class SecondChatOverlay {
     }
 
     public static boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (!BetterUCConfig.INSTANCE.secondChatEnabled) {
+            return false;
+        }
         if (button != 0 || tabDrag == null) {
             return false;
         }
@@ -208,6 +222,7 @@ public final class SecondChatOverlay {
     }
 
     public static boolean mouseScrolled(double mouseX, double mouseY, double verticalAmount) {
+        if (!BetterUCConfig.INSTANCE.secondChatEnabled) return false;
         if (verticalAmount == 0.0D) return false;
         SecondChatHud.Bounds primary = SecondChatHud.configuredBounds(SecondChatManager.PRIMARY_WINDOW_ID);
         if (primary.contains(mouseX, mouseY)
@@ -274,16 +289,15 @@ public final class SecondChatOverlay {
             boolean active = tab.id.equals(activeId);
             boolean hovered = contains(tabX, stripY, tabWidth, TAB_HEIGHT, mouseX, mouseY);
             boolean attention = SecondChatManager.needsAttention(tab.id);
-            int fill = active ? 0xF0202B38
-                    : attention ? 0xE07C2D12
+            int fill = active ? ACTIVE_BACKGROUND
+                    : attention ? ATTENTION_BACKGROUND
                     : hovered ? BACKGROUND_HOVER : BACKGROUND;
             context.fill(tabX, stripY, tabX + tabWidth, stripY + TAB_HEIGHT, fill);
-            drawTabOutline(context, tabX, stripY, tabWidth, TAB_HEIGHT, active
-                    ? forceOpaque(BetterUCConfig.INSTANCE.secondChatAccentColor)
-                    : BORDER);
+            context.fill(tabX, stripY + TAB_HEIGHT - 1, tabX + tabWidth, stripY + TAB_HEIGHT,
+                    active ? forceOpaque(BetterUCConfig.INSTANCE.secondChatAccentColor) : BORDER);
             String label = fitText(client, displayLabel, tabWidth - 10);
             int labelX = tabX + Math.max(5, (tabWidth - client.font.width(label)) / 2);
-            context.text(client.font, label, labelX, stripY + 5,
+            context.text(client.font, label, labelX, stripY + 4,
                     active ? TEXT : attention ? 0xFFFFD54A : unread > 0 ? 0xFF38BDF8 : MUTED);
             tabTargets.add(new TabHitbox(windowId, tab.id, new Box(tabX, stripY, tabWidth, TAB_HEIGHT)));
             tabX += tabWidth;
@@ -293,11 +307,10 @@ public final class SecondChatOverlay {
         boolean menuHovered = menuButton.contains(mouseX, mouseY);
         context.fill(menuX, stripY, menuX + TAB_HEIGHT, stripY + TAB_HEIGHT,
                 menuHovered || menuOpen ? BACKGROUND_HOVER : BACKGROUND);
-        drawOutline(context, menuX, stripY, TAB_HEIGHT, TAB_HEIGHT, menuOpen
-                ? forceOpaque(BetterUCConfig.INSTANCE.secondChatAccentColor)
-                : BORDER);
+        context.fill(menuX, stripY + TAB_HEIGHT - 1, menuX + TAB_HEIGHT, stripY + TAB_HEIGHT,
+                menuOpen ? forceOpaque(BetterUCConfig.INSTANCE.secondChatAccentColor) : BORDER);
         for (int line = 0; line < 3; line++) {
-            int lineY = stripY + 5 + line * 3;
+            int lineY = stripY + 4 + line * 3;
             context.fill(menuX + 5, lineY, menuX + 12, lineY + 1, TEXT);
         }
 
@@ -510,6 +523,14 @@ public final class SecondChatOverlay {
         openMenuTabId = null;
     }
 
+    private static void clearInteractionState() {
+        closeMenu();
+        tabDrag = null;
+        tabHitboxes = List.of();
+        menuButtons = List.of();
+        menuItems = List.of();
+    }
+
     private static int forceOpaque(int color) {
         return 0xFF000000 | (color & 0x00FFFFFF);
     }
@@ -526,19 +547,6 @@ public final class SecondChatOverlay {
         context.fill(x, y + height - 1, x + width, y + height, color);
         context.fill(x, y, x + 1, y + height, color);
         context.fill(x + width - 1, y, x + width, y + height, color);
-    }
-
-    private static void drawTabOutline(
-            GuiGraphicsExtractor context,
-            int x,
-            int y,
-            int width,
-            int height,
-            int color
-    ) {
-        context.fill(x, y, x + width, y + 1, color);
-        context.fill(x, y + height - 1, x + width, y + height, color);
-        context.fill(x, y, x + 1, y + height, color);
     }
 
     private record TabSpec(String id, String label) {

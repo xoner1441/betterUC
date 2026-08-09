@@ -297,6 +297,13 @@ public class BetterUCScreen extends Screen {
                         () -> BetterUCConfig.INSTANCE.autoFirstAidEnabled = !BetterUCConfig.INSTANCE.autoFirstAidEnabled);
             }
             case CHAT -> {
+                y = addSectionHeader(x, y, controlW, "Second Chat", 0xFF38BDF8);
+                y = addToggle(x, y, controlW, "Second Chat", BetterUCConfig.INSTANCE.secondChatEnabled,
+                        () -> BetterUCConfig.INSTANCE.secondChatEnabled = !BetterUCConfig.INSTANCE.secondChatEnabled);
+
+                y = addSectionHeader(x, y, controlW, "Hotkeys", 0xFFFBBF24);
+                y = addButton(x, y, controlW, "Hotkey Commands", b -> openScreen(new HotkeyCommandsScreen(this)));
+
                 y = addSectionHeader(x, y, controlW, "WPS & HQ", 0xFFFF6B6B);
                 y = addToggle(x, y, controlW, "Formatierung", BetterUCConfig.INSTANCE.chatCustomizationEnabled,
                         () -> BetterUCConfig.INSTANCE.chatCustomizationEnabled = !BetterUCConfig.INSTANCE.chatCustomizationEnabled);
@@ -343,7 +350,6 @@ public class BetterUCScreen extends Screen {
             case PING -> {
                 y = addPingControls(x, y, controlW);
             }
-            case HOTKEYS -> y = addButton(x, y, controlW, "Hotkey Commands", b -> openScreen(new HotkeyCommandsScreen(this)));
             case COMMANDS -> y = addButton(x, y, controlW, "Command Menu", b -> openScreen(new CommandGui()));
             case TRASH_FILTER -> {
                 y = addSectionHeader(x, y, controlW, "Filter", 0xFF4ADE80);
@@ -714,7 +720,7 @@ public class BetterUCScreen extends Screen {
             case "Auto-/fbank" -> "Sendet nach einer Kontostand-Abfrage automatisch /fbank.";
             case "Auto-/atminfo" -> "Sendet nach einer Kontostand-Abfrage automatisch /atminfo.";
             case "Automatisch trotzdem einzahlen" ->
-                    "Sendet bei einem vollen Bankautomaten nach 2 Sekunden automatisch /einzahlen force.";
+                    "Sendet bei einem vollen oder nicht ausreichend freien Bankautomaten nach 1 Sekunde automatisch /einzahlen force.";
             case "Reichensteuer-Alert" ->
                     "Warnt dich 5 Minuten vor dem PayDay, wenn mehr als 100.000$ auf deinem Konto liegen.";
             case "Alert-Ton" -> "Spielt zusätzlich einen kurzen Ton für den Reichensteuer-Alert ab.";
@@ -742,6 +748,8 @@ public class BetterUCScreen extends Screen {
             case "Reinf Farben zurücksetzen" -> "Setzt alle Farben der Verstärkungsrufe auf die Standardwerte zurück.";
             case "Zeitstempel" -> "Blendet vor Chatnachrichten die aktuelle Uhrzeit ein.";
             case "Blacklist Gründe" -> "Öffnet die Verwaltung der gespeicherten Blacklist-Gründe.";
+            case "Second Chat" ->
+                    "Aktiviert zusätzliche Chat-Tabs und frei platzierbare Chatfenster mit eigenen Filtern.";
             case "Hotkey Commands" -> "Öffnet die Verwaltung eigener Nachrichten- und Command-Hotkeys.";
             case "Command Menu" -> "Öffnet das Schnellmenü für betterUC-Commands.";
             case "Mülleimer Filter" -> "Hebt ausgewählte Fundstücke im oberen Mülleimer-Inventar grün hervor.";
@@ -1502,8 +1510,6 @@ public class BetterUCScreen extends Screen {
             case PING -> drawMiniInfo(context, previewX, previewY, "Ping System",
                     BetterUCConfig.INSTANCE.pingRelayEnabled ? "Aktiv" : "Aus",
                     BetterUCConfig.INSTANCE.pingRelayEnabled);
-            case HOTKEYS -> drawMiniInfo(context, previewX, previewY, "Hotkeys",
-                    BetterUCConfig.INSTANCE.hotkeyCommands.size() + " Commands", true);
             case COMMANDS -> drawMiniInfo(context, previewX, previewY, "Tools", "Command Menu", true);
             case TRASH_FILTER -> drawMiniInfo(context, previewX, previewY, "Mülleimer Filter",
                     BetterUCConfig.INSTANCE.trashFilterEnabled ? "Markierung aktiv" : "Aus",
@@ -2426,7 +2432,6 @@ public class BetterUCScreen extends Screen {
 
         BLACKLIST(Category.TOOLS, "Blacklist", "Gründe und Sync", 0xFFF97316, false),
         PING(Category.TOOLS, "Ping", "Private Mod-Pings", 0xFF38BDF8, true),
-        HOTKEYS(Category.TOOLS, "Hotkeys", "Commands auf Tasten", 0xFFFBBF24, false),
         COMMANDS(Category.TOOLS, "Commands", "Command Menu", 0xFF22C55E, false),
         TRASH_FILTER(Category.TOOLS, "Mülleimer Filter", "Fundstücke hervorheben", 0xFF4ADE80, true),
         DISCORD(Category.TOOLS, "Discord", "Community Invite", 0xFF5865F2, false),

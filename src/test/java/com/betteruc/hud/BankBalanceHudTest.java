@@ -32,6 +32,18 @@ class BankBalanceHudTest {
     }
 
     @Test
+    void partialAtmCapacityMessageIsRecognizedWithVariableAmounts() {
+        assertTrue(BankBalanceHud.matchesFullAtmMessage(
+                "00:12:10 Du versuchst 40.649$ einzuzahlen, der Bankautomat hat aber "
+                        + "nur Platz f\u00FCr 40.088$. Fortfahren? [Best\u00E4tigen]"
+        ));
+        assertTrue(BankBalanceHud.matchesFullAtmMessage(
+                "Du versuchst 1$ einzuzahlen, der Bankautomat hat aber nur Platz fuer 999$. "
+                        + "Fortfahren? [Bestaetigen]"
+        ));
+    }
+
+    @Test
     void unrelatedBankMessagesDoNotTriggerForcedDeposit() {
         assertFalse(BankBalanceHud.matchesFullAtmMessage(
                 "12:34:56 Ihr Bankguthaben beträgt: 100.000$"

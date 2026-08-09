@@ -17,11 +17,16 @@ public final class SecondChatTextCompat {
     }
 
     public static Component copyWithResolvedStyles(Component message) {
-        MutableComponent resolved = Component.empty();
-        if (message == null) return resolved;
+        if (message == null) return Component.empty();
+        return copyWithResolvedStyles(message, Style.EMPTY);
+    }
 
-        for (Component segment : message.toFlatList(Style.EMPTY)) {
-            resolved.append(segment.copy());
+    private static MutableComponent copyWithResolvedStyles(Component message, Style inheritedStyle) {
+        Style resolvedStyle = message.getStyle().applyTo(inheritedStyle);
+        MutableComponent resolved = MutableComponent.create(message.getContents()).setStyle(resolvedStyle);
+
+        for (Component sibling : message.getSiblings()) {
+            resolved.append(copyWithResolvedStyles(sibling, resolvedStyle));
         }
         return resolved;
     }
