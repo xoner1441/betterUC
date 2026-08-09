@@ -97,7 +97,10 @@ public class BetterUCConfig {
             "autoDropDrinkEnabled", "autoFisherEnabled", "autoWinzerEnabled", "autoGaertnerEnabled",
             "autoMuellmannEnabled", "autoFirstAidEnabled", "autoBuyEnabled",
             "reinfCustomizationEnabled", "reinfUniformColorEnabled", "reinfLabelColor", "reinfTextColor",
-            "reinfDistanceColor", "reinfUniformColor", "chatTimestampFormat", "maxChatHistory",
+            "reinfDistanceColor", "reinfUniformColor", "reinfAcceptEnabled", "reinfAcceptAutomatic",
+            "reinfAcceptNormal", "reinfAcceptUrgent", "reinfAcceptMedic", "reinfAcceptHostage",
+            "reinfAcceptContract", "reinfAcceptTraining", "reinfAcceptDrugs", "reinfAcceptBodyGuard",
+            "reinfAcceptBomb", "reinfAcceptCooldownSeconds", "chatTimestampFormat", "maxChatHistory",
             "pingRelayEnabled", "showPingHud", "showRoleHolograms", "pingHudScale", "pingHudStyle",
             "pingHudCustomFont", "pingRelayScope", "pingRelayTtlSeconds", "pingRelayMaxDistance",
             "pingRelayColor", "pingNormalColor", "pingDangerColor", "pingGatherColor", "pingCooldownMs",
@@ -441,6 +444,18 @@ public class BetterUCConfig {
     public int reinfTextColor = DEFAULT_REINF_TEXT_COLOR;
     public int reinfDistanceColor = DEFAULT_REINF_DISTANCE_COLOR;
     public int reinfUniformColor = DEFAULT_REINF_UNIFORM_COLOR;
+    public boolean reinfAcceptEnabled = false;
+    public boolean reinfAcceptAutomatic = false;
+    public boolean reinfAcceptNormal = true;
+    public boolean reinfAcceptUrgent = true;
+    public boolean reinfAcceptMedic = true;
+    public boolean reinfAcceptHostage = true;
+    public boolean reinfAcceptContract = true;
+    public boolean reinfAcceptTraining = true;
+    public boolean reinfAcceptDrugs = true;
+    public boolean reinfAcceptBodyGuard = true;
+    public boolean reinfAcceptBomb = true;
+    public int reinfAcceptCooldownSeconds = 3;
     public String chatTimestampFormat = "[HH:mm:ss]";
     public int maxChatHistory = 2000;
     public boolean secondChatEnabled = false;
@@ -688,6 +703,7 @@ public class BetterUCConfig {
         INSTANCE.reinfTextColor = sanitizeHudColor(INSTANCE.reinfTextColor, DEFAULT_REINF_TEXT_COLOR);
         INSTANCE.reinfDistanceColor = sanitizeHudColor(INSTANCE.reinfDistanceColor, DEFAULT_REINF_DISTANCE_COLOR);
         INSTANCE.reinfUniformColor = sanitizeHudColor(INSTANCE.reinfUniformColor, DEFAULT_REINF_UNIFORM_COLOR);
+        INSTANCE.reinfAcceptCooldownSeconds = Math.max(1, Math.min(10, INSTANCE.reinfAcceptCooldownSeconds));
     }
 
     public static void sanitizeSecondChat() {

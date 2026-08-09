@@ -21,12 +21,14 @@ import com.betteruc.client.ClientCompat;
 import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.CloudSettingsClient;
 import com.betteruc.client.CommandShortcutClient;
+import com.betteruc.client.DutyRejoinClient;
 import com.betteruc.client.TrashFilterClient;
 import com.betteruc.client.BetterUCFontManager;
 import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.MovementController;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.RemoteFeatureFlagsClient;
+import com.betteruc.client.ReinforcementAcceptClient;
 import com.betteruc.client.SecondChatManager;
 import com.betteruc.client.ServerCommandUtil;
 import com.betteruc.client.UserPanelClient;
@@ -113,6 +115,12 @@ public class BetterUCClient implements ClientModInitializer {
             GLFW.GLFW_MOUSE_BUTTON_3,
             BETTERUC_KEY_CATEGORY
     );
+    private static final KeyMapping REINF_ACCEPT_KEY = new KeyMapping(
+            "key.betteruc.reinf_accept",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_UNKNOWN,
+            BETTERUC_KEY_CATEGORY
+    );
     private int statsOnJoinDelay = -1;
     private final Map<Integer, Boolean> hotkeyPressedState = new HashMap<>();
     private final Set<Integer> activeHotkeyKeys = new HashSet<>();
@@ -187,6 +195,7 @@ public class BetterUCClient implements ClientModInitializer {
         KeyMappingHelper.registerKeyMapping(SETTINGS_KEY);
         KeyMappingHelper.registerKeyMapping(COMMANDS_KEY);
         KeyMappingHelper.registerKeyMapping(PING_KEY);
+        KeyMappingHelper.registerKeyMapping(REINF_ACCEPT_KEY);
     }
 
     private void registerMessageEvents() {
@@ -228,6 +237,8 @@ public class BetterUCClient implements ClientModInitializer {
             ProductionTimerHud.clear();
             RichTaxAlertHud.clear();
             SecondChatManager.clear();
+            ReinforcementAcceptClient.reset();
+            DutyRejoinClient.reset();
             CommunicationDeviceTracker.reset();
             resetRemoteFeatureStateTracking();
             RemoteFeatureFlagsClient.onJoin(client);
@@ -1027,6 +1038,8 @@ public class BetterUCClient implements ClientModInitializer {
             AutoBuyClient.tick(client);
             TrashFilterClient.tick(client);
             tickStatsOnJoin(client);
+            ReinforcementAcceptClient.tick(client);
+            DutyRejoinClient.tick(client);
             handleConfiguredHotkeys(client);
             MovementController.tick(client);
             handlePingHotkey(client);
@@ -1129,6 +1142,10 @@ public class BetterUCClient implements ClientModInitializer {
             if (!ClientCompat.hasScreen(client)) {
                 ClientCompat.setScreen(client, new CommandGui());
             }
+        }
+
+        while (REINF_ACCEPT_KEY.consumeClick()) {
+            ReinforcementAcceptClient.acceptPending(client);
         }
     }
 
@@ -1244,6 +1261,8 @@ public class BetterUCClient implements ClientModInitializer {
         ProductionTimerHud.clear();
         RichTaxAlertHud.clear();
         SecondChatManager.clear();
+        ReinforcementAcceptClient.reset();
+        DutyRejoinClient.reset();
         AutoDropDrinkClient.reset();
         AutoBuyClient.reset();
         AutoFisherClient.reset();
