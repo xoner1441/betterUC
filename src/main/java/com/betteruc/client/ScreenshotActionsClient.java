@@ -16,6 +16,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 
 import javax.imageio.ImageIO;
+import java.awt.AWTError;
 import java.awt.EventQueue;
 import java.awt.Image;
 import java.awt.Toolkit;
@@ -38,6 +39,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public final class ScreenshotActionsClient {
     private static final int MAX_TRACKED_SCREENSHOTS = 40;
@@ -148,7 +150,7 @@ public final class ScreenshotActionsClient {
         IO_EXECUTOR.execute(() -> {
             try {
                 BufferedImage image = readImageWithRetry(path);
-                setClipboardWithRetry(image);
+                setClipboardWithRetry(path, image);
                 if (notify) {
                     sendOnClient("\u00A7a[betterUC] Screenshot wurde in die Zwischenablage kopiert.");
                 }
@@ -340,20 +342,69 @@ public final class ScreenshotActionsClient {
         throw lastFailure == null ? new IOException("Screenshot konnte nicht gelesen werden") : lastFailure;
     }
 
-    private static void setClipboardWithRetry(Image image) throws Exception {
-        Exception lastFailure = null;
+    private static void setClipboardWithRetry(Path path, Image image) throws Exception {
+        Throwable lastFailure = null;
         for (int attempt = 0; attempt < FILE_ACTION_ATTEMPTS; attempt++) {
             try {
                 EventQueue.invokeAndWait(() -> Toolkit.getDefaultToolkit()
                         .getSystemClipboard()
                         .setContents(new ImageTransferable(image), null));
                 return;
-            } catch (Exception exception) {
-                lastFailure = exception;
+            } catch (Exception | AWTError | LinkageError failure) {
+                lastFailure = failure;
                 sleepBeforeRetry(attempt);
             }
         }
-        throw lastFailure == null ? new IOException("Zwischenablage nicht erreichbar") : lastFailure;
+
+        if (isWindows()) {
+            try {
+                setWindowsClipboard(path);
+                return;
+            } catch (Exception nativeFailure) {
+                if (lastFailure != null) {
+                    nativeFailure.addSuppressed(lastFailure);
+                }
+                throw nativeFailure;
+            }
+        }
+
+        throw new IOException("Zwischenablage nicht erreichbar", lastFailure);
+    }
+
+    private static boolean isWindows() {
+        return System.getProperty("os.name", "")
+                .toLowerCase(Locale.ROOT)
+                .contains("win");
+    }
+
+    private static void setWindowsClipboard(Path path) throws Exception {
+        String command = "$ErrorActionPreference='Stop'; "
+                + "Add-Type -AssemblyName System.Windows.Forms; "
+                + "Add-Type -AssemblyName System.Drawing; "
+                + "$image=[System.Drawing.Image]::FromFile($env:BETTERUC_SCREENSHOT_PATH); "
+                + "try {[System.Windows.Forms.Clipboard]::SetImage($image)} finally {$image.Dispose()}";
+        ProcessBuilder builder = new ProcessBuilder(
+                "powershell.exe",
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Sta",
+                "-Command",
+                command
+        );
+        builder.environment().put("BETTERUC_SCREENSHOT_PATH", path.toAbsolutePath().normalize().toString());
+        builder.redirectErrorStream(true);
+
+        Process process = builder.start();
+        if (!process.waitFor(12, TimeUnit.SECONDS)) {
+            process.destroyForcibly();
+            throw new IOException("Native Zwischenablage hat nicht rechtzeitig geantwortet");
+        }
+
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
+        if (process.exitValue() != 0) {
+            throw new IOException("Native Zwischenablage fehlgeschlagen: " + output);
+        }
     }
 
     private static void deleteWithRetry(String id, Path path) {

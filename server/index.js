@@ -39,6 +39,9 @@ const USER_SESSION_TTL_MS = Number(process.env.USER_SESSION_TTL_MS || 1000 * 60 
 const GITHUB_RELEASES_URL = "https://github.com/xoner1441/betterUC/releases";
 const GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/xoner1441/betterUC/releases/latest";
 const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || "https://betteruc.de").replace(/\/+$/, "");
+const SCREENSHOT_PUBLIC_BASE_URL = String(
+  process.env.SCREENSHOT_PUBLIC_BASE_URL || PUBLIC_BASE_URL
+).replace(/\/+$/, "");
 const RELEASE_CACHE_TTL_MS = Number(process.env.RELEASE_CACHE_TTL_MS || 5 * 60 * 1000);
 const UPDATE_WATCH_INTERVAL_MS = Math.max(
   30 * 1000,
@@ -1435,7 +1438,7 @@ async function handleScreenshotUpload(req, res, url) {
 
   json(res, 201, {
     ok: true,
-    url: absolutePublicUrl(req, `/s/${id}`),
+    url: `${SCREENSHOT_PUBLIC_BASE_URL}/s/${id}`,
     expiresAt,
     expiresInDays: Math.round(SCREENSHOT_TTL_MS / (24 * 60 * 60 * 1000))
   });
