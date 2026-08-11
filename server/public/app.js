@@ -599,6 +599,113 @@ async function copyText(value) {
   if (!copied) throw new Error("Link konnte nicht kopiert werden.");
 }
 
+function showSiteNotice(message, type = "success") {
+  let region = document.querySelector(".site-notice-region");
+  if (!region) {
+    region = document.createElement("div");
+    region.className = "site-notice-region";
+    region.setAttribute("aria-live", "polite");
+    region.setAttribute("aria-atomic", "true");
+    document.body.append(region);
+  }
+
+  const notice = document.createElement("div");
+  notice.className = `site-notice site-notice-${type}`;
+  notice.setAttribute("role", type === "error" ? "alert" : "status");
+  notice.textContent = message;
+  region.append(notice);
+
+  window.setTimeout(() => {
+    notice.classList.add("site-notice-leaving");
+    window.setTimeout(() => notice.remove(), 180);
+  }, type === "error" ? 5200 : 3200);
+}
+
+function showSiteConfirm({
+  title,
+  message,
+  detail = "",
+  confirmLabel = "Bestätigen",
+  cancelLabel = "Abbrechen"
+}) {
+  return new Promise(resolve => {
+    let settled = false;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const overlay = document.createElement("div");
+    overlay.className = "site-dialog-backdrop";
+    overlay.innerHTML = `
+      <section class="site-dialog" role="alertdialog" aria-modal="true" aria-labelledby="siteDialogTitle" aria-describedby="siteDialogMessage">
+        <header class="site-dialog-header">
+          <span class="site-dialog-mark" aria-hidden="true">!</span>
+          <h2 id="siteDialogTitle"></h2>
+          <button class="site-dialog-close" type="button" aria-label="Dialog schließen">×</button>
+        </header>
+        <div class="site-dialog-content">
+          <p id="siteDialogMessage" class="site-dialog-message"></p>
+          <p class="site-dialog-detail"></p>
+        </div>
+        <footer class="site-dialog-actions">
+          <button class="button secondary site-dialog-cancel" type="button"></button>
+          <button class="button danger site-dialog-confirm" type="button"></button>
+        </footer>
+      </section>
+    `;
+
+    const dialog = overlay.querySelector(".site-dialog");
+    const closeButton = overlay.querySelector(".site-dialog-close");
+    const cancelButton = overlay.querySelector(".site-dialog-cancel");
+    const confirmButton = overlay.querySelector(".site-dialog-confirm");
+    const detailElement = overlay.querySelector(".site-dialog-detail");
+    overlay.querySelector("#siteDialogTitle").textContent = title;
+    overlay.querySelector("#siteDialogMessage").textContent = message;
+    detailElement.textContent = detail;
+    detailElement.hidden = !detail;
+    cancelButton.textContent = cancelLabel;
+    confirmButton.textContent = confirmLabel;
+
+    const finish = confirmed => {
+      if (settled) return;
+      settled = true;
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.classList.remove("site-dialog-open");
+      overlay.classList.add("site-dialog-closing");
+      window.setTimeout(() => {
+        overlay.remove();
+        previousFocus?.focus();
+        resolve(confirmed);
+      }, 140);
+    };
+
+    const onKeyDown = event => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        finish(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = [closeButton, cancelButton, confirmButton];
+      const currentIndex = focusable.indexOf(document.activeElement);
+      const nextIndex = event.shiftKey
+        ? (currentIndex <= 0 ? focusable.length - 1 : currentIndex - 1)
+        : (currentIndex + 1) % focusable.length;
+      event.preventDefault();
+      focusable[nextIndex].focus();
+    };
+
+    closeButton.addEventListener("click", () => finish(false));
+    cancelButton.addEventListener("click", () => finish(false));
+    confirmButton.addEventListener("click", () => finish(true));
+    overlay.addEventListener("mousedown", event => {
+      if (event.target === overlay) finish(false);
+    });
+    dialog.addEventListener("mousedown", event => event.stopPropagation());
+    document.addEventListener("keydown", onKeyDown);
+    document.body.classList.add("site-dialog-open");
+    document.body.append(overlay);
+    window.requestAnimationFrame(() => cancelButton.focus());
+  });
+}
+
 function renderScreenshotGallery(screenshots) {
   if (!panelGallery) return;
   const entries = Array.isArray(screenshots) ? screenshots : [];
@@ -626,7 +733,7 @@ function renderScreenshotGallery(screenshots) {
           <div class="panel-screenshot-actions">
             <a class="button secondary" href="${escapeHtml(absoluteUrl)}" target="_blank" rel="noreferrer">Öffnen</a>
             <button class="button secondary" type="button" data-gallery-action="copy" data-url="${escapeHtml(absoluteUrl)}">Link kopieren</button>
-            <button class="button danger" type="button" data-gallery-action="delete" data-id="${escapeHtml(entry.id || "")}">Löschen</button>
+            <button class="button danger" type="button" data-gallery-action="delete" data-id="${escapeHtml(entry.id || "")}" data-name="${escapeHtml(name)}">Löschen</button>
           </div>
         </div>
       </article>
@@ -639,9 +746,11 @@ function renderScreenshotGallery(screenshots) {
       try {
         await copyText(button.dataset.url || "");
         button.textContent = "Kopiert";
+        showSiteNotice("Screenshot-Link wurde kopiert.");
       } catch (error) {
         button.textContent = "Fehler";
         button.title = error.message;
+        showSiteNotice(error.message || "Link konnte nicht kopiert werden.", "error");
       } finally {
         window.setTimeout(() => {
           button.textContent = previous;
@@ -652,7 +761,13 @@ function renderScreenshotGallery(screenshots) {
 
   panelGallery.querySelectorAll('[data-gallery-action="delete"]').forEach(button => {
     button.addEventListener("click", async () => {
-      if (!window.confirm("Diesen Screenshot wirklich löschen?")) return;
+      const confirmed = await showSiteConfirm({
+        title: "Screenshot löschen",
+        message: `Soll „${button.dataset.name || "Minecraft-Screenshot"}“ endgültig gelöscht werden?`,
+        detail: "Der Screenshot und sein öffentlicher Link sind danach nicht mehr verfügbar.",
+        confirmLabel: "Endgültig löschen"
+      });
+      if (!confirmed) return;
       button.disabled = true;
       try {
         const sessionToken = localStorage.getItem(PANEL_SESSION_KEY);
@@ -663,10 +778,12 @@ function renderScreenshotGallery(screenshots) {
         const data = await response.json();
         if (!response.ok || !data.ok) throw new Error(data.error || "Screenshot konnte nicht gelöscht werden.");
         await loadPanelScreenshots();
+        showSiteNotice("Screenshot wurde gelöscht.");
       } catch (error) {
         button.disabled = false;
         button.textContent = "Fehler";
         button.title = error.message;
+        showSiteNotice(error.message || "Screenshot konnte nicht gelöscht werden.", "error");
       }
     });
   });
