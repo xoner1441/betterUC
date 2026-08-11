@@ -29,6 +29,7 @@ import com.betteruc.client.MovementController;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.RemoteFeatureFlagsClient;
 import com.betteruc.client.ReinforcementAcceptClient;
+import com.betteruc.client.ScreenshotActionsClient;
 import com.betteruc.client.SecondChatManager;
 import com.betteruc.client.ServerCommandUtil;
 import com.betteruc.client.UserPanelClient;
@@ -183,6 +184,7 @@ public class BetterUCClient implements ClientModInitializer {
         BetterUCConfig.load();
         CloudSettingsClient.initialize();
         BetterUCFontManager.initialize();
+        ScreenshotActionsClient.initialize();
         registerKeyMappings();
         registerHudElements();
         registerConnectionEvents();
@@ -289,6 +291,7 @@ public class BetterUCClient implements ClientModInitializer {
             registerMuellmannAreaCommand(dispatcher);
             registerBroadcastCommand(dispatcher);
             registerBetterUcOnlineCommand(dispatcher);
+            ScreenshotActionsClient.registerCommands(dispatcher);
         });
     }
 

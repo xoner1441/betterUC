@@ -13,6 +13,7 @@
     "InGameHudAmmoMixin",
     "PlayerEntityRendererMixin",
     "PlayerListHudRenderContextMixin",
+    "ScreenshotMixin",
     "TextRendererTabBadgeMixin",
     "TrashFilterScreenMixin"
   ],

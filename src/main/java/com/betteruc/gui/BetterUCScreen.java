@@ -375,6 +375,17 @@ public class BetterUCScreen extends Screen {
                 y = addTimestampField(x, y, controlW);
             }
             case CONNECTION -> y = addConnectionControls(x, y, controlW);
+            case SCREENSHOTS -> {
+                y = addSectionHeader(x, y, controlW, "Screenshot-Aktionen", 0xFF38BDF8);
+                y = addToggle(x, y, controlW, "Aktionen nach F2", BetterUCConfig.INSTANCE.screenshotActionsEnabled,
+                        () -> BetterUCConfig.INSTANCE.screenshotActionsEnabled = !BetterUCConfig.INSTANCE.screenshotActionsEnabled);
+                y = addToggle(x, y, controlW, "Direkt kopieren", BetterUCConfig.INSTANCE.screenshotAutoCopyEnabled,
+                        () -> BetterUCConfig.INSTANCE.screenshotAutoCopyEnabled = !BetterUCConfig.INSTANCE.screenshotAutoCopyEnabled);
+
+                y = addSectionHeader(x, y, controlW, "Freigabe", 0xFF4ADE80);
+                y = addInfo(x, y, controlW, "Upload", "Nur auf Klick");
+                y = addInfo(x, y, controlW, "Link-Ablauf", "7 Tage");
+            }
             case CLOUD_SYNC -> y = addCloudSyncControls(x, y, controlW);
             case BLACKLIST -> {
                 y = addSectionHeader(x, y, controlW, "Verwaltung", 0xFFF59E0B);
@@ -1567,6 +1578,9 @@ public class BetterUCScreen extends Screen {
             case CHAT -> drawReinfPreview(context, previewX, previewY);
             case CONNECTION -> drawMiniInfo(context, previewX, previewY, "Verbindung", PingRelayClient.statusLabel(),
                     PingRelayClient.isConnected());
+            case SCREENSHOTS -> drawMiniInfo(context, previewX, previewY, "Screenshots",
+                    BetterUCConfig.INSTANCE.screenshotActionsEnabled ? "Aktionen im Chat" : "Vanilla",
+                    BetterUCConfig.INSTANCE.screenshotActionsEnabled);
             case CLOUD_SYNC -> drawMiniInfo(context, previewX, previewY, "Cloud Sync",
                     CloudSettingsClient.statusLabel(), CloudSettingsClient.isReady());
             case BLACKLIST -> drawMiniInfo(context, previewX, previewY, "Blacklist",
@@ -1928,6 +1942,7 @@ public class BetterUCScreen extends Screen {
             case PRODUCTION_TIMER -> BetterUCConfig.INSTANCE.showProductionTimerHud;
             case AUTO_STATS -> BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled;
             case CLOUD_SYNC -> BetterUCConfig.INSTANCE.cloudSettingsEnabled;
+            case SCREENSHOTS -> BetterUCConfig.INSTANCE.screenshotActionsEnabled;
             case PING -> BetterUCConfig.INSTANCE.pingRelayEnabled;
             case TRASH_FILTER -> BetterUCConfig.INSTANCE.trashFilterEnabled;
             default -> true;
@@ -2491,6 +2506,7 @@ public class BetterUCScreen extends Screen {
         AUTO_STATS(Category.GAMEPLAY, "Auto Stats", "Automatisches /stats", 0xFF34D399, true),
         AUTOMATIONS(Category.GAMEPLAY, "Automationen", "Job-Helfer einzeln steuern", 0xFFFBBF24, false),
         CHAT(Category.GAMEPLAY, "Chat", "Zeitstempel & Customization", 0xFF38BDF8, false),
+        SCREENSHOTS(Category.GAMEPLAY, "Screenshots", "Kopieren, teilen & verwalten", 0xFF38BDF8, true),
         CONNECTION(Category.GAMEPLAY, "Verbindung", "Account & Relay", 0xFF38BDF8, false),
         CLOUD_SYNC(Category.GAMEPLAY, "Cloud Sync", "Synchronisierte Einstellungen", 0xFF22D3EE, true),
 

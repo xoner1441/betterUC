@@ -21,6 +21,10 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 const STORE_FILE = path.join(DATA_DIR, "accounts.json");
 const BACKUP_DIR = process.env.BACKUP_DIR || path.join(DATA_DIR, "backups");
 const POSTGRES_BACKUP_DIR = process.env.POSTGRES_BACKUP_DIR || path.join(DATA_DIR, "postgres-backups");
+const SCREENSHOT_DIR = process.env.SCREENSHOT_DIR || path.join(DATA_DIR, "screenshots");
+const SCREENSHOT_MAX_BYTES = Math.min(25 * 1024 * 1024, Math.max(1024, Number(process.env.SCREENSHOT_MAX_BYTES || 12 * 1024 * 1024)));
+const SCREENSHOT_TTL_MS = Math.max(60 * 60 * 1000, Number(process.env.SCREENSHOT_TTL_MS || 7 * 24 * 60 * 60 * 1000));
+const SCREENSHOT_CLEANUP_INTERVAL_MS = Math.max(60 * 1000, Number(process.env.SCREENSHOT_CLEANUP_INTERVAL_MS || 60 * 60 * 1000));
 const BACKUP_RETENTION_DAYS = Number(process.env.BACKUP_RETENTION_DAYS || 30);
 const BACKUP_INTERVAL_ENV = Number(process.env.BACKUP_INTERVAL_MS);
 const BACKUP_INTERVAL_MS = Number.isFinite(BACKUP_INTERVAL_ENV)
@@ -77,6 +81,7 @@ let store = { version: 1, accounts: [] };
 let saveTimer = null;
 let backupTimer = null;
 let updateWatchTimer = null;
+let screenshotCleanupTimer = null;
 let saveQueue = Promise.resolve();
 let persistenceMode = "json";
 let latestReleaseCache = { fetchedAt: 0, release: null };
@@ -1261,6 +1266,21 @@ async function readJsonBody(req, maxBytes = 32768) {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
+async function readRawBody(req, maxBytes) {
+  const chunks = [];
+  let length = 0;
+  for await (const chunk of req) {
+    length += chunk.length;
+    if (length > maxBytes) {
+      const error = new Error("body_too_large");
+      error.statusCode = 413;
+      throw error;
+    }
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
+}
+
 function onlinePlayersForResponse() {
   return uniqueOnlineClients().map(client => ({
     name: client.name,
@@ -1319,6 +1339,143 @@ function absolutePublicUrl(req, pathname) {
     : req.headers.host;
   const base = host ? `${proto}://${host}` : PUBLIC_BASE_URL;
   return `${base.replace(/\/+$/, "")}${pathname}`;
+}
+
+function cleanScreenshotName(value) {
+  const cleaned = path.basename(String(value || "screenshot.png"))
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .slice(0, 96);
+  return cleaned.toLowerCase().endsWith(".png") ? cleaned : `${cleaned || "screenshot"}.png`;
+}
+
+function isPng(buffer) {
+  return buffer.length >= 8
+    && buffer[0] === 0x89
+    && buffer[1] === 0x50
+    && buffer[2] === 0x4e
+    && buffer[3] === 0x47
+    && buffer[4] === 0x0d
+    && buffer[5] === 0x0a
+    && buffer[6] === 0x1a
+    && buffer[7] === 0x0a;
+}
+
+function screenshotPath(storageName) {
+  return path.join(SCREENSHOT_DIR, path.basename(String(storageName || "")));
+}
+
+async function removeScreenshotUpload(upload) {
+  if (!upload) return;
+  try {
+    await fsp.unlink(screenshotPath(upload.storageName));
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  await database.markScreenshotUploadDeleted(upload.id);
+}
+
+async function cleanupExpiredScreenshots() {
+  if (!database.enabled) return;
+  for (;;) {
+    const expired = await database.listExpiredScreenshotUploads(100);
+    if (expired.length === 0) return;
+    for (const upload of expired) {
+      try {
+        await removeScreenshotUpload(upload);
+      } catch (error) {
+        console.warn("Could not remove expired screenshot", upload.id, error.message);
+      }
+    }
+    if (expired.length < 100) return;
+  }
+}
+
+async function handleScreenshotUpload(req, res, url) {
+  const auth = authenticate(req, url);
+  if (!auth || auth.type !== "access" || !auth.account || auth.account.id === "legacy") {
+    json(res, 401, { ok: false, error: "Access-Code fehlt oder ist ungueltig." });
+    return;
+  }
+  if (!database.enabled) {
+    json(res, 503, { ok: false, error: "Screenshot-Upload ist gerade nicht verfuegbar." });
+    return;
+  }
+  const contentType = String(req.headers["content-type"] || "").split(";", 1)[0].trim().toLowerCase();
+  if (contentType !== "image/png") {
+    json(res, 415, { ok: false, error: "Nur PNG-Screenshots werden unterstuetzt." });
+    return;
+  }
+
+  const image = await readRawBody(req, SCREENSHOT_MAX_BYTES);
+  if (!isPng(image)) {
+    json(res, 400, { ok: false, error: "Die Datei ist kein gueltiger PNG-Screenshot." });
+    return;
+  }
+
+  await fsp.mkdir(SCREENSHOT_DIR, { recursive: true });
+  const id = crypto.randomBytes(18).toString("base64url");
+  const storageName = `${id}.png`;
+  const originalName = cleanScreenshotName(req.headers["x-screenshot-name"]);
+  const expiresAt = new Date(Date.now() + SCREENSHOT_TTL_MS).toISOString();
+  const target = screenshotPath(storageName);
+  await fsp.writeFile(target, image, { flag: "wx" });
+  try {
+    await database.createScreenshotUpload({
+      id,
+      accountId: auth.account.id,
+      originalName,
+      storageName,
+      byteSize: image.length,
+      expiresAt
+    });
+  } catch (error) {
+    await fsp.unlink(target).catch(() => {});
+    throw error;
+  }
+
+  json(res, 201, {
+    ok: true,
+    url: absolutePublicUrl(req, `/s/${id}`),
+    expiresAt,
+    expiresInDays: Math.round(SCREENSHOT_TTL_MS / (24 * 60 * 60 * 1000))
+  });
+}
+
+async function handleSharedScreenshot(req, res, id) {
+  if (!database.enabled || !/^[a-zA-Z0-9_-]{20,64}$/.test(id)) {
+    text(res, 404, "Screenshot nicht gefunden");
+    return;
+  }
+  const upload = await database.getScreenshotUpload(id);
+  if (!upload) {
+    text(res, 404, "Screenshot nicht gefunden");
+    return;
+  }
+  if (!upload.expiresAt || Date.parse(upload.expiresAt) <= Date.now()) {
+    await removeScreenshotUpload(upload);
+    text(res, 410, "Dieser Screenshot-Link ist abgelaufen");
+    return;
+  }
+
+  try {
+    const stat = await fsp.stat(screenshotPath(upload.storageName));
+    const maxAge = Math.max(0, Math.floor((Date.parse(upload.expiresAt) - Date.now()) / 1000));
+    res.writeHead(200, {
+      "content-type": "image/png",
+      "content-length": stat.size,
+      "content-disposition": `inline; filename="${cleanScreenshotName(upload.originalName)}"`,
+      "cache-control": `public, max-age=${maxAge}, immutable`,
+      "x-content-type-options": "nosniff"
+    });
+    fs.createReadStream(screenshotPath(upload.storageName)).pipe(res);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      await database.markScreenshotUploadDeleted(upload.id);
+      text(res, 404, "Screenshot nicht gefunden");
+      return;
+    }
+    throw error;
+  }
 }
 
 function normalizeReleaseVersion(value) {
@@ -1649,7 +1806,7 @@ async function handleApi(req, res, url) {
     res.writeHead(204, {
       "access-control-allow-origin": "*",
       "access-control-allow-methods": "GET,POST,PATCH,OPTIONS",
-      "access-control-allow-headers": "content-type,authorization,x-betteruc-token,x-betteruc-admin,x-betteruc-session,x-betteruc-version"
+      "access-control-allow-headers": "content-type,authorization,x-betteruc-token,x-betteruc-admin,x-betteruc-session,x-betteruc-version,x-screenshot-name"
     });
     res.end();
     return;
@@ -1671,6 +1828,11 @@ async function handleApi(req, res, url) {
       github: GITHUB_RELEASES_URL,
       time: Date.now()
     });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/screenshots") {
+    await handleScreenshotUpload(req, res, url);
     return;
   }
 
@@ -2373,6 +2535,12 @@ async function handleHttp(req, res) {
     return;
   }
 
+  const screenshotMatch = req.method === "GET" ? url.pathname.match(/^\/s\/([a-zA-Z0-9_-]{20,64})$/) : null;
+  if (screenshotMatch) {
+    await handleSharedScreenshot(req, res, screenshotMatch[1]);
+    return;
+  }
+
   if (url.pathname.startsWith("/api/")) {
     await handleApi(req, res, url);
     return;
@@ -2664,6 +2832,14 @@ function removeClient(client) {
 async function main() {
   await loadStore();
   await loadWasteDropAreas();
+  await fsp.mkdir(SCREENSHOT_DIR, { recursive: true });
+  await cleanupExpiredScreenshots();
+  screenshotCleanupTimer = setInterval(() => {
+    cleanupExpiredScreenshots().catch(error => {
+      console.warn("Could not clean expired screenshots", error.message);
+    });
+  }, SCREENSHOT_CLEANUP_INTERVAL_MS);
+  screenshotCleanupTimer.unref?.();
   scheduleStoreBackups();
   startReleaseWatcher().catch(error => {
     console.warn("Could not start betterUC release watcher", error.message);
@@ -2756,6 +2932,7 @@ async function main() {
     clearTimeout(saveTimer);
     clearInterval(backupTimer);
     clearInterval(updateWatchTimer);
+    clearInterval(screenshotCleanupTimer);
     try {
       await saveStore();
     } catch (error) {

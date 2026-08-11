@@ -84,6 +84,20 @@ function suggestionFromRow(row) {
   };
 }
 
+function screenshotUploadFromRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    accountId: row.account_id || null,
+    originalName: row.original_name || "",
+    storageName: row.storage_name || "",
+    byteSize: Number(row.byte_size || 0),
+    createdAt: iso(row.created_at),
+    expiresAt: iso(row.expires_at),
+    deletedAt: iso(row.deleted_at)
+  };
+}
+
 function createDatabase(options = {}) {
   const connectionString = text(options.connectionString || process.env.DATABASE_URL).trim();
   const required = String(options.required ?? process.env.DATABASE_REQUIRED ?? "false").toLowerCase() === "true";
@@ -110,6 +124,10 @@ function createDatabase(options = {}) {
       listWasteDropAreas: unavailable,
       upsertWasteDropArea: unavailable,
       deleteWasteDropArea: unavailable,
+      createScreenshotUpload: unavailable,
+      getScreenshotUpload: unavailable,
+      listExpiredScreenshotUploads: unavailable,
+      markScreenshotUploadDeleted: unavailable,
       createDiscordTicket: unavailable,
       claimDiscordTicket: unavailable,
       closeDiscordTicket: unavailable,
@@ -906,6 +924,55 @@ function createDatabase(options = {}) {
     }
   }
 
+  async function createScreenshotUpload(upload = {}) {
+    const result = await pool.query(`
+      insert into screenshot_uploads (
+        id, account_id, original_name, storage_name, byte_size, expires_at
+      ) values ($1, $2, $3, $4, $5, $6)
+      returning *
+    `, [
+      text(upload.id),
+      upload.accountId || null,
+      text(upload.originalName),
+      text(upload.storageName),
+      Number(upload.byteSize || 0),
+      upload.expiresAt
+    ]);
+    return screenshotUploadFromRow(result.rows[0]);
+  }
+
+  async function getScreenshotUpload(id) {
+    const result = await pool.query(`
+      select *
+      from screenshot_uploads
+      where id = $1 and deleted_at is null
+      limit 1
+    `, [text(id)]);
+    return screenshotUploadFromRow(result.rows[0]);
+  }
+
+  async function listExpiredScreenshotUploads(limit = 100) {
+    const safeLimit = Math.min(1000, Math.max(1, Number(limit || 100)));
+    const result = await pool.query(`
+      select *
+      from screenshot_uploads
+      where deleted_at is null and expires_at <= now()
+      order by expires_at asc
+      limit $1
+    `, [safeLimit]);
+    return result.rows.map(screenshotUploadFromRow);
+  }
+
+  async function markScreenshotUploadDeleted(id) {
+    const result = await pool.query(`
+      update screenshot_uploads
+      set deleted_at = now()
+      where id = $1 and deleted_at is null
+      returning id
+    `, [text(id)]);
+    return result.rowCount > 0;
+  }
+
   async function createDiscordTicket(ticket = {}) {
     const result = await pool.query(`
       insert into discord_tickets (
@@ -1200,6 +1267,10 @@ function createDatabase(options = {}) {
     listWasteDropAreas,
     upsertWasteDropArea,
     deleteWasteDropArea,
+    createScreenshotUpload,
+    getScreenshotUpload,
+    listExpiredScreenshotUploads,
+    markScreenshotUploadDeleted,
     createDiscordTicket,
     claimDiscordTicket,
     closeDiscordTicket,

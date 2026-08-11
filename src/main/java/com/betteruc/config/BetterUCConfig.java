@@ -104,7 +104,8 @@ public class BetterUCConfig {
             "pingRelayEnabled", "showPingHud", "showRoleHolograms", "pingHudScale", "pingHudStyle",
             "pingHudCustomFont", "pingRelayScope", "pingRelayTtlSeconds", "pingRelayMaxDistance",
             "pingRelayColor", "pingNormalColor", "pingDangerColor", "pingGatherColor", "pingCooldownMs",
-            "pingSoundEnabled", "pingSoundId", "autoUpdateEnabled", "blReasons",
+            "pingSoundEnabled", "pingSoundId", "autoUpdateEnabled", "screenshotActionsEnabled",
+            "screenshotAutoCopyEnabled", "blReasons",
             "trashFilterEnabled", "trashFilterCloseLockEnabled", "trashFilterRottenFlesh",
             "trashFilterPaper", "trashFilterPotato", "trashFilterCarrot", "trashFilterApple",
             "trashFilterChest", "trashFilterTrappedChest", "trashFilterEnderChest",
@@ -511,6 +512,8 @@ public class BetterUCConfig {
     public String lastSeenWelcomeVersion = "";
     public String discordInviteUrl = DEFAULT_DISCORD_INVITE_URL;
     public boolean autoUpdateEnabled = true;
+    public boolean screenshotActionsEnabled = true;
+    public boolean screenshotAutoCopyEnabled = false;
     public boolean cloudSettingsEnabled = true;
     public boolean trashFilterEnabled = false;
     public boolean trashFilterCloseLockEnabled = false;
