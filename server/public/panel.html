@@ -24,7 +24,7 @@
 
   <main class="panel-main">
     <section class="section panel-layout">
-      <div>
+      <div class="panel-intro">
         <p class="section-label">Userpanel</p>
         <h1 class="panel-title">Deine Daten</h1>
         <p class="lead">Hier findest du deine von betterUC erkannten Werte aus dem Spiel.</p>
@@ -32,56 +32,70 @@
         <p class="quiet">Bank, Bargeld, Häuser, Treuebonus, Spielzeit, Votepoints und Warns werden automatisch aktualisiert, sobald die Mod neue Statistikdaten erkennt.</p>
       </div>
 
-      <div class="panel-stack">
-        <form id="panelLoginForm" class="tool-panel">
-          <label>
-            Minecraft Name
-            <input id="panelMinecraftName" name="minecraftName" maxlength="16" placeholder="FABI1441" autocomplete="username">
-          </label>
-          <label>
-            Passwort
-            <input id="panelPassword" name="password" type="password" minlength="6" maxlength="72" autocomplete="current-password">
-          </label>
-          <button class="button primary full" type="submit">Einloggen</button>
-          <p id="panelMessage" class="form-message" role="status"></p>
-        </form>
+      <form id="panelLoginForm" class="tool-panel panel-login-form">
+        <label>
+          Minecraft Name
+          <input id="panelMinecraftName" name="minecraftName" maxlength="16" placeholder="FABI1441" autocomplete="username">
+        </label>
+        <label>
+          Passwort
+          <input id="panelPassword" name="password" type="password" minlength="6" maxlength="72" autocomplete="current-password">
+        </label>
+        <button class="button primary full" type="submit">Einloggen</button>
+        <p id="panelMessage" class="form-message" role="status"></p>
+      </form>
 
-        <div id="panelDashboard" class="tool-panel panel-dashboard" hidden>
-          <div class="panel-profile">
-            <div>
-              <span>Angemeldet als</span>
-              <div class="panel-name-row">
-                <strong id="panelUsername">-</strong>
-                <span id="panelRoleBadge" class="role-badge role-user">Spieler</span>
-                <span id="panelStatusBadge" class="status-pill active">aktiv</span>
-              </div>
-            </div>
-            <div class="panel-profile-actions">
-              <button id="panelAdmin" class="button secondary" type="button" hidden>Adminpanel</button>
-              <button id="panelLogout" class="button secondary" type="button">Ausloggen</button>
+      <div id="panelDashboard" class="tool-panel panel-dashboard" hidden>
+        <div class="panel-profile">
+          <div>
+            <span>Angemeldet als</span>
+            <div class="panel-name-row">
+              <strong id="panelUsername">-</strong>
+              <span id="panelRoleBadge" class="role-badge role-user">Spieler</span>
+              <span id="panelStatusBadge" class="status-pill active">aktiv</span>
             </div>
           </div>
+          <div class="panel-profile-actions">
+            <button id="panelAdmin" class="button secondary" type="button" hidden>Adminpanel</button>
+            <button id="panelLogout" class="button secondary" type="button">Ausloggen</button>
+          </div>
+        </div>
+        <section class="panel-dashboard-section">
+          <div class="panel-section-heading">
+            <span>Spielwerte</span>
+            <small>zuletzt von der Mod erkannt</small>
+          </div>
           <div id="panelStats" class="panel-stat-grid"></div>
+        </section>
+
+        <section class="panel-dashboard-section">
+          <div class="panel-section-heading">
+            <span>Account</span>
+            <small>Verbindung und Webzugang</small>
+          </div>
           <div id="panelAccountMeta" class="account-meta-grid"></div>
-          <div class="panel-history-block">
+        </section>
+
+        <div class="panel-content-grid">
+          <section class="panel-history-block">
             <div class="panel-history-title">
               <span>Stats-Verlauf</span>
               <small>letzte Änderungen</small>
             </div>
             <div id="panelHistory" class="history-list"></div>
-          </div>
-          <div class="panel-gallery-block">
+          </section>
+          <section class="panel-gallery-block">
             <div class="panel-history-title">
               <span>Screenshot-Galerie</span>
               <small id="panelGalleryCount">wird geladen</small>
             </div>
             <p class="panel-gallery-hint">Hier siehst du nur deine eigenen Uploads. Screenshots bleiben sieben Tage verfügbar.</p>
             <div id="panelGallery" class="panel-gallery-grid" aria-live="polite"></div>
-          </div>
-          <div class="panel-refresh-row">
-            <span id="panelUpdated">Noch keine Stats empfangen</span>
-            <button id="panelRefresh" class="button secondary" type="button">Aktualisieren</button>
-          </div>
+          </section>
+        </div>
+        <div class="panel-refresh-row">
+          <span id="panelUpdated">Noch keine Stats empfangen</span>
+          <button id="panelRefresh" class="button secondary" type="button">Aktualisieren</button>
         </div>
       </div>
     </section>

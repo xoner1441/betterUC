@@ -6,6 +6,7 @@ const tokenBox = document.querySelector("#tokenBox");
 const generatedToken = document.querySelector("#generatedToken");
 const copyToken = document.querySelector("#copyToken");
 const panelLoginForm = document.querySelector("#panelLoginForm");
+const panelLayout = document.querySelector(".panel-layout");
 const panelDashboard = document.querySelector("#panelDashboard");
 const panelMessage = document.querySelector("#panelMessage");
 const panelUsername = document.querySelector("#panelUsername");
@@ -700,6 +701,7 @@ function renderPanel(user) {
   if (!panelDashboard || !panelStats) return;
   panelLoginForm.hidden = true;
   panelDashboard.hidden = false;
+  panelLayout?.classList.add("dashboard-active");
   panelUsername.textContent = user.minecraftName || "-";
   if (panelRoleBadge) {
     panelRoleBadge.textContent = roleLabel(user.role);
@@ -745,6 +747,7 @@ function showPanelLogin(messageText = "") {
   if (!panelLoginForm || !panelDashboard) return;
   panelLoginForm.hidden = false;
   panelDashboard.hidden = true;
+  panelLayout?.classList.remove("dashboard-active");
   if (panelGallery) panelGallery.innerHTML = "";
   if (panelGalleryCount) panelGalleryCount.textContent = "nicht geladen";
   if (messageText) setPanelMessage(messageText, "");

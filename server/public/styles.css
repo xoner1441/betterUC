@@ -96,6 +96,7 @@ main {
 }
 
 .panel-main {
+  max-width: 1380px;
   min-height: calc(100vh - 92px);
 }
 
@@ -931,18 +932,32 @@ select:focus {
 .panel-layout {
   align-items: start;
   display: grid;
-  gap: 34px;
-  grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
+  gap: 38px 48px;
+  grid-template-columns: minmax(260px, 0.7fr) minmax(420px, 1fr);
 }
 
-.panel-stack {
-  display: grid;
-  gap: 16px;
+.panel-layout.dashboard-active {
+  grid-template-columns: 1fr;
+}
+
+.panel-layout.dashboard-active .panel-intro {
+  display: none;
+}
+
+.panel-intro {
+  max-width: 520px;
+}
+
+.panel-login-form {
+  max-width: 560px;
+  width: 100%;
 }
 
 .panel-dashboard {
   display: grid;
-  gap: 18px;
+  gap: 22px;
+  grid-column: 1 / -1;
+  padding: 26px;
 }
 
 .panel-profile,
@@ -951,6 +966,16 @@ select:focus {
   display: flex;
   gap: 14px;
   justify-content: space-between;
+}
+
+.panel-refresh-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 18px;
+}
+
+.panel-profile {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 20px;
 }
 
 .panel-profile-actions {
@@ -978,6 +1003,27 @@ select:focus {
   display: block;
   font-size: 28px;
   margin: 2px 0;
+}
+
+.panel-dashboard-section {
+  display: grid;
+  gap: 12px;
+}
+
+.panel-section-heading {
+  align-items: baseline;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.panel-section-heading span {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.panel-section-heading small {
+  color: var(--muted);
 }
 
 .role-badge {
@@ -1012,7 +1058,7 @@ select:focus {
 .panel-stat-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .panel-stat-card {
@@ -1038,7 +1084,7 @@ select:focus {
 .account-meta-grid {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .account-meta-card {
@@ -1060,11 +1106,25 @@ select:focus {
   overflow-wrap: anywhere;
 }
 
+.panel-content-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(300px, 0.8fr) minmax(0, 1.2fr);
+}
+
 .panel-history-block {
   border-top: 1px solid rgba(255, 255, 255, 0.07);
   display: grid;
   gap: 10px;
+  min-width: 0;
   padding-top: 14px;
+}
+
+.panel-history-block .history-list {
+  align-content: start;
+  max-height: 560px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .panel-history-title {
@@ -1116,6 +1176,7 @@ select:focus {
   border-top: 1px solid rgba(255, 255, 255, 0.07);
   display: grid;
   gap: 10px;
+  min-width: 0;
   padding-top: 14px;
 }
 
@@ -1126,9 +1187,13 @@ select:focus {
 }
 
 .panel-gallery-grid {
+  align-content: start;
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  max-height: 560px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .panel-screenshot-card {
@@ -1735,7 +1800,7 @@ select:focus {
   .two-column,
   .access-layout,
   .panel-layout,
-  .account-meta-grid,
+  .panel-content-grid,
   .feature-grid,
   .feature-overview-grid,
   .discord-section,
@@ -1788,8 +1853,9 @@ select:focus {
     justify-content: flex-start;
   }
 
-  .panel-stat-grid {
-    grid-template-columns: 1fr;
+  .panel-stat-grid,
+  .account-meta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .update-list article {
@@ -1806,6 +1872,21 @@ select:focus {
 }
 
 @media (max-width: 700px) {
+  .panel-dashboard {
+    padding: 18px;
+  }
+
+  .panel-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .panel-stat-grid,
+  .account-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
   .discord-widget-shell {
     max-width: 420px;
   }
