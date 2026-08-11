@@ -10,16 +10,104 @@
         "title": "Weitere Verbesserungen folgen",
         "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
         "lines": [
-          "Version 1.3.7 enthält das neue Chat-System, präzisere Filter und ein stabileres Ammo-HUD."
+          "Version 1.3.8 enthält automatische Reinforcements, ruhigere Zusatz-Chats und den neuen Screenshot-Workflow."
         ]
       }
     ]
   },
   "releases": [
     {
+      "version": "1.3.8",
+      "date": "11.08.2026",
+      "current": true,
+      "pages": [
+        {
+          "eyebrow": "NEU IN 1.3.8",
+          "title": "Reinforcements automatisch annehmen",
+          "description": "betterUC kann passende Verstärkungsrufe gezielt für dich annehmen und dabei die echte Serveraktion verwenden.",
+          "lines": [
+            "Die automatische Annahme lässt sich vollständig ein- oder ausschalten.",
+            "Normale, dringende, Medic- und weitere Reinforcement-Typen können einzeln ausgewählt werden.",
+            "betterUC aktiviert die klickbare Unterwegs-Aktion der Servernachricht, damit Route und Bestätigung korrekt ausgelöst werden.",
+            "Eine separate Option führt /rejoinduty aus, wenn der Server nach längerer Abwesenheit den erneuten Dienstantritt anbietet."
+          ]
+        },
+        {
+          "eyebrow": "CHAT & BEDIENUNG",
+          "title": "Ruhigere Zusatz-Chats",
+          "description": "Die zusätzlichen Chatfenster fügen sich dezenter ins Spiel ein und verhalten sich näher am Minecraft-Chat.",
+          "lines": [
+            "Das gesamte Zusatz-Chat-System kann jetzt ein- oder ausgeschaltet werden.",
+            "Kopfleisten und Bedienelemente wurden dezenter gestaltet und verdecken weniger vom Spiel.",
+            "Neue Nachrichten erscheinen kompakt, rücken wie im normalen Chat nach oben und blenden sich anschließend wieder aus.",
+            "Chat- und Hotkey-Einstellungen sind gemeinsam unter Client > Chat einsortiert.",
+            "Farbauswahlen zeigen gut erkennbare Farbfelder anstelle technisch wirkender Farbcodes."
+          ]
+        },
+        {
+          "eyebrow": "SCREENSHOTS",
+          "title": "Aufnehmen, teilen und verwalten",
+          "description": "Screenshots lassen sich direkt aus Minecraft weiterverwenden und im eigenen Userpanel verwalten.",
+          "lines": [
+            "Nach einer Aufnahme stehen Kopieren, Hochladen, Ordner öffnen und Löschen direkt im Chat bereit.",
+            "Hochgeladene Screenshots erhalten einen teilbaren betterUC-Link und bleiben sieben Tage verfügbar.",
+            "Im Userpanel zeigt eine persönliche Galerie ausschließlich die eigenen Uploads an.",
+            "Screenshots können dort geöffnet, verlinkt oder nach einer eigenen betterUC-Bestätigung gelöscht werden."
+          ]
+        },
+        {
+          "eyebrow": "KOMFORT & WEBSITE",
+          "title": "Mehr Übersicht im Alltag",
+          "description": "Mehrere kleine Verbesserungen machen wiederkehrende Abläufe und die Weboberfläche angenehmer.",
+          "lines": [
+            "Die automatische Zwangseinzahlung erkennt beide Meldungen eines vollen Bankautomaten und wartet kontrolliert vor /einzahlen force.",
+            "Das Userpanel nutzt den verfügbaren Platz besser und ordnet Statistiken, Verlauf und Screenshot-Galerie übersichtlicher an.",
+            "Bestätigungen und Hinweise der Website erscheinen als eigene betterUC-Dialoge statt als Browserfenster.",
+            "Aktualisierte Website-Dateien werden zuverlässiger geladen, damit Änderungen nicht in einem alten Browser-Cache hängen bleiben."
+          ]
+        }
+      ],
+      "summary": [
+        {
+          "title": "Auto-Reinforcements",
+          "description": "Ausgewählte Verstärkungsrufe können über die echte Unterwegs-Aktion automatisch angenommen werden.",
+          "color": "cyan"
+        },
+        {
+          "title": "Ruhigere Zusatz-Chats",
+          "description": "Dezentere Fenster und ein Verhalten wie im Minecraft-Chat sorgen für weniger Ablenkung.",
+          "color": "green"
+        },
+        {
+          "title": "Screenshot-Workflow",
+          "description": "Aufnahmen lassen sich kopieren, hochladen und in der persönlichen Galerie verwalten.",
+          "color": "amber"
+        },
+        {
+          "title": "Modernisiertes Userpanel",
+          "description": "Daten, Verlauf und Screenshots sind auf der Website übersichtlicher angeordnet.",
+          "color": "cyan"
+        }
+      ],
+      "changes": [
+        "Automatische Reinforcement-Annahme mit einzeln auswählbaren Typen wurde hinzugefügt.",
+        "Reinforcements werden über die klickbare Unterwegs-Aktion des Servers angenommen.",
+        "Der Dienstantritt kann nach längerer Abwesenheit automatisch mit /rejoinduty bestätigt werden.",
+        "Das Zusatz-Chat-System ist togglebar und verwendet dezentere Kopfleisten.",
+        "Zusätzliche Chats zeigen neue Nachrichten kompakter und blenden sie wie der Minecraft-Chat wieder aus.",
+        "Hotkey- und Zusatz-Chat-Einstellungen wurden unter Client > Chat zusammengeführt.",
+        "Farbauswahlen im ClickGUI verwenden größere, gut erkennbare Farbfelder.",
+        "Screenshots können direkt kopiert, hochgeladen, geöffnet oder gelöscht werden.",
+        "Eigene Screenshot-Uploads werden sieben Tage lang in einer persönlichen Userpanel-Galerie angezeigt.",
+        "Das Userpanel wurde neu angeordnet und nutzt breite Bildschirme besser aus.",
+        "Website-Bestätigungen und Statusmeldungen verwenden jetzt eigene betterUC-Dialoge.",
+        "Die Zwangseinzahlung erkennt weitere Bankautomaten-Meldungen und führt /einzahlen force kontrolliert aus.",
+        "Die Auslieferung aktualisierter Website-Dateien wurde gegen veraltete Browser-Caches abgesichert."
+      ]
+    },
+    {
       "version": "1.3.7",
       "date": "06.08.2026",
-      "current": true,
       "pages": [
         {
           "eyebrow": "NEU IN 1.3.7",
