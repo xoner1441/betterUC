@@ -126,6 +126,7 @@ function createDatabase(options = {}) {
       deleteWasteDropArea: unavailable,
       createScreenshotUpload: unavailable,
       getScreenshotUpload: unavailable,
+      listScreenshotUploadsForAccount: unavailable,
       listExpiredScreenshotUploads: unavailable,
       markScreenshotUploadDeleted: unavailable,
       createDiscordTicket: unavailable,
@@ -951,6 +952,20 @@ function createDatabase(options = {}) {
     return screenshotUploadFromRow(result.rows[0]);
   }
 
+  async function listScreenshotUploadsForAccount(accountId, limit = 60) {
+    const safeLimit = Math.min(200, Math.max(1, Number(limit || 60)));
+    const result = await pool.query(`
+      select *
+      from screenshot_uploads
+      where account_id = $1
+        and deleted_at is null
+        and expires_at > now()
+      order by created_at desc
+      limit $2
+    `, [accountId, safeLimit]);
+    return result.rows.map(screenshotUploadFromRow);
+  }
+
   async function listExpiredScreenshotUploads(limit = 100) {
     const safeLimit = Math.min(1000, Math.max(1, Number(limit || 100)));
     const result = await pool.query(`
@@ -1269,6 +1284,7 @@ function createDatabase(options = {}) {
     deleteWasteDropArea,
     createScreenshotUpload,
     getScreenshotUpload,
+    listScreenshotUploadsForAccount,
     listExpiredScreenshotUploads,
     markScreenshotUploadDeleted,
     createDiscordTicket,

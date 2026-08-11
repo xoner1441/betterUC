@@ -1377,6 +1377,17 @@ async function removeScreenshotUpload(upload) {
   await database.markScreenshotUploadDeleted(upload.id);
 }
 
+function screenshotGalleryItem(upload) {
+  return {
+    id: upload.id,
+    originalName: upload.originalName,
+    byteSize: upload.byteSize,
+    createdAt: upload.createdAt,
+    expiresAt: upload.expiresAt,
+    url: `/s/${upload.id}`
+  };
+}
+
 async function cleanupExpiredScreenshots() {
   if (!database.enabled) return;
   for (;;) {
@@ -1808,7 +1819,7 @@ async function handleApi(req, res, url) {
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
       "access-control-allow-origin": "*",
-      "access-control-allow-methods": "GET,POST,PATCH,OPTIONS",
+      "access-control-allow-methods": "GET,POST,PATCH,DELETE,OPTIONS",
       "access-control-allow-headers": "content-type,authorization,x-betteruc-token,x-betteruc-admin,x-betteruc-session,x-betteruc-version,x-screenshot-name"
     });
     res.end();
@@ -2428,6 +2439,39 @@ async function handleApi(req, res, url) {
       ok: true,
       user: userPanelAccount(account)
     });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/user/screenshots") {
+    const account = requireUserSession(req, res, url);
+    if (!account) return;
+    if (!database.enabled) {
+      json(res, 503, { ok: false, error: "Screenshot-Galerie ist gerade nicht verfügbar." });
+      return;
+    }
+    const uploads = await database.listScreenshotUploadsForAccount(account.id, 60);
+    json(res, 200, {
+      ok: true,
+      screenshots: uploads.map(screenshotGalleryItem)
+    });
+    return;
+  }
+
+  const userScreenshotMatch = url.pathname.match(/^\/api\/user\/screenshots\/([a-zA-Z0-9_-]{20,64})$/);
+  if (req.method === "DELETE" && userScreenshotMatch) {
+    const account = requireUserSession(req, res, url);
+    if (!account) return;
+    if (!database.enabled) {
+      json(res, 503, { ok: false, error: "Screenshot-Galerie ist gerade nicht verfügbar." });
+      return;
+    }
+    const upload = await database.getScreenshotUpload(userScreenshotMatch[1]);
+    if (!upload || upload.accountId !== account.id) {
+      json(res, 404, { ok: false, error: "Screenshot nicht gefunden." });
+      return;
+    }
+    await removeScreenshotUpload(upload);
+    json(res, 200, { ok: true });
     return;
   }
 

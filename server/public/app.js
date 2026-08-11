@@ -14,6 +14,8 @@ const panelStatusBadge = document.querySelector("#panelStatusBadge");
 const panelStats = document.querySelector("#panelStats");
 const panelAccountMeta = document.querySelector("#panelAccountMeta");
 const panelHistory = document.querySelector("#panelHistory");
+const panelGallery = document.querySelector("#panelGallery");
+const panelGalleryCount = document.querySelector("#panelGalleryCount");
 const panelUpdated = document.querySelector("#panelUpdated");
 const panelRefresh = document.querySelector("#panelRefresh");
 const panelAdmin = document.querySelector("#panelAdmin");
@@ -579,6 +581,121 @@ function renderHistory(history) {
   `).join("");
 }
 
+async function copyText(value) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const area = document.createElement("textarea");
+  area.value = value;
+  area.style.position = "fixed";
+  area.style.opacity = "0";
+  document.body.append(area);
+  area.select();
+  const copied = document.execCommand("copy");
+  area.remove();
+  if (!copied) throw new Error("Link konnte nicht kopiert werden.");
+}
+
+function renderScreenshotGallery(screenshots) {
+  if (!panelGallery) return;
+  const entries = Array.isArray(screenshots) ? screenshots : [];
+  if (panelGalleryCount) {
+    panelGalleryCount.textContent = entries.length === 1 ? "1 Screenshot" : `${entries.length} Screenshots`;
+  }
+  if (entries.length === 0) {
+    panelGallery.innerHTML = `<p class="panel-gallery-empty">Noch keine aktiven Screenshot-Uploads vorhanden.</p>`;
+    return;
+  }
+
+  panelGallery.innerHTML = entries.map(entry => {
+    const relativeUrl = String(entry.url || `/s/${entry.id || ""}`);
+    const absoluteUrl = new URL(relativeUrl, window.location.origin).href;
+    const name = entry.originalName || "Minecraft-Screenshot";
+    return `
+      <article class="panel-screenshot-card">
+        <a class="panel-screenshot-preview" href="${escapeHtml(absoluteUrl)}" target="_blank" rel="noreferrer">
+          <img src="${escapeHtml(relativeUrl)}" alt="${escapeHtml(name)}" loading="lazy">
+        </a>
+        <div class="panel-screenshot-body">
+          <strong title="${escapeHtml(name)}">${escapeHtml(name)}</strong>
+          <span>${escapeHtml(formatBytes(entry.byteSize))} · ${escapeHtml(plainDateLabel(entry.createdAt))}</span>
+          <small>Verfügbar bis ${escapeHtml(plainDateLabel(entry.expiresAt))}</small>
+          <div class="panel-screenshot-actions">
+            <a class="button secondary" href="${escapeHtml(absoluteUrl)}" target="_blank" rel="noreferrer">Öffnen</a>
+            <button class="button secondary" type="button" data-gallery-action="copy" data-url="${escapeHtml(absoluteUrl)}">Link kopieren</button>
+            <button class="button danger" type="button" data-gallery-action="delete" data-id="${escapeHtml(entry.id || "")}">Löschen</button>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  panelGallery.querySelectorAll('[data-gallery-action="copy"]').forEach(button => {
+    button.addEventListener("click", async () => {
+      const previous = button.textContent;
+      try {
+        await copyText(button.dataset.url || "");
+        button.textContent = "Kopiert";
+      } catch (error) {
+        button.textContent = "Fehler";
+        button.title = error.message;
+      } finally {
+        window.setTimeout(() => {
+          button.textContent = previous;
+        }, 1400);
+      }
+    });
+  });
+
+  panelGallery.querySelectorAll('[data-gallery-action="delete"]').forEach(button => {
+    button.addEventListener("click", async () => {
+      if (!window.confirm("Diesen Screenshot wirklich löschen?")) return;
+      button.disabled = true;
+      try {
+        const sessionToken = localStorage.getItem(PANEL_SESSION_KEY);
+        const response = await fetch(`/api/user/screenshots/${encodeURIComponent(button.dataset.id || "")}`, {
+          method: "DELETE",
+          headers: { "x-betteruc-session": sessionToken || "" }
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(data.error || "Screenshot konnte nicht gelöscht werden.");
+        await loadPanelScreenshots();
+      } catch (error) {
+        button.disabled = false;
+        button.textContent = "Fehler";
+        button.title = error.message;
+      }
+    });
+  });
+}
+
+async function loadPanelScreenshots() {
+  if (!panelGallery) return;
+  const sessionToken = localStorage.getItem(PANEL_SESSION_KEY);
+  if (!sessionToken) {
+    panelGallery.innerHTML = "";
+    if (panelGalleryCount) panelGalleryCount.textContent = "nicht geladen";
+    return;
+  }
+
+  panelGallery.innerHTML = `<p class="panel-gallery-empty">Galerie wird geladen ...</p>`;
+  if (panelGalleryCount) panelGalleryCount.textContent = "wird geladen";
+  try {
+    const response = await fetch("/api/user/screenshots", {
+      cache: "no-store",
+      headers: { "x-betteruc-session": sessionToken }
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || "Galerie konnte nicht geladen werden.");
+    renderScreenshotGallery(data.screenshots);
+  } catch (error) {
+    panelGallery.innerHTML = `<p class="panel-gallery-empty">${escapeHtml(error.message)}</p>`;
+    if (panelGalleryCount) panelGalleryCount.textContent = "nicht erreichbar";
+  }
+}
+
 function renderPanel(user) {
   if (!panelDashboard || !panelStats) return;
   panelLoginForm.hidden = true;
@@ -621,12 +738,15 @@ function renderPanel(user) {
   renderMetaCards(user);
   renderHistory(user.statsHistory);
   panelUpdated.textContent = dateLabel(user.lastStatsAt || stats.updatedAt);
+  void loadPanelScreenshots();
 }
 
 function showPanelLogin(messageText = "") {
   if (!panelLoginForm || !panelDashboard) return;
   panelLoginForm.hidden = false;
   panelDashboard.hidden = true;
+  if (panelGallery) panelGallery.innerHTML = "";
+  if (panelGalleryCount) panelGalleryCount.textContent = "nicht geladen";
   if (messageText) setPanelMessage(messageText, "");
 }
 
