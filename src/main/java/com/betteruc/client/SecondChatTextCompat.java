@@ -1,6 +1,7 @@
 package com.betteruc.client;
 
 import java.util.List;
+import java.util.Optional;
 import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -18,16 +19,13 @@ public final class SecondChatTextCompat {
 
     public static Component copyWithResolvedStyles(Component message) {
         if (message == null) return Component.empty();
-        return copyWithResolvedStyles(message, Style.EMPTY);
-    }
-
-    private static MutableComponent copyWithResolvedStyles(Component message, Style inheritedStyle) {
-        Style resolvedStyle = message.getStyle().applyTo(inheritedStyle);
-        MutableComponent resolved = MutableComponent.create(message.getContents()).setStyle(resolvedStyle);
-
-        for (Component sibling : message.getSiblings()) {
-            resolved.append(copyWithResolvedStyles(sibling, resolvedStyle));
-        }
+        MutableComponent resolved = Component.empty();
+        message.visit((style, text) -> {
+            if (!text.isEmpty()) {
+                resolved.append(Component.literal(text).setStyle(style));
+            }
+            return Optional.empty();
+        }, Style.EMPTY);
         return resolved;
     }
 
