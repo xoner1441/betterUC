@@ -2547,9 +2547,10 @@ async function serveStatic(req, res, url) {
     }
 
     const ext = path.extname(target).toLowerCase();
+    const requiresRevalidation = ext === ".html" || ext === ".js" || ext === ".css";
     res.writeHead(200, {
       "content-type": MIME_TYPES.get(ext) || "application/octet-stream",
-      "cache-control": ext === ".html" ? "no-cache" : "public, max-age=3600"
+      "cache-control": requiresRevalidation ? "no-cache" : "public, max-age=3600"
     });
     fs.createReadStream(target).pipe(res);
   } catch (error) {
