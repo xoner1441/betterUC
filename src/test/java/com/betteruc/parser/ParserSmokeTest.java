@@ -239,6 +239,18 @@ class ParserSmokeTest {
                 possessiveResult.replacementMessages().get(0).getString()
         );
 
+        ChatCustomizationFormatter.Result masculinePossessiveResult = ChatCustomizationFormatter.transform(
+                "15:50:04 Beamter Dienstbeschwerde hat jimmyskyblock seine Drogen abgenommen!",
+                true,
+                false
+        );
+        assertNotNull(masculinePossessiveResult);
+        assertEquals(1, masculinePossessiveResult.replacementMessages().size());
+        assertEquals(
+                "drogen abnahme \u25C6 Dienstbeschwerde \u00BB jimmyskyblock",
+                masculinePossessiveResult.replacementMessages().get(0).getString()
+        );
+
         ChatCustomizationFormatter.Result reason = ChatCustomizationFormatter.transform(
                 "23:20:20 \u00BB HQ Fahndungsgrund: Pfandnahme + Stellung + Gute F\u00FChrung + Drogenabgabe 15g | Fahndungszeit: 0 Minuten.",
                 true,
