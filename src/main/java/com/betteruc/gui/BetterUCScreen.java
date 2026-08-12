@@ -367,6 +367,8 @@ public class BetterUCScreen extends Screen {
                             () -> BetterUCConfig.INSTANCE.reinfAcceptBodyGuard = !BetterUCConfig.INSTANCE.reinfAcceptBodyGuard);
                     y = addToggle(x, y, controlW, "Bombe", BetterUCConfig.INSTANCE.reinfAcceptBomb,
                             () -> BetterUCConfig.INSTANCE.reinfAcceptBomb = !BetterUCConfig.INSTANCE.reinfAcceptBomb);
+                    y = addToggle(x, y, controlW, "Plantage", BetterUCConfig.INSTANCE.reinfAcceptPlantage,
+                            () -> BetterUCConfig.INSTANCE.reinfAcceptPlantage = !BetterUCConfig.INSTANCE.reinfAcceptPlantage);
                 }
 
                 y = addSectionHeader(x, y, controlW, "Chat-Zeit", 0xFF94A3B8);

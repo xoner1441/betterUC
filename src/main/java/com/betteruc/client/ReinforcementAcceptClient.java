@@ -33,6 +33,13 @@ public final class ReinforcementAcceptClient {
         String raw = message.getString();
         ReinforcementTypeMatcher.Type type = ReinforcementTypeMatcher.classify(raw);
         if (type != null) {
+            String playerName = client != null && client.player != null
+                    ? client.player.getName().getString()
+                    : "";
+            if (ReinforcementTypeMatcher.isRequestedBy(raw, playerName)) {
+                clearLatestHeadline();
+                return;
+            }
             latestType = type;
             latestHeadline = ReinforcementTypeMatcher.normalize(raw);
             latestHeadlineAtMs = now;
@@ -94,13 +101,17 @@ public final class ReinforcementAcceptClient {
     }
 
     public static void reset() {
-        latestType = null;
-        latestHeadline = "";
-        latestHeadlineAtMs = 0L;
+        clearLatestHeadline();
         pending = null;
         lastAcceptedFingerprint = "";
         lastAcceptedAtMs = 0L;
         afk = false;
+    }
+
+    private static void clearLatestHeadline() {
+        latestType = null;
+        latestHeadline = "";
+        latestHeadlineAtMs = 0L;
     }
 
     private static void tryAccept(Minecraft client, boolean notifyOnBlocked) {
@@ -157,6 +168,7 @@ public final class ReinforcementAcceptClient {
             case DRUGS -> config.reinfAcceptDrugs;
             case BODY_GUARD -> config.reinfAcceptBodyGuard;
             case BOMB -> config.reinfAcceptBomb;
+            case PLANTAGE -> config.reinfAcceptPlantage;
         };
     }
 
