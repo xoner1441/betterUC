@@ -36,7 +36,7 @@ public final class ChatCustomizationFormatter {
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern DRUG_SEIZED_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(?:HQ:\\s*)?(?:[\\p{L} ]+\\s+)?(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+hat\\s+(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+(?:die\\s+)?Drogen\\s+abgenommen\\.?\\s*$",
+            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(?:HQ:\\s*)?(?:[\\p{L} ]+\\s+)?(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+hat\\s+(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+(?:(?:die|seine|ihre)\\s+)?Drogen\\s+abgenommen[.!]?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern SEARCH_REASON_PATTERN = Pattern.compile(
@@ -130,7 +130,7 @@ public final class ChatCustomizationFormatter {
             String player = supportRequest.group(3);
             String location = supportRequest.group(4);
             String meters = supportRequest.group(5);
-            return Result.replace(List.of(
+            return Result.replaceReinforcement(List.of(
                     supportHeadline(action, player),
                     supportDetail(isKnownFaction(source) ? source : "", location, meters + "m")
             ));
@@ -142,7 +142,7 @@ public final class ChatCustomizationFormatter {
             String actor = supportResponse.group(2);
             String target = supportResponse.group(3);
             String meters = supportResponse.group(4);
-            return Result.replace(List.of(
+            return Result.replaceReinforcement(List.of(
                     supportHeadline("UNTERWEGS", actor),
                     supportDetail(isKnownFaction(source) ? source : "", "zu " + target, meters + "m")
             ));
@@ -477,18 +477,24 @@ public final class ChatCustomizationFormatter {
     public static final class Result {
         private final boolean cancelOriginal;
         private final List<Component> replacementMessages;
+        private final boolean reinforcement;
 
-        private Result(boolean cancelOriginal, List<Component> replacementMessages) {
+        private Result(boolean cancelOriginal, List<Component> replacementMessages, boolean reinforcement) {
             this.cancelOriginal = cancelOriginal;
             this.replacementMessages = replacementMessages == null ? List.of() : replacementMessages;
+            this.reinforcement = reinforcement;
         }
 
         public static Result suppress() {
-            return new Result(true, List.of());
+            return new Result(true, List.of(), false);
         }
 
         public static Result replace(List<Component> replacementMessages) {
-            return new Result(true, replacementMessages);
+            return new Result(true, replacementMessages, false);
+        }
+
+        static Result replaceReinforcement(List<Component> replacementMessages) {
+            return new Result(true, replacementMessages, true);
         }
 
         public boolean cancelOriginal() {
@@ -497,6 +503,10 @@ public final class ChatCustomizationFormatter {
 
         public List<Component> replacementMessages() {
             return replacementMessages;
+        }
+
+        public boolean reinforcement() {
+            return reinforcement;
         }
 
         private Result withInteractionFrom(Component original) {
@@ -512,7 +522,7 @@ public final class ChatCustomizationFormatter {
                 interactive.setStyle(interactive.getStyle().withClickEvent(sourceStyle.getClickEvent()));
                 interactiveMessages.add(interactive);
             }
-            return new Result(cancelOriginal, List.copyOf(interactiveMessages));
+            return new Result(cancelOriginal, List.copyOf(interactiveMessages), reinforcement);
         }
     }
 }

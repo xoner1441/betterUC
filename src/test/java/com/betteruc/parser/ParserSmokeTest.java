@@ -227,6 +227,18 @@ class ParserSmokeTest {
         assertEquals(1, result.replacementMessages().size());
         assertEquals("drogen abnahme \u25C6 _ek61 \u00BB cznr", result.replacementMessages().get(0).getString());
 
+        ChatCustomizationFormatter.Result possessiveResult = ChatCustomizationFormatter.transform(
+                "Beamter FishMac_ hat Ehhie ihre Drogen abgenommen!",
+                true,
+                false
+        );
+        assertNotNull(possessiveResult);
+        assertEquals(1, possessiveResult.replacementMessages().size());
+        assertEquals(
+                "drogen abnahme \u25C6 FishMac_ \u00BB Ehhie",
+                possessiveResult.replacementMessages().get(0).getString()
+        );
+
         ChatCustomizationFormatter.Result reason = ChatCustomizationFormatter.transform(
                 "23:20:20 \u00BB HQ Fahndungsgrund: Pfandnahme + Stellung + Gute F\u00FChrung + Drogenabgabe 15g | Fahndungszeit: 0 Minuten.",
                 true,
