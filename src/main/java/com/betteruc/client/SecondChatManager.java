@@ -25,14 +25,6 @@ public final class SecondChatManager {
     public static final int MAX_WINDOWS = 4;
     private static final long HQ_BLOCK_WINDOW_MS = 2_500L;
     private static final long PAYDAY_BLOCK_WINDOW_MS = 8_000L;
-    private static final long REINFORCEMENT_BLOCK_WINDOW_MS = 2_500L;
-    private static final Pattern REINFORCEMENT_HEADLINE_PATTERN = Pattern.compile(
-            "^(?:reinf|unterwegs|medic|geiselnahme|contract|dringend|drogenabnahme|"
-                    + "leichenbewachung|bombe)(?: benotigt)? [a-z0-9_\\[\\]]+$"
-    );
-    private static final Pattern REINFORCEMENT_DISTANCE_PATTERN = Pattern.compile(
-            "^.+ \\d+m$"
-    );
     private static final Pattern WANTED_LIST_ENTRY_PATTERN = Pattern.compile(
             "^(?:\\[[a-z0-9_]+\\] )*[a-z0-9_]{1,32} \\d+ wps(?: .+)?$"
     );
@@ -48,12 +40,15 @@ public final class SecondChatManager {
     private static int hqContinuationLinesRemaining;
     private static long paydayContinuationUntilMs;
     private static boolean paydayBlockActive;
-    private static long reinforcementContinuationUntilMs;
 
     private SecondChatManager() {
     }
 
     public static RouteResult route(Component message) {
+        return route(message, false);
+    }
+
+    public static RouteResult route(Component message, boolean knownReinforcement) {
         BetterUCConfig config = BetterUCConfig.INSTANCE;
         if (!config.secondChatEnabled || message == null) {
             return RouteResult.KEEP_MAIN;
@@ -70,7 +65,7 @@ public final class SecondChatManager {
         boolean ownNameMatch = !playerName.isBlank() && containsWord(normalized, playerName);
         boolean hqMatch = classifyHqOrWps(normalized);
         boolean paydayMatch = classifyPayday(normalized);
-        boolean reinforcementMatch = classifyReinforcement(normalized);
+        boolean reinforcementMatch = knownReinforcement || isReinforcementLine(normalized);
         boolean suppressMain = false;
         boolean shouldPlaySound = false;
 
@@ -855,31 +850,17 @@ public final class SecondChatManager {
         return text.startsWith("neuer betrag ");
     }
 
-    private static synchronized boolean classifyReinforcement(String text) {
-        long now = System.currentTimeMillis();
-        if (isReinforcementAnchor(text)) {
-            reinforcementContinuationUntilMs = now + REINFORCEMENT_BLOCK_WINDOW_MS;
-            return true;
-        }
-        if (isReinforcementRouteAction(text)) {
-            return true;
-        }
-        if (now <= reinforcementContinuationUntilMs && isReinforcementDetail(text)) {
-            reinforcementContinuationUntilMs = now + REINFORCEMENT_BLOCK_WINDOW_MS;
-            return true;
-        }
-        return false;
-    }
-
     private static boolean isReinforcementLine(String text) {
         return isReinforcementAnchor(text)
-                || isReinforcementRouteAction(text)
-                || isReinforcementDetail(text);
+                || isReinforcementRouteAction(text);
+    }
+
+    static boolean isReinforcementMessage(String raw) {
+        return raw != null && isReinforcementLine(normalize(raw));
     }
 
     private static boolean isReinforcementAnchor(String text) {
-        return REINFORCEMENT_HEADLINE_PATTERN.matcher(text).matches()
-                || (text.contains(" benotigt unterstutzung in der nahe von ")
+        return (text.contains(" benotigt unterstutzung in der nahe von ")
                 && text.contains(" meter entfernt"))
                 || (text.contains(" kommt zum verstarkungsruf von ")
                 && text.contains(" meter entfernt"));
@@ -887,10 +868,6 @@ public final class SecondChatManager {
 
     private static boolean isReinforcementRouteAction(String text) {
         return "route anzeigen unterwegs".equals(text);
-    }
-
-    private static boolean isReinforcementDetail(String text) {
-        return REINFORCEMENT_DISTANCE_PATTERN.matcher(text).matches();
     }
 
     private static boolean isPrivateMessage(String text) {
