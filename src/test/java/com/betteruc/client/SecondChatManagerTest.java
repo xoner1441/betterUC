@@ -6,10 +6,17 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SecondChatManagerTest {
+
+    @Test
+    void suppressedMessagesAreEscapedIntoOneLogLine() {
+        assertEquals("erste Zeile\\nzweite Zeile\\rende",
+                SecondChatManager.singleLineForLog("erste Zeile\nzweite Zeile\rende"));
+    }
 
     @Test
     void recognizesRealAndFormattedReinforcementMessages() {

@@ -680,7 +680,10 @@ public class ChatBlacklistMixin {
         if (!timestampAdded && !routed.suppressMain()) return;
 
         ci.cancel();
-        if (routed.suppressMain()) return;
+        if (routed.suppressMain()) {
+            SecondChatManager.logSuppressedMessage(finalMessage);
+            return;
+        }
 
         addingTimestamp = true;
         try {
@@ -703,7 +706,9 @@ public class ChatBlacklistMixin {
             for (Component line : messages) {
                 Component finalMessage = withTimestampIfEnabled(line);
                 SecondChatManager.RouteResult routed = SecondChatManager.route(finalMessage, reinforcement);
-                if (!routed.suppressMain()) {
+                if (routed.suppressMain()) {
+                    SecondChatManager.logSuppressedMessage(finalMessage);
+                } else {
                     ((ChatComponent) (Object) this).addClientSystemMessage(finalMessage);
                 }
             }

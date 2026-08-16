@@ -1,5 +1,6 @@
 package com.betteruc.client;
 
+import com.betteruc.BetterUCMod;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.config.SecondChatFilterConfig;
 import com.betteruc.config.SecondChatTabConfig;
@@ -91,6 +92,19 @@ public final class SecondChatManager {
             playMentionSound(client);
         }
         return suppressMain ? RouteResult.HIDE_MAIN : RouteResult.KEEP_MAIN;
+    }
+
+    public static void logSuppressedMessage(Component message) {
+        if (message == null) return;
+        String text = message.getString();
+        if (text == null || text.isBlank()) return;
+        BetterUCMod.LOGGER.info("[betterUC Second Chat] {}", singleLineForLog(text));
+    }
+
+    static String singleLineForLog(String text) {
+        return (text == null ? "" : text)
+                .replace("\r", "\\r")
+                .replace("\n", "\\n");
     }
 
     public static synchronized List<Entry> snapshot() {

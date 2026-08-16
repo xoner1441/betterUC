@@ -75,6 +75,12 @@ Wenn der Bot die Startnachrichten schon gepostet hat und du nur die Texte aktual
 & "C:\Users\huhns\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe" .\discord-setup-bot\setup-discord.js --refresh-messages
 ```
 
+Nur das Bug-Forum anlegen oder aktualisieren, ohne andere Rollen und Kanäle abzugleichen:
+
+```powershell
+& "C:\Users\huhns\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe" .\discord-setup-bot\setup-discord.js --bug-forum-only
+```
+
 ## Hinweise
 
 - `.env` ist in `.gitignore` eingetragen und soll nicht auf GitHub.

@@ -196,6 +196,7 @@ async function main() {
 
   const shouldListGuilds = process.argv.includes("--list-guilds");
   const refreshMessages = process.argv.includes("--refresh-messages");
+  const bugForumOnly = process.argv.includes("--bug-forum-only");
   const dryRun = parseBoolean(process.env.DRY_RUN) || process.argv.includes("--dry-run");
   const token = normalizeToken(process.env.DISCORD_BOT_TOKEN);
   const guildId = clean(process.env.DISCORD_GUILD_ID);
@@ -245,6 +246,13 @@ async function main() {
   console.log(dryRun ? "Modus: DRY_RUN (keine Änderungen)" : "Modus: Setup ausführen");
   console.log("");
 
+  if (bugForumOnly) {
+    await ensureBugForumOnly(api, guildId);
+    console.log("");
+    console.log("Fertig. Das betterUC Bug-Forum ist eingerichtet.");
+    return;
+  }
+
   const roles = await ensureRoles(api, guildId);
   await trySetRolePositions(api, guildId, roles);
   const channels = await ensureChannels(api, guildId, roles);
@@ -255,6 +263,28 @@ async function main() {
   if (!dryRun) {
     console.log("Tipp: Bot-Rolle in Discord über die erstellten Rollen ziehen, falls Rollenfarben/Rechte nicht direkt greifen.");
   }
+}
+
+async function ensureBugForumOnly(api, guildId) {
+  const channels = await api.get(`/guilds/${guildId}/channels`);
+  const supportCategory = channels.find(channel =>
+    channel.type === ChannelType.GuildCategory
+    && channel.name.toLowerCase() === "support"
+  );
+  if (!supportCategory) {
+    throw new Error("Die Kategorie 'Support' wurde nicht gefunden.");
+  }
+
+  const map = new Map(channels.map(channel => [`${channel.type}:${channel.name}:${channel.parent_id || ""}`, channel]));
+  await ensureChannel(api, guildId, map, {
+    name: "bug-reports",
+    type: ChannelType.GuildForum,
+    parent_id: supportCategory.id,
+    topic: topicFor("bug-reports"),
+    available_tags: ["Neu", "Bestätigt", "In Arbeit", "Behoben"]
+      .map(name => ({ name, moderated: false })),
+    default_auto_archive_duration: 1440,
+  });
 }
 
 function loadEnvFile() {
@@ -574,6 +604,7 @@ function printHelp() {
   console.log("  node discord-setup-bot/setup-discord.js --dry-run");
   console.log("  node discord-setup-bot/setup-discord.js --list-guilds");
   console.log("  node discord-setup-bot/setup-discord.js --refresh-messages");
+  console.log("  node discord-setup-bot/setup-discord.js --bug-forum-only");
   console.log("");
   console.log("Erforderliche .env Werte:");
   console.log("  DISCORD_BOT_TOKEN");
