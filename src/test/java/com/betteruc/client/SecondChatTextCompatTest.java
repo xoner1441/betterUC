@@ -1,6 +1,7 @@
 package com.betteruc.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.List;
 import net.minecraft.ChatFormatting;
@@ -27,17 +28,38 @@ class SecondChatTextCompatTest {
     }
 
     @Test
-    void carriesPrefixColorUntilServerSetsAnotherColor() {
+    void keepsShopBuyerWhiteAndPreservesExplicitServerColors() {
         MutableComponent message = Component.empty()
                 .append(Component.literal("[Shop] ").withStyle(ChatFormatting.GOLD))
                 .append(Component.literal("Ein anonymer K\u00E4ufer "))
-                .append(Component.literal("hat im Shop eingekauft!").withStyle(ChatFormatting.AQUA));
+                .append(Component.literal("hat im ").withStyle(ChatFormatting.AQUA))
+                .append(Component.literal("Shop").withStyle(ChatFormatting.GOLD))
+                .append(Component.literal(" eingekauft!").withStyle(ChatFormatting.AQUA));
 
         Component copy = SecondChatTextCompat.copyWithResolvedStyles(message);
         List<Component> segments = copy.toFlatList();
 
         assertEquals(TextColor.fromLegacyFormat(ChatFormatting.GOLD), segments.get(0).getStyle().getColor());
-        assertEquals(TextColor.fromLegacyFormat(ChatFormatting.GOLD), segments.get(1).getStyle().getColor());
+        assertNull(segments.get(1).getStyle().getColor());
         assertEquals(TextColor.fromLegacyFormat(ChatFormatting.AQUA), segments.get(2).getStyle().getColor());
+        assertEquals(TextColor.fromLegacyFormat(ChatFormatting.GOLD), segments.get(3).getStyle().getColor());
+        assertEquals(TextColor.fromLegacyFormat(ChatFormatting.AQUA), segments.get(4).getStyle().getColor());
+    }
+
+    @Test
+    void doesNotCarryRankBracketColorIntoNormalPlayerChat() {
+        MutableComponent message = Component.empty()
+                .append(Component.literal("[").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal("11").withStyle(ChatFormatting.RED))
+                .append(Component.literal("] ").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal("ClumsyCrow_ sagt: YKvro"));
+
+        Component copy = SecondChatTextCompat.copyWithResolvedStyles(message);
+        List<Component> segments = copy.toFlatList();
+
+        assertEquals(TextColor.fromLegacyFormat(ChatFormatting.DARK_GRAY), segments.get(0).getStyle().getColor());
+        assertEquals(TextColor.fromLegacyFormat(ChatFormatting.RED), segments.get(1).getStyle().getColor());
+        assertEquals(TextColor.fromLegacyFormat(ChatFormatting.DARK_GRAY), segments.get(2).getStyle().getColor());
+        assertNull(segments.get(3).getStyle().getColor());
     }
 }

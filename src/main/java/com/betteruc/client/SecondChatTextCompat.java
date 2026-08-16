@@ -21,13 +21,14 @@ public final class SecondChatTextCompat {
     public static Component copyWithResolvedStyles(Component message) {
         if (message == null) return Component.empty();
         MutableComponent resolved = Component.empty();
+        boolean carrySiblingColors = needsSiblingColorContinuation(message.getString());
         TextColor[] carriedColor = {null};
         message.visit((style, text) -> {
             if (!text.isEmpty()) {
                 Style resolvedStyle = style;
-                if (style.getColor() != null) {
+                if (carrySiblingColors && style.getColor() != null) {
                     carriedColor[0] = style.getColor();
-                } else if (carriedColor[0] != null) {
+                } else if (carrySiblingColors && carriedColor[0] != null) {
                     resolvedStyle = style.withColor(carriedColor[0]);
                 }
                 resolved.append(Component.literal(text).setStyle(resolvedStyle));
@@ -35,6 +36,13 @@ public final class SecondChatTextCompat {
             return Optional.empty();
         }, Style.EMPTY);
         return resolved;
+    }
+
+    private static boolean needsSiblingColorContinuation(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        String message = raw.stripLeading()
+                .replaceFirst("^\\[?\\d{1,2}:\\d{2}:\\d{2}]?\\s*", "");
+        return message.startsWith("News von ");
     }
 
     public static Style styleAtWidth(Font font, FormattedCharSequence text, int x) {
