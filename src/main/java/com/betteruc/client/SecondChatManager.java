@@ -859,6 +859,10 @@ public final class SecondChatManager {
         return raw != null && isReinforcementLine(normalize(raw));
     }
 
+    static boolean isFormattedHqMessage(String raw) {
+        return raw != null && formattedHqContinuationLines(normalize(raw)) >= 0;
+    }
+
     private static boolean isReinforcementAnchor(String text) {
         return (text.contains(" benotigt unterstutzung in der nahe von ")
                 && text.contains(" meter entfernt"))
@@ -897,7 +901,7 @@ public final class SecondChatManager {
     }
 
     private static String normalize(String value) {
-        return Normalizer.normalize(value, Normalizer.Form.NFD)
+        return Normalizer.normalize(SmallCapsText.fold(value), Normalizer.Form.NFD)
                 .replaceAll("\\p{M}+", "")
                 .replaceAll("(?i)\\u00A7[0-9A-FK-OR]", " ")
                 .toLowerCase(Locale.ROOT)

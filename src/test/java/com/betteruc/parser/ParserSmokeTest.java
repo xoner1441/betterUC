@@ -184,7 +184,7 @@ class ParserSmokeTest {
         );
         assertNotNull(second);
         assertEquals(3, second.replacementMessages().size());
-        assertEquals("get\u00F6tet \u25C6 pixel361 \u00BB coderXD", second.replacementMessages().get(0).getString());
+        assertEquals("ɢᴇᴛöᴛᴇᴛ // pixel361 \u2192 coderXD", second.replacementMessages().get(0).getString());
         assertEquals("\u00BB Terrorismus", second.replacementMessages().get(1).getString());
         assertEquals("\u00BB 20 Minuten", second.replacementMessages().get(2).getString());
     }
@@ -209,7 +209,7 @@ class ParserSmokeTest {
         );
         assertNotNull(second);
         assertEquals(3, second.replacementMessages().size());
-        assertEquals("inhaftiert \u25C6 _ek61 \u00BB cznr", second.replacementMessages().get(0).getString());
+        assertEquals("ɪɴʜᴀꜰᴛɪᴇʀᴛ // _ek61 \u2192 cznr", second.replacementMessages().get(0).getString());
         assertEquals("\u00BB Pfandnahme + Stellung + Gute F\u00FChrung + DA 15g", second.replacementMessages().get(1).getString());
         assertEquals("\u00BB 0 Minuten", second.replacementMessages().get(2).getString());
     }
@@ -234,7 +234,7 @@ class ParserSmokeTest {
         );
         assertNotNull(second);
         assertEquals(3, second.replacementMessages().size());
-        assertEquals("inhaftiert \u25C6 rteli \u00BB shrek_abi", second.replacementMessages().get(0).getString());
+        assertEquals("ɪɴʜᴀꜰᴛɪᴇʀᴛ // rteli \u2192 shrek_abi", second.replacementMessages().get(0).getString());
         assertEquals("\u00BB Einbruch staatliche Einrichtung", second.replacementMessages().get(1).getString());
         assertEquals("\u00BB 50 Minuten", second.replacementMessages().get(2).getString());
     }
@@ -250,7 +250,7 @@ class ParserSmokeTest {
         );
         assertNotNull(result);
         assertEquals(1, result.replacementMessages().size());
-        assertEquals("waffen abnahme \u25C6 _ek61 \u00BB WantKS0E", result.replacementMessages().get(0).getString());
+        assertEquals("ᴡᴀꜰꜰᴇɴ ᴀʙɴᴀʜᴍᴇ // _ek61 \u2192 WantKS0E", result.replacementMessages().get(0).getString());
 
         ChatCustomizationFormatter.Result reason = ChatCustomizationFormatter.transform(
                 "12:33:03 \u00BB HQ Fahndungsgrund: Versuchter Mord | Fahndungszeit: 2 Minuten.",
@@ -271,7 +271,7 @@ class ParserSmokeTest {
         );
         assertNotNull(result);
         assertEquals(1, result.replacementMessages().size());
-        assertEquals("drogen abnahme \u25C6 _ek61 \u00BB cznr", result.replacementMessages().get(0).getString());
+        assertEquals("ᴅʀᴏɢᴇɴ ᴀʙɴᴀʜᴍᴇ // _ek61 \u2192 cznr", result.replacementMessages().get(0).getString());
 
         ChatCustomizationFormatter.Result possessiveResult = ChatCustomizationFormatter.transform(
                 "Beamter FishMac_ hat Ehhie ihre Drogen abgenommen!",
@@ -281,7 +281,7 @@ class ParserSmokeTest {
         assertNotNull(possessiveResult);
         assertEquals(1, possessiveResult.replacementMessages().size());
         assertEquals(
-                "drogen abnahme \u25C6 FishMac_ \u00BB Ehhie",
+                "ᴅʀᴏɢᴇɴ ᴀʙɴᴀʜᴍᴇ // FishMac_ \u2192 Ehhie",
                 possessiveResult.replacementMessages().get(0).getString()
         );
 
@@ -293,7 +293,7 @@ class ParserSmokeTest {
         assertNotNull(masculinePossessiveResult);
         assertEquals(1, masculinePossessiveResult.replacementMessages().size());
         assertEquals(
-                "drogen abnahme \u25C6 Dienstbeschwerde \u00BB jimmyskyblock",
+                "ᴅʀᴏɢᴇɴ ᴀʙɴᴀʜᴍᴇ // Dienstbeschwerde \u2192 jimmyskyblock",
                 masculinePossessiveResult.replacementMessages().get(0).getString()
         );
 
@@ -325,7 +325,7 @@ class ParserSmokeTest {
         );
         assertNotNull(second);
         assertEquals(3, second.replacementMessages().size());
-        assertEquals("gesucht \u25C6 blausaphir", second.replacementMessages().get(0).getString());
+        assertEquals("ɢᴇꜱᴜᴄʜᴛ // blausaphir", second.replacementMessages().get(0).getString());
         assertEquals("\u00BB Versuchter Mord", second.replacementMessages().get(1).getString());
         assertEquals("\u00BB 55 Wanteds", second.replacementMessages().get(2).getString());
     }
@@ -350,7 +350,7 @@ class ParserSmokeTest {
         );
         assertNotNull(second);
         assertEquals(3, second.replacementMessages().size());
-        assertEquals("get\u00F6tet \u25C6 pixel361 \u00BB coderXD", second.replacementMessages().get(0).getString());
+        assertEquals("ɢᴇᴛöᴛᴇᴛ // pixel361 \u2192 coderXD", second.replacementMessages().get(0).getString());
         assertEquals("\u00BB Terrorismus", second.replacementMessages().get(1).getString());
         assertEquals("\u00BB 1 Minute", second.replacementMessages().get(2).getString());
     }
@@ -376,7 +376,7 @@ class ParserSmokeTest {
         );
         assertNotNull(second);
         assertEquals(3, second.replacementMessages().size());
-        assertEquals("get\u00F6tet \u25C6 [UC]_ek61 \u00BB NuRisk", second.replacementMessages().get(0).getString());
+        assertEquals("ɢᴇᴛöᴛᴇᴛ // [UC]_ek61 \u2192 NuRisk", second.replacementMessages().get(0).getString());
         assertEquals(
                 "\u00BB Terrorismus + F\u00FChrerschein Abnahme + Widerstand gegen Beamte",
                 second.replacementMessages().get(1).getString()
@@ -404,7 +404,7 @@ class ParserSmokeTest {
         );
         assertNotNull(second);
         assertEquals(3, second.replacementMessages().size());
-        assertEquals("get\u00F6tet \u25C6 UncJonas \u00BB Notsituation", second.replacementMessages().get(0).getString());
+        assertEquals("ɢᴇᴛöᴛᴇᴛ // UncJonas \u2192 Notsituation", second.replacementMessages().get(0).getString());
         assertEquals("\u00BB Versuchter Mord + Widerstand gegen Beamte", second.replacementMessages().get(1).getString());
         assertEquals("\u00BB 1 Stunden", second.replacementMessages().get(2).getString());
     }
@@ -429,7 +429,7 @@ class ParserSmokeTest {
         );
         assertNotNull(reason);
         assertEquals(3, reason.replacementMessages().size());
-        assertEquals("ver\u00E4ndert \u25C6 hustexYD \u00BB faul681", reason.replacementMessages().get(0).getString());
+        assertEquals("ᴠᴇʀäɴᴅᴇʀᴛ // hustexYD \u2192 faul681", reason.replacementMessages().get(0).getString());
         assertEquals("\u00BB Pfandnahme + Widerstand gegen Beamte", reason.replacementMessages().get(1).getString());
         assertEquals("\u00BB 65 \u00BB 60 Wanteds", reason.replacementMessages().get(2).getString());
 
@@ -440,7 +440,7 @@ class ParserSmokeTest {
         );
         assertNotNull(deleted);
         assertEquals(2, deleted.replacementMessages().size());
-        assertEquals("gel\u00F6scht \u25C6 WzrU \u00BB Crizock404HD", deleted.replacementMessages().get(0).getString());
+        assertEquals("ɢᴇʟöꜱᴄʜᴛ // WzrU \u2192 Crizock404HD", deleted.replacementMessages().get(0).getString());
     }
 
     @Test
@@ -463,7 +463,7 @@ class ParserSmokeTest {
         );
         assertNotNull(reason);
         assertEquals(3, reason.replacementMessages().size());
-        assertEquals("ver\u00E4ndert \u25C6 _ek61 \u00BB QingVon", reason.replacementMessages().get(0).getString());
+        assertEquals("ᴠᴇʀäɴᴅᴇʀᴛ // _ek61 \u2192 QingVon", reason.replacementMessages().get(0).getString());
         assertEquals("\u00BB Versuchter Mord + DA 15g + Stellung + Gute F\u00FChrung", reason.replacementMessages().get(1).getString());
         assertEquals("\u00BB 55 \u00BB 30 Wanteds", reason.replacementMessages().get(2).getString());
     }

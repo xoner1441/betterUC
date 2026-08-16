@@ -84,7 +84,7 @@ public class BetterUCConfig {
             "toggleSprintEnabled", "autoStatsOnJoinEnabled", "autoFactionBankOnBalanceEnabled",
             "autoAtmInfoOnBalanceEnabled", "autoForceDepositEnabled", "richTaxAlertEnabled",
             "richTaxAlertSoundEnabled",
-            "chatTimestampsEnabled", "chatCustomizationEnabled",
+            "chatTimestampsEnabled", "chatCustomizationEnabled", "chatActionTextStyle", "chatHeadlineSeparatorStyle",
             "secondChatEnabled", "secondChatLocked", "secondChatBackgroundEnabled",
             "secondChatX", "secondChatY", "secondChatWidth", "secondChatHeight",
             "secondChatPrimaryCustomSize",
@@ -204,6 +204,10 @@ public class BetterUCConfig {
     public static final String HUD_STYLE_TRANSPARENT = "transparent";
     public static final String HUD_STYLE_CARTOON = "cartoon";
     public static final String HUD_STYLE_CUSTOM = "custom";
+    public static final String CHAT_ACTION_TEXT_NORMAL = "normal";
+    public static final String CHAT_ACTION_TEXT_SMALL_CAPS = "small_caps";
+    public static final String CHAT_SEPARATOR_CLASSIC = "classic";
+    public static final String CHAT_SEPARATOR_TECHNICAL = "technical";
     public static final String DEFAULT_PING_RELAY_URL = "wss://ping.betteruc.de/ws";
     public static final String DEFAULT_DISCORD_INVITE_URL = "https://discord.gg/UQQQw8hVsn";
     private static final String LEGACY_PING_RELAY_URL = "ws://65.109.175.203:3000/ws";
@@ -439,6 +443,8 @@ public class BetterUCConfig {
     public int reloadIntervalMinutes = 5;
     public boolean chatTimestampsEnabled = true;
     public boolean chatCustomizationEnabled = true;
+    public String chatActionTextStyle = CHAT_ACTION_TEXT_SMALL_CAPS;
+    public String chatHeadlineSeparatorStyle = CHAT_SEPARATOR_TECHNICAL;
     public boolean reinfCustomizationEnabled = true;
     public boolean reinfUniformColorEnabled = false;
     public int reinfLabelColor = DEFAULT_REINF_LABEL_COLOR;
@@ -585,6 +591,47 @@ public class BetterUCConfig {
             return DEFAULT_HUD_SCALE;
         }
         return Math.max(MIN_HUD_SCALE, Math.min(MAX_HUD_SCALE, scale));
+    }
+
+    public static String toggleChatActionTextStyle(String style) {
+        return CHAT_ACTION_TEXT_SMALL_CAPS.equals(normalizeChatActionTextStyle(style))
+                ? CHAT_ACTION_TEXT_NORMAL
+                : CHAT_ACTION_TEXT_SMALL_CAPS;
+    }
+
+    public static String chatActionTextStyleLabel(String style) {
+        return CHAT_ACTION_TEXT_SMALL_CAPS.equals(normalizeChatActionTextStyle(style))
+                ? "Small Caps"
+                : "Normal";
+    }
+
+    public static String toggleChatHeadlineSeparatorStyle(String style) {
+        return CHAT_SEPARATOR_TECHNICAL.equals(normalizeChatHeadlineSeparatorStyle(style))
+                ? CHAT_SEPARATOR_CLASSIC
+                : CHAT_SEPARATOR_TECHNICAL;
+    }
+
+    public static String chatHeadlineSeparatorStyleLabel(String style) {
+        return CHAT_SEPARATOR_TECHNICAL.equals(normalizeChatHeadlineSeparatorStyle(style))
+                ? "Technisch"
+                : "Klassisch";
+    }
+
+    private static String normalizeChatActionTextStyle(String style) {
+        return CHAT_ACTION_TEXT_NORMAL.equals(style)
+                ? CHAT_ACTION_TEXT_NORMAL
+                : CHAT_ACTION_TEXT_SMALL_CAPS;
+    }
+
+    private static String normalizeChatHeadlineSeparatorStyle(String style) {
+        return CHAT_SEPARATOR_CLASSIC.equals(style)
+                ? CHAT_SEPARATOR_CLASSIC
+                : CHAT_SEPARATOR_TECHNICAL;
+    }
+
+    private static void sanitizeChatCustomizationStyles() {
+        INSTANCE.chatActionTextStyle = normalizeChatActionTextStyle(INSTANCE.chatActionTextStyle);
+        INSTANCE.chatHeadlineSeparatorStyle = normalizeChatHeadlineSeparatorStyle(INSTANCE.chatHeadlineSeparatorStyle);
     }
 
     public static class WasteDropArea {
@@ -1442,6 +1489,7 @@ public class BetterUCConfig {
         sanitizeHudPrefixes();
         sanitizeHudGradients();
         sanitizeReinfColors();
+        sanitizeChatCustomizationStyles();
         sanitizeSecondChat();
         sanitizePingRelay();
         sanitizeDiscordInvite();
@@ -1526,6 +1574,7 @@ public class BetterUCConfig {
             INSTANCE.healthHudTextColor = sanitizeHudColor(INSTANCE.healthHudTextColor, INSTANCE.healthHudColor);
             INSTANCE.healthHudAbsorptionColor = sanitizeHudColor(INSTANCE.healthHudAbsorptionColor, DEFAULT_HEALTH_HUD_ABSORPTION_COLOR);
             sanitizeReinfColors();
+            sanitizeChatCustomizationStyles();
             sanitizeSecondChat();
             sanitizeHudGradients();
             sanitizeHudStyles();
@@ -1621,6 +1670,7 @@ public class BetterUCConfig {
         sanitizeHudPrefixes();
         sanitizeHudGradients();
         sanitizeReinfColors();
+        sanitizeChatCustomizationStyles();
         sanitizeSecondChat();
         sanitizeAmmoHud();
         sanitizePingRelay();

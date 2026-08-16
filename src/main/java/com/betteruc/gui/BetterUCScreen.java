@@ -309,6 +309,27 @@ public class BetterUCScreen extends Screen {
                 y = addSectionHeader(x, y, controlW, "WPS & HQ", 0xFFFF6B6B);
                 y = addToggle(x, y, controlW, "Formatierung", BetterUCConfig.INSTANCE.chatCustomizationEnabled,
                         () -> BetterUCConfig.INSTANCE.chatCustomizationEnabled = !BetterUCConfig.INSTANCE.chatCustomizationEnabled);
+                if (BetterUCConfig.INSTANCE.chatCustomizationEnabled) {
+                    y = addButton(x, y, controlW,
+                            "Aktionsschrift: " + BetterUCConfig.chatActionTextStyleLabel(
+                                    BetterUCConfig.INSTANCE.chatActionTextStyle),
+                            b -> {
+                                BetterUCConfig.INSTANCE.chatActionTextStyle = BetterUCConfig.toggleChatActionTextStyle(
+                                        BetterUCConfig.INSTANCE.chatActionTextStyle);
+                                saveConfig();
+                                refreshWidgets();
+                            });
+                    y = addButton(x, y, controlW,
+                            "Trennstil: " + BetterUCConfig.chatHeadlineSeparatorStyleLabel(
+                                    BetterUCConfig.INSTANCE.chatHeadlineSeparatorStyle),
+                            b -> {
+                                BetterUCConfig.INSTANCE.chatHeadlineSeparatorStyle =
+                                        BetterUCConfig.toggleChatHeadlineSeparatorStyle(
+                                                BetterUCConfig.INSTANCE.chatHeadlineSeparatorStyle);
+                                saveConfig();
+                                refreshWidgets();
+                            });
+                }
 
                 y = addSectionHeader(x, y, controlW, "Reinf", BetterUCConfig.INSTANCE.reinfLabelColor);
                 y = addToggle(x, y, controlW, "Formatierung", BetterUCConfig.INSTANCE.reinfCustomizationEnabled,

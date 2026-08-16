@@ -94,12 +94,31 @@ public final class ChatCustomizationFormatter {
         Result result = transform(
                 original == null ? "" : original.getString(),
                 wpsHqEnabled,
-                reinfEnabled
+                reinfEnabled,
+                BetterUCConfig.INSTANCE.chatActionTextStyle,
+                BetterUCConfig.INSTANCE.chatHeadlineSeparatorStyle
         );
         return result == null ? null : result.withInteractionFrom(original);
     }
 
     public static Result transform(String raw, boolean wpsHqEnabled, boolean reinfEnabled) {
+        return transform(
+                raw,
+                wpsHqEnabled,
+                reinfEnabled,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL
+        );
+    }
+
+    static Result transform(
+            String raw,
+            boolean wpsHqEnabled,
+            boolean reinfEnabled,
+            String actionTextStyle,
+            String separatorStyle
+    ) {
+        HeadlineStyle headlineStyle = new HeadlineStyle(actionTextStyle, separatorStyle);
         String clean = normalize(raw);
         if (clean.isEmpty()) return null;
 
@@ -112,7 +131,7 @@ public final class ChatCustomizationFormatter {
         Matcher paySent = PAY_SENT_PATTERN.matcher(clean);
         if (paySent.matches()) {
             return Result.replace(List.of(
-                    payHeadline("Du", paySent.group(1)),
+                    payHeadline("Du", paySent.group(1), headlineStyle),
                     amountDetail("-" + cleanAmount(paySent.group(2)) + "$", ChatFormatting.RED)
             ));
         }
@@ -120,7 +139,7 @@ public final class ChatCustomizationFormatter {
         Matcher payReceived = PAY_RECEIVED_PATTERN.matcher(clean);
         if (payReceived.matches()) {
             return Result.replace(List.of(
-                    payHeadline(payReceived.group(1), "Du"),
+                    payHeadline(payReceived.group(1), "Du", headlineStyle),
                     amountDetail("+" + cleanAmount(payReceived.group(2)) + "$", ChatFormatting.GREEN)
             ));
         }
@@ -166,7 +185,7 @@ public final class ChatCustomizationFormatter {
             Pending current = pending;
             pending = null;
             return Result.replace(messages(
-                    headline("GESUCHT", current.target()),
+                    headline("GESUCHT", current.target(), headlineStyle),
                     reasonDetails(current.reason(), wantedLevel.group(2) + " Wanteds")
             ));
         }
@@ -186,14 +205,14 @@ public final class ChatCustomizationFormatter {
         Matcher weaponSeized = WEAPON_SEIZED_PATTERN.matcher(clean);
         if (weaponSeized.matches()) {
             return Result.replace(List.of(
-                    headline("WAFFEN ABNAHME", playerName(weaponSeized.group(1)), playerName(weaponSeized.group(2)))
+                    headline("WAFFEN ABNAHME", playerName(weaponSeized.group(1)), playerName(weaponSeized.group(2)), headlineStyle)
             ));
         }
 
         Matcher drugSeized = DRUG_SEIZED_PATTERN.matcher(clean);
         if (drugSeized.matches()) {
             return Result.replace(List.of(
-                    headline("DROGEN ABNAHME", playerName(drugSeized.group(1)), playerName(drugSeized.group(2)))
+                    headline("DROGEN ABNAHME", playerName(drugSeized.group(1)), playerName(drugSeized.group(2)), headlineStyle)
             ));
         }
 
@@ -203,7 +222,7 @@ public final class ChatCustomizationFormatter {
             pending = null;
             String action = fahndungAction(current.type());
             return Result.replace(messages(
-                    headline(action, current.actor(), current.target()),
+                    headline(action, current.actor(), current.target(), headlineStyle),
                     reasonDetails(searchReason.group(1), searchReason.group(2) + " " + searchReason.group(3))
             ));
         }
@@ -219,7 +238,7 @@ public final class ChatCustomizationFormatter {
             Pending current = pending;
             pending = null;
             return Result.replace(messages(
-                    headline("VERÄNDERT", current.actor(), current.target()),
+                    headline("VERÄNDERT", current.actor(), current.target(), headlineStyle),
                     reasonDetails(newReason.group(1), newReason.group(2) + " » " + newReason.group(3) + " Wanteds")
             ));
         }
@@ -227,7 +246,7 @@ public final class ChatCustomizationFormatter {
         Matcher deleted = DELETED_PATTERN.matcher(clean);
         if (deleted.matches()) {
             return Result.replace(List.of(
-                    headline("GELÖSCHT", playerName(deleted.group(1)), playerName(deleted.group(2))),
+                    headline("GELÖSCHT", playerName(deleted.group(1)), playerName(deleted.group(2)), headlineStyle),
                     detail("Akten gelöscht", "")
             ));
         }
@@ -269,17 +288,17 @@ public final class ChatCustomizationFormatter {
         };
     }
 
-    private static Component headline(String action, String target) {
-        return action(action)
-                .append(separator(" ◆ "))
+    private static Component headline(String action, String target, HeadlineStyle headlineStyle) {
+        return action(action, headlineStyle)
+                .append(separator(headlineLeadSeparator(headlineStyle)))
                 .append(name(target));
     }
 
-    private static Component headline(String action, String actor, String target) {
-        return action(action)
-                .append(separator(" ◆ "))
+    private static Component headline(String action, String actor, String target, HeadlineStyle headlineStyle) {
+        return action(action, headlineStyle)
+                .append(separator(headlineLeadSeparator(headlineStyle)))
                 .append(name(actor))
-                .append(separator(" » "))
+                .append(separator(headlineDirectionSeparator(headlineStyle)))
                 .append(name(target));
     }
 
@@ -331,11 +350,11 @@ public final class ChatCustomizationFormatter {
                 .append(Component.literal(amount == null ? "" : amount.trim()).withStyle(color, ChatFormatting.BOLD));
     }
 
-    private static Component payHeadline(String actor, String target) {
-        return action("PAY")
-                .append(separator(" \u25C6 "))
+    private static Component payHeadline(String actor, String target, HeadlineStyle headlineStyle) {
+        return action("PAY", headlineStyle)
+                .append(separator(headlineLeadSeparator(headlineStyle)))
                 .append(payName(actor))
-                .append(separator(" \u00BB "))
+                .append(separator(headlineDirectionSeparator(headlineStyle)))
                 .append(payName(target));
     }
 
@@ -394,9 +413,24 @@ public final class ChatCustomizationFormatter {
                 || normalized.equals("zivilist");
     }
 
-    private static MutableComponent action(String value) {
+    private static MutableComponent action(String value, HeadlineStyle headlineStyle) {
         String label = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+        if (BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS.equals(headlineStyle.actionTextStyle())) {
+            label = SmallCapsText.convert(label);
+        }
         return Component.literal(label).withStyle(ChatFormatting.RED);
+    }
+
+    private static String headlineLeadSeparator(HeadlineStyle headlineStyle) {
+        return BetterUCConfig.CHAT_SEPARATOR_TECHNICAL.equals(headlineStyle.separatorStyle())
+                ? " // "
+                : " \u25C6 ";
+    }
+
+    private static String headlineDirectionSeparator(HeadlineStyle headlineStyle) {
+        return BetterUCConfig.CHAT_SEPARATOR_TECHNICAL.equals(headlineStyle.separatorStyle())
+                ? " \u2192 "
+                : " \u00BB ";
     }
 
     private static MutableComponent name(String value) {
@@ -479,6 +513,9 @@ public final class ChatCustomizationFormatter {
     }
 
     private record Pending(PendingType type, String actor, String target, String reason, long createdAtMs) {
+    }
+
+    private record HeadlineStyle(String actionTextStyle, String separatorStyle) {
     }
 
     private static Style findInteractiveStyle(Component component) {

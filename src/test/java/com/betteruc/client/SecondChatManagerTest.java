@@ -51,4 +51,14 @@ class SecondChatManagerTest {
         assertTrue(result.reinforcement());
         assertTrue(result.replacementMessages().size() > 1);
     }
+
+    @Test
+    void recognizesSmallCapsTechnicalHqHeadlines() {
+        assertTrue(SecondChatManager.isFormattedHqMessage(
+                "ɪɴʜᴀꜰᴛɪᴇʀᴛ // [UC]_ek61 \u2192 NuRisk"
+        ));
+        assertTrue(SecondChatManager.isFormattedHqMessage(
+                "ᴡᴀꜰꜰᴇɴ ᴀʙɴᴀʜᴍᴇ // FishMac_ \u2192 Ehhie"
+        ));
+    }
 }
