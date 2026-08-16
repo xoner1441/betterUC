@@ -13,11 +13,13 @@ import org.junit.jupiter.api.Test;
 class SecondChatTextCompatTest {
 
     @Test
-    void carriesNewsColorAcrossSiblingSegmentsWithoutOwnColor() {
+    void carriesNewsColorAcrossSiblingSegmentsMarkedWhiteByTheServer() {
         MutableComponent message = Component.empty()
                 .append(Component.literal("News von ").withStyle(ChatFormatting.GOLD))
-                .append(Component.literal("\u200CMichellethereal_\u200C").withStyle(ChatFormatting.UNDERLINE))
-                .append(Component.literal(": Der Orden veranstaltet um 14:35 Uhr einen Jugendausflug."));
+                .append(Component.literal("\u2063Michellethereal_\u2063")
+                        .withStyle(ChatFormatting.WHITE, ChatFormatting.UNDERLINE))
+                .append(Component.literal(": Der Orden veranstaltet um 14:35 Uhr einen Jugendausflug.")
+                        .withStyle(ChatFormatting.WHITE));
 
         Component copy = SecondChatTextCompat.copyWithResolvedStyles(message);
         List<Component> segments = copy.toFlatList();
@@ -28,10 +30,10 @@ class SecondChatTextCompatTest {
     }
 
     @Test
-    void keepsShopBuyerWhiteAndPreservesExplicitServerColors() {
+    void restoresShopBodyColorFromTheLaterAquaSegment() {
         MutableComponent message = Component.empty()
                 .append(Component.literal("[Shop] ").withStyle(ChatFormatting.GOLD))
-                .append(Component.literal("Ein anonymer K\u00E4ufer "))
+                .append(Component.literal("Ein anonymer K\u00E4ufer ").withStyle(ChatFormatting.WHITE))
                 .append(Component.literal("hat im ").withStyle(ChatFormatting.AQUA))
                 .append(Component.literal("Shop").withStyle(ChatFormatting.GOLD))
                 .append(Component.literal(" eingekauft!").withStyle(ChatFormatting.AQUA));
@@ -40,7 +42,7 @@ class SecondChatTextCompatTest {
         List<Component> segments = copy.toFlatList();
 
         assertEquals(TextColor.fromLegacyFormat(ChatFormatting.GOLD), segments.get(0).getStyle().getColor());
-        assertNull(segments.get(1).getStyle().getColor());
+        assertEquals(TextColor.fromLegacyFormat(ChatFormatting.AQUA), segments.get(1).getStyle().getColor());
         assertEquals(TextColor.fromLegacyFormat(ChatFormatting.AQUA), segments.get(2).getStyle().getColor());
         assertEquals(TextColor.fromLegacyFormat(ChatFormatting.GOLD), segments.get(3).getStyle().getColor());
         assertEquals(TextColor.fromLegacyFormat(ChatFormatting.AQUA), segments.get(4).getStyle().getColor());
