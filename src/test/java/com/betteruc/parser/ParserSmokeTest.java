@@ -240,6 +240,34 @@ class ParserSmokeTest {
     }
 
     @Test
+    void chatCustomizationHandlesCurrentJailedFormatWithGeneralUnicodeMarkers() {
+        ChatCustomizationFormatter.clearPending();
+
+        ChatCustomizationFormatter.Result first = ChatCustomizationFormatter.transform(
+                "15:02:56 HQ: \u2063jimmyskyblock\u2063 wurde von \u2063reaax72\u2063 eingesperrt.",
+                true,
+                false
+        );
+        assertNotNull(first);
+        assertTrue(first.cancelOriginal());
+        assertTrue(first.replacementMessages().isEmpty());
+
+        ChatCustomizationFormatter.Result second = ChatCustomizationFormatter.transform(
+                "HQ: Fahndungsgrund: BTM Besitz 11\u201320g | Fahndungszeit: 1 Minuten.",
+                true,
+                false
+        );
+        assertNotNull(second);
+        assertEquals(3, second.replacementMessages().size());
+        assertEquals(
+                "ɪɴʜᴀꜰᴛɪᴇʀᴛ // reaax72 \u2192 jimmyskyblock",
+                second.replacementMessages().get(0).getString()
+        );
+        assertEquals("\u00BB BTM Besitz 11\u201320g", second.replacementMessages().get(1).getString());
+        assertEquals("\u00BB 1 Minuten", second.replacementMessages().get(2).getString());
+    }
+
+    @Test
     void chatCustomizationFormatsWeaponSeizureWithoutFollowingReason() {
         ChatCustomizationFormatter.clearPending();
 

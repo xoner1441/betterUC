@@ -42,7 +42,7 @@ public final class ChatCustomizationFormatter {
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern JAILED_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(?:HQ:\\s*)?(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+wurde\\s+von\\s+(.+?)\\s+eingesperrt\\.?\\s*$",
+            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(?:HQ:\\s*)?(?:\\[[^\\]]+\\]\\s*)?(.+?)\\s+wurde\\s+von\\s+(.+?)\\s+eingesperrt[.!]?\\s*(?:\\[[^\\]]*\\]\\s*)*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern WEAPON_SEIZED_PATTERN = Pattern.compile(
@@ -542,7 +542,7 @@ public final class ChatCustomizationFormatter {
         return raw
                 .replace('\u00A0', ' ')
                 .replaceAll("(?i)\\u00A7[0-9A-FK-ORX]", "")
-                .replaceAll("[\\u00AD\\u200B-\\u200D\\u2060\\uFEFF]", "")
+                .replaceAll("\\p{Cf}", "")
                 .trim();
     }
 
