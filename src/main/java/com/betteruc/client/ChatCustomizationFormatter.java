@@ -13,6 +13,16 @@ import net.minecraft.network.chat.Style;
 
 public final class ChatCustomizationFormatter {
     private static final long PENDING_TTL_MS = 30000L;
+    private static final int ACTION_GRADIENT_START = 0xFF5555;
+    private static final int ACTION_GRADIENT_END = 0xAA0000;
+    private static final int ACTOR_GRADIENT_START = 0x55FFFF;
+    private static final int ACTOR_GRADIENT_END = 0x5555FF;
+    private static final int TARGET_GRADIENT_START = 0x5555FF;
+    private static final int TARGET_GRADIENT_END = 0xAA55FF;
+    private static final int DETAIL_GRADIENT_START = 0x55AAFF;
+    private static final int DETAIL_GRADIENT_END = 0x5555FF;
+    private static final int POSITIVE_GRADIENT_START = 0x55FF55;
+    private static final int POSITIVE_GRADIENT_END = 0x00AA00;
     private static final Pattern PLAYER_TOKEN_PATTERN = Pattern.compile("[A-Za-z0-9_]{2,16}");
     private static final Pattern TEAM_PLAYER_PATTERN = Pattern.compile(
             "\\[UC\\]\\s*([A-Za-z0-9_]{2,16})",
@@ -96,7 +106,8 @@ public final class ChatCustomizationFormatter {
                 wpsHqEnabled,
                 reinfEnabled,
                 BetterUCConfig.INSTANCE.chatActionTextStyle,
-                BetterUCConfig.INSTANCE.chatHeadlineSeparatorStyle
+                BetterUCConfig.INSTANCE.chatHeadlineSeparatorStyle,
+                BetterUCConfig.INSTANCE.chatCustomizationGradientEnabled
         );
         return result == null ? null : result.withInteractionFrom(original);
     }
@@ -107,7 +118,8 @@ public final class ChatCustomizationFormatter {
                 wpsHqEnabled,
                 reinfEnabled,
                 BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
-                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
         );
     }
 
@@ -118,7 +130,18 @@ public final class ChatCustomizationFormatter {
             String actionTextStyle,
             String separatorStyle
     ) {
-        HeadlineStyle headlineStyle = new HeadlineStyle(actionTextStyle, separatorStyle);
+        return transform(raw, wpsHqEnabled, reinfEnabled, actionTextStyle, separatorStyle, false);
+    }
+
+    static Result transform(
+            String raw,
+            boolean wpsHqEnabled,
+            boolean reinfEnabled,
+            String actionTextStyle,
+            String separatorStyle,
+            boolean gradientEnabled
+    ) {
+        HeadlineStyle headlineStyle = new HeadlineStyle(actionTextStyle, separatorStyle, gradientEnabled);
         String clean = normalize(raw);
         if (clean.isEmpty()) return null;
 
@@ -132,7 +155,7 @@ public final class ChatCustomizationFormatter {
         if (paySent.matches()) {
             return Result.replace(List.of(
                     payHeadline("Du", paySent.group(1), headlineStyle),
-                    amountDetail("-" + cleanAmount(paySent.group(2)) + "$", ChatFormatting.RED)
+                    amountDetail("-" + cleanAmount(paySent.group(2)) + "$", ChatFormatting.RED, headlineStyle)
             ));
         }
 
@@ -140,7 +163,7 @@ public final class ChatCustomizationFormatter {
         if (payReceived.matches()) {
             return Result.replace(List.of(
                     payHeadline(payReceived.group(1), "Du", headlineStyle),
-                    amountDetail("+" + cleanAmount(payReceived.group(2)) + "$", ChatFormatting.GREEN)
+                    amountDetail("+" + cleanAmount(payReceived.group(2)) + "$", ChatFormatting.GREEN, headlineStyle)
             ));
         }
         }
@@ -186,7 +209,7 @@ public final class ChatCustomizationFormatter {
             pending = null;
             return Result.replace(messages(
                     headline("GESUCHT", current.target(), headlineStyle),
-                    reasonDetails(current.reason(), wantedLevel.group(2) + " Wanteds")
+                    reasonDetails(current.reason(), wantedLevel.group(2) + " Wanteds", headlineStyle)
             ));
         }
 
@@ -223,7 +246,7 @@ public final class ChatCustomizationFormatter {
             String action = fahndungAction(current.type());
             return Result.replace(messages(
                     headline(action, current.actor(), current.target(), headlineStyle),
-                    reasonDetails(searchReason.group(1), searchReason.group(2) + " " + searchReason.group(3))
+                    reasonDetails(searchReason.group(1), searchReason.group(2) + " " + searchReason.group(3), headlineStyle)
             ));
         }
 
@@ -239,7 +262,7 @@ public final class ChatCustomizationFormatter {
             pending = null;
             return Result.replace(messages(
                     headline("VERÄNDERT", current.actor(), current.target(), headlineStyle),
-                    reasonDetails(newReason.group(1), newReason.group(2) + " » " + newReason.group(3) + " Wanteds")
+                    reasonDetails(newReason.group(1), newReason.group(2) + " » " + newReason.group(3) + " Wanteds", headlineStyle)
             ));
         }
 
@@ -247,7 +270,7 @@ public final class ChatCustomizationFormatter {
         if (deleted.matches()) {
             return Result.replace(List.of(
                     headline("GELÖSCHT", playerName(deleted.group(1)), playerName(deleted.group(2)), headlineStyle),
-                    detail("Akten gelöscht", "")
+                    detail("Akten gelöscht", "", headlineStyle)
             ));
         }
 
@@ -291,23 +314,23 @@ public final class ChatCustomizationFormatter {
     private static Component headline(String action, String target, HeadlineStyle headlineStyle) {
         return action(action, headlineStyle)
                 .append(separator(headlineLeadSeparator(headlineStyle)))
-                .append(name(target));
+                .append(targetName(target, headlineStyle));
     }
 
     private static Component headline(String action, String actor, String target, HeadlineStyle headlineStyle) {
         return action(action, headlineStyle)
                 .append(separator(headlineLeadSeparator(headlineStyle)))
-                .append(name(actor))
+                .append(actorName(actor, headlineStyle))
                 .append(separator(headlineDirectionSeparator(headlineStyle)))
-                .append(name(target));
+                .append(targetName(target, headlineStyle));
     }
 
-    private static Component detail(String reason, String suffix) {
+    private static Component detail(String reason, String suffix, HeadlineStyle headlineStyle) {
         MutableComponent text = Component.literal("» ").withStyle(ChatFormatting.GRAY)
-                .append(Component.literal(reason == null ? "" : reason.trim()).withStyle(ChatFormatting.BLUE));
+                .append(detailText(reason, headlineStyle));
         if (suffix != null && !suffix.isBlank()) {
             text.append(separator(" | "))
-                    .append(Component.literal(suffix.trim()).withStyle(ChatFormatting.YELLOW));
+                    .append(detailText(suffix, headlineStyle));
         }
         return text;
     }
@@ -319,15 +342,15 @@ public final class ChatCustomizationFormatter {
         return messages;
     }
 
-    private static List<Component> reasonDetails(String reason, String suffix) {
+    private static List<Component> reasonDetails(String reason, String suffix, HeadlineStyle headlineStyle) {
         String normalizedReason = normalizeReason(reason);
         if (suffix == null || suffix.isBlank()) {
-            return List.of(detail(normalizedReason, ""));
+            return List.of(detail(normalizedReason, "", headlineStyle));
         }
 
         return List.of(
-                detail(normalizedReason, ""),
-                valueDetail(suffix)
+                detail(normalizedReason, "", headlineStyle),
+                valueDetail(suffix, headlineStyle)
         );
     }
 
@@ -340,22 +363,29 @@ public final class ChatCustomizationFormatter {
                 .replaceAll("(?i)\\bDrogenabgabe\\s*(5|10|15)\\s*g?\\b", "DA $1g");
     }
 
-    private static Component valueDetail(String value) {
+    private static Component valueDetail(String value, HeadlineStyle headlineStyle) {
         return Component.literal("» ").withStyle(ChatFormatting.GRAY)
-                .append(Component.literal(value == null ? "" : value.trim()).withStyle(ChatFormatting.YELLOW));
+                .append(detailText(value, headlineStyle));
     }
 
-    private static Component amountDetail(String amount, ChatFormatting color) {
-        return Component.literal("\u00BB ").withStyle(ChatFormatting.GRAY)
-                .append(Component.literal(amount == null ? "" : amount.trim()).withStyle(color, ChatFormatting.BOLD));
+    private static Component amountDetail(String amount, ChatFormatting color, HeadlineStyle headlineStyle) {
+        MutableComponent value = headlineStyle.gradientEnabled()
+                ? gradientText(
+                        amount == null ? "" : amount.trim(),
+                        color == ChatFormatting.GREEN ? POSITIVE_GRADIENT_START : ACTION_GRADIENT_START,
+                        color == ChatFormatting.GREEN ? POSITIVE_GRADIENT_END : ACTION_GRADIENT_END,
+                        true
+                )
+                : Component.literal(amount == null ? "" : amount.trim()).withStyle(color, ChatFormatting.BOLD);
+        return Component.literal("\u00BB ").withStyle(ChatFormatting.GRAY).append(value);
     }
 
     private static Component payHeadline(String actor, String target, HeadlineStyle headlineStyle) {
         return action("PAY", headlineStyle)
                 .append(separator(headlineLeadSeparator(headlineStyle)))
-                .append(payName(actor))
+                .append(headlineStyle.gradientEnabled() ? actorName(actor, headlineStyle) : payName(actor))
                 .append(separator(headlineDirectionSeparator(headlineStyle)))
-                .append(payName(target));
+                .append(headlineStyle.gradientEnabled() ? targetName(target, headlineStyle) : payName(target));
     }
 
     private static Component supportHeadline(String action, String target) {
@@ -418,6 +448,9 @@ public final class ChatCustomizationFormatter {
         if (BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS.equals(headlineStyle.actionTextStyle())) {
             label = SmallCapsText.convert(label);
         }
+        if (headlineStyle.gradientEnabled()) {
+            return gradientText(label, ACTION_GRADIENT_START, ACTION_GRADIENT_END, true);
+        }
         return Component.literal(label).withStyle(ChatFormatting.RED);
     }
 
@@ -433,8 +466,55 @@ public final class ChatCustomizationFormatter {
                 : " \u00BB ";
     }
 
-    private static MutableComponent name(String value) {
-        return Component.literal(value == null ? "" : value.trim()).withStyle(ChatFormatting.BLUE);
+    private static MutableComponent actorName(String value, HeadlineStyle headlineStyle) {
+        String name = value == null ? "" : value.trim();
+        return headlineStyle.gradientEnabled()
+                ? gradientText(name, ACTOR_GRADIENT_START, ACTOR_GRADIENT_END, false)
+                : Component.literal(name).withStyle(ChatFormatting.BLUE);
+    }
+
+    private static MutableComponent targetName(String value, HeadlineStyle headlineStyle) {
+        String name = value == null ? "" : value.trim();
+        return headlineStyle.gradientEnabled()
+                ? gradientText(name, TARGET_GRADIENT_START, TARGET_GRADIENT_END, false)
+                : Component.literal(name).withStyle(ChatFormatting.BLUE);
+    }
+
+    private static MutableComponent detailText(String value, HeadlineStyle headlineStyle) {
+        String text = value == null ? "" : value.trim();
+        return headlineStyle.gradientEnabled()
+                ? gradientText(text, DETAIL_GRADIENT_START, DETAIL_GRADIENT_END, true)
+                : Component.literal(text).withStyle(ChatFormatting.BLUE);
+    }
+
+    private static MutableComponent gradientText(
+            String value,
+            int startColor,
+            int endColor,
+            boolean bold
+    ) {
+        MutableComponent result = Component.empty();
+        int[] codePoints = (value == null ? "" : value).codePoints().toArray();
+        for (int index = 0; index < codePoints.length; index++) {
+            float progress = codePoints.length <= 1 ? 0.0F : (float) index / (codePoints.length - 1);
+            Style style = Style.EMPTY.withColor(interpolateColor(startColor, endColor, progress));
+            if (bold) {
+                style = style.withBold(true);
+            }
+            result.append(Component.literal(new String(Character.toChars(codePoints[index]))).setStyle(style));
+        }
+        return result;
+    }
+
+    private static int interpolateColor(int startColor, int endColor, float progress) {
+        float clamped = Math.max(0.0F, Math.min(1.0F, progress));
+        int red = Math.round(((startColor >> 16) & 0xFF) * (1.0F - clamped)
+                + ((endColor >> 16) & 0xFF) * clamped);
+        int green = Math.round(((startColor >> 8) & 0xFF) * (1.0F - clamped)
+                + ((endColor >> 8) & 0xFF) * clamped);
+        int blue = Math.round((startColor & 0xFF) * (1.0F - clamped)
+                + (endColor & 0xFF) * clamped);
+        return (red << 16) | (green << 8) | blue;
     }
 
     private static MutableComponent supportName(String value) {
@@ -515,7 +595,7 @@ public final class ChatCustomizationFormatter {
     private record Pending(PendingType type, String actor, String target, String reason, long createdAtMs) {
     }
 
-    private record HeadlineStyle(String actionTextStyle, String separatorStyle) {
+    private record HeadlineStyle(String actionTextStyle, String separatorStyle, boolean gradientEnabled) {
     }
 
     private static Style findInteractiveStyle(Component component) {

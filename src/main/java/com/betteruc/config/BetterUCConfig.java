@@ -85,6 +85,7 @@ public class BetterUCConfig {
             "autoAtmInfoOnBalanceEnabled", "autoForceDepositEnabled", "richTaxAlertEnabled",
             "richTaxAlertSoundEnabled",
             "chatTimestampsEnabled", "chatCustomizationEnabled", "chatActionTextStyle", "chatHeadlineSeparatorStyle",
+            "chatCustomizationGradientEnabled",
             "secondChatEnabled", "secondChatLocked", "secondChatBackgroundEnabled",
             "secondChatX", "secondChatY", "secondChatWidth", "secondChatHeight",
             "secondChatPrimaryCustomSize",
@@ -445,6 +446,7 @@ public class BetterUCConfig {
     public boolean chatCustomizationEnabled = true;
     public String chatActionTextStyle = CHAT_ACTION_TEXT_SMALL_CAPS;
     public String chatHeadlineSeparatorStyle = CHAT_SEPARATOR_TECHNICAL;
+    public boolean chatCustomizationGradientEnabled = true;
     public boolean reinfCustomizationEnabled = true;
     public boolean reinfUniformColorEnabled = false;
     public int reinfLabelColor = DEFAULT_REINF_LABEL_COLOR;

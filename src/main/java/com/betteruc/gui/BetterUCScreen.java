@@ -329,6 +329,10 @@ public class BetterUCScreen extends Screen {
                                 saveConfig();
                                 refreshWidgets();
                             });
+                    y = addToggle(x, y, controlW, "HQ-Farbverlauf",
+                            BetterUCConfig.INSTANCE.chatCustomizationGradientEnabled,
+                            () -> BetterUCConfig.INSTANCE.chatCustomizationGradientEnabled =
+                                    !BetterUCConfig.INSTANCE.chatCustomizationGradientEnabled);
                 }
 
                 y = addSectionHeader(x, y, controlW, "Reinf", BetterUCConfig.INSTANCE.reinfLabelColor);
