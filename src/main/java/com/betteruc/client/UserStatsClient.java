@@ -90,7 +90,7 @@ public final class UserStatsClient {
         }
 
         changed |= updateNumber(LOYALTY_PATTERN.matcher(trimmed), StatNumber.LOYALTY);
-        changed |= updateNumber(PLAYTIME_PATTERN.matcher(trimmed), StatNumber.PLAYTIME);
+        changed |= updateNumber(parsePlayTimeHours(trimmed), StatNumber.PLAYTIME);
         changed |= updateNumber(VOTEPOINTS_PATTERN.matcher(trimmed), StatNumber.VOTEPOINTS);
 
         if (changed) {
@@ -100,7 +100,10 @@ public final class UserStatsClient {
 
     private static boolean updateNumber(Matcher matcher, StatNumber statNumber) {
         if (!matcher.find()) return false;
-        Integer parsed = parseNumber(matcher.group(1));
+        return updateNumber(parseNumber(matcher.group(1)), statNumber);
+    }
+
+    private static boolean updateNumber(Integer parsed, StatNumber statNumber) {
         if (parsed == null) return false;
 
         switch (statNumber) {
@@ -123,6 +126,12 @@ public final class UserStatsClient {
                 return false;
             }
         }
+    }
+
+    static Integer parsePlayTimeHours(String raw) {
+        Matcher matcher = PLAYTIME_PATTERN.matcher(cleanStatsLine(raw));
+        if (!matcher.find()) return null;
+        return parseNumber(matcher.group(1));
     }
 
     private static void requestUpload(Minecraft client) {

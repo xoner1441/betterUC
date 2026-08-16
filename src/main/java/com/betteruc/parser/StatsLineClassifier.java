@@ -10,7 +10,7 @@ public final class StatsLineClassifier {
     private static final Pattern HEADER_PATTERN = Pattern.compile("statistiken", Pattern.CASE_INSENSITIVE);
     private static final Pattern TIMED_LINE_PATTERN = Pattern.compile("^\\d{1,2}:\\d{2}:\\d{2}\\s+-\\s+.*");
     private static final Pattern KEYWORD_PATTERN = Pattern.compile(
-            "\\b(status|level|inventar|wanted\\s+punkte|geld|schwarzgeld|verwarnungen|zeit\\s+seit\\s+payday|experience|fraktion|haus|immobilien|beruf|votepoints|treuebonus|spielzeit)\\b",
+            "\\b(status|level|inventar|wanted\\s+punkte|geld|schwarzgeld|verwarnungen|zeit\\s+seit\\s+payday|experience|fraktion|haus|immobilien|beruf|votepoints|treuebonus|spielzeitbonus|spielzeit)\\b",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern HOVER_KEYWORD_PATTERN = Pattern.compile(

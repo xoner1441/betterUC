@@ -106,8 +106,29 @@ class ParserSmokeTest {
         assertTrue(StatsLineClassifier.isDetailLine("02:55:59 - Immobilien [Details]"));
         assertTrue(StatsLineClassifier.isDetailLine("\u00A78- \u00A76Immobilien \u00A77[\u00A7cDetails\u00A77]"));
         assertTrue(StatsLineClassifier.isDetailLine("03:06:58 \u00A78- \u00A76Immobilien \u00A77[\u00A7cDetails\u00A77]"));
+        assertTrue(StatsLineClassifier.isDetailLine("14:30:53 - Spielzeitbonus: 0 Punkte"));
+        assertTrue(StatsLineClassifier.isDetailLine("14:30:53 - Spielzeit: 502 Stunden"));
         assertTrue(StatsLineClassifier.isStandaloneKdStatsLine("14:04:31    - K/D: 1.48"));
         assertTrue(StatsLineClassifier.isStandaloneKdStatsLine("\u00A7714:04:31 \u00A78- \u00A7eK/D: \u00A7c1.48"));
+    }
+
+    @Test
+    void statsClassifierHidesNewPlaytimeLinesDuringSilentJoinAndAfkRefreshes() {
+        long now = 10_000L;
+        assertTrue(StatsLineClassifier.shouldForceHideLine(
+                "14:30:53 - Spielzeitbonus: 0 Punkte",
+                now,
+                0L,
+                now + 1_000L,
+                now + 1_000L
+        ));
+        assertTrue(StatsLineClassifier.shouldForceHideLine(
+                "14:30:53 - Spielzeit: 502 Stunden",
+                now,
+                now + 1_000L,
+                0L,
+                0L
+        ));
     }
 
     @Test
