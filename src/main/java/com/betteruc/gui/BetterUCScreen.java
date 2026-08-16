@@ -15,6 +15,7 @@ import com.betteruc.client.VersionChecker;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.CashHud;
+import com.betteruc.hud.DateTimeHud;
 import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.HealthHud;
 import com.betteruc.hud.ModernHudRenderer;
@@ -161,6 +162,25 @@ public class BetterUCScreen extends Screen {
                         () -> BetterUCConfig.INSTANCE.showFpsHud = !BetterUCConfig.INSTANCE.showFpsHud);
                 y = addColorButton(x, y, controlW, "FPS Farbe", BetterUCConfig.INSTANCE.fpsHudColor,
                         color -> BetterUCConfig.INSTANCE.fpsHudColor = color);
+            }
+            case DATE_TIME -> {
+                y = addSectionHeader(x, y, controlW, "Anzeige", 0xFF38BDF8);
+                y = addToggle(x, y, controlW, "Datum & Uhrzeit HUD", BetterUCConfig.INSTANCE.showDateTimeHud,
+                        () -> BetterUCConfig.INSTANCE.showDateTimeHud = !BetterUCConfig.INSTANCE.showDateTimeHud);
+                y = addToggle(x, y, controlW, "Datum anzeigen", BetterUCConfig.INSTANCE.dateTimeHudShowDate,
+                        () -> BetterUCConfig.INSTANCE.dateTimeHudShowDate = !BetterUCConfig.INSTANCE.dateTimeHudShowDate);
+                y = addToggle(x, y, controlW, "Uhrzeit anzeigen", BetterUCConfig.INSTANCE.dateTimeHudShowTime,
+                        () -> BetterUCConfig.INSTANCE.dateTimeHudShowTime = !BetterUCConfig.INSTANCE.dateTimeHudShowTime);
+                if (BetterUCConfig.INSTANCE.dateTimeHudShowTime) {
+                    y = addToggle(x, y, controlW, "Sekunden anzeigen", BetterUCConfig.INSTANCE.dateTimeHudShowSeconds,
+                            () -> BetterUCConfig.INSTANCE.dateTimeHudShowSeconds = !BetterUCConfig.INSTANCE.dateTimeHudShowSeconds);
+                }
+                if (BetterUCConfig.INSTANCE.dateTimeHudShowDate && BetterUCConfig.INSTANCE.dateTimeHudShowTime) {
+                    y = addToggle(x, y, controlW, "Zweizeilig", BetterUCConfig.INSTANCE.dateTimeHudTwoLines,
+                            () -> BetterUCConfig.INSTANCE.dateTimeHudTwoLines = !BetterUCConfig.INSTANCE.dateTimeHudTwoLines);
+                }
+                y = addColorButton(x, y, controlW, "Datum & Uhrzeit Farbe", BetterUCConfig.INSTANCE.dateTimeHudColor,
+                        color -> BetterUCConfig.INSTANCE.dateTimeHudColor = color);
             }
             case PAYDAY -> {
                 y = addSectionHeader(x, y, controlW, "Anzeige", 0xFFFACC15);
@@ -802,6 +822,11 @@ public class BetterUCScreen extends Screen {
             case "Health HUD" -> "Zeigt deine aktuellen Herzen als frei positionierbares HUD.";
             case "Absorptionsherzen" -> "Zeigt zusätzliche Absorptionsherzen neben deinen normalen Herzen.";
             case "FPS HUD" -> "Zeigt deine aktuellen Bilder pro Sekunde.";
+            case "Datum & Uhrzeit HUD" -> "Zeigt dein lokales Datum und deine lokale Uhrzeit als frei positionierbares HUD.";
+            case "Datum anzeigen" -> "Blendet das lokale Systemdatum im Widget ein.";
+            case "Uhrzeit anzeigen" -> "Blendet die lokale Systemzeit im Widget ein.";
+            case "Sekunden anzeigen" -> "Erweitert die Uhrzeit um eine sekundengenaue Anzeige.";
+            case "Zweizeilig" -> "Zeigt Datum und Uhrzeit untereinander statt mit // getrennt.";
             case "Payday HUD" -> "Zeigt den Fortschritt bis zu deinem nächsten PayDay.";
             case "Ammo HUD" -> "Zeigt Munition, Magazinstand und die erkannte Waffe.";
             case "Magazinbalken" -> "Ergänzt das moderne Ammo-HUD um einen Magazin-Fortschrittsbalken.";
@@ -1447,6 +1472,7 @@ public class BetterUCScreen extends Screen {
                             BetterUCConfig.INSTANCE.fpsHudColor);
                 }
             }
+            case DATE_TIME -> DateTimeHud.drawPreview(context, minecraft, previewX, previewY);
             case PAYDAY -> {
                 if (modernStyle) {
                     ModernHudRenderer.drawProgressModule(context, minecraft, previewX, previewY, hudPreviewLabel(ModuleOption.PAYDAY),
@@ -1957,6 +1983,7 @@ public class BetterUCScreen extends Screen {
         return switch (module) {
             case HEALTH -> BetterUCConfig.INSTANCE.showHealthHud;
             case FPS -> BetterUCConfig.INSTANCE.showFpsHud;
+            case DATE_TIME -> BetterUCConfig.INSTANCE.showDateTimeHud;
             case PAYDAY -> BetterUCConfig.INSTANCE.showPaydayHud;
             case AMMO -> BetterUCConfig.INSTANCE.showAmmoHud;
             case BANK -> BetterUCConfig.INSTANCE.showBankHud;
@@ -1980,6 +2007,7 @@ public class BetterUCScreen extends Screen {
         return switch (module) {
             case HEALTH -> BetterUCConfig.INSTANCE.healthHudStyle;
             case FPS -> BetterUCConfig.INSTANCE.fpsHudStyle;
+            case DATE_TIME -> BetterUCConfig.INSTANCE.dateTimeHudStyle;
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudStyle;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudStyle;
             case BANK -> BetterUCConfig.INSTANCE.bankHudStyle;
@@ -2000,6 +2028,7 @@ public class BetterUCScreen extends Screen {
         switch (module) {
             case HEALTH -> BetterUCConfig.INSTANCE.healthHudStyle = style;
             case FPS -> BetterUCConfig.INSTANCE.fpsHudStyle = style;
+            case DATE_TIME -> BetterUCConfig.INSTANCE.dateTimeHudStyle = style;
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudStyle = style;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudStyle = style;
             case BANK -> BetterUCConfig.INSTANCE.bankHudStyle = style;
@@ -2021,6 +2050,7 @@ public class BetterUCScreen extends Screen {
         return switch (module) {
             case HEALTH -> BetterUCConfig.INSTANCE.healthHudCustomFont;
             case FPS -> BetterUCConfig.INSTANCE.fpsHudCustomFont;
+            case DATE_TIME -> BetterUCConfig.INSTANCE.dateTimeHudCustomFont;
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudCustomFont;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudCustomFont;
             case BANK -> BetterUCConfig.INSTANCE.bankHudCustomFont;
@@ -2041,6 +2071,7 @@ public class BetterUCScreen extends Screen {
         switch (module) {
             case HEALTH -> BetterUCConfig.INSTANCE.healthHudCustomFont = fontId;
             case FPS -> BetterUCConfig.INSTANCE.fpsHudCustomFont = fontId;
+            case DATE_TIME -> BetterUCConfig.INSTANCE.dateTimeHudCustomFont = fontId;
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudCustomFont = fontId;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudCustomFont = fontId;
             case BANK -> BetterUCConfig.INSTANCE.bankHudCustomFont = fontId;
@@ -2061,6 +2092,7 @@ public class BetterUCScreen extends Screen {
         return switch (module) {
             case HEALTH -> BetterUCConfig.INSTANCE.healthHudGradientEnabled;
             case FPS -> BetterUCConfig.INSTANCE.fpsHudGradientEnabled;
+            case DATE_TIME -> BetterUCConfig.INSTANCE.dateTimeHudGradientEnabled;
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudGradientEnabled;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudGradientEnabled;
             case BANK -> BetterUCConfig.INSTANCE.bankHudGradientEnabled;
@@ -2080,6 +2112,7 @@ public class BetterUCScreen extends Screen {
         switch (module) {
             case HEALTH -> BetterUCConfig.INSTANCE.healthHudGradientEnabled = enabled;
             case FPS -> BetterUCConfig.INSTANCE.fpsHudGradientEnabled = enabled;
+            case DATE_TIME -> BetterUCConfig.INSTANCE.dateTimeHudGradientEnabled = enabled;
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudGradientEnabled = enabled;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudGradientEnabled = enabled;
             case BANK -> BetterUCConfig.INSTANCE.bankHudGradientEnabled = enabled;
@@ -2100,6 +2133,7 @@ public class BetterUCScreen extends Screen {
         return switch (module) {
             case HEALTH -> BetterUCConfig.INSTANCE.healthHudGradientColor;
             case FPS -> BetterUCConfig.INSTANCE.fpsHudGradientColor;
+            case DATE_TIME -> BetterUCConfig.INSTANCE.dateTimeHudGradientColor;
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudGradientColor;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudGradientColor;
             case BANK -> BetterUCConfig.INSTANCE.bankHudGradientColor;
@@ -2119,6 +2153,7 @@ public class BetterUCScreen extends Screen {
         switch (module) {
             case HEALTH -> BetterUCConfig.INSTANCE.healthHudGradientColor = color;
             case FPS -> BetterUCConfig.INSTANCE.fpsHudGradientColor = color;
+            case DATE_TIME -> BetterUCConfig.INSTANCE.dateTimeHudGradientColor = color;
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudGradientColor = color;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudGradientColor = color;
             case BANK -> BetterUCConfig.INSTANCE.bankHudGradientColor = color;
@@ -2518,6 +2553,7 @@ public class BetterUCScreen extends Screen {
         HUD_PROFILES(Category.HUD, "HUD-Profile", "Eigene Layouts speichern", 0xFF38BDF8, false),
         HEALTH(Category.HUD, "Health", "Transparentes Herz-HUD", 0xFFFF5555, true),
         FPS(Category.HUD, "FPS", "Performance-Modul", BetterUCConfig.DEFAULT_FPS_HUD_COLOR, true),
+        DATE_TIME(Category.HUD, "Datum & Uhrzeit", "Lokale Zeit im HUD", BetterUCConfig.DEFAULT_DATE_TIME_HUD_COLOR, true),
         PAYDAY(Category.HUD, "Payday", "Payday-Fortschritt", BetterUCConfig.DEFAULT_PAYDAY_HUD_COLOR, true),
         AMMO(Category.HUD, "Ammo", "Munition und Waffe", 0xFFFFAA33, true),
         BANK(Category.HUD, "Bank", "Kontostand im HUD", BetterUCConfig.DEFAULT_BANK_HUD_COLOR, true),

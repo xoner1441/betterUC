@@ -43,29 +43,30 @@ public class BetterUCConfig {
             "timerX", "timerY", "hackTimerX", "hackTimerY", "plantTimerX", "plantTimerY",
             "dealerTimerX", "dealerTimerY", "maskTimerX", "maskTimerY", "productionTimerX", "productionTimerY",
             "healthHudX", "healthHudY", "toggleSprintHudX", "toggleSprintHudY", "fpsHudX", "fpsHudY",
+            "dateTimeHudX", "dateTimeHudY",
             "paydayHudX", "paydayHudY", "ammoHudX", "ammoHudY", "bankHudX", "bankHudY",
             "cashHudX", "cashHudY", "potionHudX", "potionHudY",
-            "healthHudScale", "toggleSprintHudScale", "fpsHudScale", "paydayHudScale", "ammoHudScale",
+            "healthHudScale", "toggleSprintHudScale", "fpsHudScale", "dateTimeHudScale", "paydayHudScale", "ammoHudScale",
             "bankHudScale", "cashHudScale", "potionHudScale", "hackTimerHudScale", "plantTimerHudScale",
             "dealerTimerHudScale", "maskTimerHudScale", "productionTimerHudScale",
-            "toggleSprintHudColor", "fpsHudColor", "paydayHudColor", "bankHudColor", "cashHudColor",
+            "toggleSprintHudColor", "fpsHudColor", "dateTimeHudColor", "paydayHudColor", "bankHudColor", "cashHudColor",
             "potionHudColor",
             "dealerTimerHudColor", "maskTimerHudColor", "productionTimerHudColor", "healthHudHeartColor", "healthHudTextColor",
             "healthHudAbsorptionColor", "showHealthAbsorption",
             "healthHudColor", "hudColorGradientEnabled", "hudGradientColor", "hudGradientConfigVersion",
-            "healthHudGradientEnabled", "toggleSprintHudGradientEnabled", "fpsHudGradientEnabled",
+            "healthHudGradientEnabled", "toggleSprintHudGradientEnabled", "fpsHudGradientEnabled", "dateTimeHudGradientEnabled",
             "paydayHudGradientEnabled", "ammoHudGradientEnabled", "bankHudGradientEnabled",
             "cashHudGradientEnabled", "potionHudGradientEnabled", "hackTimerHudGradientEnabled",
             "plantTimerHudGradientEnabled", "dealerTimerHudGradientEnabled", "maskTimerHudGradientEnabled",
             "productionTimerHudGradientEnabled",
-            "healthHudGradientColor", "toggleSprintHudGradientColor", "fpsHudGradientColor",
+            "healthHudGradientColor", "toggleSprintHudGradientColor", "fpsHudGradientColor", "dateTimeHudGradientColor",
             "paydayHudGradientColor", "ammoHudGradientColor", "bankHudGradientColor", "cashHudGradientColor",
             "potionHudGradientColor", "hackTimerHudGradientColor", "plantTimerHudGradientColor",
             "dealerTimerHudGradientColor", "maskTimerHudGradientColor", "productionTimerHudGradientColor",
-            "healthHudStyle", "toggleSprintHudStyle", "fpsHudStyle", "paydayHudStyle", "ammoHudStyle",
+            "healthHudStyle", "toggleSprintHudStyle", "fpsHudStyle", "dateTimeHudStyle", "paydayHudStyle", "ammoHudStyle",
             "bankHudStyle", "cashHudStyle", "potionHudStyle", "hackTimerHudStyle", "plantTimerHudStyle",
             "dealerTimerHudStyle", "maskTimerHudStyle", "productionTimerHudStyle", "healthHudCustomFont",
-            "toggleSprintHudCustomFont", "fpsHudCustomFont", "paydayHudCustomFont", "ammoHudCustomFont",
+            "toggleSprintHudCustomFont", "fpsHudCustomFont", "dateTimeHudCustomFont", "paydayHudCustomFont", "ammoHudCustomFont",
             "bankHudCustomFont", "cashHudCustomFont", "potionHudCustomFont", "hackTimerHudCustomFont",
             "plantTimerHudCustomFont", "dealerTimerHudCustomFont", "maskTimerHudCustomFont",
             "productionTimerHudCustomFont",
@@ -78,7 +79,8 @@ public class BetterUCConfig {
             "dealerTimerHudPrefix", "maskTimerHudPrefix", "productionTimerHudPrefix",
             "ammoHudMagazineBarEnabled", "ammoHudLowAmmoWarningEnabled", "ammoHudLowAmmoSoundEnabled",
             "ammoHudLowAmmoThresholdPercent", "ammoHudKr47MagazineSize",
-            "showHealthHud", "showFpsHud", "showPaydayHud", "showAmmoHud", "showBankHud", "showCashHud",
+            "showHealthHud", "showFpsHud", "showDateTimeHud", "dateTimeHudShowDate", "dateTimeHudShowTime",
+            "dateTimeHudShowSeconds", "dateTimeHudTwoLines", "showPaydayHud", "showAmmoHud", "showBankHud", "showCashHud",
             "showPotionEffectsHud", "showPlantTimerHud", "showDealerTimerHud", "showMaskTimerHud",
             "showProductionTimerHud",
             "toggleSprintEnabled", "autoStatsOnJoinEnabled", "autoFactionBankOnBalanceEnabled",
@@ -114,29 +116,30 @@ public class BetterUCConfig {
     );
     private static final Set<String> HUD_PROFILE_FIELDS = Set.of(
             "healthHudX", "healthHudY", "toggleSprintHudX", "toggleSprintHudY", "fpsHudX", "fpsHudY",
+            "dateTimeHudX", "dateTimeHudY",
             "paydayHudX", "paydayHudY", "ammoHudX", "ammoHudY", "bankHudX", "bankHudY",
             "cashHudX", "cashHudY", "potionHudX", "potionHudY", "hackTimerX", "hackTimerY",
             "plantTimerX", "plantTimerY", "dealerTimerX", "dealerTimerY", "maskTimerX", "maskTimerY",
             "productionTimerX", "productionTimerY",
-            "healthHudScale", "toggleSprintHudScale", "fpsHudScale", "paydayHudScale", "ammoHudScale",
+            "healthHudScale", "toggleSprintHudScale", "fpsHudScale", "dateTimeHudScale", "paydayHudScale", "ammoHudScale",
             "bankHudScale", "cashHudScale", "potionHudScale", "hackTimerHudScale", "plantTimerHudScale",
             "dealerTimerHudScale", "maskTimerHudScale", "productionTimerHudScale",
-            "toggleSprintHudColor", "fpsHudColor", "paydayHudColor", "bankHudColor", "cashHudColor",
+            "toggleSprintHudColor", "fpsHudColor", "dateTimeHudColor", "paydayHudColor", "bankHudColor", "cashHudColor",
             "potionHudColor", "dealerTimerHudColor", "maskTimerHudColor", "productionTimerHudColor",
             "healthHudHeartColor", "healthHudTextColor", "healthHudAbsorptionColor",
-            "healthHudGradientEnabled", "toggleSprintHudGradientEnabled", "fpsHudGradientEnabled",
+            "healthHudGradientEnabled", "toggleSprintHudGradientEnabled", "fpsHudGradientEnabled", "dateTimeHudGradientEnabled",
             "paydayHudGradientEnabled", "ammoHudGradientEnabled", "bankHudGradientEnabled",
             "cashHudGradientEnabled", "potionHudGradientEnabled", "hackTimerHudGradientEnabled",
             "plantTimerHudGradientEnabled", "dealerTimerHudGradientEnabled", "maskTimerHudGradientEnabled",
             "productionTimerHudGradientEnabled",
-            "healthHudGradientColor", "toggleSprintHudGradientColor", "fpsHudGradientColor",
+            "healthHudGradientColor", "toggleSprintHudGradientColor", "fpsHudGradientColor", "dateTimeHudGradientColor",
             "paydayHudGradientColor", "ammoHudGradientColor", "bankHudGradientColor", "cashHudGradientColor",
             "potionHudGradientColor", "hackTimerHudGradientColor", "plantTimerHudGradientColor",
             "dealerTimerHudGradientColor", "maskTimerHudGradientColor", "productionTimerHudGradientColor",
-            "healthHudStyle", "toggleSprintHudStyle", "fpsHudStyle", "paydayHudStyle", "ammoHudStyle",
+            "healthHudStyle", "toggleSprintHudStyle", "fpsHudStyle", "dateTimeHudStyle", "paydayHudStyle", "ammoHudStyle",
             "bankHudStyle", "cashHudStyle", "potionHudStyle", "hackTimerHudStyle", "plantTimerHudStyle",
             "dealerTimerHudStyle", "maskTimerHudStyle", "productionTimerHudStyle",
-            "healthHudCustomFont", "toggleSprintHudCustomFont", "fpsHudCustomFont", "paydayHudCustomFont",
+            "healthHudCustomFont", "toggleSprintHudCustomFont", "fpsHudCustomFont", "dateTimeHudCustomFont", "paydayHudCustomFont",
             "ammoHudCustomFont", "bankHudCustomFont", "cashHudCustomFont", "potionHudCustomFont",
             "hackTimerHudCustomFont", "plantTimerHudCustomFont", "dealerTimerHudCustomFont",
             "maskTimerHudCustomFont", "productionTimerHudCustomFont",
@@ -146,7 +149,8 @@ public class BetterUCConfig {
             "maskTimerHudPrefixEnabled", "productionTimerHudPrefixEnabled", "toggleSprintHudPrefix", "fpsHudPrefix", "paydayHudPrefix",
             "ammoHudPrefix", "bankHudPrefix", "cashHudPrefix", "hackTimerHudPrefix", "plantTimerHudPrefix",
             "dealerTimerHudPrefix", "maskTimerHudPrefix", "productionTimerHudPrefix",
-            "showHealthHud", "showHealthAbsorption", "showFpsHud", "showPaydayHud", "showAmmoHud",
+            "showHealthHud", "showHealthAbsorption", "showFpsHud", "showDateTimeHud", "dateTimeHudShowDate",
+            "dateTimeHudShowTime", "dateTimeHudShowSeconds", "dateTimeHudTwoLines", "showPaydayHud", "showAmmoHud",
             "showBankHud", "showCashHud", "showPotionEffectsHud", "showPlantTimerHud",
             "showDealerTimerHud", "showMaskTimerHud", "showProductionTimerHud", "toggleSprintEnabled",
             "ammoHudMagazineBarEnabled", "ammoHudLowAmmoWarningEnabled", "ammoHudLowAmmoSoundEnabled",
@@ -185,6 +189,7 @@ public class BetterUCConfig {
     public List<String> trackedFactionQueries = defaultTrackedFactionQueries();
     public static final int DEFAULT_TOGGLE_SPRINT_HUD_COLOR = 0xFF55FF55;
     public static final int DEFAULT_FPS_HUD_COLOR = 0xFF55FFFF;
+    public static final int DEFAULT_DATE_TIME_HUD_COLOR = 0xFFF8FAFC;
     public static final int DEFAULT_PAYDAY_HUD_COLOR = 0xFFFFD866;
     public static final int DEFAULT_BANK_HUD_COLOR = 0xFF55FFFF;
     public static final int DEFAULT_CASH_HUD_COLOR = 0xFF86EFAC;
@@ -285,6 +290,8 @@ public class BetterUCConfig {
     public int toggleSprintHudY = 28;
     public int fpsHudX = 10;
     public int fpsHudY = 46;
+    public int dateTimeHudX = 10;
+    public int dateTimeHudY = 136;
     public int paydayHudX = 10;
     public int paydayHudY = 64;
     public int ammoHudX = 10;
@@ -298,6 +305,7 @@ public class BetterUCConfig {
     public float healthHudScale = DEFAULT_HUD_SCALE;
     public float toggleSprintHudScale = DEFAULT_HUD_SCALE;
     public float fpsHudScale = DEFAULT_HUD_SCALE;
+    public float dateTimeHudScale = DEFAULT_HUD_SCALE;
     public float paydayHudScale = DEFAULT_HUD_SCALE;
     public float ammoHudScale = DEFAULT_HUD_SCALE;
     public float bankHudScale = DEFAULT_HUD_SCALE;
@@ -311,6 +319,7 @@ public class BetterUCConfig {
     public int lastKnownBankBalance = -1;
     public int toggleSprintHudColor = DEFAULT_TOGGLE_SPRINT_HUD_COLOR;
     public int fpsHudColor = DEFAULT_FPS_HUD_COLOR;
+    public int dateTimeHudColor = DEFAULT_DATE_TIME_HUD_COLOR;
     public int paydayHudColor = DEFAULT_PAYDAY_HUD_COLOR;
     public int bankHudColor = DEFAULT_BANK_HUD_COLOR;
     public int cashHudColor = DEFAULT_CASH_HUD_COLOR;
@@ -328,6 +337,7 @@ public class BetterUCConfig {
     public boolean healthHudGradientEnabled = false;
     public boolean toggleSprintHudGradientEnabled = false;
     public boolean fpsHudGradientEnabled = false;
+    public boolean dateTimeHudGradientEnabled = false;
     public boolean paydayHudGradientEnabled = false;
     public boolean ammoHudGradientEnabled = false;
     public boolean bankHudGradientEnabled = false;
@@ -341,6 +351,7 @@ public class BetterUCConfig {
     public int healthHudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
     public int toggleSprintHudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
     public int fpsHudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
+    public int dateTimeHudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
     public int paydayHudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
     public int ammoHudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
     public int bankHudGradientColor = DEFAULT_HUD_GRADIENT_COLOR;
@@ -354,6 +365,7 @@ public class BetterUCConfig {
     public String healthHudStyle = HUD_STYLE_TRANSPARENT;
     public String toggleSprintHudStyle = HUD_STYLE_MODERN;
     public String fpsHudStyle = HUD_STYLE_MODERN;
+    public String dateTimeHudStyle = HUD_STYLE_TRANSPARENT;
     public String paydayHudStyle = HUD_STYLE_MODERN;
     public String ammoHudStyle = HUD_STYLE_MODERN;
     public String bankHudStyle = HUD_STYLE_MODERN;
@@ -367,6 +379,7 @@ public class BetterUCConfig {
     public String healthHudCustomFont = "";
     public String toggleSprintHudCustomFont = "";
     public String fpsHudCustomFont = "";
+    public String dateTimeHudCustomFont = "";
     public String paydayHudCustomFont = "";
     public String ammoHudCustomFont = "";
     public String bankHudCustomFont = "";
@@ -409,6 +422,11 @@ public class BetterUCConfig {
     public boolean showHealthHud = true;
     public boolean showHealthAbsorption = true;
     public boolean showFpsHud = true;
+    public boolean showDateTimeHud = false;
+    public boolean dateTimeHudShowDate = true;
+    public boolean dateTimeHudShowTime = true;
+    public boolean dateTimeHudShowSeconds = false;
+    public boolean dateTimeHudTwoLines = false;
     public boolean showPaydayHud = true;
     public boolean showAmmoHud = true;
     public boolean showBankHud = true;
@@ -700,6 +718,7 @@ public class BetterUCConfig {
         INSTANCE.healthHudStyle = normalizeHudStyle(INSTANCE.healthHudStyle, HUD_STYLE_TRANSPARENT);
         INSTANCE.toggleSprintHudStyle = normalizeHudStyle(INSTANCE.toggleSprintHudStyle, HUD_STYLE_MODERN);
         INSTANCE.fpsHudStyle = normalizeHudStyle(INSTANCE.fpsHudStyle, HUD_STYLE_MODERN);
+        INSTANCE.dateTimeHudStyle = normalizeHudStyle(INSTANCE.dateTimeHudStyle, HUD_STYLE_TRANSPARENT);
         INSTANCE.paydayHudStyle = normalizeHudStyle(INSTANCE.paydayHudStyle, HUD_STYLE_MODERN);
         INSTANCE.ammoHudStyle = normalizeHudStyle(INSTANCE.ammoHudStyle, HUD_STYLE_MODERN);
         INSTANCE.bankHudStyle = normalizeHudStyle(INSTANCE.bankHudStyle, HUD_STYLE_MODERN);
@@ -717,6 +736,7 @@ public class BetterUCConfig {
         INSTANCE.healthHudScale = normalizeHudScale(INSTANCE.healthHudScale);
         INSTANCE.toggleSprintHudScale = normalizeHudScale(INSTANCE.toggleSprintHudScale);
         INSTANCE.fpsHudScale = normalizeHudScale(INSTANCE.fpsHudScale);
+        INSTANCE.dateTimeHudScale = normalizeHudScale(INSTANCE.dateTimeHudScale);
         INSTANCE.paydayHudScale = normalizeHudScale(INSTANCE.paydayHudScale);
         INSTANCE.ammoHudScale = normalizeHudScale(INSTANCE.ammoHudScale);
         INSTANCE.bankHudScale = normalizeHudScale(INSTANCE.bankHudScale);
@@ -898,6 +918,7 @@ public class BetterUCConfig {
             INSTANCE.healthHudGradientEnabled = INSTANCE.hudColorGradientEnabled;
             INSTANCE.toggleSprintHudGradientEnabled = INSTANCE.hudColorGradientEnabled;
             INSTANCE.fpsHudGradientEnabled = INSTANCE.hudColorGradientEnabled;
+            INSTANCE.dateTimeHudGradientEnabled = INSTANCE.hudColorGradientEnabled;
             INSTANCE.paydayHudGradientEnabled = INSTANCE.hudColorGradientEnabled;
             INSTANCE.ammoHudGradientEnabled = INSTANCE.hudColorGradientEnabled;
             INSTANCE.bankHudGradientEnabled = INSTANCE.hudColorGradientEnabled;
@@ -912,6 +933,7 @@ public class BetterUCConfig {
             INSTANCE.healthHudGradientColor = INSTANCE.hudGradientColor;
             INSTANCE.toggleSprintHudGradientColor = INSTANCE.hudGradientColor;
             INSTANCE.fpsHudGradientColor = INSTANCE.hudGradientColor;
+            INSTANCE.dateTimeHudGradientColor = INSTANCE.hudGradientColor;
             INSTANCE.paydayHudGradientColor = INSTANCE.hudGradientColor;
             INSTANCE.ammoHudGradientColor = INSTANCE.hudGradientColor;
             INSTANCE.bankHudGradientColor = INSTANCE.hudGradientColor;
@@ -928,6 +950,7 @@ public class BetterUCConfig {
         INSTANCE.healthHudGradientColor = sanitizeHudColor(INSTANCE.healthHudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
         INSTANCE.toggleSprintHudGradientColor = sanitizeHudColor(INSTANCE.toggleSprintHudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
         INSTANCE.fpsHudGradientColor = sanitizeHudColor(INSTANCE.fpsHudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
+        INSTANCE.dateTimeHudGradientColor = sanitizeHudColor(INSTANCE.dateTimeHudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
         INSTANCE.paydayHudGradientColor = sanitizeHudColor(INSTANCE.paydayHudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
         INSTANCE.ammoHudGradientColor = sanitizeHudColor(INSTANCE.ammoHudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
         INSTANCE.bankHudGradientColor = sanitizeHudColor(INSTANCE.bankHudGradientColor, DEFAULT_HUD_GRADIENT_COLOR);
@@ -1564,6 +1587,7 @@ public class BetterUCConfig {
             migrateSplitTimerPositions();
             INSTANCE.toggleSprintHudColor = sanitizeHudColor(INSTANCE.toggleSprintHudColor, DEFAULT_TOGGLE_SPRINT_HUD_COLOR);
             INSTANCE.fpsHudColor = sanitizeHudColor(INSTANCE.fpsHudColor, DEFAULT_FPS_HUD_COLOR);
+            INSTANCE.dateTimeHudColor = sanitizeHudColor(INSTANCE.dateTimeHudColor, DEFAULT_DATE_TIME_HUD_COLOR);
             INSTANCE.paydayHudColor = sanitizeHudColor(INSTANCE.paydayHudColor, DEFAULT_PAYDAY_HUD_COLOR);
             INSTANCE.bankHudColor = sanitizeHudColor(INSTANCE.bankHudColor, DEFAULT_BANK_HUD_COLOR);
             INSTANCE.cashHudColor = sanitizeHudColor(INSTANCE.cashHudColor, DEFAULT_CASH_HUD_COLOR);

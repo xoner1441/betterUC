@@ -44,6 +44,7 @@ import com.betteruc.hud.AmmoHud;
 import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.CashHud;
 import com.betteruc.hud.DealerTimerHud;
+import com.betteruc.hud.DateTimeHud;
 import com.betteruc.hud.FpsHud;
 import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.HealthHud;
@@ -217,6 +218,7 @@ public class BetterUCClient implements ClientModInitializer {
         HealthHud.register();
         ToggleSprintHud.register();
         FpsHud.register();
+        DateTimeHud.register();
         PaydayHud.register();
         PlantageHud.register();
         PotionEffectsHud.register();
