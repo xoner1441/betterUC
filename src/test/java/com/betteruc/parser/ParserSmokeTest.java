@@ -215,6 +215,43 @@ class ParserSmokeTest {
     }
 
     @Test
+    void chatCustomizationHandlesCurrentCombinedSecondChatKillMessage() {
+        ChatCustomizationFormatter.clearPending();
+
+        ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
+                "[betterUC Second Chat] HQ: xImReshi wurde von mteii getötet.\\n"
+                        + "HQ: Fahndungsgrund: Versuchter Mord | Fahndungszeit: 0 Minuten.",
+                true,
+                false
+        );
+
+        assertNotNull(result);
+        assertEquals(3, result.replacementMessages().size());
+        assertEquals("ɢᴇᴛöᴛᴇᴛ // mteii → xImReshi", result.replacementMessages().get(0).getString());
+        assertEquals("\u00BB Versuchter Mord", result.replacementMessages().get(1).getString());
+        assertEquals("\u00BB 0 Minuten", result.replacementMessages().get(2).getString());
+    }
+
+    @Test
+    void chatCustomizationHandlesCurrentCombinedSecondChatJailMessage() {
+        ChatCustomizationFormatter.clearPending();
+
+        ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
+                "[betterUC Second Chat] HQ: Level10Rizzler wurde von FABI1441 eingesperrt.\n"
+                        + "HQ: Fahndungsgrund: Versuchter Mord | Fahndungszeit: 2 Minuten.",
+                true,
+                false
+        );
+
+        assertNotNull(result);
+        assertEquals(3, result.replacementMessages().size());
+        assertEquals("ɪɴʜᴀꜰᴛɪᴇʀᴛ // FABI1441 → Level10Rizzler",
+                result.replacementMessages().get(0).getString());
+        assertEquals("\u00BB Versuchter Mord", result.replacementMessages().get(1).getString());
+        assertEquals("\u00BB 2 Minuten", result.replacementMessages().get(2).getString());
+    }
+
+    @Test
     void chatCustomizationHandlesInvisiblePlayerNameMarkersInCurrentHqFormat() {
         ChatCustomizationFormatter.clearPending();
 
@@ -467,8 +504,8 @@ class ParserSmokeTest {
                 false
         );
         assertNotNull(deleted);
-        assertEquals(2, deleted.replacementMessages().size());
-        assertEquals("ɢᴇʟöꜱᴄʜᴛ // WzrU \u2192 Crizock404HD", deleted.replacementMessages().get(0).getString());
+        assertEquals(1, deleted.replacementMessages().size());
+        assertEquals("ᴀᴋᴛᴇɴ ɢᴇʟöꜱᴄʜᴛ // WzrU \u2192 Crizock404HD", deleted.replacementMessages().get(0).getString());
     }
 
     @Test

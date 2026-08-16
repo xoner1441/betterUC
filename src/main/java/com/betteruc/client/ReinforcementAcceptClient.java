@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.world.level.GameType;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -46,7 +47,7 @@ public final class ReinforcementAcceptClient {
             return;
         }
 
-        if (!BetterUCConfig.INSTANCE.reinfAcceptEnabled || afk) return;
+        if (!BetterUCConfig.INSTANCE.reinfAcceptEnabled || afk || !isGameModeAllowed(client)) return;
         if (!ReinforcementTypeMatcher.normalize(raw).contains("unterwegs")) return;
         if (latestType == null || now - latestHeadlineAtMs > HEADLINE_MATCH_WINDOW_MS) return;
         if (!isTypeEnabled(latestType)) return;
@@ -70,7 +71,10 @@ public final class ReinforcementAcceptClient {
     public static void tick(Minecraft client) {
         if (pending == null) return;
         long now = System.currentTimeMillis();
-        if (!BetterUCConfig.INSTANCE.reinfAcceptEnabled || afk || now - pending.createdAtMs > PENDING_EXPIRY_MS) {
+        if (!BetterUCConfig.INSTANCE.reinfAcceptEnabled
+                || afk
+                || !isGameModeAllowed(client)
+                || now - pending.createdAtMs > PENDING_EXPIRY_MS) {
             pending = null;
             return;
         }
@@ -85,6 +89,10 @@ public final class ReinforcementAcceptClient {
         }
         if (afk) {
             notify(client, "\u00A7c[betterUC] Reinf-Annahme ist im AFK-Modus gesperrt.");
+            return;
+        }
+        if (!isGameModeAllowed(client)) {
+            notify(client, "\u00A7c[betterUC] Reinf-Annahme ist nur im Survival-Modus erlaubt.");
             return;
         }
         if (pending == null || System.currentTimeMillis() - pending.createdAtMs > PENDING_EXPIRY_MS) {
@@ -116,6 +124,12 @@ public final class ReinforcementAcceptClient {
 
     private static void tryAccept(Minecraft client, boolean notifyOnBlocked) {
         if (pending == null) return;
+        if (!isGameModeAllowed(client)) {
+            if (notifyOnBlocked) {
+                notify(client, "\u00A7c[betterUC] Reinf-Annahme ist nur im Survival-Modus erlaubt.");
+            }
+            return;
+        }
         long now = System.currentTimeMillis();
         long cooldownMs = BetterUCConfig.INSTANCE.reinfAcceptCooldownSeconds * 1_000L;
         if (now - lastAcceptedAtMs < cooldownMs) {
@@ -170,6 +184,17 @@ public final class ReinforcementAcceptClient {
             case BOMB -> config.reinfAcceptBomb;
             case PLANTAGE -> config.reinfAcceptPlantage;
         };
+    }
+
+    private static boolean isGameModeAllowed(Minecraft client) {
+        GameType gameType = client != null && client.gameMode != null
+                ? client.gameMode.getPlayerMode()
+                : null;
+        return isGameModeAllowed(BetterUCConfig.INSTANCE.reinfAcceptSurvivalOnly, gameType);
+    }
+
+    static boolean isGameModeAllowed(boolean survivalOnly, GameType gameType) {
+        return !survivalOnly || gameType == GameType.SURVIVAL;
     }
 
     private static String stripLeadingSlash(String command) {

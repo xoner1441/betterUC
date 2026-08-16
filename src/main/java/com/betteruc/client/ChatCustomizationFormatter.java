@@ -13,8 +13,13 @@ import net.minecraft.network.chat.Style;
 
 public final class ChatCustomizationFormatter {
     private static final long PENDING_TTL_MS = 30000L;
+    private static final long PENDING_TICKET_TTL_MS = 5 * 60 * 1000L;
     private static final int ACTION_GRADIENT_START = 0xFF5555;
     private static final int ACTION_GRADIENT_END = 0xAA0000;
+    private static final int TICKET_ACTION_GRADIENT_START = 0xFFAA00;
+    private static final int TICKET_ACTION_GRADIENT_END = 0xFF5555;
+    private static final int TICKET_DETAIL_GRADIENT_START = 0xFFFF55;
+    private static final int TICKET_DETAIL_GRADIENT_END = 0xFFAA00;
     private static final int ACTOR_GRADIENT_START = 0x55FFFF;
     private static final int ACTOR_GRADIENT_END = 0x5555FF;
     private static final int TARGET_GRADIENT_START = 0x5555FF;
@@ -38,11 +43,15 @@ public final class ChatCustomizationFormatter {
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern KILLED_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(?:HQ:\\s*)?(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+wurde\\s+von\\s+(.+?)\\s+get(?:ötet|oetet|otet)\\.?\\s*$",
+            "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(?:HQ:\\s*)?(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+wurde\\s+von\\s+(.+?)\\s+get(?:ötet|oetet|otet)\\.?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern JAILED_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(?:HQ:\\s*)?(?:\\[[^\\]]+\\]\\s*)?(.+?)\\s+wurde\\s+von\\s+(.+?)\\s+eingesperrt[.!]?\\s*(?:\\[[^\\]]*\\]\\s*)*$",
+            "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(?:HQ:\\s*)?(?:\\[[^\\]]+\\]\\s*)?(.+?)\\s+wurde\\s+von\\s+(.+?)\\s+eingesperrt[.!]?\\s*(?:\\[[^\\]]*\\]\\s*)*$",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern ARREST_OR_KILL_WITH_REASON_PATTERN = Pattern.compile(
+            "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(?:HQ:\\s*)?(?:\\[[^\\]]+\\]\\s*)?(.+?)\\s+wurde\\s+von\\s+(.+?)\\s+(get(?:ötet|oetet|otet)|eingesperrt)[.!]?\\s*(?:\\R|\\\\n)\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:?\\s*Fahndungsgrund:\\s*(.+?)\\s*[|¦]\\s*Fahndungszeit:\\s*(\\d+)\\s*(Minute(?:n)?|Stunde(?:n)?)\\.?\\s*(?:\\[[^\\]]*\\]\\s*)*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern WEAPON_SEIZED_PATTERN = Pattern.compile(
@@ -53,8 +62,20 @@ public final class ChatCustomizationFormatter {
             "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(?:HQ:\\s*)?(?:[\\p{L} ]+\\s+)?(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+hat\\s+(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+(?:(?:die|seine|ihre)\\s+)?Drogen\\s+abgenommen[.!]?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
+    private static final Pattern LICENSE_SEIZED_PATTERN = Pattern.compile(
+            "^\\s*(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(?:HQ:\\s*)?Beamt(?:er|in)\\s+((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)\\s+hat\\s+((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)['’]?s\\s+F(?:ü|ue)hrerschein\\s+abgenommen[.!]?\\s*$",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern LICENSE_RETURNED_PATTERN = Pattern.compile(
+            "^\\s*(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(?:HQ:\\s*)?Beamt(?:er|in)\\s+((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)\\s+hat\\s+((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)['’]?s\\s+F(?:ü|ue)hrerschein\\s+zur(?:ü|ue)ckgegeben[.!]?\\s*$",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern TICKET_ISSUED_PATTERN = Pattern.compile(
+            "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*Officer\\s+((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)\\s+hat\\s+((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)\\s+ein\\s+Ticket\\s+(?:über|ueber)\\s+([0-9][0-9.,]*)\\$\\s+ausgestellt[.!]?\\s*Best(?:ä|ae)tigung\\s+ausstehend,?\\s*over\\.?\\s*$",
+            Pattern.CASE_INSENSITIVE
+    );
     private static final Pattern SEARCH_REASON_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:?\\s*Fahndungsgrund:\\s*(.+?)\\s*[|¦]\\s*Fahndungszeit:\\s*(\\d+)\\s*(Minute(?:n)?|Stunde(?:n)?)\\.?\\s*(?:\\[[^\\]]*\\]\\s*)*$",
+            "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:?\\s*Fahndungsgrund:\\s*(.+?)\\s*[|¦]\\s*Fahndungszeit:\\s*(\\d+)\\s*(Minute(?:n)?|Stunde(?:n)?)\\.?\\s*(?:\\[[^\\]]*\\]\\s*)*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern CHANGED_PATTERN = Pattern.compile(
@@ -66,7 +87,7 @@ public final class ChatCustomizationFormatter {
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern DELETED_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*(?:.*?\\s+)?(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)\\s+hat\\s+(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+)['’]?s\\s+Akten\\s+gel[öo]scht,\\s*over\\.?\\s*$",
+            "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*(?:.*?\\s+)?((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)\\s+hat\\s+((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)(?:(?:['’]?s)|(?:\\s+(?:seine|ihre|die)))\\s+Akten\\s+gel[öo]scht,\\s*over\\.?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
 
@@ -88,6 +109,7 @@ public final class ChatCustomizationFormatter {
     );
 
     private static Pending pending;
+    private static PendingTicket pendingTicket;
 
     private ChatCustomizationFormatter() {
     }
@@ -148,6 +170,7 @@ public final class ChatCustomizationFormatter {
         clearExpiredPending();
         if (!wpsHqEnabled) {
             pending = null;
+            pendingTicket = null;
         }
 
         if (wpsHqEnabled) {
@@ -213,6 +236,19 @@ public final class ChatCustomizationFormatter {
             ));
         }
 
+        Matcher arrestOrKillWithReason = ARREST_OR_KILL_WITH_REASON_PATTERN.matcher(clean);
+        if (arrestOrKillWithReason.matches()) {
+            PendingType type = arrestOrKillWithReason.group(3).toLowerCase(Locale.ROOT).startsWith("eingesperrt")
+                    ? PendingType.JAILED
+                    : PendingType.KILLED;
+            return Result.replace(messages(
+                    headline(fahndungAction(type), playerName(arrestOrKillWithReason.group(2)),
+                            playerName(arrestOrKillWithReason.group(1)), headlineStyle),
+                    reasonDetails(arrestOrKillWithReason.group(4),
+                            arrestOrKillWithReason.group(5) + " " + arrestOrKillWithReason.group(6), headlineStyle)
+            ));
+        }
+
         Matcher killed = KILLED_PATTERN.matcher(clean);
         if (killed.matches()) {
             pending = new Pending(PendingType.KILLED, playerName(killed.group(2)), playerName(killed.group(1)), "", System.currentTimeMillis());
@@ -236,6 +272,34 @@ public final class ChatCustomizationFormatter {
         if (drugSeized.matches()) {
             return Result.replace(List.of(
                     headline("DROGEN ABNAHME", playerName(drugSeized.group(1)), playerName(drugSeized.group(2)), headlineStyle)
+            ));
+        }
+
+        Matcher licenseSeized = LICENSE_SEIZED_PATTERN.matcher(clean);
+        if (licenseSeized.matches()) {
+            return Result.replace(List.of(
+                    headline("FÜHRERSCHEIN ABNAHME", playerName(licenseSeized.group(1)),
+                            playerName(licenseSeized.group(2)), headlineStyle)
+            ));
+        }
+
+        Matcher licenseReturned = LICENSE_RETURNED_PATTERN.matcher(clean);
+        if (licenseReturned.matches()) {
+            return Result.replace(List.of(
+                    positiveHeadline("FÜHRERSCHEIN RÜCKGABE", playerName(licenseReturned.group(1)),
+                            playerName(licenseReturned.group(2)), headlineStyle)
+            ));
+        }
+
+        Matcher ticketIssued = TICKET_ISSUED_PATTERN.matcher(clean);
+        if (ticketIssued.matches()) {
+            String actor = playerName(ticketIssued.group(1));
+            String target = playerName(ticketIssued.group(2));
+            String amount = cleanAmount(ticketIssued.group(3)) + "$";
+            pendingTicket = new PendingTicket(actor, target, amount, System.currentTimeMillis());
+            return Result.replace(List.of(
+                    ticketHeadline("TICKET AUSGESTELLT", actor, target, headlineStyle),
+                    ticketDetail(amount, "Bestätigung ausstehend", false, headlineStyle)
             ));
         }
 
@@ -268,9 +332,18 @@ public final class ChatCustomizationFormatter {
 
         Matcher deleted = DELETED_PATTERN.matcher(clean);
         if (deleted.matches()) {
+            String actor = playerName(deleted.group(1));
+            String target = playerName(deleted.group(2));
+            if (matchesPendingTicket(actor, target)) {
+                PendingTicket current = pendingTicket;
+                pendingTicket = null;
+                return Result.replace(List.of(
+                        positiveHeadline("TICKET BESTÄTIGT", actor, target, headlineStyle),
+                        ticketDetail(current.amount(), "Akten gelöscht", true, headlineStyle)
+                ));
+            }
             return Result.replace(List.of(
-                    headline("GELÖSCHT", playerName(deleted.group(1)), playerName(deleted.group(2)), headlineStyle),
-                    detail("Akten gelöscht", "", headlineStyle)
+                    headline("AKTEN GELÖSCHT", actor, target, headlineStyle)
             ));
         }
 
@@ -279,11 +352,16 @@ public final class ChatCustomizationFormatter {
 
     public static void clearPending() {
         pending = null;
+        pendingTicket = null;
     }
 
     private static void clearExpiredPending() {
         if (pending != null && System.currentTimeMillis() - pending.createdAtMs() > PENDING_TTL_MS) {
             pending = null;
+        }
+        if (pendingTicket != null
+                && System.currentTimeMillis() - pendingTicket.createdAtMs() > PENDING_TICKET_TTL_MS) {
+            pendingTicket = null;
         }
     }
 
@@ -303,6 +381,12 @@ public final class ChatCustomizationFormatter {
                 || pending.type() == PendingType.JAILED);
     }
 
+    private static boolean matchesPendingTicket(String actor, String target) {
+        return pendingTicket != null
+                && key(pendingTicket.actor()).equals(key(actor))
+                && key(pendingTicket.target()).equals(key(target));
+    }
+
     private static String fahndungAction(PendingType type) {
         return switch (type) {
             case KILLED -> "GETÖTET";
@@ -319,6 +403,22 @@ public final class ChatCustomizationFormatter {
 
     private static Component headline(String action, String actor, String target, HeadlineStyle headlineStyle) {
         return action(action, headlineStyle)
+                .append(separator(headlineLeadSeparator(headlineStyle)))
+                .append(actorName(actor, headlineStyle))
+                .append(separator(headlineDirectionSeparator(headlineStyle)))
+                .append(targetName(target, headlineStyle));
+    }
+
+    private static Component positiveHeadline(String action, String actor, String target, HeadlineStyle headlineStyle) {
+        return positiveAction(action, headlineStyle)
+                .append(separator(headlineLeadSeparator(headlineStyle)))
+                .append(actorName(actor, headlineStyle))
+                .append(separator(headlineDirectionSeparator(headlineStyle)))
+                .append(targetName(target, headlineStyle));
+    }
+
+    private static Component ticketHeadline(String action, String actor, String target, HeadlineStyle headlineStyle) {
+        return ticketAction(action, headlineStyle)
                 .append(separator(headlineLeadSeparator(headlineStyle)))
                 .append(actorName(actor, headlineStyle))
                 .append(separator(headlineDirectionSeparator(headlineStyle)))
@@ -378,6 +478,32 @@ public final class ChatCustomizationFormatter {
                 )
                 : Component.literal(amount == null ? "" : amount.trim()).withStyle(color, ChatFormatting.BOLD);
         return Component.literal("\u00BB ").withStyle(ChatFormatting.GRAY).append(value);
+    }
+
+    private static Component ticketDetail(
+            String amount,
+            String status,
+            boolean confirmed,
+            HeadlineStyle headlineStyle
+    ) {
+        MutableComponent amountText = headlineStyle.gradientEnabled()
+                ? gradientText(amount, TICKET_DETAIL_GRADIENT_START, TICKET_DETAIL_GRADIENT_END, true)
+                : Component.literal(amount).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
+        MutableComponent statusText;
+        if (headlineStyle.gradientEnabled()) {
+            statusText = confirmed
+                    ? gradientText(status, POSITIVE_GRADIENT_START, POSITIVE_GRADIENT_END, true)
+                    : gradientText(status, TICKET_DETAIL_GRADIENT_START, TICKET_DETAIL_GRADIENT_END, true);
+        } else {
+            statusText = Component.literal(status).withStyle(
+                    confirmed ? ChatFormatting.GREEN : ChatFormatting.YELLOW,
+                    ChatFormatting.BOLD
+            );
+        }
+        return Component.literal("\u00BB ").withStyle(ChatFormatting.GRAY)
+                .append(amountText)
+                .append(separator(" | "))
+                .append(statusText);
     }
 
     private static Component payHeadline(String actor, String target, HeadlineStyle headlineStyle) {
@@ -452,6 +578,28 @@ public final class ChatCustomizationFormatter {
             return gradientText(label, ACTION_GRADIENT_START, ACTION_GRADIENT_END, true);
         }
         return Component.literal(label).withStyle(ChatFormatting.RED);
+    }
+
+    private static MutableComponent positiveAction(String value, HeadlineStyle headlineStyle) {
+        String label = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+        if (BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS.equals(headlineStyle.actionTextStyle())) {
+            label = SmallCapsText.convert(label);
+        }
+        if (headlineStyle.gradientEnabled()) {
+            return gradientText(label, POSITIVE_GRADIENT_START, POSITIVE_GRADIENT_END, true);
+        }
+        return Component.literal(label).withStyle(ChatFormatting.GREEN);
+    }
+
+    private static MutableComponent ticketAction(String value, HeadlineStyle headlineStyle) {
+        String label = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+        if (BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS.equals(headlineStyle.actionTextStyle())) {
+            label = SmallCapsText.convert(label);
+        }
+        if (headlineStyle.gradientEnabled()) {
+            return gradientText(label, TICKET_ACTION_GRADIENT_START, TICKET_ACTION_GRADIENT_END, true);
+        }
+        return Component.literal(label).withStyle(ChatFormatting.GOLD);
     }
 
     private static String headlineLeadSeparator(HeadlineStyle headlineStyle) {
@@ -593,6 +741,9 @@ public final class ChatCustomizationFormatter {
     }
 
     private record Pending(PendingType type, String actor, String target, String reason, long createdAtMs) {
+    }
+
+    private record PendingTicket(String actor, String target, String amount, long createdAtMs) {
     }
 
     private record HeadlineStyle(String actionTextStyle, String separatorStyle, boolean gradientEnabled) {

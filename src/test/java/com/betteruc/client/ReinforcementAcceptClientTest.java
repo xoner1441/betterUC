@@ -2,10 +2,13 @@ package com.betteruc.client;
 
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.GameType;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ReinforcementAcceptClientTest {
 
@@ -29,6 +32,17 @@ class ReinforcementAcceptClientTest {
                 .append(Component.literal(" | Unterwegs"));
 
         assertNull(ReinforcementAcceptClient.findRunCommandForLabel(actionLine, "Unterwegs"));
+    }
+
+    @Test
+    void restrictsAcceptanceToSurvivalOnlyWhenConfigured() {
+        assertTrue(ReinforcementAcceptClient.isGameModeAllowed(false, GameType.CREATIVE));
+        assertTrue(ReinforcementAcceptClient.isGameModeAllowed(false, null));
+        assertTrue(ReinforcementAcceptClient.isGameModeAllowed(true, GameType.SURVIVAL));
+        assertFalse(ReinforcementAcceptClient.isGameModeAllowed(true, GameType.CREATIVE));
+        assertFalse(ReinforcementAcceptClient.isGameModeAllowed(true, GameType.ADVENTURE));
+        assertFalse(ReinforcementAcceptClient.isGameModeAllowed(true, GameType.SPECTATOR));
+        assertFalse(ReinforcementAcceptClient.isGameModeAllowed(true, null));
     }
 
     private static Component clickable(String label, String command) {

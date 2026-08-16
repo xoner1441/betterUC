@@ -397,6 +397,10 @@ public class BetterUCScreen extends Screen {
                             BetterUCConfig.INSTANCE.reinfAcceptAutomatic,
                             () -> BetterUCConfig.INSTANCE.reinfAcceptAutomatic =
                                     !BetterUCConfig.INSTANCE.reinfAcceptAutomatic);
+                    y = addToggle(x, y, controlW, "Nur im Survival-Modus",
+                            BetterUCConfig.INSTANCE.reinfAcceptSurvivalOnly,
+                            () -> BetterUCConfig.INSTANCE.reinfAcceptSurvivalOnly =
+                                    !BetterUCConfig.INSTANCE.reinfAcceptSurvivalOnly);
                     y = addRangeIntSlider(x, y, controlW, "Cooldown (Sek.)",
                             BetterUCConfig.INSTANCE.reinfAcceptCooldownSeconds, 1, 10,
                             value -> BetterUCConfig.INSTANCE.reinfAcceptCooldownSeconds = value);

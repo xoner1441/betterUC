@@ -10,16 +10,126 @@
         "title": "Weitere Verbesserungen folgen",
         "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
         "lines": [
-          "Version 1.3.8 enthält automatische Reinforcements, ruhigere Zusatz-Chats und den neuen Screenshot-Workflow."
+          "Version 1.3.9 erweitert betterUC um Ingame-Bugmeldungen, frei platzierbare Zeit-HUDs und umfassend überarbeitete Chatfunktionen."
         ]
       }
     ]
   },
   "releases": [
     {
+      "version": "1.3.9",
+      "date": "16.08.2026",
+      "current": true,
+      "pages": [
+        {
+          "eyebrow": "BUGMELDUNGEN",
+          "title": "Fehler direkt aus Minecraft melden",
+          "description": "Bugmeldungen lassen sich vollständig im Spiel erstellen und werden anschließend übersichtlich im öffentlichen Discord-Forum veröffentlicht.",
+          "lines": [
+            "Ein hervorgehobener Bug-melden-Button ist dauerhaft unten in der ClickGUI erreichbar.",
+            "Titel, Beschreibung und optionale Schritte zum Nachstellen werden in einem eigenen Ingame-Formular erfasst.",
+            "Der zuletzt aufgenommene Screenshot und die aktuelle latest.log können nach eigener Auswahl angehängt werden.",
+            "Access Codes werden vor dem Versand aus Protokolldateien entfernt und die Meldung wird über das bestehende Relay-System authentifiziert.",
+            "Der Discord-Bot erstellt für jede Meldung einen eigenen Beitrag mit passenden Status-Tags im Bug-Forum."
+          ]
+        },
+        {
+          "eyebrow": "HUD & SECOND CHAT",
+          "title": "Zeit und Nachrichten frei anordnen",
+          "description": "Neue HUD-Optionen und präzisere Zusatz-Chats geben dir mehr Kontrolle über die Darstellung wichtiger Informationen.",
+          "lines": [
+            "Datum und Uhrzeit stehen als neues HUD zur Verfügung und lassen sich gemeinsam oder getrennt positionieren.",
+            "Datum, Uhrzeit und Sekunden können einzeln ein- oder ausgeschaltet sowie farblich angepasst werden.",
+            "Jeder Second-Chat-Tab kann den globalen Zeitstempel übernehmen oder ein eigenes Format verwenden.",
+            "Doppelte Zeitstempel werden vermieden und verschobene Second-Chat-Nachrichten erscheinen nun zuverlässig in latest.log.",
+            "Bündnis- und Fraktionspräfixe wie FBI, Polizei und Rettungsdienst lösen keine falschen Ortsfilter mehr aus."
+          ]
+        },
+        {
+          "eyebrow": "HQ & CHAT-DESIGN",
+          "title": "Klarere Einsatzmeldungen",
+          "description": "HQ-Aktionen sind kompakter, besser lesbar und erkennen die aktuellen Formulierungen des Servers.",
+          "lines": [
+            "Aktionsbezeichnungen können als technische Small Caps dargestellt werden.",
+            "Optionale Farbverläufe und fette Aktions- sowie Detailtexte heben Namen, Status und Fahndungsdaten voneinander ab.",
+            "Neue Muster formatieren Führerscheinabnahmen, Führerscheinrückgaben und ausgestellte Tickets.",
+            "Ticketbetrag und beteiligte Spieler werden bis zur passenden Aktenlöschung gespeichert und anschließend als bestätigter Vorgang dargestellt.",
+            "Verhaftungen und Tötungen werden auch als kombinierte mehrzeilige Servernachricht einschließlich Fahndungsgrund erkannt.",
+            "Farben normaler Chat-, Shop- und News-Nachrichten bleiben wieder vollständig erhalten."
+          ]
+        },
+        {
+          "eyebrow": "REINFORCEMENTS",
+          "title": "Gezielter und sicherer annehmen",
+          "description": "Die automatische Reinf-Annahme reagiert genauer auf Typ, Absender und aktuellen Spielmodus.",
+          "lines": [
+            "Eigene Reinforcement-Rufe werden erkannt und nicht automatisch angenommen.",
+            "Alle unterstützten Reinf-Typen einschließlich Plantage stehen einzeln in der ClickGUI zur Auswahl.",
+            "Eine neue Option erlaubt automatische und manuelle Annahmen ausschließlich im Survival-Modus.",
+            "Creative, Adventure, Spectator und ein noch unbekannter Spielmodus werden bei aktivierter Beschränkung sicher blockiert.",
+            "Der Reinf-Filter unterscheidet zuverlässiger zwischen Aktionszeilen, Fraktionspräfixen und tatsächlichen Einsatzorten."
+          ]
+        },
+        {
+          "eyebrow": "KOMFORT & STABILITÄT",
+          "title": "Schnellere Abläufe im Alltag",
+          "description": "Kleine technische Verbesserungen sparen Zeit und halten automatische Hintergrundfunktionen zuverlässig.",
+          "lines": [
+            "Screenshots werden unter Windows zuerst direkt in die Zwischenablage kopiert; der langsamere Fallback wird nur noch bei Bedarf verwendet.",
+            "Neue Spielzeitbonus- und Spielzeitzeilen werden bei stillen /stats-Abfragen korrekt unterdrückt.",
+            "Die erkannte Gesamtspielzeit wird trotz unterdrückter Chatausgabe weiterhin für Website und Userpanel gespeichert.",
+            "Aktualisierte HQ-, Drogenabnahme- und Chatmuster tolerieren unsichtbare Namenszeichen sowie neue Serverformulierungen."
+          ]
+        }
+      ],
+      "summary": [
+        {
+          "title": "Ingame-Bugmeldungen",
+          "description": "Fehler können mit Screenshot und Log direkt aus Minecraft ins öffentliche Discord-Forum gesendet werden.",
+          "color": "amber"
+        },
+        {
+          "title": "Datum & Uhrzeit",
+          "description": "Das neue Zeit-HUD lässt Datum und Uhrzeit gemeinsam oder vollständig getrennt positionieren.",
+          "color": "cyan"
+        },
+        {
+          "title": "HQ & Second Chat",
+          "description": "Neue Servermuster, eigene Tab-Zeitformate und ein technisches Aktionsdesign schaffen mehr Übersicht.",
+          "color": "purple"
+        },
+        {
+          "title": "Sicherere Reinforcements",
+          "description": "Self-Filter, vollständige Typauswahl und die optionale Survival-Beschränkung verhindern falsche Annahmen.",
+          "color": "green"
+        }
+      ],
+      "changes": [
+        "Bugmeldungen können über einen hervorgehobenen Button direkt in der ClickGUI erstellt werden.",
+        "Titel, Beschreibung, Schritte, letzter Screenshot und latest.log können an das Discord-Bugforum übermittelt werden.",
+        "Access Codes werden vor dem Versand automatisch aus angehängten Protokolldateien entfernt.",
+        "Datum und Uhrzeit wurden als konfigurierbares HUD mit optional getrennten Positionen hinzugefügt.",
+        "Datum, Uhrzeit und Sekunden können unabhängig voneinander angezeigt werden.",
+        "Second-Chat-Tabs unterstützen globale oder eigene Zeitstempelformate.",
+        "Doppelte Second-Chat-Zeitstempel wurden behoben.",
+        "In Second Chats verschobene Nachrichten werden nun in latest.log protokolliert.",
+        "Die Erkennung von Ortsfiltern ignoriert normale Bündnisnachrichten mit FBI-, Polizei- und Rettungsdienst-Präfixen.",
+        "HQ-Aktionsbezeichnungen unterstützen Small Caps, technische Trenner und optionale Farbverläufe.",
+        "Führerscheinabnahmen und Führerscheinrückgaben werden im neuen HQ-Format dargestellt.",
+        "Ausgestellte Tickets zeigen Officer, Empfänger, Betrag und ausstehende Bestätigung an.",
+        "Passende Aktenlöschungen schließen einen vorgemerkten Ticketvorgang als bestätigt ab.",
+        "Aktuelle kombinierte Verhaftungs- und Getötet-Nachrichten werden einschließlich Fahndungsgrund und Fahndungszeit erkannt.",
+        "Shop-, News- und normale Chatnachrichten behalten ihre ursprünglichen Serverfarben.",
+        "Eigene Reinforcement-Rufe werden von der automatischen Annahme ausgeschlossen.",
+        "Alle Reinf-Typen einschließlich Plantage können einzeln umgeschaltet werden.",
+        "Reinforcement-Annahmen lassen sich optional auf den Survival-Modus beschränken.",
+        "Screenshots werden unter Windows schneller in die Zwischenablage kopiert.",
+        "Neue /stats-Zeilen für Spielzeitbonus und Spielzeit werden bei stillen Abfragen ausgeblendet, ohne das Userpanel-Tracking zu unterbrechen."
+      ]
+    },
+    {
       "version": "1.3.8",
       "date": "11.08.2026",
-      "current": true,
       "pages": [
         {
           "eyebrow": "NEU IN 1.3.8",

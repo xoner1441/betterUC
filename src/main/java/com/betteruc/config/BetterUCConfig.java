@@ -101,6 +101,7 @@ public class BetterUCConfig {
             "autoMuellmannEnabled", "autoFirstAidEnabled", "autoBuyEnabled",
             "reinfCustomizationEnabled", "reinfUniformColorEnabled", "reinfLabelColor", "reinfTextColor",
             "reinfDistanceColor", "reinfUniformColor", "reinfAcceptEnabled", "reinfAcceptAutomatic",
+            "reinfAcceptSurvivalOnly",
             "reinfAcceptNormal", "reinfAcceptUrgent", "reinfAcceptMedic", "reinfAcceptHostage",
             "reinfAcceptContract", "reinfAcceptTraining", "reinfAcceptDrugs", "reinfAcceptBodyGuard",
             "reinfAcceptBomb", "reinfAcceptPlantage", "reinfAcceptCooldownSeconds", "chatTimestampFormat", "maxChatHistory",
@@ -476,6 +477,7 @@ public class BetterUCConfig {
     public int reinfUniformColor = DEFAULT_REINF_UNIFORM_COLOR;
     public boolean reinfAcceptEnabled = false;
     public boolean reinfAcceptAutomatic = false;
+    public boolean reinfAcceptSurvivalOnly = false;
     public boolean reinfAcceptNormal = true;
     public boolean reinfAcceptUrgent = true;
     public boolean reinfAcceptMedic = true;

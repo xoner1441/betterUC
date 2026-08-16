@@ -121,4 +121,99 @@ class ChatCustomizationStyleTest {
         assertEquals(TextColor.fromLegacyFormat(ChatFormatting.RED), segments.get(0).getStyle().getColor());
         assertFalse(segments.get(0).getStyle().isBold());
     }
+
+    @Test
+    void formatsLicenseSeizureWithInvisibleNameMarkersAndLogPrefix() {
+        ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
+                "[System] [CHAT] 19:13:44 Beamter FABI1441 hat \u200Creaax72\u200C's Führerschein abgenommen.",
+                true,
+                false,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
+        );
+
+        assertNotNull(result);
+        assertEquals("ꜰüʜʀᴇʀꜱᴄʜᴇɪɴ ᴀʙɴᴀʜᴍᴇ // FABI1441 → reaax72",
+                result.replacementMessages().get(0).getString());
+    }
+
+    @Test
+    void formatsLicenseReturnAsPositiveActionAndPreservesUcPrefix() {
+        ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
+                "Beamter [UC]FABI1441 hat reaax72’s Führerschein zurückgegeben.",
+                true,
+                false,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
+        );
+
+        assertNotNull(result);
+        assertEquals("ꜰüʜʀᴇʀꜱᴄʜᴇɪɴ ʀüᴄᴋɢᴀʙᴇ // [UC]FABI1441 → reaax72",
+                result.replacementMessages().get(0).getString());
+        List<Component> segments = result.replacementMessages().get(0).toFlatList();
+        String action = "ꜰüʜʀᴇʀꜱᴄʜᴇɪɴ ʀüᴄᴋɢᴀʙᴇ";
+        assertEquals(0x55FF55, segments.get(0).getStyle().getColor().getValue());
+        assertEquals(0x00AA00, segments.get(action.length() - 1).getStyle().getColor().getValue());
+        assertTrue(segments.get(0).getStyle().isBold());
+    }
+
+    @Test
+    void formatsTicketAndCorrelatesFollowingRecordsDeletion() {
+        ChatCustomizationFormatter.clearPending();
+        ChatCustomizationFormatter.Result issued = ChatCustomizationFormatter.transform(
+                "HQ: Officer 68mirco hat 1Arrogante_ ein Ticket über 230$ ausgestellt. Bestätigung ausstehend, over.",
+                true,
+                false,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
+        );
+
+        assertNotNull(issued);
+        assertEquals("ᴛɪᴄᴋᴇᴛ ᴀᴜꜱɢᴇꜱᴛᴇʟʟᴛ // 68mirco → 1Arrogante_",
+                issued.replacementMessages().get(0).getString());
+        assertEquals("» 230$ | Bestätigung ausstehend",
+                issued.replacementMessages().get(1).getString());
+        assertEquals(0xFFAA00,
+                issued.replacementMessages().get(0).toFlatList().get(0).getStyle().getColor().getValue());
+
+        ChatCustomizationFormatter.Result confirmed = ChatCustomizationFormatter.transform(
+                "[betterUC Second Chat] HQ: Officer 68mirco hat 1Arrogante_ ihre Akten gelöscht, over.",
+                true,
+                false,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
+        );
+
+        assertNotNull(confirmed);
+        assertEquals("ᴛɪᴄᴋᴇᴛ ʙᴇꜱᴛäᴛɪɢᴛ // 68mirco → 1Arrogante_",
+                confirmed.replacementMessages().get(0).getString());
+        assertEquals("» 230$ | Akten gelöscht",
+                confirmed.replacementMessages().get(1).getString());
+        assertEquals(0x55FF55,
+                confirmed.replacementMessages().get(0).toFlatList().get(0).getStyle().getColor().getValue());
+        ChatCustomizationFormatter.clearPending();
+    }
+
+    @Test
+    void keepsUnrelatedRecordsDeletionAsStandaloneAction() {
+        ChatCustomizationFormatter.clearPending();
+        ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
+                "HQ: Officer 68mirco hat 1Arrogante_ ihre Akten gelöscht, over.",
+                true,
+                false,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
+        );
+
+        assertNotNull(result);
+        assertEquals(1, result.replacementMessages().size());
+        assertEquals("ᴀᴋᴛᴇɴ ɢᴇʟöꜱᴄʜᴛ // 68mirco → 1Arrogante_",
+                result.replacementMessages().get(0).getString());
+        ChatCustomizationFormatter.clearPending();
+    }
 }
