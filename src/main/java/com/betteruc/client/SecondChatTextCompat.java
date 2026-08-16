@@ -6,6 +6,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.util.FormattedCharSequence;
 
 public final class SecondChatTextCompat {
@@ -20,9 +21,16 @@ public final class SecondChatTextCompat {
     public static Component copyWithResolvedStyles(Component message) {
         if (message == null) return Component.empty();
         MutableComponent resolved = Component.empty();
+        TextColor[] carriedColor = {null};
         message.visit((style, text) -> {
             if (!text.isEmpty()) {
-                resolved.append(Component.literal(text).setStyle(style));
+                Style resolvedStyle = style;
+                if (style.getColor() != null) {
+                    carriedColor[0] = style.getColor();
+                } else if (carriedColor[0] != null) {
+                    resolvedStyle = style.withColor(carriedColor[0]);
+                }
+                resolved.append(Component.literal(text).setStyle(resolvedStyle));
             }
             return Optional.empty();
         }, Style.EMPTY);

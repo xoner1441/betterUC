@@ -24,14 +24,20 @@ class SecondChatManagerTest {
     }
 
     @Test
-    void ignoresFactionChatLocationsAndDistances() {
+    void ignoresStateAllianceChatPrefixesLocationsAndDistances() {
         assertFalse(SecondChatManager.isReinforcementMessage("FBI Bank 120m"));
         assertFalse(SecondChatManager.isReinforcementMessage("Polizei Plantage 85m"));
         assertFalse(SecondChatManager.isReinforcementMessage("Rettungsdienst Krankenhaus 12m"));
         assertFalse(SecondChatManager.isReinforcementMessage("Unterwegs Polizei"));
         assertFalse(SecondChatManager.isReinforcementMessage("Medic FBI"));
+        assertFalse(SecondChatManager.isReinforcementMessage("Polizei FABI1441: was geht ab chat"));
+        assertFalse(SecondChatManager.isReinforcementMessage("Polizei readax72: d\u00F6ner"));
+        assertFalse(SecondChatManager.isReinforcementMessage("FBI tzfy: betteruc"));
         assertFalse(SecondChatManager.isReinforcementMessage(
-                "[D-Chat] [FBI] FABI1441: Bin bei der Plantage, Polizei kommt gleich."
+                "Rettungsdienst Paulphobie: FABI1441 gro\u00DF geredet und nichts"
+        ));
+        assertFalse(SecondChatManager.isReinforcementMessage(
+                "Polizei FABI1441: Bin bei der Plantage, Polizei kommt gleich."
         ));
     }
 
