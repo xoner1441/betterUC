@@ -9,6 +9,7 @@ const ENV_PATH = path.join(__dirname, ".env");
 const ChannelType = {
   GuildText: 0,
   GuildCategory: 4,
+  GuildForum: 15,
 };
 
 const OverwriteType = {
@@ -31,6 +32,8 @@ const Permissions = {
   MentionEveryone: 1n << 17n,
   ManageRoles: 1n << 28n,
   UseApplicationCommands: 1n << 31n,
+  CreatePublicThreads: 1n << 35n,
+  SendMessagesInThreads: 1n << 38n,
   ModerateMembers: 1n << 40n,
 };
 
@@ -117,7 +120,12 @@ const CATEGORY_DEFS = [
     name: "Support",
     channels: [
       { name: "hilfe", mode: "support" },
-      { name: "bugreports", mode: "support" },
+      {
+        name: "bug-reports",
+        mode: "support",
+        type: ChannelType.GuildForum,
+        tags: ["Neu", "Bestätigt", "In Arbeit", "Behoben"],
+      },
       { name: "crash-reports", mode: "support" },
       { name: "feature-vorschlaege", mode: "support" },
     ],
@@ -161,8 +169,6 @@ const START_MESSAGES = {
     "**Access Code Hilfe**\n1. Website öffnen.\n2. Access Code erstellen.\n3. Code im betterUC ClickGUI eintragen.\n4. Danach verbindet sich das Ping- und Account-System automatisch.",
   "website-status":
     "**Website Status**\nDieser Channel ist für Hinweise zur Website, zum Relay und zu geplanten Wartungen gedacht.",
-  bugreports:
-    "**Bugreport Vorlage**\n**Was ist passiert?**\n**Was hast du gemacht?**\n**Screenshot/Crashlog:**\n**Mod-Version:**",
   "feature-vorschlaege":
     "**Feature-Vorschlag Vorlage**\n**Idee:**\n**Warum wäre das nützlich?**\n**Soll es für alle oder nur bestimmte Rollen gelten?**",
   "team-chat":
@@ -391,10 +397,14 @@ async function ensureChannels(api, guildId, roles) {
     for (const channelDef of categoryDef.channels) {
       const channel = await ensureChannel(api, guildId, map, {
         name: channelDef.name,
-        type: ChannelType.GuildText,
+        type: channelDef.type ?? ChannelType.GuildText,
         parent_id: category.id,
-        permission_overwrites: overwritesForMode(channelDef.mode, roles),
+        permission_overwrites: overwritesForMode(channelDef.mode, roles, channelDef.type === ChannelType.GuildForum),
         topic: topicFor(channelDef.name),
+        ...(channelDef.type === ChannelType.GuildForum ? {
+          available_tags: channelDef.tags.map(name => ({ name, moderated: false })),
+          default_auto_archive_duration: 1440,
+        } : {}),
       });
       channelRefs.set(channelDef.name, channel);
     }
@@ -412,6 +422,12 @@ async function ensureChannel(api, guildId, map, payload) {
   const found = map.get(key) || map.get(fallbackKey);
 
   if (found) {
+    if (Array.isArray(payload.available_tags) && Array.isArray(found.available_tags)) {
+      payload.available_tags = payload.available_tags.map(tag => {
+        const existing = found.available_tags.find(candidate => candidate.name.toLowerCase() === tag.name.toLowerCase());
+        return existing ? { ...tag, id: existing.id } : tag;
+      });
+    }
     console.log(`Kanal vorhanden: ${payload.name}`);
     return api.patch(`/channels/${found.id}`, payload).catch(error => {
       console.warn(`Kanal konnte nicht aktualisiert werden (${payload.name}): ${error.message}`);
@@ -423,7 +439,7 @@ async function ensureChannel(api, guildId, map, payload) {
   return api.post(`/guilds/${guildId}/channels`, payload);
 }
 
-function overwritesForMode(mode, roles) {
+function overwritesForMode(mode, roles, forum = false) {
   const everyone = roles.get("everyone").id;
   const muted = roles.get("muted")?.id;
   const owner = roles.get("owner")?.id;
@@ -449,11 +465,16 @@ function overwritesForMode(mode, roles) {
       if (roleId) overwrites.push(roleOverwrite(roleId, Permissions.SendMessages | Permissions.ReadMessageHistory, 0n));
     }
   } else {
-    overwrites.push(roleOverwrite(everyone, Permissions.ViewChannel | Permissions.SendMessages | Permissions.ReadMessageHistory | Permissions.UseApplicationCommands, 0n));
+    let allowed = Permissions.ViewChannel | Permissions.SendMessages
+      | Permissions.ReadMessageHistory | Permissions.UseApplicationCommands;
+    if (forum) allowed |= Permissions.CreatePublicThreads | Permissions.SendMessagesInThreads;
+    overwrites.push(roleOverwrite(everyone, allowed, 0n));
   }
 
   if (muted) {
-    overwrites.push(roleOverwrite(muted, 0n, Permissions.SendMessages | Permissions.AddReactions));
+    let denied = Permissions.SendMessages | Permissions.AddReactions;
+    if (forum) denied |= Permissions.CreatePublicThreads | Permissions.SendMessagesInThreads;
+    overwrites.push(roleOverwrite(muted, 0n, denied));
   }
 
   return overwrites;
@@ -512,7 +533,7 @@ function topicFor(name) {
     "access-code-hilfe": "Hilfe beim Verbinden der Mod mit dem Access Code.",
     "website-status": "Statusinfos für Website und Relay.",
     hilfe: "Allgemeine Hilfe.",
-    bugreports: "Fehlerberichte mit Screenshots oder Crashlogs.",
+    "bug-reports": "Öffentliche, direkt aus betterUC übermittelte Fehlerberichte.",
     "crash-reports": "Crashlogs und Startprobleme.",
     "feature-vorschlaege": "Ideen für neue betterUC Features.",
     chat: "Community-Chat.",

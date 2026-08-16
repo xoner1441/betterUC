@@ -46,6 +46,8 @@ const SUGGESTION_CHANNEL_ID = clean(process.env.DISCORD_SUGGESTION_CHANNEL_ID);
 const SUGGESTION_CHANNEL_NAME = clean(process.env.DISCORD_SUGGESTION_CHANNEL_NAME) || "vorschl\u00e4ge";
 const SUGGESTION_GUIDE_ENABLED = String(process.env.DISCORD_SUGGESTION_GUIDE_ENABLED || "true").toLowerCase() !== "false";
 const SUGGESTION_GUIDE_DELAY_MS = Math.max(500, Number(process.env.DISCORD_SUGGESTION_GUIDE_DELAY_MS || 1500));
+const BUG_FORUM_CHANNEL_ID = clean(process.env.DISCORD_BUG_FORUM_CHANNEL_ID);
+const BUG_FORUM_CHANNEL_NAME = clean(process.env.DISCORD_BUG_FORUM_CHANNEL_NAME) || "bug-reports";
 const MONITOR_CHANNEL_ID = clean(process.env.DISCORD_MONITOR_CHANNEL_ID);
 const MONITOR_CHANNEL_NAME = clean(process.env.DISCORD_MONITOR_CHANNEL_NAME) || "systemstatus";
 const MONITOR_ENABLED = String(process.env.DISCORD_MONITOR_ENABLED || "true").toLowerCase() !== "false";
@@ -623,6 +625,43 @@ async function resolveTextChannel(guild, id, name) {
     if (channel && channel.type === ChannelType.GuildText) return channel;
   }
   return name ? findTextChannelByName(guild, name) : null;
+}
+
+async function resolveForumChannel(guild, id, name) {
+  if (!guild) return null;
+  if (id) {
+    const channel = await guild.channels.fetch(id).catch(() => null);
+    if (channel && channel.type === ChannelType.GuildForum) return channel;
+  }
+  await guild.channels.fetch().catch(() => null);
+  const lower = String(name || "").toLowerCase();
+  return guild.channels.cache.find(channel =>
+    channel.type === ChannelType.GuildForum
+    && channel.name.toLowerCase() === lower
+  ) || null;
+}
+
+function bugReportEmbed(report) {
+  const fields = [
+    { name: "Gemeldet von", value: display(report.reporterName), inline: true },
+    { name: "betterUC", value: display(report.modVersion), inline: true },
+    { name: "Minecraft / Client", value: `${display(report.gameVersion)} / ${display(report.clientName)}`, inline: true }
+  ];
+  if (report.steps) {
+    fields.push({ name: "Schritte zum Nachstellen", value: display(report.steps).slice(0, 1024), inline: false });
+    if (report.steps.length > 1024) {
+      fields.push({ name: "Schritte (Fortsetzung)", value: report.steps.slice(1024, 2048), inline: false });
+    }
+  }
+  const embed = new EmbedBuilder()
+    .setColor(0xf59e0b)
+    .setTitle(clean(report.title).slice(0, 256))
+    .setDescription(display(report.description).slice(0, 4096))
+    .setFields(fields)
+    .setFooter({ text: "Direkt aus dem betterUC Client gemeldet" })
+    .setTimestamp();
+  if (report.screenshotUrl) embed.setImage(report.screenshotUrl);
+  return embed;
 }
 
 async function ensureUpdateNotificationRole(guild) {
@@ -1946,6 +1985,7 @@ async function startDiscordBot(context) {
     return {
       notifyStateChanged() {},
       publishAnnouncement() { return Promise.resolve(); },
+      createBugReport() { return Promise.reject(new Error("Discord-Bot ist nicht konfiguriert.")); },
       stop() {}
     };
   }
@@ -1957,6 +1997,7 @@ async function startDiscordBot(context) {
     return {
       notifyStateChanged() {},
       publishAnnouncement() { return Promise.resolve(); },
+      createBugReport() { return Promise.reject(new Error("Discord-Bot ist nicht verfuegbar.")); },
       stop() {}
     };
   }
@@ -1979,6 +2020,7 @@ async function startDiscordBot(context) {
   let announcementChannel = null;
   let ticketLogChannel = null;
   let suggestionChannel = null;
+  let bugForumChannel = null;
   let monitorChannel = null;
   let weeklyChannel = null;
   let changelogChannel = null;
@@ -1989,6 +2031,34 @@ async function startDiscordBot(context) {
       embeds: [announcementEmbed(event)],
       allowedMentions: { parse: [] }
     });
+  };
+
+  const createBugReport = async report => {
+    if (!ready || !bugForumChannel) {
+      throw new Error("Discord Bug-Forum ist nicht verfuegbar.");
+    }
+    const files = [];
+    if (report.logExcerpt) {
+      files.push(new AttachmentBuilder(Buffer.from(report.logExcerpt, "utf8"), {
+        name: "betteruc-latest-log.txt",
+        description: "Vom Spieler freigegebener Auszug aus latest.log"
+      }));
+    }
+    const newTag = bugForumChannel.availableTags?.find(tag => tag.name.toLowerCase() === "neu");
+    const thread = await bugForumChannel.threads.create({
+      name: clean(report.title).slice(0, 100),
+      reason: `betterUC Bugreport von ${display(report.reporterName)}`,
+      appliedTags: newTag ? [newTag.id] : [],
+      message: {
+        embeds: [bugReportEmbed(report)],
+        files,
+        allowedMentions: { parse: [] }
+      }
+    });
+    return {
+      threadId: thread.id,
+      url: thread.url || `https://discord.com/channels/${thread.guildId}/${thread.id}`
+    };
   };
 
   const updateSuggestionGuide = async () => {
@@ -2130,6 +2200,7 @@ async function startDiscordBot(context) {
         announcementChannel = await resolveTextChannel(guild, ANNOUNCEMENT_CHANNEL_ID, ANNOUNCEMENT_CHANNEL_NAME);
         ticketLogChannel = await resolveTextChannel(guild, TICKET_LOG_CHANNEL_ID, TICKET_LOG_CHANNEL_NAME);
         suggestionChannel = await resolveTextChannel(guild, SUGGESTION_CHANNEL_ID, SUGGESTION_CHANNEL_NAME);
+        bugForumChannel = await resolveForumChannel(guild, BUG_FORUM_CHANNEL_ID, BUG_FORUM_CHANNEL_NAME);
         monitorChannel = await resolveTextChannel(guild, MONITOR_CHANNEL_ID, MONITOR_CHANNEL_NAME);
         weeklyChannel = await resolveTextChannel(guild, WEEKLY_CHANNEL_ID, WEEKLY_CHANNEL_NAME);
         changelogChannel = await resolveTextChannel(guild, CHANGELOG_CHANNEL_ID, CHANGELOG_CHANNEL_NAME);
@@ -2141,6 +2212,7 @@ async function startDiscordBot(context) {
         }
         if (!ticketLogChannel) console.warn(`Discord ticket log channel not found (${TICKET_LOG_CHANNEL_ID || TICKET_LOG_CHANNEL_NAME})`);
         if (!suggestionChannel) console.warn(`Discord suggestion channel not found (${SUGGESTION_CHANNEL_ID || SUGGESTION_CHANNEL_NAME})`);
+        if (!bugForumChannel) console.warn(`Discord bug forum not found (${BUG_FORUM_CHANNEL_ID || BUG_FORUM_CHANNEL_NAME})`);
         if (MONITOR_ENABLED && !monitorChannel) console.warn(`Discord monitor channel not found (${MONITOR_CHANNEL_ID || MONITOR_CHANNEL_NAME})`);
         if (!weeklyChannel) console.warn(`Discord weekly channel not found (${WEEKLY_CHANNEL_ID || WEEKLY_CHANNEL_NAME})`);
         if (!changelogChannel) console.warn(`Discord changelog channel not found (${CHANGELOG_CHANNEL_ID || CHANGELOG_CHANNEL_NAME})`);
@@ -2190,6 +2262,7 @@ async function startDiscordBot(context) {
   return {
     notifyStateChanged,
     publishAnnouncement,
+    createBugReport,
     stop() {
       clearTimeout(presenceTimer);
       clearTimeout(monitorRefreshTimer);

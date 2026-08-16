@@ -37,6 +37,9 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Comparator;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -117,6 +120,70 @@ public final class ScreenshotActionsClient {
     private static synchronized Path resolve(String id) {
         Path path = SCREENSHOTS.get(id);
         return path != null && Files.isRegularFile(path) ? path : null;
+    }
+
+    public static Path latestScreenshot() {
+        Path directory = Minecraft.getInstance().gameDirectory.toPath().resolve("screenshots");
+        if (!Files.isDirectory(directory)) {
+            return null;
+        }
+        try (var files = Files.list(directory)) {
+            return files
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".png"))
+                    .max(Comparator.comparingLong(ScreenshotActionsClient::lastModified))
+                    .orElse(null);
+        } catch (IOException exception) {
+            BetterUCMod.LOGGER.warn("Could not list screenshots", exception);
+            return null;
+        }
+    }
+
+    public static CompletableFuture<String> uploadForBug(Path path) {
+        String token = BetterUCConfig.INSTANCE.pingRelayToken == null
+                ? ""
+                : BetterUCConfig.INSTANCE.pingRelayToken.trim();
+        if (token.isEmpty()) {
+            return CompletableFuture.failedFuture(new IllegalStateException("Für den Screenshot wird ein gültiger Access Code benötigt."));
+        }
+        try {
+            long size = Files.size(path);
+            if (size <= 0 || size > MAX_UPLOAD_BYTES) {
+                return CompletableFuture.failedFuture(new IllegalStateException("Der Screenshot ist leer oder größer als 12 MB."));
+            }
+            HttpRequest request = HttpRequest.newBuilder(screenshotApiUri(BetterUCConfig.INSTANCE.pingRelayUrl))
+                    .timeout(Duration.ofSeconds(30))
+                    .header("Authorization", "Bearer " + token)
+                    .header("Content-Type", "image/png")
+                    .header("X-Screenshot-Name", path.getFileName().toString())
+                    .POST(HttpRequest.BodyPublishers.ofFile(path))
+                    .build();
+            return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
+                    .thenApply(response -> {
+                        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                            throw new CompletionException(new IllegalStateException(
+                                    response.statusCode() == 401 || response.statusCode() == 403
+                                            ? "Access Code ungültig oder gesperrt."
+                                            : "Screenshot-Upload fehlgeschlagen (HTTP " + response.statusCode() + ")."));
+                        }
+                        JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+                        String url = json.has("url") ? json.get("url").getAsString() : "";
+                        if (url.isBlank()) {
+                            throw new CompletionException(new IllegalStateException("Der Screenshot-Upload lieferte keinen Link."));
+                        }
+                        return url;
+                    });
+        } catch (Exception exception) {
+            return CompletableFuture.failedFuture(exception);
+        }
+    }
+
+    private static long lastModified(Path path) {
+        try {
+            return Files.getLastModifiedTime(path).toMillis();
+        } catch (IOException exception) {
+            return Long.MIN_VALUE;
+        }
     }
 
     private static Component buildActionsMessage(String id) {
@@ -344,6 +411,14 @@ public final class ScreenshotActionsClient {
 
     private static void setClipboardWithRetry(Path path, Image image) throws Exception {
         Throwable lastFailure = null;
+        if (isWindows()) {
+            try {
+                setWindowsClipboard(path);
+                return;
+            } catch (Exception nativeFailure) {
+                lastFailure = nativeFailure;
+            }
+        }
         for (int attempt = 0; attempt < FILE_ACTION_ATTEMPTS; attempt++) {
             try {
                 EventQueue.invokeAndWait(() -> Toolkit.getDefaultToolkit()
@@ -353,18 +428,6 @@ public final class ScreenshotActionsClient {
             } catch (Exception | AWTError | LinkageError failure) {
                 lastFailure = failure;
                 sleepBeforeRetry(attempt);
-            }
-        }
-
-        if (isWindows()) {
-            try {
-                setWindowsClipboard(path);
-                return;
-            } catch (Exception nativeFailure) {
-                if (lastFailure != null) {
-                    nativeFailure.addSuppressed(lastFailure);
-                }
-                throw nativeFailure;
             }
         }
 

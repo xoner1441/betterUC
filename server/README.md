@@ -11,6 +11,8 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `POST /api/access` creates a personal access code
 - `GET /api/status` public status
 - `GET /api/players` online mod users, requires an access code
+- `POST /api/screenshots` uploads an authenticated PNG screenshot for seven days
+- `POST /api/bugs` creates a public Discord forum report; requires an access code
 - `GET /admin` admin control panel
 - `GET /api/admin/accounts` list accounts, requires an admin user session or `ADMIN_KEY`
 - `POST /api/admin/backups` creates an immediate `accounts.json` backup, requires admin access
@@ -54,6 +56,8 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `DISCORD_TICKET_LOG_CHANNEL_ID=...` private channel receiving ticket transcripts
 - `DISCORD_TICKET_TRANSCRIPT_DIR=/opt/betteruc-relay/data/ticket-transcripts`
 - `DISCORD_SUGGESTION_CHANNEL_ID=...` public channel for persistent suggestions and votes
+- `DISCORD_BUG_FORUM_CHANNEL_ID=...` public forum receiving authenticated in-game bug reports
+- `DISCORD_BUG_FORUM_CHANNEL_NAME=bug-reports` fallback forum channel name
 - `DISCORD_SUGGESTION_GUIDE_ENABLED=true` keeps the `/vorschlag erstellen` guide at the bottom of the suggestion channel
 - `DISCORD_SUGGESTION_GUIDE_DELAY_MS=1500` debounce before the guide is moved below new messages
 - `DISCORD_MONITOR_CHANNEL_ID=...` channel containing one permanently updated live system-status message

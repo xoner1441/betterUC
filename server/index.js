@@ -96,6 +96,7 @@ let lastAnnouncementAt = 0;
 let discordBot = {
   notifyStateChanged() {},
   publishAnnouncement() { return Promise.resolve(); },
+  createBugReport() { return Promise.reject(new Error("Discord-Bot ist nicht verfuegbar.")); },
   stop() {}
 };
 const database = createDatabase();
@@ -1455,6 +1456,67 @@ async function handleScreenshotUpload(req, res, url) {
   });
 }
 
+function cleanBugText(value, maxLength) {
+  return String(value || "")
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "")
+    .trim()
+    .slice(0, maxLength);
+}
+
+function cleanBugScreenshotUrl(value) {
+  const raw = cleanBugText(value, 512);
+  if (!raw) return "";
+  try {
+    const parsed = new URL(raw);
+    const expected = new URL(SCREENSHOT_PUBLIC_BASE_URL);
+    if (parsed.origin !== expected.origin || !/^\/s\/[a-zA-Z0-9_-]{20,64}$/.test(parsed.pathname)) return "";
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
+async function handleBugReport(req, res, url) {
+  const auth = authenticate(req, url);
+  if (!auth || auth.type !== "access" || !auth.account || auth.account.id === "legacy") {
+    json(res, 401, { ok: false, error: "Access-Code fehlt oder ist ungueltig." });
+    return;
+  }
+  if (isRateLimited(req, `bug-report:${auth.account.id}`, 5, 15 * 60 * 1000)) {
+    json(res, 429, { ok: false, error: "Zu viele Bugmeldungen. Bitte warte einige Minuten." });
+    return;
+  }
+
+  const body = await readJsonBody(req, 256 * 1024);
+  const title = cleanBugText(body.title, 100);
+  const description = cleanBugText(body.description, 3000);
+  const steps = cleanBugText(body.steps, 2000);
+  const logExcerpt = cleanBugText(body.logExcerpt, 96 * 1024);
+  if (title.length < 5 || description.length < 10) {
+    json(res, 400, { ok: false, error: "Titel und Beschreibung sind zu kurz." });
+    return;
+  }
+
+  try {
+    const result = await discordBot.createBugReport({
+      reporterName: cleanBugText(auth.account.minecraftName, 32) || "Unbekannt",
+      title,
+      description,
+      steps,
+      screenshotUrl: cleanBugScreenshotUrl(body.screenshotUrl),
+      logExcerpt,
+      modVersion: cleanBugText(body.modVersion, 40),
+      gameVersion: cleanBugText(body.gameVersion, 40),
+      clientName: cleanBugText(body.clientName, 80)
+    });
+    await recordDiscordActivity("bug.minecraft", auth.account.id, { threadId: result.threadId, title });
+    json(res, 201, { ok: true, threadId: result.threadId, url: result.url });
+  } catch (error) {
+    console.error("Could not create Discord bug report", error);
+    json(res, 503, { ok: false, error: "Das Discord Bug-Forum ist gerade nicht erreichbar." });
+  }
+}
+
 async function handleSharedScreenshot(req, res, id) {
   if (!database.enabled || !/^[a-zA-Z0-9_-]{20,64}$/.test(id)) {
     text(res, 404, "Screenshot nicht gefunden");
@@ -1847,6 +1909,11 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && url.pathname === "/api/screenshots") {
     await handleScreenshotUpload(req, res, url);
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/bugs") {
+    await handleBugReport(req, res, url);
     return;
   }
 

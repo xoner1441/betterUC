@@ -74,6 +74,7 @@ public class BetterUCScreen extends Screen {
     private String hudProfileNameDraft;
     private boolean hudProfileDropdownOpen = false;
     private boolean hudProfileDeleteConfirmation = false;
+    private Button bugReportButton;
 
     public BetterUCScreen() {
         super(Component.literal("betterUC"));
@@ -114,6 +115,13 @@ public class BetterUCScreen extends Screen {
         }).bounds(mainX() + mainW() - 150, mainY() + mainH() - 28, 138, BUTTON_H).build();
         addRenderableWidget(saveButton);
         registerTooltip(saveButton, "Speichert deine Änderungen und schließt das ClickGUI.");
+
+        bugReportButton = Button.builder(Component.literal("Bug melden"), b -> openScreen(new BugReportScreen(this)))
+                .bounds(saveButton.getX() - 114, saveButton.getY(), 104, BUTTON_H)
+                .build();
+        addRenderableWidget(bugReportButton);
+        registerTooltip(bugReportButton,
+                "Öffnet das Ingame-Formular und erstellt nach deiner Bestätigung einen öffentlichen Discord-Forumbeitrag.");
     }
 
     private void addDetailControls() {
@@ -1165,6 +1173,10 @@ public class BetterUCScreen extends Screen {
         context.fill(0, 0, width, height, 0x66000000);
         renderFrame(context, mouseX, mouseY);
         super.extractRenderState(context, mouseX, mouseY, delta);
+        if (bugReportButton != null && bugReportButton.visible) {
+            drawBorder(context, bugReportButton.getX() - 1, bugReportButton.getY() - 1,
+                    bugReportButton.getWidth() + 2, bugReportButton.getHeight() + 2, 0xFFF59E0B);
+        }
         renderHoveredTooltip(context, mouseX, mouseY);
     }
 
