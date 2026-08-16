@@ -194,6 +194,31 @@ class ParserSmokeTest {
     }
 
     @Test
+    void chatCustomizationHandlesInvisiblePlayerNameMarkersInCurrentHqFormat() {
+        ChatCustomizationFormatter.clearPending();
+
+        ChatCustomizationFormatter.Result first = ChatCustomizationFormatter.transform(
+                "23:28:22 HQ: \u200Cshrek_abi\u200C wurde von \u200Crteli\u200C eingesperrt.",
+                true,
+                false
+        );
+        assertNotNull(first);
+        assertTrue(first.cancelOriginal());
+        assertTrue(first.replacementMessages().isEmpty());
+
+        ChatCustomizationFormatter.Result second = ChatCustomizationFormatter.transform(
+                "HQ: Fahndungsgrund: Einbruch staatliche Einrichtung | Fahndungszeit: 50 Minuten.",
+                true,
+                false
+        );
+        assertNotNull(second);
+        assertEquals(3, second.replacementMessages().size());
+        assertEquals("inhaftiert \u25C6 rteli \u00BB shrek_abi", second.replacementMessages().get(0).getString());
+        assertEquals("\u00BB Einbruch staatliche Einrichtung", second.replacementMessages().get(1).getString());
+        assertEquals("\u00BB 50 Minuten", second.replacementMessages().get(2).getString());
+    }
+
+    @Test
     void chatCustomizationFormatsWeaponSeizureWithoutFollowingReason() {
         ChatCustomizationFormatter.clearPending();
 
@@ -307,6 +332,35 @@ class ParserSmokeTest {
         assertEquals("get\u00F6tet \u25C6 pixel361 \u00BB coderXD", second.replacementMessages().get(0).getString());
         assertEquals("\u00BB Terrorismus", second.replacementMessages().get(1).getString());
         assertEquals("\u00BB 1 Minute", second.replacementMessages().get(2).getString());
+    }
+
+    @Test
+    void chatCustomizationHandlesCurrentKilledHqFormatWithBracketedOfficer() {
+        ChatCustomizationFormatter.clearPending();
+
+        ChatCustomizationFormatter.Result first = ChatCustomizationFormatter.transform(
+                "13:47:31 HQ: \u200CNuRisk\u200C wurde von [UC]\u200C_ek61\u200C get\u00F6tet.",
+                true,
+                false
+        );
+        assertNotNull(first);
+        assertTrue(first.cancelOriginal());
+        assertTrue(first.replacementMessages().isEmpty());
+
+        ChatCustomizationFormatter.Result second = ChatCustomizationFormatter.transform(
+                "HQ: Fahndungsgrund: Terrorismus + F\u00FChrerschein Abnahme + Widerstand gegen Beamte "
+                        + "| Fahndungszeit: 1 Minuten. [\u2022]",
+                true,
+                false
+        );
+        assertNotNull(second);
+        assertEquals(3, second.replacementMessages().size());
+        assertEquals("get\u00F6tet \u25C6 [UC]_ek61 \u00BB NuRisk", second.replacementMessages().get(0).getString());
+        assertEquals(
+                "\u00BB Terrorismus + F\u00FChrerschein Abnahme + Widerstand gegen Beamte",
+                second.replacementMessages().get(1).getString()
+        );
+        assertEquals("\u00BB 1 Minuten", second.replacementMessages().get(2).getString());
     }
 
     @Test

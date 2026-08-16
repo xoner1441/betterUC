@@ -14,6 +14,10 @@ import net.minecraft.network.chat.Style;
 public final class ChatCustomizationFormatter {
     private static final long PENDING_TTL_MS = 30000L;
     private static final Pattern PLAYER_TOKEN_PATTERN = Pattern.compile("[A-Za-z0-9_]{2,16}");
+    private static final Pattern TEAM_PLAYER_PATTERN = Pattern.compile(
+            "\\[UC\\]\\s*([A-Za-z0-9_]{2,16})",
+            Pattern.CASE_INSENSITIVE
+    );
 
     private static final Pattern WANTED_START_PATTERN = Pattern.compile(
             "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*Gesuchter:.*?(?:\\[[^\\]]+\\]\\s*)?([A-Za-z0-9_]+).*?Grund.*?[:\\s]+(.+?)(?:\\s*\\[.*?\\])?\\s*$",
@@ -40,7 +44,7 @@ public final class ChatCustomizationFormatter {
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern SEARCH_REASON_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:?\\s*Fahndungsgrund:\\s*(.+?)\\s*[|¦]\\s*Fahndungszeit:\\s*(\\d+)\\s*(Minute(?:n)?|Stunde(?:n)?)\\.?\\s*$",
+            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:?\\s*Fahndungsgrund:\\s*(.+?)\\s*[|¦]\\s*Fahndungszeit:\\s*(\\d+)\\s*(Minute(?:n)?|Stunde(?:n)?)\\.?\\s*(?:\\[[^\\]]*\\]\\s*)*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern CHANGED_PATTERN = Pattern.compile(
@@ -421,7 +425,11 @@ public final class ChatCustomizationFormatter {
 
     private static String normalize(String raw) {
         if (raw == null) return "";
-        return raw.replaceAll("§.", "").trim();
+        return raw
+                .replace('\u00A0', ' ')
+                .replaceAll("(?i)\\u00A7[0-9A-FK-ORX]", "")
+                .replaceAll("[\\u00AD\\u200B-\\u200D\\u2060\\uFEFF]", "")
+                .trim();
     }
 
     private static String cleanAmount(String amount) {
@@ -435,15 +443,28 @@ public final class ChatCustomizationFormatter {
 
     private static String playerName(String value) {
         if (value == null) return "";
-        String cleaned = value.replaceAll("§.", "")
+        String normalized = normalize(value);
+        Matcher teamPlayer = TEAM_PLAYER_PATTERN.matcher(normalized);
+        if (teamPlayer.find()) {
+            return "[UC]" + teamPlayer.group(1);
+        }
+        String cleaned = normalized
                 .replaceAll("\\[[^\\]]+\\]", " ")
                 .trim();
-        Matcher matcher = PLAYER_TOKEN_PATTERN.matcher(cleaned);
+        String player = lastPlayerToken(cleaned);
+        if (player.isBlank()) {
+            player = lastPlayerToken(normalized);
+        }
+        return player.isBlank() ? cleaned : player;
+    }
+
+    private static String lastPlayerToken(String value) {
+        Matcher matcher = PLAYER_TOKEN_PATTERN.matcher(value == null ? "" : value);
         String last = "";
         while (matcher.find()) {
             last = matcher.group();
         }
-        return last.isBlank() ? cleaned : last;
+        return last;
     }
 
     private static String key(String value) {
