@@ -254,7 +254,13 @@ public class HudLayoutScreen extends Screen {
         return switch (module) {
             case HEALTH -> BetterUCConfig.INSTANCE.showHealthHud;
             case FPS -> BetterUCConfig.INSTANCE.showFpsHud;
-            case DATE_TIME -> BetterUCConfig.INSTANCE.showDateTimeHud;
+            case DATE_TIME -> BetterUCConfig.INSTANCE.showDateTimeHud
+                    && (BetterUCConfig.INSTANCE.dateTimeHudSeparate
+                    ? BetterUCConfig.INSTANCE.dateTimeHudShowDate
+                    : BetterUCConfig.INSTANCE.dateTimeHudShowDate || BetterUCConfig.INSTANCE.dateTimeHudShowTime);
+            case DATE_TIME_CLOCK -> BetterUCConfig.INSTANCE.showDateTimeHud
+                    && BetterUCConfig.INSTANCE.dateTimeHudSeparate
+                    && BetterUCConfig.INSTANCE.dateTimeHudShowTime;
             case PAYDAY -> BetterUCConfig.INSTANCE.showPaydayHud;
             case AMMO -> BetterUCConfig.INSTANCE.showAmmoHud;
             case BANK -> BetterUCConfig.INSTANCE.showBankHud;
@@ -282,6 +288,7 @@ public class HudLayoutScreen extends Screen {
             case HEALTH -> resolveHealthX();
             case FPS -> BetterUCConfig.INSTANCE.fpsHudX;
             case DATE_TIME -> BetterUCConfig.INSTANCE.dateTimeHudX;
+            case DATE_TIME_CLOCK -> BetterUCConfig.INSTANCE.dateTimeHudTimeX;
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudX;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudX;
             case BANK -> BetterUCConfig.INSTANCE.bankHudX;
@@ -301,6 +308,7 @@ public class HudLayoutScreen extends Screen {
             case HEALTH -> resolveHealthY();
             case FPS -> BetterUCConfig.INSTANCE.fpsHudY;
             case DATE_TIME -> BetterUCConfig.INSTANCE.dateTimeHudY;
+            case DATE_TIME_CLOCK -> BetterUCConfig.INSTANCE.dateTimeHudTimeY;
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudY;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudY;
             case BANK -> BetterUCConfig.INSTANCE.bankHudY;
@@ -328,6 +336,10 @@ public class HudLayoutScreen extends Screen {
             case DATE_TIME -> {
                 BetterUCConfig.INSTANCE.dateTimeHudX = x;
                 BetterUCConfig.INSTANCE.dateTimeHudY = y;
+            }
+            case DATE_TIME_CLOCK -> {
+                BetterUCConfig.INSTANCE.dateTimeHudTimeX = x;
+                BetterUCConfig.INSTANCE.dateTimeHudTimeY = y;
             }
             case PAYDAY -> {
                 BetterUCConfig.INSTANCE.paydayHudX = x;
@@ -381,6 +393,7 @@ public class HudLayoutScreen extends Screen {
             case HEALTH -> BetterUCConfig.INSTANCE.healthHudScale;
             case FPS -> BetterUCConfig.INSTANCE.fpsHudScale;
             case DATE_TIME -> BetterUCConfig.INSTANCE.dateTimeHudScale;
+            case DATE_TIME_CLOCK -> BetterUCConfig.INSTANCE.dateTimeHudTimeScale;
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudScale;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudScale;
             case BANK -> BetterUCConfig.INSTANCE.bankHudScale;
@@ -401,6 +414,7 @@ public class HudLayoutScreen extends Screen {
             case HEALTH -> BetterUCConfig.INSTANCE.healthHudScale = safeScale;
             case FPS -> BetterUCConfig.INSTANCE.fpsHudScale = safeScale;
             case DATE_TIME -> BetterUCConfig.INSTANCE.dateTimeHudScale = safeScale;
+            case DATE_TIME_CLOCK -> BetterUCConfig.INSTANCE.dateTimeHudTimeScale = safeScale;
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudScale = safeScale;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudScale = safeScale;
             case BANK -> BetterUCConfig.INSTANCE.bankHudScale = safeScale;
@@ -422,7 +436,8 @@ public class HudLayoutScreen extends Screen {
                 yield HealthHud.getPreviewWidth(renderer, BetterUCConfig.INSTANCE.healthHudStyle);
             }
             case FPS -> singleLineWidth(hudLabel(module), "144", prefixedText(module, "144"), BetterUCConfig.INSTANCE.fpsHudStyle);
-            case DATE_TIME -> DateTimeHud.previewWidth(renderer);
+            case DATE_TIME -> DateTimeHud.previewWidth(renderer, false);
+            case DATE_TIME_CLOCK -> DateTimeHud.previewWidth(renderer, true);
             case PAYDAY -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.paydayHudStyle)
                     ? progressWidth(hudLabel(module), "25/60 min")
                     : renderer.width(prefixedText(module, "25/60 Minuten")) + 4;
@@ -462,7 +477,8 @@ public class HudLayoutScreen extends Screen {
             case POTION -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.potionHudStyle) ? 65 : 48;
             case PLANT_TIMER -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.plantTimerHudStyle) ? 31 : 24;
             case FPS -> singleLineHeight(BetterUCConfig.INSTANCE.fpsHudStyle);
-            case DATE_TIME -> DateTimeHud.previewHeight();
+            case DATE_TIME -> DateTimeHud.previewHeight(false);
+            case DATE_TIME_CLOCK -> DateTimeHud.previewHeight(true);
             case BANK -> singleLineHeight(BetterUCConfig.INSTANCE.bankHudStyle);
             case CASH -> singleLineHeight(BetterUCConfig.INSTANCE.cashHudStyle);
             case SPRINT -> singleLineHeight(BetterUCConfig.INSTANCE.toggleSprintHudStyle);
@@ -533,7 +549,8 @@ public class HudLayoutScreen extends Screen {
                 );
             }
             case FPS -> renderSingleLine(context, minecraft, style, fontId, x, y, hudLabel(module), "144", prefixedText(module, "144"), BetterUCConfig.INSTANCE.fpsHudColor);
-            case DATE_TIME -> DateTimeHud.drawPreview(context, minecraft, x, y);
+            case DATE_TIME -> DateTimeHud.drawLayoutPreview(context, minecraft, x, y, false);
+            case DATE_TIME_CLOCK -> DateTimeHud.drawLayoutPreview(context, minecraft, x, y, true);
             case PAYDAY -> {
                 if (modernStyle) {
                     ModernHudRenderer.drawProgressModule(context, minecraft, x, y, hudLabel(module), "25/60 min", 25.0F / 60.0F, BetterUCConfig.INSTANCE.paydayHudColor);
@@ -642,6 +659,7 @@ public class HudLayoutScreen extends Screen {
             case HEALTH -> BetterUCConfig.INSTANCE.healthHudStyle;
             case FPS -> BetterUCConfig.INSTANCE.fpsHudStyle;
             case DATE_TIME -> BetterUCConfig.INSTANCE.dateTimeHudStyle;
+            case DATE_TIME_CLOCK -> BetterUCConfig.INSTANCE.dateTimeHudStyle;
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudStyle;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudStyle;
             case BANK -> BetterUCConfig.INSTANCE.bankHudStyle;
@@ -661,6 +679,7 @@ public class HudLayoutScreen extends Screen {
             case HEALTH -> BetterUCConfig.INSTANCE.healthHudCustomFont;
             case FPS -> BetterUCConfig.INSTANCE.fpsHudCustomFont;
             case DATE_TIME -> BetterUCConfig.INSTANCE.dateTimeHudCustomFont;
+            case DATE_TIME_CLOCK -> BetterUCConfig.INSTANCE.dateTimeHudCustomFont;
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudCustomFont;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudCustomFont;
             case BANK -> BetterUCConfig.INSTANCE.bankHudCustomFont;
@@ -680,6 +699,7 @@ public class HudLayoutScreen extends Screen {
             case HEALTH -> BetterUCConfig.INSTANCE.healthHudGradientEnabled;
             case FPS -> BetterUCConfig.INSTANCE.fpsHudGradientEnabled;
             case DATE_TIME -> BetterUCConfig.INSTANCE.dateTimeHudGradientEnabled;
+            case DATE_TIME_CLOCK -> BetterUCConfig.INSTANCE.dateTimeHudGradientEnabled;
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudGradientEnabled;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudGradientEnabled;
             case BANK -> BetterUCConfig.INSTANCE.bankHudGradientEnabled;
@@ -699,6 +719,7 @@ public class HudLayoutScreen extends Screen {
             case HEALTH -> BetterUCConfig.INSTANCE.healthHudGradientColor;
             case FPS -> BetterUCConfig.INSTANCE.fpsHudGradientColor;
             case DATE_TIME -> BetterUCConfig.INSTANCE.dateTimeHudGradientColor;
+            case DATE_TIME_CLOCK -> BetterUCConfig.INSTANCE.dateTimeHudGradientColor;
             case PAYDAY -> BetterUCConfig.INSTANCE.paydayHudGradientColor;
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudGradientColor;
             case BANK -> BetterUCConfig.INSTANCE.bankHudGradientColor;
@@ -826,6 +847,11 @@ public class HudLayoutScreen extends Screen {
                 BetterUCConfig.INSTANCE.dateTimeHudX = defaults.dateTimeHudX;
                 BetterUCConfig.INSTANCE.dateTimeHudY = defaults.dateTimeHudY;
                 BetterUCConfig.INSTANCE.dateTimeHudScale = defaults.dateTimeHudScale;
+            }
+            case DATE_TIME_CLOCK -> {
+                BetterUCConfig.INSTANCE.dateTimeHudTimeX = defaults.dateTimeHudTimeX;
+                BetterUCConfig.INSTANCE.dateTimeHudTimeY = defaults.dateTimeHudTimeY;
+                BetterUCConfig.INSTANCE.dateTimeHudTimeScale = defaults.dateTimeHudTimeScale;
             }
             case PAYDAY -> {
                 BetterUCConfig.INSTANCE.paydayHudX = defaults.paydayHudX;
@@ -1003,7 +1029,7 @@ public class HudLayoutScreen extends Screen {
         context.fill(bounds.x - 3, bounds.y - 3, bounds.x + bounds.width + 3, bounds.y + bounds.height + 3, active ? 0x22000000 : 0x12000000);
         drawBorder(context, bounds.x - 3, bounds.y - 3, bounds.width + 6, bounds.height + 6, borderColor);
         if (active) {
-            String label = String.format(Locale.ROOT, "%s %d%%", module.label, Math.round(getScale(module) * 100.0F));
+            String label = String.format(Locale.ROOT, "%s %d%%", moduleDisplayLabel(module), Math.round(getScale(module) * 100.0F));
             context.text(font, Component.literal(label), bounds.x, Math.max(0, bounds.y - 12), borderColor | 0xFF000000);
         }
         if (module == selectedModule) {
@@ -1120,6 +1146,13 @@ public class HudLayoutScreen extends Screen {
         );
     }
 
+    private String moduleDisplayLabel(HudModule module) {
+        if (module == HudModule.DATE_TIME && BetterUCConfig.INSTANCE.dateTimeHudSeparate) {
+            return "Datum";
+        }
+        return module.label;
+    }
+
     private int clamp(int value, int min, int max) {
         return Math.max(min, Math.min(max, value));
     }
@@ -1128,6 +1161,7 @@ public class HudLayoutScreen extends Screen {
         HEALTH("Health", 0xFFFF5555),
         FPS("FPS", BetterUCConfig.DEFAULT_FPS_HUD_COLOR),
         DATE_TIME("Datum & Uhrzeit", BetterUCConfig.DEFAULT_DATE_TIME_HUD_COLOR),
+        DATE_TIME_CLOCK("Uhrzeit", BetterUCConfig.DEFAULT_DATE_TIME_HUD_COLOR),
         PAYDAY("Payday", BetterUCConfig.DEFAULT_PAYDAY_HUD_COLOR),
         AMMO("Ammo", 0xFFFFAA33),
         BANK("Bank", BetterUCConfig.DEFAULT_BANK_HUD_COLOR),

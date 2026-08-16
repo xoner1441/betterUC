@@ -19,7 +19,7 @@ class DateTimeHudTest {
     }
 
     @Test
-    void formatsSecondsAndTwoLines() {
+    void formatsSecondsForSeparatelyPositionedElements() {
         DateTimeHud.DisplayText display = DateTimeHud.format(SAMPLE, true, true, true, true);
 
         assertEquals("16.08.2026", display.primary());

@@ -17,7 +17,7 @@ public final class DateTimeHud {
     private static final LocalDateTime PREVIEW_TIME = LocalDateTime.of(2026, 8, 16, 16, 42, 37);
     private static long cachedEpochSecond = Long.MIN_VALUE;
     private static int cachedOptions = Integer.MIN_VALUE;
-    private static DisplayText cachedDisplay = DisplayText.EMPTY;
+    private static DisplaySet cachedDisplays = DisplaySet.EMPTY;
 
     private DateTimeHud() {
     }
@@ -38,50 +38,73 @@ public final class DateTimeHud {
         BetterUCConfig config = BetterUCConfig.INSTANCE;
         if (client.player == null || !config.showDateTimeHud) return;
 
-        DisplayText display = currentDisplay(config);
-        if (display.isEmpty()) return;
-
-        ModernHudRenderer.drawScaledWithGradient(
-                context,
-                config.dateTimeHudX,
-                config.dateTimeHudY,
-                config.dateTimeHudScale,
-                config.dateTimeHudGradientEnabled,
-                config.dateTimeHudGradientColor,
-                () -> drawBody(
-                        context,
-                        client,
-                        0,
-                        0,
-                        config.dateTimeHudStyle,
-                        config.dateTimeHudCustomFont,
-                        config.dateTimeHudColor,
-                        display
-                )
-        );
+        DisplaySet displays = currentDisplays(config);
+        if (config.dateTimeHudSeparate) {
+            drawScaledDisplay(context, client, config.dateTimeHudX, config.dateTimeHudY,
+                    config.dateTimeHudScale, "DATUM", displays.date());
+            drawScaledDisplay(context, client, config.dateTimeHudTimeX, config.dateTimeHudTimeY,
+                    config.dateTimeHudTimeScale, "UHRZEIT", displays.time());
+        } else {
+            drawScaledDisplay(
+                    context,
+                    client,
+                    config.dateTimeHudX,
+                    config.dateTimeHudY,
+                    config.dateTimeHudScale,
+                    combinedLabel(config),
+                    displays.combined()
+            );
+        }
     }
 
     public static void drawPreview(GuiGraphicsExtractor context, Minecraft client, int x, int y) {
         BetterUCConfig config = BetterUCConfig.INSTANCE;
-        drawBody(
-                context,
-                client,
-                x,
-                y,
-                config.dateTimeHudStyle,
-                config.dateTimeHudCustomFont,
-                config.dateTimeHudColor,
-                previewDisplay(config)
-        );
+        DisplaySet displays = previewDisplays(config);
+        if (config.dateTimeHudSeparate) {
+            drawBody(context, client, x, y, config.dateTimeHudStyle, config.dateTimeHudCustomFont,
+                    config.dateTimeHudColor, "DATUM", displays.date());
+            drawBody(context, client, x, y + previewHeight(false) + 2, config.dateTimeHudStyle,
+                    config.dateTimeHudCustomFont, config.dateTimeHudColor, "UHRZEIT", displays.time());
+        } else {
+            drawBody(context, client, x, y, config.dateTimeHudStyle, config.dateTimeHudCustomFont,
+                    config.dateTimeHudColor, combinedLabel(config), displays.combined());
+        }
     }
 
-    public static int previewWidth(Font font) {
+    public static void drawLayoutPreview(
+            GuiGraphicsExtractor context,
+            Minecraft client,
+            int x,
+            int y,
+            boolean timeElement
+    ) {
         BetterUCConfig config = BetterUCConfig.INSTANCE;
-        DisplayText display = previewDisplay(config);
+        DisplaySet displays = previewDisplays(config);
+        DisplayText display = timeElement ? displays.time() : layoutPrimaryDisplay(config, displays);
+        String label = timeElement ? "UHRZEIT" : layoutPrimaryLabel(config);
+        drawBody(context, client, x, y, config.dateTimeHudStyle, config.dateTimeHudCustomFont,
+                config.dateTimeHudColor, label, display);
+    }
+
+    public static int previewWidth(Font font, boolean timeElement) {
+        BetterUCConfig config = BetterUCConfig.INSTANCE;
+        DisplaySet displays = previewDisplays(config);
+        DisplayText display = timeElement ? displays.time() : layoutPrimaryDisplay(config, displays);
+        String label = timeElement ? "UHRZEIT" : layoutPrimaryLabel(config);
+        return displayWidth(font, config.dateTimeHudStyle, label, display);
+    }
+
+    public static int previewHeight(boolean timeElement) {
+        BetterUCConfig config = BetterUCConfig.INSTANCE;
+        DisplaySet displays = previewDisplays(config);
+        DisplayText display = timeElement ? displays.time() : layoutPrimaryDisplay(config, displays);
+        return displayHeight(config.dateTimeHudStyle, display);
+    }
+
+    private static int displayWidth(Font font, String style, String label, DisplayText display) {
         if (display.isEmpty()) return 1;
 
-        if (BetterUCConfig.isModernHudStyle(config.dateTimeHudStyle)) {
-            String label = moduleLabel(config);
+        if (BetterUCConfig.isModernHudStyle(style)) {
             int labelGap = label.isBlank() ? 0 : 5;
             int firstLineWidth = font.width(label) + font.width(display.primary()) + labelGap + 23;
             if (!display.hasSecondLine()) {
@@ -92,10 +115,9 @@ public final class DateTimeHud {
         return Math.max(font.width(display.primary()), font.width(display.secondary())) + 4;
     }
 
-    public static int previewHeight() {
-        BetterUCConfig config = BetterUCConfig.INSTANCE;
-        boolean twoLines = previewDisplay(config).hasSecondLine();
-        if (BetterUCConfig.isModernHudStyle(config.dateTimeHudStyle)) {
+    private static int displayHeight(String style, DisplayText display) {
+        boolean twoLines = display.hasSecondLine();
+        if (BetterUCConfig.isModernHudStyle(style)) {
             return twoLines ? 31 : 18;
         }
         return twoLines ? 24 : 12;
@@ -106,7 +128,7 @@ public final class DateTimeHud {
             boolean showDate,
             boolean showTime,
             boolean showSeconds,
-            boolean twoLines
+            boolean separate
     ) {
         if (dateTime == null || (!showDate && !showTime)) return DisplayText.EMPTY;
 
@@ -115,37 +137,34 @@ public final class DateTimeHud {
                 ? (showSeconds ? TIME_SECONDS_FORMAT : TIME_FORMAT).format(dateTime)
                 : "";
         if (showDate && showTime) {
-            return twoLines
+            return separate
                     ? new DisplayText(date, time)
                     : new DisplayText(date + " // " + time, "");
         }
         return new DisplayText(showDate ? date : time, "");
     }
 
-    private static DisplayText currentDisplay(BetterUCConfig config) {
+    private static DisplaySet currentDisplays(BetterUCConfig config) {
         long epochSecond = System.currentTimeMillis() / 1000L;
         int options = optionSignature(config);
         if (epochSecond != cachedEpochSecond || options != cachedOptions) {
             cachedEpochSecond = epochSecond;
             cachedOptions = options;
-            cachedDisplay = format(
-                    LocalDateTime.now(),
-                    config.dateTimeHudShowDate,
-                    config.dateTimeHudShowTime,
-                    config.dateTimeHudShowSeconds,
-                    config.dateTimeHudTwoLines
-            );
+            cachedDisplays = displays(LocalDateTime.now(), config);
         }
-        return cachedDisplay;
+        return cachedDisplays;
     }
 
-    private static DisplayText previewDisplay(BetterUCConfig config) {
-        return format(
-                PREVIEW_TIME,
-                config.dateTimeHudShowDate,
-                config.dateTimeHudShowTime,
-                config.dateTimeHudShowSeconds,
-                config.dateTimeHudTwoLines
+    private static DisplaySet previewDisplays(BetterUCConfig config) {
+        return displays(PREVIEW_TIME, config);
+    }
+
+    private static DisplaySet displays(LocalDateTime dateTime, BetterUCConfig config) {
+        return new DisplaySet(
+                format(dateTime, config.dateTimeHudShowDate, config.dateTimeHudShowTime,
+                        config.dateTimeHudShowSeconds, false),
+                format(dateTime, config.dateTimeHudShowDate, false, false, false),
+                format(dateTime, false, config.dateTimeHudShowTime, config.dateTimeHudShowSeconds, false)
         );
     }
 
@@ -153,8 +172,30 @@ public final class DateTimeHud {
         int signature = config.dateTimeHudShowDate ? 1 : 0;
         signature |= config.dateTimeHudShowTime ? 1 << 1 : 0;
         signature |= config.dateTimeHudShowSeconds ? 1 << 2 : 0;
-        signature |= config.dateTimeHudTwoLines ? 1 << 3 : 0;
         return signature;
+    }
+
+    private static void drawScaledDisplay(
+            GuiGraphicsExtractor context,
+            Minecraft client,
+            int x,
+            int y,
+            float scale,
+            String label,
+            DisplayText display
+    ) {
+        if (display.isEmpty()) return;
+        BetterUCConfig config = BetterUCConfig.INSTANCE;
+        ModernHudRenderer.drawScaledWithGradient(
+                context,
+                x,
+                y,
+                scale,
+                config.dateTimeHudGradientEnabled,
+                config.dateTimeHudGradientColor,
+                () -> drawBody(context, client, 0, 0, config.dateTimeHudStyle,
+                        config.dateTimeHudCustomFont, config.dateTimeHudColor, label, display)
+        );
     }
 
     private static void drawBody(
@@ -165,6 +206,7 @@ public final class DateTimeHud {
             String style,
             String fontId,
             int color,
+            String label,
             DisplayText display
     ) {
         if (display.isEmpty()) return;
@@ -176,7 +218,7 @@ public final class DateTimeHud {
                         client,
                         x,
                         y,
-                        moduleLabel(BetterUCConfig.INSTANCE),
+                        label,
                         display.primary(),
                         display.secondary(),
                         color,
@@ -188,7 +230,7 @@ public final class DateTimeHud {
                         client,
                         x,
                         y,
-                        moduleLabel(BetterUCConfig.INSTANCE),
+                        label,
                         display.primary(),
                         color
                 );
@@ -210,9 +252,21 @@ public final class DateTimeHud {
         }
     }
 
-    private static String moduleLabel(BetterUCConfig config) {
+    private static DisplayText layoutPrimaryDisplay(BetterUCConfig config, DisplaySet displays) {
+        return config.dateTimeHudSeparate ? displays.date() : displays.combined();
+    }
+
+    private static String layoutPrimaryLabel(BetterUCConfig config) {
+        return config.dateTimeHudSeparate ? "DATUM" : combinedLabel(config);
+    }
+
+    private static String combinedLabel(BetterUCConfig config) {
         if (config.dateTimeHudShowDate && config.dateTimeHudShowTime) return "DATUM & ZEIT";
         return config.dateTimeHudShowDate ? "DATUM" : "UHRZEIT";
+    }
+
+    private record DisplaySet(DisplayText combined, DisplayText date, DisplayText time) {
+        private static final DisplaySet EMPTY = new DisplaySet(DisplayText.EMPTY, DisplayText.EMPTY, DisplayText.EMPTY);
     }
 
     record DisplayText(String primary, String secondary) {

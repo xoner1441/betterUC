@@ -43,10 +43,10 @@ public class BetterUCConfig {
             "timerX", "timerY", "hackTimerX", "hackTimerY", "plantTimerX", "plantTimerY",
             "dealerTimerX", "dealerTimerY", "maskTimerX", "maskTimerY", "productionTimerX", "productionTimerY",
             "healthHudX", "healthHudY", "toggleSprintHudX", "toggleSprintHudY", "fpsHudX", "fpsHudY",
-            "dateTimeHudX", "dateTimeHudY",
+            "dateTimeHudX", "dateTimeHudY", "dateTimeHudTimeX", "dateTimeHudTimeY",
             "paydayHudX", "paydayHudY", "ammoHudX", "ammoHudY", "bankHudX", "bankHudY",
             "cashHudX", "cashHudY", "potionHudX", "potionHudY",
-            "healthHudScale", "toggleSprintHudScale", "fpsHudScale", "dateTimeHudScale", "paydayHudScale", "ammoHudScale",
+            "healthHudScale", "toggleSprintHudScale", "fpsHudScale", "dateTimeHudScale", "dateTimeHudTimeScale", "paydayHudScale", "ammoHudScale",
             "bankHudScale", "cashHudScale", "potionHudScale", "hackTimerHudScale", "plantTimerHudScale",
             "dealerTimerHudScale", "maskTimerHudScale", "productionTimerHudScale",
             "toggleSprintHudColor", "fpsHudColor", "dateTimeHudColor", "paydayHudColor", "bankHudColor", "cashHudColor",
@@ -80,7 +80,7 @@ public class BetterUCConfig {
             "ammoHudMagazineBarEnabled", "ammoHudLowAmmoWarningEnabled", "ammoHudLowAmmoSoundEnabled",
             "ammoHudLowAmmoThresholdPercent", "ammoHudKr47MagazineSize",
             "showHealthHud", "showFpsHud", "showDateTimeHud", "dateTimeHudShowDate", "dateTimeHudShowTime",
-            "dateTimeHudShowSeconds", "dateTimeHudTwoLines", "showPaydayHud", "showAmmoHud", "showBankHud", "showCashHud",
+            "dateTimeHudShowSeconds", "dateTimeHudSeparate", "showPaydayHud", "showAmmoHud", "showBankHud", "showCashHud",
             "showPotionEffectsHud", "showPlantTimerHud", "showDealerTimerHud", "showMaskTimerHud",
             "showProductionTimerHud",
             "toggleSprintEnabled", "autoStatsOnJoinEnabled", "autoFactionBankOnBalanceEnabled",
@@ -116,12 +116,12 @@ public class BetterUCConfig {
     );
     private static final Set<String> HUD_PROFILE_FIELDS = Set.of(
             "healthHudX", "healthHudY", "toggleSprintHudX", "toggleSprintHudY", "fpsHudX", "fpsHudY",
-            "dateTimeHudX", "dateTimeHudY",
+            "dateTimeHudX", "dateTimeHudY", "dateTimeHudTimeX", "dateTimeHudTimeY",
             "paydayHudX", "paydayHudY", "ammoHudX", "ammoHudY", "bankHudX", "bankHudY",
             "cashHudX", "cashHudY", "potionHudX", "potionHudY", "hackTimerX", "hackTimerY",
             "plantTimerX", "plantTimerY", "dealerTimerX", "dealerTimerY", "maskTimerX", "maskTimerY",
             "productionTimerX", "productionTimerY",
-            "healthHudScale", "toggleSprintHudScale", "fpsHudScale", "dateTimeHudScale", "paydayHudScale", "ammoHudScale",
+            "healthHudScale", "toggleSprintHudScale", "fpsHudScale", "dateTimeHudScale", "dateTimeHudTimeScale", "paydayHudScale", "ammoHudScale",
             "bankHudScale", "cashHudScale", "potionHudScale", "hackTimerHudScale", "plantTimerHudScale",
             "dealerTimerHudScale", "maskTimerHudScale", "productionTimerHudScale",
             "toggleSprintHudColor", "fpsHudColor", "dateTimeHudColor", "paydayHudColor", "bankHudColor", "cashHudColor",
@@ -150,7 +150,7 @@ public class BetterUCConfig {
             "ammoHudPrefix", "bankHudPrefix", "cashHudPrefix", "hackTimerHudPrefix", "plantTimerHudPrefix",
             "dealerTimerHudPrefix", "maskTimerHudPrefix", "productionTimerHudPrefix",
             "showHealthHud", "showHealthAbsorption", "showFpsHud", "showDateTimeHud", "dateTimeHudShowDate",
-            "dateTimeHudShowTime", "dateTimeHudShowSeconds", "dateTimeHudTwoLines", "showPaydayHud", "showAmmoHud",
+            "dateTimeHudShowTime", "dateTimeHudShowSeconds", "dateTimeHudSeparate", "showPaydayHud", "showAmmoHud",
             "showBankHud", "showCashHud", "showPotionEffectsHud", "showPlantTimerHud",
             "showDealerTimerHud", "showMaskTimerHud", "showProductionTimerHud", "toggleSprintEnabled",
             "ammoHudMagazineBarEnabled", "ammoHudLowAmmoWarningEnabled", "ammoHudLowAmmoSoundEnabled",
@@ -292,6 +292,8 @@ public class BetterUCConfig {
     public int fpsHudY = 46;
     public int dateTimeHudX = 10;
     public int dateTimeHudY = 136;
+    public int dateTimeHudTimeX = 10;
+    public int dateTimeHudTimeY = 150;
     public int paydayHudX = 10;
     public int paydayHudY = 64;
     public int ammoHudX = 10;
@@ -306,6 +308,7 @@ public class BetterUCConfig {
     public float toggleSprintHudScale = DEFAULT_HUD_SCALE;
     public float fpsHudScale = DEFAULT_HUD_SCALE;
     public float dateTimeHudScale = DEFAULT_HUD_SCALE;
+    public float dateTimeHudTimeScale = DEFAULT_HUD_SCALE;
     public float paydayHudScale = DEFAULT_HUD_SCALE;
     public float ammoHudScale = DEFAULT_HUD_SCALE;
     public float bankHudScale = DEFAULT_HUD_SCALE;
@@ -426,7 +429,7 @@ public class BetterUCConfig {
     public boolean dateTimeHudShowDate = true;
     public boolean dateTimeHudShowTime = true;
     public boolean dateTimeHudShowSeconds = false;
-    public boolean dateTimeHudTwoLines = false;
+    public boolean dateTimeHudSeparate = false;
     public boolean showPaydayHud = true;
     public boolean showAmmoHud = true;
     public boolean showBankHud = true;
@@ -737,6 +740,7 @@ public class BetterUCConfig {
         INSTANCE.toggleSprintHudScale = normalizeHudScale(INSTANCE.toggleSprintHudScale);
         INSTANCE.fpsHudScale = normalizeHudScale(INSTANCE.fpsHudScale);
         INSTANCE.dateTimeHudScale = normalizeHudScale(INSTANCE.dateTimeHudScale);
+        INSTANCE.dateTimeHudTimeScale = normalizeHudScale(INSTANCE.dateTimeHudTimeScale);
         INSTANCE.paydayHudScale = normalizeHudScale(INSTANCE.paydayHudScale);
         INSTANCE.ammoHudScale = normalizeHudScale(INSTANCE.ammoHudScale);
         INSTANCE.bankHudScale = normalizeHudScale(INSTANCE.bankHudScale);
@@ -1531,11 +1535,15 @@ public class BetterUCConfig {
     private static void loadFromFile(File file) {
         try {
             String rawJson = Files.readString(file.toPath(), StandardCharsets.UTF_8);
+            JsonObject rawConfig = JsonParser.parseString(rawJson).getAsJsonObject();
             boolean hasChatCustomizationSetting = rawJson.contains("\"chatCustomizationEnabled\"");
             boolean hasReinfCustomizationSetting = rawJson.contains("\"reinfCustomizationEnabled\"");
             boolean hasCloudSettingsSetting = rawJson.contains("\"cloudSettingsEnabled\"");
             boolean hasRichTaxAlertSetting = rawJson.contains("\"richTaxAlertEnabled\"");
             boolean hasRichTaxAlertSoundSetting = rawJson.contains("\"richTaxAlertSoundEnabled\"");
+            boolean hasDateTimeSeparateSetting = rawConfig.has("dateTimeHudSeparate");
+            boolean legacyDateTimeTwoLines = rawConfig.has("dateTimeHudTwoLines")
+                    && rawConfig.get("dateTimeHudTwoLines").getAsBoolean();
             BetterUCConfig loaded = GSON.fromJson(rawJson, BetterUCConfig.class);
             if (loaded == null) return;
 
@@ -1554,6 +1562,9 @@ public class BetterUCConfig {
             }
             if (!hasRichTaxAlertSoundSetting) {
                 INSTANCE.richTaxAlertSoundEnabled = true;
+            }
+            if (!hasDateTimeSeparateSetting && legacyDateTimeTwoLines) {
+                INSTANCE.dateTimeHudSeparate = true;
             }
             ensureRuntimeCollections();
             if (INSTANCE.hotkeyCommands == null)         INSTANCE.hotkeyCommands = new ArrayList<>();

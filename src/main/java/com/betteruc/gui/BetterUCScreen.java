@@ -176,8 +176,8 @@ public class BetterUCScreen extends Screen {
                             () -> BetterUCConfig.INSTANCE.dateTimeHudShowSeconds = !BetterUCConfig.INSTANCE.dateTimeHudShowSeconds);
                 }
                 if (BetterUCConfig.INSTANCE.dateTimeHudShowDate && BetterUCConfig.INSTANCE.dateTimeHudShowTime) {
-                    y = addToggle(x, y, controlW, "Zweizeilig", BetterUCConfig.INSTANCE.dateTimeHudTwoLines,
-                            () -> BetterUCConfig.INSTANCE.dateTimeHudTwoLines = !BetterUCConfig.INSTANCE.dateTimeHudTwoLines);
+                    y = addToggle(x, y, controlW, "Getrennt positionieren", BetterUCConfig.INSTANCE.dateTimeHudSeparate,
+                            () -> BetterUCConfig.INSTANCE.dateTimeHudSeparate = !BetterUCConfig.INSTANCE.dateTimeHudSeparate);
                 }
                 y = addColorButton(x, y, controlW, "Datum & Uhrzeit Farbe", BetterUCConfig.INSTANCE.dateTimeHudColor,
                         color -> BetterUCConfig.INSTANCE.dateTimeHudColor = color);
@@ -826,7 +826,8 @@ public class BetterUCScreen extends Screen {
             case "Datum anzeigen" -> "Blendet das lokale Systemdatum im Widget ein.";
             case "Uhrzeit anzeigen" -> "Blendet die lokale Systemzeit im Widget ein.";
             case "Sekunden anzeigen" -> "Erweitert die Uhrzeit um eine sekundengenaue Anzeige.";
-            case "Zweizeilig" -> "Zeigt Datum und Uhrzeit untereinander statt mit // getrennt.";
+            case "Getrennt positionieren" ->
+                    "Macht Datum und Uhrzeit im HUD-Editor zu zwei unabhängig verschiebbaren Elementen.";
             case "Payday HUD" -> "Zeigt den Fortschritt bis zu deinem nächsten PayDay.";
             case "Ammo HUD" -> "Zeigt Munition, Magazinstand und die erkannte Waffe.";
             case "Magazinbalken" -> "Ergänzt das moderne Ammo-HUD um einen Magazin-Fortschrittsbalken.";
