@@ -216,4 +216,41 @@ class ChatCustomizationStyleTest {
                 result.replacementMessages().get(0).getString());
         ChatCustomizationFormatter.clearPending();
     }
+
+    @Test
+    void keepsHqAndPayGradientProfilesIndependent() {
+        ChatCustomizationFormatter.GradientPalette palette =
+                ChatCustomizationFormatter.GradientPalette.defaults()
+                        .withHqAction(0xFF112233, 0xFF223344)
+                        .withPayAction(0xFFAA5500, 0xFFCC7700)
+                        .withPayOutgoing(0xFF010203, 0xFF040506);
+
+        ChatCustomizationFormatter.Result hq = ChatCustomizationFormatter.transform(
+                "Beamter FishMac_ hat Ehhie die Waffen abgenommen.",
+                true,
+                false,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true,
+                palette
+        );
+        ChatCustomizationFormatter.Result pay = ChatCustomizationFormatter.transform(
+                "Du hast Ehhie 230$ gegeben!",
+                true,
+                false,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true,
+                palette
+        );
+
+        assertNotNull(hq);
+        assertNotNull(pay);
+        assertEquals(0x112233,
+                hq.replacementMessages().get(0).toFlatList().get(0).getStyle().getColor().getValue());
+        assertEquals(0xAA5500,
+                pay.replacementMessages().get(0).toFlatList().get(0).getStyle().getColor().getValue());
+        assertEquals(0x010203,
+                pay.replacementMessages().get(1).toFlatList().get(1).getStyle().getColor().getValue());
+    }
 }

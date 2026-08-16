@@ -14,20 +14,6 @@ import net.minecraft.network.chat.Style;
 public final class ChatCustomizationFormatter {
     private static final long PENDING_TTL_MS = 30000L;
     private static final long PENDING_TICKET_TTL_MS = 5 * 60 * 1000L;
-    private static final int ACTION_GRADIENT_START = 0xFF5555;
-    private static final int ACTION_GRADIENT_END = 0xAA0000;
-    private static final int TICKET_ACTION_GRADIENT_START = 0xFFAA00;
-    private static final int TICKET_ACTION_GRADIENT_END = 0xFF5555;
-    private static final int TICKET_DETAIL_GRADIENT_START = 0xFFFF55;
-    private static final int TICKET_DETAIL_GRADIENT_END = 0xFFAA00;
-    private static final int ACTOR_GRADIENT_START = 0x55FFFF;
-    private static final int ACTOR_GRADIENT_END = 0x5555FF;
-    private static final int TARGET_GRADIENT_START = 0x5555FF;
-    private static final int TARGET_GRADIENT_END = 0xAA55FF;
-    private static final int DETAIL_GRADIENT_START = 0x55AAFF;
-    private static final int DETAIL_GRADIENT_END = 0x5555FF;
-    private static final int POSITIVE_GRADIENT_START = 0x55FF55;
-    private static final int POSITIVE_GRADIENT_END = 0x00AA00;
     private static final Pattern PLAYER_TOKEN_PATTERN = Pattern.compile("[A-Za-z0-9_]{2,16}");
     private static final Pattern TEAM_PLAYER_PATTERN = Pattern.compile(
             "\\[UC\\]\\s*([A-Za-z0-9_]{2,16})",
@@ -123,13 +109,15 @@ public final class ChatCustomizationFormatter {
             boolean wpsHqEnabled,
             boolean reinfEnabled
     ) {
+        BetterUCConfig config = BetterUCConfig.INSTANCE;
         Result result = transform(
                 original == null ? "" : original.getString(),
                 wpsHqEnabled,
                 reinfEnabled,
-                BetterUCConfig.INSTANCE.chatActionTextStyle,
-                BetterUCConfig.INSTANCE.chatHeadlineSeparatorStyle,
-                BetterUCConfig.INSTANCE.chatCustomizationGradientEnabled
+                config.chatActionTextStyle,
+                config.chatHeadlineSeparatorStyle,
+                config.chatCustomizationGradientEnabled,
+                GradientPalette.configured(config)
         );
         return result == null ? null : result.withInteractionFrom(original);
     }
@@ -163,7 +151,25 @@ public final class ChatCustomizationFormatter {
             String separatorStyle,
             boolean gradientEnabled
     ) {
-        HeadlineStyle headlineStyle = new HeadlineStyle(actionTextStyle, separatorStyle, gradientEnabled);
+        return transform(raw, wpsHqEnabled, reinfEnabled, actionTextStyle, separatorStyle,
+                gradientEnabled, GradientPalette.defaults());
+    }
+
+    static Result transform(
+            String raw,
+            boolean wpsHqEnabled,
+            boolean reinfEnabled,
+            String actionTextStyle,
+            String separatorStyle,
+            boolean gradientEnabled,
+            GradientPalette palette
+    ) {
+        HeadlineStyle headlineStyle = new HeadlineStyle(
+                actionTextStyle,
+                separatorStyle,
+                gradientEnabled,
+                palette == null ? GradientPalette.defaults() : palette
+        );
         String clean = normalize(raw);
         if (clean.isEmpty()) return null;
 
@@ -178,7 +184,7 @@ public final class ChatCustomizationFormatter {
         if (paySent.matches()) {
             return Result.replace(List.of(
                     payHeadline("Du", paySent.group(1), headlineStyle),
-                    amountDetail("-" + cleanAmount(paySent.group(2)) + "$", ChatFormatting.RED, headlineStyle)
+                    payAmountDetail("-" + cleanAmount(paySent.group(2)) + "$", false, headlineStyle)
             ));
         }
 
@@ -186,7 +192,7 @@ public final class ChatCustomizationFormatter {
         if (payReceived.matches()) {
             return Result.replace(List.of(
                     payHeadline(payReceived.group(1), "Du", headlineStyle),
-                    amountDetail("+" + cleanAmount(payReceived.group(2)) + "$", ChatFormatting.GREEN, headlineStyle)
+                    payAmountDetail("+" + cleanAmount(payReceived.group(2)) + "$", true, headlineStyle)
             ));
         }
         }
@@ -468,15 +474,19 @@ public final class ChatCustomizationFormatter {
                 .append(detailText(value, headlineStyle));
     }
 
-    private static Component amountDetail(String amount, ChatFormatting color, HeadlineStyle headlineStyle) {
+    private static Component payAmountDetail(String amount, boolean incoming, HeadlineStyle headlineStyle) {
+        GradientPalette palette = headlineStyle.palette();
         MutableComponent value = headlineStyle.gradientEnabled()
                 ? gradientText(
                         amount == null ? "" : amount.trim(),
-                        color == ChatFormatting.GREEN ? POSITIVE_GRADIENT_START : ACTION_GRADIENT_START,
-                        color == ChatFormatting.GREEN ? POSITIVE_GRADIENT_END : ACTION_GRADIENT_END,
+                        incoming ? palette.payIncomingStart() : palette.payOutgoingStart(),
+                        incoming ? palette.payIncomingEnd() : palette.payOutgoingEnd(),
                         true
                 )
-                : Component.literal(amount == null ? "" : amount.trim()).withStyle(color, ChatFormatting.BOLD);
+                : Component.literal(amount == null ? "" : amount.trim()).withStyle(
+                        incoming ? ChatFormatting.GREEN : ChatFormatting.RED,
+                        ChatFormatting.BOLD
+                );
         return Component.literal("\u00BB ").withStyle(ChatFormatting.GRAY).append(value);
     }
 
@@ -486,14 +496,15 @@ public final class ChatCustomizationFormatter {
             boolean confirmed,
             HeadlineStyle headlineStyle
     ) {
+        GradientPalette palette = headlineStyle.palette();
         MutableComponent amountText = headlineStyle.gradientEnabled()
-                ? gradientText(amount, TICKET_DETAIL_GRADIENT_START, TICKET_DETAIL_GRADIENT_END, true)
+                ? gradientText(amount, palette.hqTicketDetailStart(), palette.hqTicketDetailEnd(), true)
                 : Component.literal(amount).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
         MutableComponent statusText;
         if (headlineStyle.gradientEnabled()) {
             statusText = confirmed
-                    ? gradientText(status, POSITIVE_GRADIENT_START, POSITIVE_GRADIENT_END, true)
-                    : gradientText(status, TICKET_DETAIL_GRADIENT_START, TICKET_DETAIL_GRADIENT_END, true);
+                    ? gradientText(status, palette.hqPositiveStart(), palette.hqPositiveEnd(), true)
+                    : gradientText(status, palette.hqTicketDetailStart(), palette.hqTicketDetailEnd(), true);
         } else {
             statusText = Component.literal(status).withStyle(
                     confirmed ? ChatFormatting.GREEN : ChatFormatting.YELLOW,
@@ -507,11 +518,11 @@ public final class ChatCustomizationFormatter {
     }
 
     private static Component payHeadline(String actor, String target, HeadlineStyle headlineStyle) {
-        return action("PAY", headlineStyle)
+        return payAction("PAY", headlineStyle)
                 .append(separator(headlineLeadSeparator(headlineStyle)))
-                .append(headlineStyle.gradientEnabled() ? actorName(actor, headlineStyle) : payName(actor))
+                .append(headlineStyle.gradientEnabled() ? payActorName(actor, headlineStyle) : payName(actor))
                 .append(separator(headlineDirectionSeparator(headlineStyle)))
-                .append(headlineStyle.gradientEnabled() ? targetName(target, headlineStyle) : payName(target));
+                .append(headlineStyle.gradientEnabled() ? payTargetName(target, headlineStyle) : payName(target));
     }
 
     private static Component supportHeadline(String action, String target) {
@@ -540,6 +551,36 @@ public final class ChatCustomizationFormatter {
         return List.of(
                 supportHeadline("REINF", "FABI1441"),
                 supportDetail("FBI", "Bank", "120m")
+        );
+    }
+
+    public static List<Component> hqGradientPreview() {
+        HeadlineStyle style = previewHeadlineStyle();
+        return List.of(
+                headline("INHAFTIERT", "FABI1441", "Spieler", style),
+                detail("Versuchter Mord", "2 Minuten", style),
+                positiveHeadline("FÜHRERSCHEIN RÜCKGABE", "FABI1441", "Spieler", style),
+                ticketHeadline("TICKET AUSGESTELLT", "FABI1441", "Spieler", style),
+                ticketDetail("230$", "Bestätigung ausstehend", false, style)
+        );
+    }
+
+    public static List<Component> payGradientPreview() {
+        HeadlineStyle style = previewHeadlineStyle();
+        return List.of(
+                payHeadline("Du", "Spieler", style),
+                payAmountDetail("-230$", false, style),
+                payAmountDetail("+230$", true, style)
+        );
+    }
+
+    private static HeadlineStyle previewHeadlineStyle() {
+        BetterUCConfig config = BetterUCConfig.INSTANCE;
+        return new HeadlineStyle(
+                config.chatActionTextStyle,
+                config.chatHeadlineSeparatorStyle,
+                true,
+                GradientPalette.configured(config)
         );
     }
 
@@ -575,7 +616,8 @@ public final class ChatCustomizationFormatter {
             label = SmallCapsText.convert(label);
         }
         if (headlineStyle.gradientEnabled()) {
-            return gradientText(label, ACTION_GRADIENT_START, ACTION_GRADIENT_END, true);
+            return gradientText(label, headlineStyle.palette().hqActionStart(),
+                    headlineStyle.palette().hqActionEnd(), true);
         }
         return Component.literal(label).withStyle(ChatFormatting.RED);
     }
@@ -586,7 +628,8 @@ public final class ChatCustomizationFormatter {
             label = SmallCapsText.convert(label);
         }
         if (headlineStyle.gradientEnabled()) {
-            return gradientText(label, POSITIVE_GRADIENT_START, POSITIVE_GRADIENT_END, true);
+            return gradientText(label, headlineStyle.palette().hqPositiveStart(),
+                    headlineStyle.palette().hqPositiveEnd(), true);
         }
         return Component.literal(label).withStyle(ChatFormatting.GREEN);
     }
@@ -597,7 +640,8 @@ public final class ChatCustomizationFormatter {
             label = SmallCapsText.convert(label);
         }
         if (headlineStyle.gradientEnabled()) {
-            return gradientText(label, TICKET_ACTION_GRADIENT_START, TICKET_ACTION_GRADIENT_END, true);
+            return gradientText(label, headlineStyle.palette().hqTicketActionStart(),
+                    headlineStyle.palette().hqTicketActionEnd(), true);
         }
         return Component.literal(label).withStyle(ChatFormatting.GOLD);
     }
@@ -617,22 +661,49 @@ public final class ChatCustomizationFormatter {
     private static MutableComponent actorName(String value, HeadlineStyle headlineStyle) {
         String name = value == null ? "" : value.trim();
         return headlineStyle.gradientEnabled()
-                ? gradientText(name, ACTOR_GRADIENT_START, ACTOR_GRADIENT_END, false)
+                ? gradientText(name, headlineStyle.palette().hqActorStart(),
+                        headlineStyle.palette().hqActorEnd(), false)
                 : Component.literal(name).withStyle(ChatFormatting.BLUE);
     }
 
     private static MutableComponent targetName(String value, HeadlineStyle headlineStyle) {
         String name = value == null ? "" : value.trim();
         return headlineStyle.gradientEnabled()
-                ? gradientText(name, TARGET_GRADIENT_START, TARGET_GRADIENT_END, false)
+                ? gradientText(name, headlineStyle.palette().hqTargetStart(),
+                        headlineStyle.palette().hqTargetEnd(), false)
                 : Component.literal(name).withStyle(ChatFormatting.BLUE);
     }
 
     private static MutableComponent detailText(String value, HeadlineStyle headlineStyle) {
         String text = value == null ? "" : value.trim();
         return headlineStyle.gradientEnabled()
-                ? gradientText(text, DETAIL_GRADIENT_START, DETAIL_GRADIENT_END, true)
+                ? gradientText(text, headlineStyle.palette().hqDetailStart(),
+                        headlineStyle.palette().hqDetailEnd(), true)
                 : Component.literal(text).withStyle(ChatFormatting.BLUE);
+    }
+
+    private static MutableComponent payAction(String value, HeadlineStyle headlineStyle) {
+        String label = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+        if (BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS.equals(headlineStyle.actionTextStyle())) {
+            label = SmallCapsText.convert(label);
+        }
+        if (headlineStyle.gradientEnabled()) {
+            return gradientText(label, headlineStyle.palette().payActionStart(),
+                    headlineStyle.palette().payActionEnd(), true);
+        }
+        return Component.literal(label).withStyle(ChatFormatting.RED);
+    }
+
+    private static MutableComponent payActorName(String value, HeadlineStyle headlineStyle) {
+        String name = value == null ? "" : value.trim();
+        return gradientText(name, headlineStyle.palette().payActorStart(),
+                headlineStyle.palette().payActorEnd(), false);
+    }
+
+    private static MutableComponent payTargetName(String value, HeadlineStyle headlineStyle) {
+        String name = value == null ? "" : value.trim();
+        return gradientText(name, headlineStyle.palette().payTargetStart(),
+                headlineStyle.palette().payTargetEnd(), false);
     }
 
     private static MutableComponent gradientText(
@@ -746,7 +817,127 @@ public final class ChatCustomizationFormatter {
     private record PendingTicket(String actor, String target, String amount, long createdAtMs) {
     }
 
-    private record HeadlineStyle(String actionTextStyle, String separatorStyle, boolean gradientEnabled) {
+    record GradientPalette(
+            int hqActionStart,
+            int hqActionEnd,
+            int hqActorStart,
+            int hqActorEnd,
+            int hqTargetStart,
+            int hqTargetEnd,
+            int hqDetailStart,
+            int hqDetailEnd,
+            int hqPositiveStart,
+            int hqPositiveEnd,
+            int hqTicketActionStart,
+            int hqTicketActionEnd,
+            int hqTicketDetailStart,
+            int hqTicketDetailEnd,
+            int payActionStart,
+            int payActionEnd,
+            int payActorStart,
+            int payActorEnd,
+            int payTargetStart,
+            int payTargetEnd,
+            int payOutgoingStart,
+            int payOutgoingEnd,
+            int payIncomingStart,
+            int payIncomingEnd
+    ) {
+        static GradientPalette defaults() {
+            return new GradientPalette(
+                    BetterUCConfig.DEFAULT_CHAT_HQ_ACTION_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_ACTION_GRADIENT_END,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_ACTOR_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_ACTOR_GRADIENT_END,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_TARGET_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_TARGET_GRADIENT_END,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_DETAIL_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_DETAIL_GRADIENT_END,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_POSITIVE_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_POSITIVE_GRADIENT_END,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_TICKET_ACTION_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_TICKET_ACTION_GRADIENT_END,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_END,
+                    BetterUCConfig.DEFAULT_CHAT_PAY_ACTION_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_PAY_ACTION_GRADIENT_END,
+                    BetterUCConfig.DEFAULT_CHAT_PAY_ACTOR_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_PAY_ACTOR_GRADIENT_END,
+                    BetterUCConfig.DEFAULT_CHAT_PAY_TARGET_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_PAY_TARGET_GRADIENT_END,
+                    BetterUCConfig.DEFAULT_CHAT_PAY_OUTGOING_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_PAY_OUTGOING_GRADIENT_END,
+                    BetterUCConfig.DEFAULT_CHAT_PAY_INCOMING_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_PAY_INCOMING_GRADIENT_END
+            );
+        }
+
+        static GradientPalette configured(BetterUCConfig config) {
+            return new GradientPalette(
+                    config.chatHqActionGradientStart,
+                    config.chatHqActionGradientEnd,
+                    config.chatHqActorGradientStart,
+                    config.chatHqActorGradientEnd,
+                    config.chatHqTargetGradientStart,
+                    config.chatHqTargetGradientEnd,
+                    config.chatHqDetailGradientStart,
+                    config.chatHqDetailGradientEnd,
+                    config.chatHqPositiveGradientStart,
+                    config.chatHqPositiveGradientEnd,
+                    config.chatHqTicketActionGradientStart,
+                    config.chatHqTicketActionGradientEnd,
+                    config.chatHqTicketDetailGradientStart,
+                    config.chatHqTicketDetailGradientEnd,
+                    config.chatPayActionGradientStart,
+                    config.chatPayActionGradientEnd,
+                    config.chatPayActorGradientStart,
+                    config.chatPayActorGradientEnd,
+                    config.chatPayTargetGradientStart,
+                    config.chatPayTargetGradientEnd,
+                    config.chatPayOutgoingGradientStart,
+                    config.chatPayOutgoingGradientEnd,
+                    config.chatPayIncomingGradientStart,
+                    config.chatPayIncomingGradientEnd
+            );
+        }
+
+        GradientPalette withHqAction(int start, int end) {
+            return new GradientPalette(
+                    start, end, hqActorStart, hqActorEnd, hqTargetStart, hqTargetEnd,
+                    hqDetailStart, hqDetailEnd, hqPositiveStart, hqPositiveEnd,
+                    hqTicketActionStart, hqTicketActionEnd, hqTicketDetailStart, hqTicketDetailEnd,
+                    payActionStart, payActionEnd, payActorStart, payActorEnd, payTargetStart, payTargetEnd,
+                    payOutgoingStart, payOutgoingEnd, payIncomingStart, payIncomingEnd
+            );
+        }
+
+        GradientPalette withPayAction(int start, int end) {
+            return new GradientPalette(
+                    hqActionStart, hqActionEnd, hqActorStart, hqActorEnd, hqTargetStart, hqTargetEnd,
+                    hqDetailStart, hqDetailEnd, hqPositiveStart, hqPositiveEnd,
+                    hqTicketActionStart, hqTicketActionEnd, hqTicketDetailStart, hqTicketDetailEnd,
+                    start, end, payActorStart, payActorEnd, payTargetStart, payTargetEnd,
+                    payOutgoingStart, payOutgoingEnd, payIncomingStart, payIncomingEnd
+            );
+        }
+
+        GradientPalette withPayOutgoing(int start, int end) {
+            return new GradientPalette(
+                    hqActionStart, hqActionEnd, hqActorStart, hqActorEnd, hqTargetStart, hqTargetEnd,
+                    hqDetailStart, hqDetailEnd, hqPositiveStart, hqPositiveEnd,
+                    hqTicketActionStart, hqTicketActionEnd, hqTicketDetailStart, hqTicketDetailEnd,
+                    payActionStart, payActionEnd, payActorStart, payActorEnd, payTargetStart, payTargetEnd,
+                    start, end, payIncomingStart, payIncomingEnd
+            );
+        }
+    }
+
+    private record HeadlineStyle(
+            String actionTextStyle,
+            String separatorStyle,
+            boolean gradientEnabled,
+            GradientPalette palette
+    ) {
     }
 
     private static Style findInteractiveStyle(Component component) {

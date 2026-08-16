@@ -88,6 +88,18 @@ public class BetterUCConfig {
             "richTaxAlertSoundEnabled",
             "chatTimestampsEnabled", "chatCustomizationEnabled", "chatActionTextStyle", "chatHeadlineSeparatorStyle",
             "chatCustomizationGradientEnabled",
+            "chatHqActionGradientStart", "chatHqActionGradientEnd",
+            "chatHqActorGradientStart", "chatHqActorGradientEnd",
+            "chatHqTargetGradientStart", "chatHqTargetGradientEnd",
+            "chatHqDetailGradientStart", "chatHqDetailGradientEnd",
+            "chatHqPositiveGradientStart", "chatHqPositiveGradientEnd",
+            "chatHqTicketActionGradientStart", "chatHqTicketActionGradientEnd",
+            "chatHqTicketDetailGradientStart", "chatHqTicketDetailGradientEnd",
+            "chatPayActionGradientStart", "chatPayActionGradientEnd",
+            "chatPayActorGradientStart", "chatPayActorGradientEnd",
+            "chatPayTargetGradientStart", "chatPayTargetGradientEnd",
+            "chatPayOutgoingGradientStart", "chatPayOutgoingGradientEnd",
+            "chatPayIncomingGradientStart", "chatPayIncomingGradientEnd",
             "secondChatEnabled", "secondChatLocked", "secondChatBackgroundEnabled",
             "secondChatX", "secondChatY", "secondChatWidth", "secondChatHeight",
             "secondChatPrimaryCustomSize",
@@ -204,6 +216,30 @@ public class BetterUCConfig {
     public static final int DEFAULT_REINF_TEXT_COLOR = 0xFF55FFFF;
     public static final int DEFAULT_REINF_DISTANCE_COLOR = 0xFFFFFF55;
     public static final int DEFAULT_REINF_UNIFORM_COLOR = 0xFF55FFFF;
+    public static final int DEFAULT_CHAT_HQ_ACTION_GRADIENT_START = 0xFFFF5555;
+    public static final int DEFAULT_CHAT_HQ_ACTION_GRADIENT_END = 0xFFAA0000;
+    public static final int DEFAULT_CHAT_HQ_ACTOR_GRADIENT_START = 0xFF55FFFF;
+    public static final int DEFAULT_CHAT_HQ_ACTOR_GRADIENT_END = 0xFF5555FF;
+    public static final int DEFAULT_CHAT_HQ_TARGET_GRADIENT_START = 0xFF5555FF;
+    public static final int DEFAULT_CHAT_HQ_TARGET_GRADIENT_END = 0xFFAA55FF;
+    public static final int DEFAULT_CHAT_HQ_DETAIL_GRADIENT_START = 0xFF55AAFF;
+    public static final int DEFAULT_CHAT_HQ_DETAIL_GRADIENT_END = 0xFF5555FF;
+    public static final int DEFAULT_CHAT_HQ_POSITIVE_GRADIENT_START = 0xFF55FF55;
+    public static final int DEFAULT_CHAT_HQ_POSITIVE_GRADIENT_END = 0xFF00AA00;
+    public static final int DEFAULT_CHAT_HQ_TICKET_ACTION_GRADIENT_START = 0xFFFFAA00;
+    public static final int DEFAULT_CHAT_HQ_TICKET_ACTION_GRADIENT_END = 0xFFFF5555;
+    public static final int DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_START = 0xFFFFFF55;
+    public static final int DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_END = 0xFFFFAA00;
+    public static final int DEFAULT_CHAT_PAY_ACTION_GRADIENT_START = DEFAULT_CHAT_HQ_ACTION_GRADIENT_START;
+    public static final int DEFAULT_CHAT_PAY_ACTION_GRADIENT_END = DEFAULT_CHAT_HQ_ACTION_GRADIENT_END;
+    public static final int DEFAULT_CHAT_PAY_ACTOR_GRADIENT_START = DEFAULT_CHAT_HQ_ACTOR_GRADIENT_START;
+    public static final int DEFAULT_CHAT_PAY_ACTOR_GRADIENT_END = DEFAULT_CHAT_HQ_ACTOR_GRADIENT_END;
+    public static final int DEFAULT_CHAT_PAY_TARGET_GRADIENT_START = DEFAULT_CHAT_HQ_TARGET_GRADIENT_START;
+    public static final int DEFAULT_CHAT_PAY_TARGET_GRADIENT_END = DEFAULT_CHAT_HQ_TARGET_GRADIENT_END;
+    public static final int DEFAULT_CHAT_PAY_OUTGOING_GRADIENT_START = DEFAULT_CHAT_HQ_ACTION_GRADIENT_START;
+    public static final int DEFAULT_CHAT_PAY_OUTGOING_GRADIENT_END = DEFAULT_CHAT_HQ_ACTION_GRADIENT_END;
+    public static final int DEFAULT_CHAT_PAY_INCOMING_GRADIENT_START = DEFAULT_CHAT_HQ_POSITIVE_GRADIENT_START;
+    public static final int DEFAULT_CHAT_PAY_INCOMING_GRADIENT_END = DEFAULT_CHAT_HQ_POSITIVE_GRADIENT_END;
     public static final float MIN_HUD_SCALE = 0.5F;
     public static final float MAX_HUD_SCALE = 3.0F;
     public static final float DEFAULT_HUD_SCALE = 1.0F;
@@ -469,6 +505,30 @@ public class BetterUCConfig {
     public String chatActionTextStyle = CHAT_ACTION_TEXT_SMALL_CAPS;
     public String chatHeadlineSeparatorStyle = CHAT_SEPARATOR_TECHNICAL;
     public boolean chatCustomizationGradientEnabled = true;
+    public int chatHqActionGradientStart = DEFAULT_CHAT_HQ_ACTION_GRADIENT_START;
+    public int chatHqActionGradientEnd = DEFAULT_CHAT_HQ_ACTION_GRADIENT_END;
+    public int chatHqActorGradientStart = DEFAULT_CHAT_HQ_ACTOR_GRADIENT_START;
+    public int chatHqActorGradientEnd = DEFAULT_CHAT_HQ_ACTOR_GRADIENT_END;
+    public int chatHqTargetGradientStart = DEFAULT_CHAT_HQ_TARGET_GRADIENT_START;
+    public int chatHqTargetGradientEnd = DEFAULT_CHAT_HQ_TARGET_GRADIENT_END;
+    public int chatHqDetailGradientStart = DEFAULT_CHAT_HQ_DETAIL_GRADIENT_START;
+    public int chatHqDetailGradientEnd = DEFAULT_CHAT_HQ_DETAIL_GRADIENT_END;
+    public int chatHqPositiveGradientStart = DEFAULT_CHAT_HQ_POSITIVE_GRADIENT_START;
+    public int chatHqPositiveGradientEnd = DEFAULT_CHAT_HQ_POSITIVE_GRADIENT_END;
+    public int chatHqTicketActionGradientStart = DEFAULT_CHAT_HQ_TICKET_ACTION_GRADIENT_START;
+    public int chatHqTicketActionGradientEnd = DEFAULT_CHAT_HQ_TICKET_ACTION_GRADIENT_END;
+    public int chatHqTicketDetailGradientStart = DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_START;
+    public int chatHqTicketDetailGradientEnd = DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_END;
+    public int chatPayActionGradientStart = DEFAULT_CHAT_PAY_ACTION_GRADIENT_START;
+    public int chatPayActionGradientEnd = DEFAULT_CHAT_PAY_ACTION_GRADIENT_END;
+    public int chatPayActorGradientStart = DEFAULT_CHAT_PAY_ACTOR_GRADIENT_START;
+    public int chatPayActorGradientEnd = DEFAULT_CHAT_PAY_ACTOR_GRADIENT_END;
+    public int chatPayTargetGradientStart = DEFAULT_CHAT_PAY_TARGET_GRADIENT_START;
+    public int chatPayTargetGradientEnd = DEFAULT_CHAT_PAY_TARGET_GRADIENT_END;
+    public int chatPayOutgoingGradientStart = DEFAULT_CHAT_PAY_OUTGOING_GRADIENT_START;
+    public int chatPayOutgoingGradientEnd = DEFAULT_CHAT_PAY_OUTGOING_GRADIENT_END;
+    public int chatPayIncomingGradientStart = DEFAULT_CHAT_PAY_INCOMING_GRADIENT_START;
+    public int chatPayIncomingGradientEnd = DEFAULT_CHAT_PAY_INCOMING_GRADIENT_END;
     public boolean reinfCustomizationEnabled = true;
     public boolean reinfUniformColorEnabled = false;
     public int reinfLabelColor = DEFAULT_REINF_LABEL_COLOR;
@@ -657,6 +717,30 @@ public class BetterUCConfig {
     private static void sanitizeChatCustomizationStyles() {
         INSTANCE.chatActionTextStyle = normalizeChatActionTextStyle(INSTANCE.chatActionTextStyle);
         INSTANCE.chatHeadlineSeparatorStyle = normalizeChatHeadlineSeparatorStyle(INSTANCE.chatHeadlineSeparatorStyle);
+        INSTANCE.chatHqActionGradientStart = sanitizeHudColor(INSTANCE.chatHqActionGradientStart, DEFAULT_CHAT_HQ_ACTION_GRADIENT_START);
+        INSTANCE.chatHqActionGradientEnd = sanitizeHudColor(INSTANCE.chatHqActionGradientEnd, DEFAULT_CHAT_HQ_ACTION_GRADIENT_END);
+        INSTANCE.chatHqActorGradientStart = sanitizeHudColor(INSTANCE.chatHqActorGradientStart, DEFAULT_CHAT_HQ_ACTOR_GRADIENT_START);
+        INSTANCE.chatHqActorGradientEnd = sanitizeHudColor(INSTANCE.chatHqActorGradientEnd, DEFAULT_CHAT_HQ_ACTOR_GRADIENT_END);
+        INSTANCE.chatHqTargetGradientStart = sanitizeHudColor(INSTANCE.chatHqTargetGradientStart, DEFAULT_CHAT_HQ_TARGET_GRADIENT_START);
+        INSTANCE.chatHqTargetGradientEnd = sanitizeHudColor(INSTANCE.chatHqTargetGradientEnd, DEFAULT_CHAT_HQ_TARGET_GRADIENT_END);
+        INSTANCE.chatHqDetailGradientStart = sanitizeHudColor(INSTANCE.chatHqDetailGradientStart, DEFAULT_CHAT_HQ_DETAIL_GRADIENT_START);
+        INSTANCE.chatHqDetailGradientEnd = sanitizeHudColor(INSTANCE.chatHqDetailGradientEnd, DEFAULT_CHAT_HQ_DETAIL_GRADIENT_END);
+        INSTANCE.chatHqPositiveGradientStart = sanitizeHudColor(INSTANCE.chatHqPositiveGradientStart, DEFAULT_CHAT_HQ_POSITIVE_GRADIENT_START);
+        INSTANCE.chatHqPositiveGradientEnd = sanitizeHudColor(INSTANCE.chatHqPositiveGradientEnd, DEFAULT_CHAT_HQ_POSITIVE_GRADIENT_END);
+        INSTANCE.chatHqTicketActionGradientStart = sanitizeHudColor(INSTANCE.chatHqTicketActionGradientStart, DEFAULT_CHAT_HQ_TICKET_ACTION_GRADIENT_START);
+        INSTANCE.chatHqTicketActionGradientEnd = sanitizeHudColor(INSTANCE.chatHqTicketActionGradientEnd, DEFAULT_CHAT_HQ_TICKET_ACTION_GRADIENT_END);
+        INSTANCE.chatHqTicketDetailGradientStart = sanitizeHudColor(INSTANCE.chatHqTicketDetailGradientStart, DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_START);
+        INSTANCE.chatHqTicketDetailGradientEnd = sanitizeHudColor(INSTANCE.chatHqTicketDetailGradientEnd, DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_END);
+        INSTANCE.chatPayActionGradientStart = sanitizeHudColor(INSTANCE.chatPayActionGradientStart, DEFAULT_CHAT_PAY_ACTION_GRADIENT_START);
+        INSTANCE.chatPayActionGradientEnd = sanitizeHudColor(INSTANCE.chatPayActionGradientEnd, DEFAULT_CHAT_PAY_ACTION_GRADIENT_END);
+        INSTANCE.chatPayActorGradientStart = sanitizeHudColor(INSTANCE.chatPayActorGradientStart, DEFAULT_CHAT_PAY_ACTOR_GRADIENT_START);
+        INSTANCE.chatPayActorGradientEnd = sanitizeHudColor(INSTANCE.chatPayActorGradientEnd, DEFAULT_CHAT_PAY_ACTOR_GRADIENT_END);
+        INSTANCE.chatPayTargetGradientStart = sanitizeHudColor(INSTANCE.chatPayTargetGradientStart, DEFAULT_CHAT_PAY_TARGET_GRADIENT_START);
+        INSTANCE.chatPayTargetGradientEnd = sanitizeHudColor(INSTANCE.chatPayTargetGradientEnd, DEFAULT_CHAT_PAY_TARGET_GRADIENT_END);
+        INSTANCE.chatPayOutgoingGradientStart = sanitizeHudColor(INSTANCE.chatPayOutgoingGradientStart, DEFAULT_CHAT_PAY_OUTGOING_GRADIENT_START);
+        INSTANCE.chatPayOutgoingGradientEnd = sanitizeHudColor(INSTANCE.chatPayOutgoingGradientEnd, DEFAULT_CHAT_PAY_OUTGOING_GRADIENT_END);
+        INSTANCE.chatPayIncomingGradientStart = sanitizeHudColor(INSTANCE.chatPayIncomingGradientStart, DEFAULT_CHAT_PAY_INCOMING_GRADIENT_START);
+        INSTANCE.chatPayIncomingGradientEnd = sanitizeHudColor(INSTANCE.chatPayIncomingGradientEnd, DEFAULT_CHAT_PAY_INCOMING_GRADIENT_END);
     }
 
     public static class WasteDropArea {

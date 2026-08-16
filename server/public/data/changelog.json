@@ -52,6 +52,7 @@
           "lines": [
             "Aktionsbezeichnungen können als technische Small Caps dargestellt werden.",
             "Optionale Farbverläufe und fette Aktions- sowie Detailtexte heben Namen, Status und Fahndungsdaten voneinander ab.",
+            "HQ und PAY besitzen getrennte Farbprofile; Start- und Endfarben für Aktionen, Spielernamen und Details lassen sich frei anpassen.",
             "Neue Muster formatieren Führerscheinabnahmen, Führerscheinrückgaben und ausgestellte Tickets.",
             "Ticketbetrag und beteiligte Spieler werden bis zur passenden Aktenlöschung gespeichert und anschließend als bestätigter Vorgang dargestellt.",
             "Verhaftungen und Tötungen werden auch als kombinierte mehrzeilige Servernachricht einschließlich Fahndungsgrund erkannt.",
@@ -115,6 +116,7 @@
         "In Second Chats verschobene Nachrichten werden nun in latest.log protokolliert.",
         "Die Erkennung von Ortsfiltern ignoriert normale Bündnisnachrichten mit FBI-, Polizei- und Rettungsdienst-Präfixen.",
         "HQ-Aktionsbezeichnungen unterstützen Small Caps, technische Trenner und optionale Farbverläufe.",
+        "HQ- und PAY-Farbverläufe lassen sich mit getrennten Profilen und Live-Vorschau individuell anpassen.",
         "Führerscheinabnahmen und Führerscheinrückgaben werden im neuen HQ-Format dargestellt.",
         "Ausgestellte Tickets zeigen Officer, Empfänger, Betrag und ausstehende Bestätigung an.",
         "Passende Aktenlöschungen schließen einen vorgemerkten Ticketvorgang als bestätigt ab.",

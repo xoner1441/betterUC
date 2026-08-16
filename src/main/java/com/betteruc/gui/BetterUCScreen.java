@@ -357,10 +357,14 @@ public class BetterUCScreen extends Screen {
                                 saveConfig();
                                 refreshWidgets();
                             });
-                    y = addToggle(x, y, controlW, "HQ-Farbverlauf",
+                    y = addToggle(x, y, controlW, "Chat-Farbverläufe",
                             BetterUCConfig.INSTANCE.chatCustomizationGradientEnabled,
                             () -> BetterUCConfig.INSTANCE.chatCustomizationGradientEnabled =
                                     !BetterUCConfig.INSTANCE.chatCustomizationGradientEnabled);
+                    if (BetterUCConfig.INSTANCE.chatCustomizationGradientEnabled) {
+                        y = addButton(x, y, controlW, "Farbverläufe anpassen",
+                                b -> openScreen(new ChatGradientConfigScreen(this)));
+                    }
                 }
 
                 y = addSectionHeader(x, y, controlW, "Reinf", BetterUCConfig.INSTANCE.reinfLabelColor);
@@ -917,6 +921,8 @@ public class BetterUCScreen extends Screen {
             case "Prefix anzeigen" -> "Blendet die Beschriftung vor dem HUD-Wert ein oder aus.";
             case "Fonts neu laden" -> "Liest den Custom-Font-Ordner neu ein.";
             case "Font Ordner" -> "Öffnet den Ordner, in den du eigene Schriftarten legen kannst.";
+            case "Chat-Farbverläufe" -> "Aktiviert die farbigen Verläufe für formatierte HQ- und PAY-Nachrichten.";
+            case "Farbverläufe anpassen" -> "Öffnet getrennte Farbprofile für HQ- und PAY-Nachrichten.";
             default -> {
                 if (lower.startsWith("ping ziel:")) {
                     yield "Bestimmt, ob deine Pings global, nur für deine Fraktion oder für Staatsfraktionen sichtbar sind.";
