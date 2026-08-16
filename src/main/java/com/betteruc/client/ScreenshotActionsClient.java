@@ -413,17 +413,22 @@ public final class ScreenshotActionsClient {
         Throwable lastFailure = null;
         if (isWindows()) {
             try {
+                setJavaClipboard(image);
+                return;
+            } catch (Exception | AWTError | LinkageError fastFailure) {
+                lastFailure = fastFailure;
+            }
+            try {
                 setWindowsClipboard(path);
                 return;
             } catch (Exception nativeFailure) {
-                lastFailure = nativeFailure;
+                nativeFailure.addSuppressed(lastFailure);
+                throw nativeFailure;
             }
         }
         for (int attempt = 0; attempt < FILE_ACTION_ATTEMPTS; attempt++) {
             try {
-                EventQueue.invokeAndWait(() -> Toolkit.getDefaultToolkit()
-                        .getSystemClipboard()
-                        .setContents(new ImageTransferable(image), null));
+                setJavaClipboard(image);
                 return;
             } catch (Exception | AWTError | LinkageError failure) {
                 lastFailure = failure;
@@ -432,6 +437,12 @@ public final class ScreenshotActionsClient {
         }
 
         throw new IOException("Zwischenablage nicht erreichbar", lastFailure);
+    }
+
+    private static void setJavaClipboard(Image image) throws Exception {
+        EventQueue.invokeAndWait(() -> Toolkit.getDefaultToolkit()
+                .getSystemClipboard()
+                .setContents(new ImageTransferable(image), null));
     }
 
     private static boolean isWindows() {
