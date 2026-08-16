@@ -81,6 +81,27 @@ public final class SecondChatTabSettingsScreen extends Screen {
                         tab.fadeSeconds, new int[]{0, 1, 3, 5, 10, 15}));
         y = addToggleRow(x, y, rowWidth, "Zeitstempel",
                 () -> tab.timestamps, value -> tab.timestamps = value);
+        if (tab.timestamps) {
+            Button timestampMode = Button.builder(timestampModeLabel(tab), button -> {
+                        tab.timestampUseGlobalFormat = !tab.timestampUseGlobalFormat;
+                        save();
+                        reopen();
+                    })
+                    .bounds(x, y, rowWidth, 20)
+                    .build();
+            addRow(timestampMode, y);
+            y += ROW_HEIGHT;
+
+            if (!tab.timestampUseGlobalFormat) {
+                EditBox timestampFormat = new EditBox(
+                        font, x, y, rowWidth, 20, Component.literal("Zeitformat, z. B. [HH:mm:ss]"));
+                timestampFormat.setMaxLength(32);
+                timestampFormat.setValue(tab.timestampFormat);
+                timestampFormat.setResponder(value -> tab.timestampFormat = value);
+                addRow(timestampFormat, y);
+                y += ROW_HEIGHT;
+            }
+        }
 
         Button limit = Button.builder(limitLabel(tab), button -> {
                     tab.messageLimit += 25;
@@ -213,6 +234,12 @@ public final class SecondChatTabSettingsScreen extends Screen {
         }
     }
 
+    private void reopen() {
+        if (minecraft != null) {
+            ClientCompat.setScreen(minecraft, new SecondChatTabSettingsScreen(parent, tabId));
+        }
+    }
+
     private int addToggleRow(
             int x,
             int y,
@@ -305,6 +332,13 @@ public final class SecondChatTabSettingsScreen extends Screen {
 
     private static Component limitLabel(SecondChatTabConfig tab) {
         return Component.literal("Nachrichtenlimit: " + tab.messageLimit);
+    }
+
+    private static Component timestampModeLabel(SecondChatTabConfig tab) {
+        String value = tab.timestampUseGlobalFormat
+                ? "Global (" + BetterUCConfig.INSTANCE.chatTimestampFormat + ")"
+                : "Eigenes Format";
+        return Component.literal("Zeitformat: " + value);
     }
 
     private static Component mentionColorLabel(SecondChatTabConfig tab) {

@@ -18,6 +18,8 @@ public final class SecondChatTabConfig {
     public int fontScalePercent = 100;
     public int fadeSeconds = 3;
     public boolean timestamps = false;
+    public boolean timestampUseGlobalFormat = true;
+    public String timestampFormat = "[HH:mm:ss]";
     public String mentionTerms = "";
     public boolean mentionSound = true;
     public int mentionColor = 0xFFFFD54A;
@@ -55,6 +57,8 @@ public final class SecondChatTabConfig {
         copy.fontScalePercent = fontScalePercent;
         copy.fadeSeconds = fadeSeconds;
         copy.timestamps = timestamps;
+        copy.timestampUseGlobalFormat = timestampUseGlobalFormat;
+        copy.timestampFormat = timestampFormat;
         copy.mentionTerms = mentionTerms;
         copy.mentionSound = mentionSound;
         copy.mentionColor = mentionColor;
@@ -90,6 +94,7 @@ public final class SecondChatTabConfig {
         backgroundOpacity = Math.max(0, Math.min(230, backgroundOpacity));
         fontScalePercent = Math.max(75, Math.min(150, fontScalePercent));
         fadeSeconds = Math.max(0, Math.min(15, fadeSeconds));
+        timestampFormat = sanitizeText(timestampFormat, "[HH:mm:ss]", 32);
         mentionTerms = sanitizeText(mentionTerms, "", 160);
         mentionColor = 0xFF000000 | (mentionColor & 0x00FFFFFF);
         hqMode = sanitizeMode(hqMode);

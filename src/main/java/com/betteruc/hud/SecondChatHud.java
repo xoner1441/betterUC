@@ -35,8 +35,8 @@ public final class SecondChatHud {
     private static final int TEXT_MUTED = 0xFF94A3B8;
     private static final int LINE_HEIGHT = 10;
     private static final long MESSAGE_VISIBLE_MS = 10_000L;
-    private static final DateTimeFormatter TIME_FORMAT =
-            DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault());
+    private static final DateTimeFormatter FALLBACK_TIME_FORMAT =
+            DateTimeFormatter.ofPattern("[HH:mm:ss]").withZone(ZoneId.systemDefault());
     private static final Map<String, CachedLines> LINE_CACHE = new LinkedHashMap<>();
     private static List<TooltipHitbox> tooltipHitboxes = List.of();
     private static List<ActionHitbox> actionHitboxes = List.of();
@@ -406,7 +406,9 @@ public final class SecondChatHud {
             boolean editorPreview
     ) {
         String tabId = tab == null ? "preview" : tab.id;
-        String cacheKey = tabId + ":" + contentWidth + ":" + (tab != null && tab.timestamps);
+        String timestampPattern = tab != null && tab.timestamps ? timestampPattern(tab) : "";
+        String cacheKey = tabId + ":" + contentWidth + ":" + (tab != null && tab.timestamps)
+                + ":" + timestampPattern;
         long revision = SecondChatManager.revision();
         CachedLines cached = LINE_CACHE.get(cacheKey);
         if (cached == null || cached.revision != revision) {
@@ -416,8 +418,8 @@ public final class SecondChatHud {
                     Component displayMessage = entry.message();
                     if (tab.timestamps) {
                         displayMessage = Component.empty()
-                                .append(Component.literal("[" + TIME_FORMAT.format(
-                                                Instant.ofEpochMilli(entry.createdAtMs())) + "] ")
+                                .append(Component.literal(formatTimestamp(
+                                                entry.createdAtMs(), timestampPattern) + " ")
                                         .withStyle(net.minecraft.ChatFormatting.DARK_GRAY))
                                 .append(SecondChatTextCompat.copyWithResolvedStyles(entry.message()));
                     }
@@ -462,6 +464,27 @@ public final class SecondChatHud {
         addPreviewLine(preview, client, Component.literal("Dein Name wurde erwähnt"),
                 contentWidth, true, BetterUCConfig.INSTANCE.secondChatHighlightColor, "Eigener Name");
         return preview;
+    }
+
+    static String timestampPattern(SecondChatTabConfig tab) {
+        return timestampPattern(tab, BetterUCConfig.INSTANCE.chatTimestampFormat);
+    }
+
+    static String timestampPattern(SecondChatTabConfig tab, String globalPattern) {
+        String configured = tab != null && !tab.timestampUseGlobalFormat
+                ? tab.timestampFormat
+                : globalPattern;
+        return configured == null || configured.isBlank() ? "[HH:mm:ss]" : configured.trim();
+    }
+
+    static String formatTimestamp(long timestampMs, String pattern) {
+        try {
+            return DateTimeFormatter.ofPattern(pattern)
+                    .withZone(ZoneId.systemDefault())
+                    .format(Instant.ofEpochMilli(timestampMs));
+        } catch (IllegalArgumentException ignored) {
+            return FALLBACK_TIME_FORMAT.format(Instant.ofEpochMilli(timestampMs));
+        }
     }
 
     private static void addPreviewLine(

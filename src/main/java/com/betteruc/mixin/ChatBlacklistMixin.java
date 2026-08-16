@@ -675,13 +675,13 @@ public class ChatBlacklistMixin {
             GuiMessageTag indicator
     ) {
         Component finalMessage = withTimestampIfEnabled(message);
-        SecondChatManager.RouteResult routed = SecondChatManager.route(finalMessage);
+        SecondChatManager.RouteResult routed = SecondChatManager.route(message);
         boolean timestampAdded = finalMessage != message;
         if (!timestampAdded && !routed.suppressMain()) return;
 
         ci.cancel();
         if (routed.suppressMain()) {
-            SecondChatManager.logSuppressedMessage(finalMessage);
+            SecondChatManager.logSuppressedMessage(message);
             return;
         }
 
@@ -705,9 +705,9 @@ public class ChatBlacklistMixin {
         try {
             for (Component line : messages) {
                 Component finalMessage = withTimestampIfEnabled(line);
-                SecondChatManager.RouteResult routed = SecondChatManager.route(finalMessage, reinforcement);
+                SecondChatManager.RouteResult routed = SecondChatManager.route(line, reinforcement);
                 if (routed.suppressMain()) {
-                    SecondChatManager.logSuppressedMessage(finalMessage);
+                    SecondChatManager.logSuppressedMessage(line);
                 } else {
                     ((ChatComponent) (Object) this).addClientSystemMessage(finalMessage);
                 }
