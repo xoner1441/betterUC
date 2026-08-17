@@ -79,6 +79,7 @@
           "description": "Kleine technische Verbesserungen sparen Zeit und halten automatische Hintergrundfunktionen zuverlässig.",
           "lines": [
             "Screenshots werden unter Windows zuerst direkt in die Zwischenablage kopiert; der langsamere Fallback wird nur noch bei Bedarf verwendet.",
+            "ToggleSprint hält den aktivierten Sprintwunsch konstant und setzt das Sprinten nach vorübergehenden Unterbrechungen automatisch fort.",
             "Die Modulleiste der ClickGUI ist pro Kategorie scrollbar und bleibt auch bei kleinen Fensterhöhen vollständig bedienbar.",
             "Neue Spielzeitbonus- und Spielzeitzeilen werden bei stillen /stats-Abfragen korrekt unterdrückt.",
             "Die erkannte Gesamtspielzeit wird trotz unterdrückter Chatausgabe weiterhin für Website und Userpanel gespeichert.",
@@ -131,6 +132,7 @@
         "Alle Reinf-Typen einschließlich Plantage können einzeln umgeschaltet werden.",
         "Reinforcement-Annahmen lassen sich optional auf den Survival-Modus beschränken.",
         "Screenshots werden unter Windows schneller in die Zwischenablage kopiert.",
+        "ToggleSprint nimmt das Sprinten nach temporären Unterbrechungen zuverlässig wieder auf.",
         "HUD-, Client- und Tools-Modulleisten lassen sich bei begrenztem Platz unabhängig scrollen.",
         "Neue /stats-Zeilen für Spielzeitbonus und Spielzeit werden bei stillen Abfragen ausgeblendet, ohne das Userpanel-Tracking zu unterbrechen."
       ]

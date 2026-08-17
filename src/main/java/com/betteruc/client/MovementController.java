@@ -53,16 +53,17 @@ public final class MovementController {
             return;
         }
 
-        boolean shouldForceSprint = BetterUCConfig.INSTANCE.toggleSprintEnabled
-                && toggleSprintActive
+        boolean shouldHoldSprint = toggleSprintActive
                 && !ClientCompat.hasScreen(client)
                 && client.player != null
-                && client.player.isAlive()
-                && client.player.getFoodData().getFoodLevel() > 6
-                && !client.player.isShiftKeyDown();
+                && client.player.isAlive();
 
         if (toggleSprintActive) {
-            sprintKey.setDown(shouldForceSprint);
+            // Keep the input latched and let vanilla decide whether sprinting is
+            // currently possible. This preserves the toggle intent through
+            // temporary interruptions such as crouching, item use, low hunger or
+            // collisions and resumes sprinting as soon as Minecraft allows it.
+            sprintKey.setDown(shouldHoldSprint);
         } else if (toggleSprintWasActiveLastTick) {
             sprintKey.setDown(false);
         }

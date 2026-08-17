@@ -1007,6 +1007,11 @@ public class BetterUCClient implements ClientModInitializer {
     }
 
     private void registerTickEvents() {
+        // Keep the latched sprint key in place before Minecraft snapshots the
+        // keyboard state for the player tick. Applying it only at the end of a
+        // tick allows a physical key-release event to create a short sprint gap.
+        ClientTickEvents.START_CLIENT_TICK.register(MovementController::tick);
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             BetterUCFontManager.tick(client);
             maybeOpenWelcomeChangelog(client);
@@ -1046,7 +1051,6 @@ public class BetterUCClient implements ClientModInitializer {
             ReinforcementAcceptClient.tick(client);
             DutyRejoinClient.tick(client);
             handleConfiguredHotkeys(client);
-            MovementController.tick(client);
             handlePingHotkey(client);
             handleScreenHotkeys(client);
         });
