@@ -36,6 +36,7 @@ import net.minecraft.network.chat.Style;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
@@ -61,12 +62,15 @@ public class BetterUCScreen extends Screen {
             .orElse("dev");
     private Category selectedCategory = Category.HUD;
     private ModuleOption selectedModule = ModuleOption.FPS;
+    private final EnumMap<Category, Integer> moduleScrollIndices = new EnumMap<>(Category.class);
+    private final EnumMap<Category, ModuleOption> selectedModulesByCategory = new EnumMap<>(Category.class);
     private final List<ScrollableControl> detailControls = new ArrayList<>();
     private final List<DetailSectionHeader> detailSectionHeaders = new ArrayList<>();
     private final List<ControlTooltip> controlTooltips = new ArrayList<>();
     private final List<Runnable> textFieldFlushers = new ArrayList<>();
     private String activeDetailSection = "";
     private boolean rebuildingWidgets = false;
+    private int moduleScrollIndex = 0;
     private int detailScrollOffset = 0;
     private int detailContentHeight = 0;
     private int updatesScrollOffset = 0;
@@ -81,6 +85,13 @@ public class BetterUCScreen extends Screen {
         selectedCategory = parseCategory(BetterUCConfig.INSTANCE.clickGuiLastCategory);
         selectedModule = parseModule(BetterUCConfig.INSTANCE.clickGuiLastModule, selectedCategory);
         selectedCategory = selectedModule.category;
+        for (Category category : Category.values()) {
+            int storedIndex = storedModuleScroll(category);
+            moduleScrollIndices.put(category, storedIndex);
+            selectedModulesByCategory.put(category, moduleAtCategoryIndex(category, storedIndex));
+        }
+        selectedModulesByCategory.put(selectedCategory, selectedModule);
+        moduleScrollIndex = moduleScrollIndices.getOrDefault(selectedCategory, 0);
         detailScrollOffset = storedDetailScroll(selectedModule);
         updatesScrollOffset = Math.max(0, BetterUCConfig.INSTANCE.clickGuiUpdatesScrollOffset);
         hudProfileNameDraft = BetterUCConfig.activeHudProfileName();
@@ -96,6 +107,8 @@ public class BetterUCScreen extends Screen {
             selectedModule = firstModuleFor(selectedCategory);
             detailScrollOffset = storedDetailScroll(selectedModule);
         }
+        selectedModulesByCategory.put(selectedCategory, selectedModule);
+        ensureSelectedModuleVisible();
 
         detailControls.clear();
         detailSectionHeaders.clear();
@@ -1242,9 +1255,16 @@ public class BetterUCScreen extends Screen {
         int x = mainX() + 10;
         int y = moduleListY();
         int w = sidebarW() - 20;
+        int categoryIndex = 0;
         for (ModuleOption module : ModuleOption.values()) {
             if (module.category != selectedCategory) {
                 continue;
+            }
+            if (categoryIndex++ < moduleScrollIndex) {
+                continue;
+            }
+            if (y + MODULE_H > moduleListBottom()) {
+                break;
             }
             if (inBounds(mouseX, mouseY, x, y, w, MODULE_H)) {
                 return module.description;
@@ -1320,9 +1340,12 @@ public class BetterUCScreen extends Screen {
         int x = mainX() + 10;
         int y = moduleListY();
         int w = sidebarW() - 20;
+        int categoryIndex = 0;
 
         for (ModuleOption module : ModuleOption.values()) {
             if (module.category != selectedCategory) continue;
+            if (categoryIndex++ < moduleScrollIndex) continue;
+            if (y + MODULE_H > moduleListBottom()) break;
             boolean selected = module == selectedModule;
             boolean hovered = inBounds(mouseX, mouseY, x, y, w, MODULE_H);
             int bg = selected ? 0xB82A3442 : hovered ? 0x80313A47 : 0x4D1F2631;
@@ -1337,6 +1360,28 @@ public class BetterUCScreen extends Screen {
             context.text(font, Component.literal(state), x + w - font.width(state) - 6, y + 4, stateColor);
             y += MODULE_H + MODULE_GAP;
         }
+
+        renderModuleScrollbar(context);
+    }
+
+    private void renderModuleScrollbar(GuiGraphicsExtractor context) {
+        int maximum = maxModuleScrollIndex();
+        if (maximum <= 0) {
+            return;
+        }
+        int top = moduleListY();
+        int bottom = moduleListBottom();
+        int trackHeight = Math.max(1, bottom - top);
+        int visibleRows = visibleModuleRows();
+        int totalRows = moduleCount(selectedCategory);
+        int thumbHeight = Math.max(18, trackHeight * visibleRows / Math.max(1, totalRows));
+        thumbHeight = Math.min(trackHeight, thumbHeight);
+        int thumbY = top + (int) Math.round(
+                (trackHeight - thumbHeight) * (moduleScrollIndex / (double) maximum)
+        );
+        int x = moduleScrollbarX();
+        context.fill(x, top, x + 3, bottom, 0x55334155);
+        context.fill(x, thumbY, x + 3, thumbY + thumbHeight, withAlpha(selectedCategory.accent, 0xDD));
     }
 
     private void renderDetailPanel(GuiGraphicsExtractor context, int mouseX, int mouseY) {
@@ -1854,6 +1899,14 @@ public class BetterUCScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (maxModuleScrollIndex() > 0
+                && verticalAmount != 0.0D
+                && inBounds(mouseX, mouseY, mainX() + 8, moduleListY(), sidebarW() - 12,
+                moduleListBottom() - moduleListY())) {
+            int rows = Math.max(1, (int) Math.round(Math.abs(verticalAmount)));
+            setModuleScrollIndex(moduleScrollIndex - (verticalAmount > 0.0D ? rows : -rows));
+            return true;
+        }
         if (selectedModule == ModuleOption.UPDATES) {
             int x = detailX();
             int y = detailY();
@@ -1892,6 +1945,15 @@ public class BetterUCScreen extends Screen {
         double mouseX = event.x();
         double mouseY = event.y();
 
+        if (maxModuleScrollIndex() > 0
+                && inBounds(mouseX, mouseY, moduleScrollbarX() - 2, moduleListY(), 7,
+                moduleListBottom() - moduleListY())) {
+            double ratio = clamp01((mouseY - moduleListY())
+                    / Math.max(1.0D, moduleListBottom() - moduleListY()));
+            setModuleScrollIndex((int) Math.round(ratio * maxModuleScrollIndex()));
+            return true;
+        }
+
         if (selectedModule != ModuleOption.UPDATES && maxDetailScroll() > 0) {
             int trackX = detailX() + detailW() - 10;
             int trackY = detailControlsTop();
@@ -1906,8 +1968,12 @@ public class BetterUCScreen extends Screen {
         Category category = categoryAt(mouseX, mouseY);
         if (category != null) {
             rememberCurrentUiState();
+            moduleScrollIndices.put(selectedCategory, moduleScrollIndex);
+            selectedModulesByCategory.put(selectedCategory, selectedModule);
             selectedCategory = category;
-            selectedModule = firstModuleFor(category);
+            moduleScrollIndex = moduleScrollIndices.getOrDefault(category, 0);
+            selectedModule = selectedModulesByCategory.getOrDefault(category, firstModuleFor(category));
+            ensureSelectedModuleVisible();
             restoreSelectedModuleScroll();
             refreshWidgets();
             return true;
@@ -1918,6 +1984,7 @@ public class BetterUCScreen extends Screen {
             rememberCurrentUiState();
             selectedCategory = module.category;
             selectedModule = module;
+            selectedModulesByCategory.put(selectedCategory, selectedModule);
             restoreSelectedModuleScroll();
             refreshWidgets();
             return true;
@@ -1951,8 +2018,11 @@ public class BetterUCScreen extends Screen {
         int x = mainX() + 10;
         int y = moduleListY();
         int w = sidebarW() - 20;
+        int categoryIndex = 0;
         for (ModuleOption module : ModuleOption.values()) {
             if (module.category != selectedCategory) continue;
+            if (categoryIndex++ < moduleScrollIndex) continue;
+            if (y + MODULE_H > moduleListBottom()) break;
             if (inBounds(mouseX, mouseY, x, y, w, MODULE_H)) return module;
             y += MODULE_H + MODULE_GAP;
         }
@@ -1964,6 +2034,34 @@ public class BetterUCScreen extends Screen {
             if (module.category == category) return module;
         }
         return ModuleOption.FPS;
+    }
+
+    private ModuleOption moduleAtCategoryIndex(Category category, int targetIndex) {
+        int index = 0;
+        for (ModuleOption module : ModuleOption.values()) {
+            if (module.category != category) continue;
+            if (index++ == Math.max(0, targetIndex)) return module;
+        }
+        return firstModuleFor(category);
+    }
+
+    private int moduleIndex(ModuleOption target) {
+        if (target == null) return 0;
+        int index = 0;
+        for (ModuleOption module : ModuleOption.values()) {
+            if (module.category != target.category) continue;
+            if (module == target) return index;
+            index++;
+        }
+        return 0;
+    }
+
+    private int moduleCount(Category category) {
+        int count = 0;
+        for (ModuleOption module : ModuleOption.values()) {
+            if (module.category == category) count++;
+        }
+        return count;
     }
 
     private Category parseCategory(String value) {
@@ -1988,6 +2086,43 @@ public class BetterUCScreen extends Screen {
         return Math.max(0, BetterUCConfig.INSTANCE.clickGuiScrollOffsets.getOrDefault(module.name(), 0));
     }
 
+    private int storedModuleScroll(Category category) {
+        if (category == null || BetterUCConfig.INSTANCE.clickGuiScrollOffsets == null) return 0;
+        return Math.max(0, BetterUCConfig.INSTANCE.clickGuiScrollOffsets.getOrDefault(moduleScrollKey(category), 0));
+    }
+
+    private String moduleScrollKey(Category category) {
+        return "sidebar:" + category.name();
+    }
+
+    private void setModuleScrollIndex(int index) {
+        moduleScrollIndex = clamp(index, 0, maxModuleScrollIndex());
+        moduleScrollIndices.put(selectedCategory, moduleScrollIndex);
+        BetterUCConfig.INSTANCE.clickGuiScrollOffsets.put(moduleScrollKey(selectedCategory), moduleScrollIndex);
+    }
+
+    private void ensureSelectedModuleVisible() {
+        moduleScrollIndex = clamp(moduleScrollIndex, 0, maxModuleScrollIndex());
+        int selectedIndex = moduleIndex(selectedModule);
+        int visibleRows = visibleModuleRows();
+        if (selectedIndex < moduleScrollIndex) {
+            moduleScrollIndex = selectedIndex;
+        } else if (selectedIndex >= moduleScrollIndex + visibleRows) {
+            moduleScrollIndex = selectedIndex - visibleRows + 1;
+        }
+        moduleScrollIndex = clamp(moduleScrollIndex, 0, maxModuleScrollIndex());
+        moduleScrollIndices.put(selectedCategory, moduleScrollIndex);
+    }
+
+    private int maxModuleScrollIndex() {
+        return Math.max(0, moduleCount(selectedCategory) - visibleModuleRows());
+    }
+
+    private int visibleModuleRows() {
+        int height = Math.max(1, moduleListBottom() - moduleListY());
+        return Math.max(1, (height + MODULE_GAP) / (MODULE_H + MODULE_GAP));
+    }
+
     private void restoreSelectedModuleScroll() {
         detailScrollOffset = storedDetailScroll(selectedModule);
         updatesScrollOffset = selectedModule == ModuleOption.UPDATES
@@ -1998,6 +2133,8 @@ public class BetterUCScreen extends Screen {
     private void rememberCurrentUiState() {
         BetterUCConfig.INSTANCE.clickGuiLastCategory = selectedCategory.name();
         BetterUCConfig.INSTANCE.clickGuiLastModule = selectedModule.name();
+        BetterUCConfig.INSTANCE.clickGuiScrollOffsets.put(moduleScrollKey(selectedCategory),
+                Math.max(0, moduleScrollIndex));
         BetterUCConfig.INSTANCE.clickGuiScrollOffsets.put(selectedModule.name(), Math.max(0, detailScrollOffset));
         BetterUCConfig.INSTANCE.clickGuiUpdatesScrollOffset = Math.max(0, updatesScrollOffset);
     }
@@ -2494,6 +2631,14 @@ public class BetterUCScreen extends Screen {
 
     private int moduleListY() {
         return mainY() + 66;
+    }
+
+    private int moduleListBottom() {
+        return mainY() + mainH() - 34;
+    }
+
+    private int moduleScrollbarX() {
+        return mainX() + sidebarW() - 7;
     }
 
     private void drawSoftRect(GuiGraphicsExtractor context, int x, int y, int width, int height, int color) {
