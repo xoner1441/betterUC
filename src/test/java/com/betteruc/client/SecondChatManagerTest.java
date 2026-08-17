@@ -86,6 +86,9 @@ class SecondChatManagerTest {
         assertEquals(0, SecondChatManager.formattedHqContinuationLineCount(
                 "ᴀᴋᴛᴇɴ ɢᴇʟöꜱᴄʜᴛ // FABI1441 \u2192 reaax72"
         ));
+        assertFalse(SecondChatManager.isFormattedHqMessage(
+                "ᴘʟᴀɴᴛᴀɢᴇ ᴠᴇʀʙʀᴀɴɴᴛ // Erfolgreich"
+        ));
     }
 
     @Test

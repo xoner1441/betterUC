@@ -218,6 +218,54 @@ class ChatCustomizationStyleTest {
     }
 
     @Test
+    void formatsPersonalPlantageBurnAsCompactSuccessMessage() {
+        ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
+                "[System] [CHAT] 23:52:56 Du hast erfolgreich eine Pulver Plant verbrannt.",
+                true,
+                false,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
+        );
+
+        assertNotNull(result);
+        assertFalse(result.hq());
+        assertEquals(1, result.replacementMessages().size());
+        assertEquals("ᴘʟᴀɴᴛᴀɢᴇ ᴠᴇʀʙʀᴀɴɴᴛ // Erfolgreich",
+                result.replacementMessages().get(0).getString());
+        List<Component> segments = result.replacementMessages().get(0).toFlatList();
+        assertEquals(0xFF3B30, segments.get(0).getStyle().getColor().getValue());
+        assertTrue(segments.get(0).getStyle().isBold());
+    }
+
+    @Test
+    void formatsHqPlantageBurnWithAgentAndFireDetailProfile() {
+        ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
+                "[betterUC Second Chat] HQ: Agent lara412 hat erfolgreich eine Pulver Plantage verbrannt, over.",
+                true,
+                false,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
+        );
+
+        assertNotNull(result);
+        assertTrue(result.hq());
+        assertEquals(2, result.replacementMessages().size());
+        assertEquals("ᴘʟᴀɴᴛᴀɢᴇ ᴠᴇʀʙʀᴀɴɴᴛ // lara412",
+                result.replacementMessages().get(0).getString());
+        assertEquals("» Pulver-Plantage erfolgreich zerstört",
+                result.replacementMessages().get(1).getString());
+
+        List<Component> headline = result.replacementMessages().get(0).toFlatList();
+        assertEquals(0xFF3B30, headline.get(0).getStyle().getColor().getValue());
+        assertTrue(headline.get(0).getStyle().isBold());
+        List<Component> detail = result.replacementMessages().get(1).toFlatList();
+        assertEquals(0xFFD75A, detail.get(1).getStyle().getColor().getValue());
+        assertTrue(detail.get(1).getStyle().isBold());
+    }
+
+    @Test
     void keepsHqAndPayGradientProfilesIndependent() {
         ChatCustomizationFormatter.GradientPalette palette =
                 ChatCustomizationFormatter.GradientPalette.defaults()

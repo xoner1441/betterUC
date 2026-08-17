@@ -207,7 +207,7 @@ public class ChatBlacklistMixin {
                     reinfCustomizationEnabled
             );
             if (customized != null && customized.cancelOriginal()) {
-                appendCustomMessages(customized.replacementMessages(), customized.reinforcement(), ci);
+                appendCustomMessages(customized.replacementMessages(), customized.reinforcement(), customized.hq(), ci);
                 return;
             }
         } else {
@@ -697,7 +697,7 @@ public class ChatBlacklistMixin {
         }
     }
 
-    private void appendCustomMessages(List<Component> messages, boolean reinforcement, CallbackInfo ci) {
+    private void appendCustomMessages(List<Component> messages, boolean reinforcement, boolean hq, CallbackInfo ci) {
         ci.cancel();
         if (messages == null || messages.isEmpty()) return;
 
@@ -705,7 +705,7 @@ public class ChatBlacklistMixin {
         try {
             for (Component line : messages) {
                 Component finalMessage = withTimestampIfEnabled(line);
-                SecondChatManager.RouteResult routed = SecondChatManager.route(line, reinforcement);
+                SecondChatManager.RouteResult routed = SecondChatManager.route(line, reinforcement, hq);
                 if (routed.suppressMain()) {
                     SecondChatManager.logSuppressedMessage(line);
                 } else {

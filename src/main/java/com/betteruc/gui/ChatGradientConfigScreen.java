@@ -97,7 +97,7 @@ public final class ChatGradientConfigScreen extends Screen {
                 "Chat-Farbverläufe",
                 "HQ- und PAY-Nachrichten unabhängig gestalten"
         );
-        SecondChatSettingsUi.renderPanel(context, panelX - 10, 85, panelWidth + 20, 65);
+        SecondChatSettingsUi.renderPanel(context, panelX - 10, 85, panelWidth + 20, 83);
         context.text(font, Component.literal("Live-Vorschau"), panelX, 91, TEXT_MUTED);
         List<Component> preview = profile == Profile.HQ
                 ? ChatCustomizationFormatter.hqGradientPreview()
@@ -180,6 +180,10 @@ public final class ChatGradientConfigScreen extends Screen {
                 () -> config.chatHqTicketActionGradientEnd, value -> config.chatHqTicketActionGradientEnd = value));
         rows.add(row("Ticket-Details", () -> config.chatHqTicketDetailGradientStart, value -> config.chatHqTicketDetailGradientStart = value,
                 () -> config.chatHqTicketDetailGradientEnd, value -> config.chatHqTicketDetailGradientEnd = value));
+        rows.add(row("Plantage-Aktion", () -> config.chatHqPlantageActionGradientStart, value -> config.chatHqPlantageActionGradientStart = value,
+                () -> config.chatHqPlantageActionGradientEnd, value -> config.chatHqPlantageActionGradientEnd = value));
+        rows.add(row("Plantage-Details", () -> config.chatHqPlantageDetailGradientStart, value -> config.chatHqPlantageDetailGradientStart = value,
+                () -> config.chatHqPlantageDetailGradientEnd, value -> config.chatHqPlantageDetailGradientEnd = value));
     }
 
     private void addPayRows() {
@@ -236,6 +240,10 @@ public final class ChatGradientConfigScreen extends Screen {
             config.chatHqTicketActionGradientEnd = BetterUCConfig.DEFAULT_CHAT_HQ_TICKET_ACTION_GRADIENT_END;
             config.chatHqTicketDetailGradientStart = BetterUCConfig.DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_START;
             config.chatHqTicketDetailGradientEnd = BetterUCConfig.DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_END;
+            config.chatHqPlantageActionGradientStart = BetterUCConfig.DEFAULT_CHAT_HQ_PLANTAGE_ACTION_GRADIENT_START;
+            config.chatHqPlantageActionGradientEnd = BetterUCConfig.DEFAULT_CHAT_HQ_PLANTAGE_ACTION_GRADIENT_END;
+            config.chatHqPlantageDetailGradientStart = BetterUCConfig.DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_START;
+            config.chatHqPlantageDetailGradientEnd = BetterUCConfig.DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_END;
         } else {
             config.chatPayActionGradientStart = BetterUCConfig.DEFAULT_CHAT_PAY_ACTION_GRADIENT_START;
             config.chatPayActionGradientEnd = BetterUCConfig.DEFAULT_CHAT_PAY_ACTION_GRADIENT_END;

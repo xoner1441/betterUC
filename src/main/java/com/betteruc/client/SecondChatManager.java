@@ -46,10 +46,14 @@ public final class SecondChatManager {
     }
 
     public static RouteResult route(Component message) {
-        return route(message, false);
+        return route(message, false, false);
     }
 
     public static RouteResult route(Component message, boolean knownReinforcement) {
+        return route(message, knownReinforcement, false);
+    }
+
+    public static RouteResult route(Component message, boolean knownReinforcement, boolean knownHq) {
         BetterUCConfig config = BetterUCConfig.INSTANCE;
         if (!config.secondChatEnabled || message == null) {
             return RouteResult.KEEP_MAIN;
@@ -64,7 +68,7 @@ public final class SecondChatManager {
         Minecraft client = Minecraft.getInstance();
         String playerName = client.player == null ? "" : normalize(client.player.getName().getString());
         boolean ownNameMatch = !playerName.isBlank() && containsWord(normalized, playerName);
-        boolean hqMatch = classifyHqOrWps(normalized);
+        boolean hqMatch = knownHq || classifyHqOrWps(normalized);
         boolean paydayMatch = classifyPayday(normalized);
         boolean reinforcementMatch = knownReinforcement || isReinforcementLine(normalized);
         boolean suppressMain = false;

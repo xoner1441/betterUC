@@ -95,6 +95,8 @@ public class BetterUCConfig {
             "chatHqPositiveGradientStart", "chatHqPositiveGradientEnd",
             "chatHqTicketActionGradientStart", "chatHqTicketActionGradientEnd",
             "chatHqTicketDetailGradientStart", "chatHqTicketDetailGradientEnd",
+            "chatHqPlantageActionGradientStart", "chatHqPlantageActionGradientEnd",
+            "chatHqPlantageDetailGradientStart", "chatHqPlantageDetailGradientEnd",
             "chatPayActionGradientStart", "chatPayActionGradientEnd",
             "chatPayActorGradientStart", "chatPayActorGradientEnd",
             "chatPayTargetGradientStart", "chatPayTargetGradientEnd",
@@ -230,6 +232,10 @@ public class BetterUCConfig {
     public static final int DEFAULT_CHAT_HQ_TICKET_ACTION_GRADIENT_END = 0xFFFF5555;
     public static final int DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_START = 0xFFFFFF55;
     public static final int DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_END = 0xFFFFAA00;
+    public static final int DEFAULT_CHAT_HQ_PLANTAGE_ACTION_GRADIENT_START = 0xFFFF3B30;
+    public static final int DEFAULT_CHAT_HQ_PLANTAGE_ACTION_GRADIENT_END = 0xFFFF9500;
+    public static final int DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_START = 0xFFFFD75A;
+    public static final int DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_END = 0xFFFF8C42;
     public static final int DEFAULT_CHAT_PAY_ACTION_GRADIENT_START = DEFAULT_CHAT_HQ_ACTION_GRADIENT_START;
     public static final int DEFAULT_CHAT_PAY_ACTION_GRADIENT_END = DEFAULT_CHAT_HQ_ACTION_GRADIENT_END;
     public static final int DEFAULT_CHAT_PAY_ACTOR_GRADIENT_START = DEFAULT_CHAT_HQ_ACTOR_GRADIENT_START;
@@ -519,6 +525,10 @@ public class BetterUCConfig {
     public int chatHqTicketActionGradientEnd = DEFAULT_CHAT_HQ_TICKET_ACTION_GRADIENT_END;
     public int chatHqTicketDetailGradientStart = DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_START;
     public int chatHqTicketDetailGradientEnd = DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_END;
+    public int chatHqPlantageActionGradientStart = DEFAULT_CHAT_HQ_PLANTAGE_ACTION_GRADIENT_START;
+    public int chatHqPlantageActionGradientEnd = DEFAULT_CHAT_HQ_PLANTAGE_ACTION_GRADIENT_END;
+    public int chatHqPlantageDetailGradientStart = DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_START;
+    public int chatHqPlantageDetailGradientEnd = DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_END;
     public int chatPayActionGradientStart = DEFAULT_CHAT_PAY_ACTION_GRADIENT_START;
     public int chatPayActionGradientEnd = DEFAULT_CHAT_PAY_ACTION_GRADIENT_END;
     public int chatPayActorGradientStart = DEFAULT_CHAT_PAY_ACTOR_GRADIENT_START;
@@ -731,6 +741,10 @@ public class BetterUCConfig {
         INSTANCE.chatHqTicketActionGradientEnd = sanitizeHudColor(INSTANCE.chatHqTicketActionGradientEnd, DEFAULT_CHAT_HQ_TICKET_ACTION_GRADIENT_END);
         INSTANCE.chatHqTicketDetailGradientStart = sanitizeHudColor(INSTANCE.chatHqTicketDetailGradientStart, DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_START);
         INSTANCE.chatHqTicketDetailGradientEnd = sanitizeHudColor(INSTANCE.chatHqTicketDetailGradientEnd, DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_END);
+        INSTANCE.chatHqPlantageActionGradientStart = sanitizeHudColor(INSTANCE.chatHqPlantageActionGradientStart, DEFAULT_CHAT_HQ_PLANTAGE_ACTION_GRADIENT_START);
+        INSTANCE.chatHqPlantageActionGradientEnd = sanitizeHudColor(INSTANCE.chatHqPlantageActionGradientEnd, DEFAULT_CHAT_HQ_PLANTAGE_ACTION_GRADIENT_END);
+        INSTANCE.chatHqPlantageDetailGradientStart = sanitizeHudColor(INSTANCE.chatHqPlantageDetailGradientStart, DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_START);
+        INSTANCE.chatHqPlantageDetailGradientEnd = sanitizeHudColor(INSTANCE.chatHqPlantageDetailGradientEnd, DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_END);
         INSTANCE.chatPayActionGradientStart = sanitizeHudColor(INSTANCE.chatPayActionGradientStart, DEFAULT_CHAT_PAY_ACTION_GRADIENT_START);
         INSTANCE.chatPayActionGradientEnd = sanitizeHudColor(INSTANCE.chatPayActionGradientEnd, DEFAULT_CHAT_PAY_ACTION_GRADIENT_END);
         INSTANCE.chatPayActorGradientStart = sanitizeHudColor(INSTANCE.chatPayActorGradientStart, DEFAULT_CHAT_PAY_ACTOR_GRADIENT_START);

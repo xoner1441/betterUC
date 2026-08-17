@@ -76,6 +76,14 @@ public final class ChatCustomizationFormatter {
             "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*(?:.*?\\s+)?((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)\\s+hat\\s+((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)(?:(?:['’]?s)|(?:\\s+(?:seine|ihre|die)))\\s+Akten\\s+gel[öo]scht,\\s*over\\.?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
+    private static final Pattern PERSONAL_PLANTAGE_BURNED_PATTERN = Pattern.compile(
+            "^\\s*(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:[^\\p{L}\\p{N}_\\[]+\\s*)?Du\\s+hast\\s+erfolgreich\\s+eine\\s+Pulver\\s*-?\\s*Plant(?:age)?\\s+verbrannt[.!]?\\s*$",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern HQ_PLANTAGE_BURNED_PATTERN = Pattern.compile(
+            "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*Agent\\s+((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)\\s+hat\\s+erfolgreich\\s+eine\\s+Pulver\\s*-?\\s*Plant(?:age)?\\s+verbrannt,?\\s*over\\.?\\s*$",
+            Pattern.CASE_INSENSITIVE
+    );
 
     private static final Pattern PAY_SENT_PATTERN = Pattern.compile(
             "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:[^\\p{L}\\p{N}_\\[]+\\s*)?Du\\s+hast\\s+([^\\s]+)\\s+([+-]?[0-9.]+)\\$\\s+gegeben!\\s*$",
@@ -225,6 +233,21 @@ public final class ChatCustomizationFormatter {
         }
 
         if (!wpsHqEnabled) return null;
+
+        Matcher personalPlantageBurned = PERSONAL_PLANTAGE_BURNED_PATTERN.matcher(clean);
+        if (personalPlantageBurned.matches()) {
+            return Result.replace(List.of(
+                    plantageSuccessHeadline(headlineStyle)
+            ));
+        }
+
+        Matcher hqPlantageBurned = HQ_PLANTAGE_BURNED_PATTERN.matcher(clean);
+        if (hqPlantageBurned.matches()) {
+            return Result.replaceHq(List.of(
+                    plantageHeadline(playerName(hqPlantageBurned.group(1)), headlineStyle),
+                    plantageDetail("Pulver-Plantage erfolgreich zerstört", headlineStyle)
+            ));
+        }
 
         Matcher wantedStart = WANTED_START_PATTERN.matcher(clean);
         if (wantedStart.matches()) {
@@ -431,6 +454,23 @@ public final class ChatCustomizationFormatter {
                 .append(targetName(target, headlineStyle));
     }
 
+    private static Component plantageSuccessHeadline(HeadlineStyle headlineStyle) {
+        return plantageAction("PLANTAGE VERBRANNT", headlineStyle)
+                .append(separator(headlineLeadSeparator(headlineStyle)))
+                .append(plantageDetailText("Erfolgreich", headlineStyle));
+    }
+
+    private static Component plantageHeadline(String actor, HeadlineStyle headlineStyle) {
+        return plantageAction("PLANTAGE VERBRANNT", headlineStyle)
+                .append(separator(headlineLeadSeparator(headlineStyle)))
+                .append(actorName(actor, headlineStyle));
+    }
+
+    private static Component plantageDetail(String value, HeadlineStyle headlineStyle) {
+        return Component.literal("\u00BB ").withStyle(ChatFormatting.GRAY)
+                .append(plantageDetailText(value, headlineStyle));
+    }
+
     private static Component detail(String reason, String suffix, HeadlineStyle headlineStyle) {
         MutableComponent text = Component.literal("» ").withStyle(ChatFormatting.GRAY)
                 .append(detailText(reason, headlineStyle));
@@ -561,7 +601,9 @@ public final class ChatCustomizationFormatter {
                 detail("Versuchter Mord", "2 Minuten", style),
                 positiveHeadline("FÜHRERSCHEIN RÜCKGABE", "FABI1441", "Spieler", style),
                 ticketHeadline("TICKET AUSGESTELLT", "FABI1441", "Spieler", style),
-                ticketDetail("230$", "Bestätigung ausstehend", false, style)
+                ticketDetail("230$", "Bestätigung ausstehend", false, style),
+                plantageHeadline("FABI1441", style),
+                plantageDetail("Pulver-Plantage erfolgreich zerstört", style)
         );
     }
 
@@ -644,6 +686,27 @@ public final class ChatCustomizationFormatter {
                     headlineStyle.palette().hqTicketActionEnd(), true);
         }
         return Component.literal(label).withStyle(ChatFormatting.GOLD);
+    }
+
+    private static MutableComponent plantageAction(String value, HeadlineStyle headlineStyle) {
+        String label = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+        if (BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS.equals(headlineStyle.actionTextStyle())) {
+            label = SmallCapsText.convert(label);
+        }
+        if (headlineStyle.gradientEnabled()) {
+            return gradientText(label, headlineStyle.palette().hqPlantageActionStart(),
+                    headlineStyle.palette().hqPlantageActionEnd(), true);
+        }
+        return Component.literal(label).withStyle(ChatFormatting.RED);
+    }
+
+    private static MutableComponent plantageDetailText(String value, HeadlineStyle headlineStyle) {
+        String text = value == null ? "" : value.trim();
+        if (headlineStyle.gradientEnabled()) {
+            return gradientText(text, headlineStyle.palette().hqPlantageDetailStart(),
+                    headlineStyle.palette().hqPlantageDetailEnd(), true);
+        }
+        return Component.literal(text).withStyle(ChatFormatting.GOLD);
     }
 
     private static String headlineLeadSeparator(HeadlineStyle headlineStyle) {
@@ -832,6 +895,10 @@ public final class ChatCustomizationFormatter {
             int hqTicketActionEnd,
             int hqTicketDetailStart,
             int hqTicketDetailEnd,
+            int hqPlantageActionStart,
+            int hqPlantageActionEnd,
+            int hqPlantageDetailStart,
+            int hqPlantageDetailEnd,
             int payActionStart,
             int payActionEnd,
             int payActorStart,
@@ -859,6 +926,10 @@ public final class ChatCustomizationFormatter {
                     BetterUCConfig.DEFAULT_CHAT_HQ_TICKET_ACTION_GRADIENT_END,
                     BetterUCConfig.DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_START,
                     BetterUCConfig.DEFAULT_CHAT_HQ_TICKET_DETAIL_GRADIENT_END,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_PLANTAGE_ACTION_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_PLANTAGE_ACTION_GRADIENT_END,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_END,
                     BetterUCConfig.DEFAULT_CHAT_PAY_ACTION_GRADIENT_START,
                     BetterUCConfig.DEFAULT_CHAT_PAY_ACTION_GRADIENT_END,
                     BetterUCConfig.DEFAULT_CHAT_PAY_ACTOR_GRADIENT_START,
@@ -888,6 +959,10 @@ public final class ChatCustomizationFormatter {
                     config.chatHqTicketActionGradientEnd,
                     config.chatHqTicketDetailGradientStart,
                     config.chatHqTicketDetailGradientEnd,
+                    config.chatHqPlantageActionGradientStart,
+                    config.chatHqPlantageActionGradientEnd,
+                    config.chatHqPlantageDetailGradientStart,
+                    config.chatHqPlantageDetailGradientEnd,
                     config.chatPayActionGradientStart,
                     config.chatPayActionGradientEnd,
                     config.chatPayActorGradientStart,
@@ -906,6 +981,7 @@ public final class ChatCustomizationFormatter {
                     start, end, hqActorStart, hqActorEnd, hqTargetStart, hqTargetEnd,
                     hqDetailStart, hqDetailEnd, hqPositiveStart, hqPositiveEnd,
                     hqTicketActionStart, hqTicketActionEnd, hqTicketDetailStart, hqTicketDetailEnd,
+                    hqPlantageActionStart, hqPlantageActionEnd, hqPlantageDetailStart, hqPlantageDetailEnd,
                     payActionStart, payActionEnd, payActorStart, payActorEnd, payTargetStart, payTargetEnd,
                     payOutgoingStart, payOutgoingEnd, payIncomingStart, payIncomingEnd
             );
@@ -916,6 +992,7 @@ public final class ChatCustomizationFormatter {
                     hqActionStart, hqActionEnd, hqActorStart, hqActorEnd, hqTargetStart, hqTargetEnd,
                     hqDetailStart, hqDetailEnd, hqPositiveStart, hqPositiveEnd,
                     hqTicketActionStart, hqTicketActionEnd, hqTicketDetailStart, hqTicketDetailEnd,
+                    hqPlantageActionStart, hqPlantageActionEnd, hqPlantageDetailStart, hqPlantageDetailEnd,
                     start, end, payActorStart, payActorEnd, payTargetStart, payTargetEnd,
                     payOutgoingStart, payOutgoingEnd, payIncomingStart, payIncomingEnd
             );
@@ -926,6 +1003,7 @@ public final class ChatCustomizationFormatter {
                     hqActionStart, hqActionEnd, hqActorStart, hqActorEnd, hqTargetStart, hqTargetEnd,
                     hqDetailStart, hqDetailEnd, hqPositiveStart, hqPositiveEnd,
                     hqTicketActionStart, hqTicketActionEnd, hqTicketDetailStart, hqTicketDetailEnd,
+                    hqPlantageActionStart, hqPlantageActionEnd, hqPlantageDetailStart, hqPlantageDetailEnd,
                     payActionStart, payActionEnd, payActorStart, payActorEnd, payTargetStart, payTargetEnd,
                     start, end, payIncomingStart, payIncomingEnd
             );
@@ -958,23 +1036,29 @@ public final class ChatCustomizationFormatter {
         private final boolean cancelOriginal;
         private final List<Component> replacementMessages;
         private final boolean reinforcement;
+        private final boolean hq;
 
-        private Result(boolean cancelOriginal, List<Component> replacementMessages, boolean reinforcement) {
+        private Result(boolean cancelOriginal, List<Component> replacementMessages, boolean reinforcement, boolean hq) {
             this.cancelOriginal = cancelOriginal;
             this.replacementMessages = replacementMessages == null ? List.of() : replacementMessages;
             this.reinforcement = reinforcement;
+            this.hq = hq;
         }
 
         public static Result suppress() {
-            return new Result(true, List.of(), false);
+            return new Result(true, List.of(), false, false);
         }
 
         public static Result replace(List<Component> replacementMessages) {
-            return new Result(true, replacementMessages, false);
+            return new Result(true, replacementMessages, false, false);
+        }
+
+        static Result replaceHq(List<Component> replacementMessages) {
+            return new Result(true, replacementMessages, false, true);
         }
 
         static Result replaceReinforcement(List<Component> replacementMessages) {
-            return new Result(true, replacementMessages, true);
+            return new Result(true, replacementMessages, true, false);
         }
 
         public boolean cancelOriginal() {
@@ -987,6 +1071,10 @@ public final class ChatCustomizationFormatter {
 
         public boolean reinforcement() {
             return reinforcement;
+        }
+
+        public boolean hq() {
+            return hq;
         }
 
         private Result withInteractionFrom(Component original) {
@@ -1002,7 +1090,7 @@ public final class ChatCustomizationFormatter {
                 interactive.setStyle(interactive.getStyle().withClickEvent(sourceStyle.getClickEvent()));
                 interactiveMessages.add(interactive);
             }
-            return new Result(cancelOriginal, List.copyOf(interactiveMessages), reinforcement);
+            return new Result(cancelOriginal, List.copyOf(interactiveMessages), reinforcement, hq);
         }
     }
 }
