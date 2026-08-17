@@ -812,8 +812,15 @@ public final class SecondChatManager {
         if (text.startsWith("geloscht ")) {
             return 1;
         }
+        if (text.startsWith("ticket ausgestellt ")
+                || text.startsWith("ticket bestatigt ")) {
+            return 1;
+        }
         if (text.startsWith("waffen abnahme ")
-                || text.startsWith("drogen abnahme ")) {
+                || text.startsWith("drogen abnahme ")
+                || text.startsWith("fuhrerschein abnahme ")
+                || text.startsWith("fuhrerschein ruckgabe ")
+                || text.startsWith("akten geloscht ")) {
             return 0;
         }
         return -1;
@@ -821,10 +828,21 @@ public final class SecondChatManager {
 
     private static boolean isHqOrWpsLine(String text) {
         return WANTED_LIST_ENTRY_PATTERN.matcher(text).matches()
+                || hasStructuredHqPrefix(text)
                 || containsAny(text,
-                " hq ", "wantedlevel", "wantedpunkte", "fahndungsgrund", "fahndungszeit",
+                "wantedlevel", "wantedpunkte", "fahndungsgrund", "fahndungszeit",
                 "gesuchter", "getotet", "eingesperrt", "akten geloscht", "waffen abnahme",
-                "drogen abnahme", "verandert");
+                "drogen abnahme", "fuhrerschein abnahme", "fuhrerschein ruckgabe",
+                "fuhrerschein abgenommen", "fuhrerschein zuruckgegeben",
+                "ticket ausgestellt", "ticket bestatigt", "verandert");
+    }
+
+    private static boolean hasStructuredHqPrefix(String text) {
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+        return text.matches("^(?:(?:\\[?system]? \\[?chat]?)(?: \\d{1,2} \\d{2} \\d{2})? |"
+                + "\\[?betteruc second chat]? )?hq(?: |$).*$");
     }
 
     private static synchronized boolean classifyPayday(String text) {
@@ -874,7 +892,19 @@ public final class SecondChatManager {
     }
 
     static boolean isFormattedHqMessage(String raw) {
-        return raw != null && formattedHqContinuationLines(normalize(raw)) >= 0;
+        return formattedHqContinuationLineCount(raw) >= 0;
+    }
+
+    static boolean isHqOrWpsMessage(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return false;
+        }
+        String normalized = normalize(raw);
+        return isHqOrWpsLine(normalized) || formattedHqContinuationLines(normalized) >= 0;
+    }
+
+    static int formattedHqContinuationLineCount(String raw) {
+        return raw == null ? -1 : formattedHqContinuationLines(normalize(raw));
     }
 
     private static boolean isReinforcementAnchor(String text) {

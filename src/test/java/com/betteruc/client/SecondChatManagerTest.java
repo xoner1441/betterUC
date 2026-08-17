@@ -68,4 +68,44 @@ class SecondChatManagerTest {
                 "ᴡᴀꜰꜰᴇɴ ᴀʙɴᴀʜᴍᴇ // FishMac_ \u2192 Ehhie"
         ));
     }
+
+    @Test
+    void recognizesNewTicketAndLicenseHeadlinesWithTheirContinuationCounts() {
+        assertEquals(1, SecondChatManager.formattedHqContinuationLineCount(
+                "ᴛɪᴄᴋᴇᴛ ᴀᴜꜱɢᴇꜱᴛᴇʟʟᴛ // Eymenn \u2192 aveey_"
+        ));
+        assertEquals(1, SecondChatManager.formattedHqContinuationLineCount(
+                "ᴛɪᴄᴋᴇᴛ ʙᴇꜱᴛäᴛɪɢᴛ // Eymenn \u2192 aveey_"
+        ));
+        assertEquals(0, SecondChatManager.formattedHqContinuationLineCount(
+                "ꜰüʜʀᴇʀꜱᴄʜᴇɪɴ ᴀʙɴᴀʜᴍᴇ // FABI1441 \u2192 reaax72"
+        ));
+        assertEquals(0, SecondChatManager.formattedHqContinuationLineCount(
+                "ꜰüʜʀᴇʀꜱᴄʜᴇɪɴ ʀüᴄᴋɢᴀʙᴇ // FABI1441 \u2192 reaax72"
+        ));
+        assertEquals(0, SecondChatManager.formattedHqContinuationLineCount(
+                "ᴀᴋᴛᴇɴ ɢᴇʟöꜱᴄʜᴛ // FABI1441 \u2192 reaax72"
+        ));
+    }
+
+    @Test
+    void doesNotTreatHqLocationsInNormalFactionChatAsHqMessages() {
+        assertFalse(SecondChatManager.isHqOrWpsMessage(
+                "Calderón Kartell TikaKorth: Alles klar ich setze nen Vertrag auf "
+                        + "und ich würde sagen wir sehen uns am Cop HQ"
+        ));
+        assertFalse(SecondChatManager.isHqOrWpsMessage(
+                "Polizei FABI1441: Ich stehe gerade am FBI HQ"
+        ));
+
+        assertTrue(SecondChatManager.isHqOrWpsMessage(
+                "HQ: Officer 68mirco hat 1Arrogante_ ein Ticket über 230$ ausgestellt."
+        ));
+        assertTrue(SecondChatManager.isHqOrWpsMessage(
+                "[System] [CHAT] 19:13:44 HQ: Officer 68mirco hat 1Arrogante_ ein Ticket ausgestellt."
+        ));
+        assertTrue(SecondChatManager.isHqOrWpsMessage(
+                "[betterUC Second Chat] HQ: NuRisk wurde von mteii getötet."
+        ));
+    }
 }
