@@ -42,6 +42,8 @@
             "Datum, Uhrzeit und Sekunden können einzeln ein- oder ausgeschaltet sowie farblich angepasst werden.",
             "Jeder Second-Chat-Tab kann den globalen Zeitstempel übernehmen oder ein eigenes Format verwenden.",
             "Doppelte Zeitstempel werden vermieden und verschobene Second-Chat-Nachrichten erscheinen nun zuverlässig in latest.log.",
+            "HTTP-, HTTPS- und www-Links werden im normalen Chat sowie im Second Chat erkannt, hervorgehoben und anklickbar dargestellt.",
+            "Die Bestätigung für vorhandene anklickbare Serverbefehle kann separat ein- oder ausgeschaltet werden.",
             "Bündnis- und Fraktionspräfixe wie FBI, Polizei und Rettungsdienst lösen keine falschen Ortsfilter mehr aus."
           ]
         },
@@ -119,6 +121,8 @@
         "Second-Chat-Tabs unterstützen globale oder eigene Zeitstempelformate.",
         "Doppelte Second-Chat-Zeitstempel wurden behoben.",
         "In Second Chats verschobene Nachrichten werden nun in latest.log protokolliert.",
+        "Weblinks sind im Hauptchat und Second Chat wieder anklickbar und optional hervorgehoben.",
+        "Die Sicherheitsabfrage anklickbarer RUN_COMMAND-Aktionen lässt sich abschalten, ohne Befehle aus normalem Text zu erzeugen.",
         "Die Erkennung von Ortsfiltern ignoriert normale Bündnisnachrichten mit FBI-, Polizei- und Rettungsdienst-Präfixen.",
         "HQ-Aktionsbezeichnungen unterstützen Small Caps, technische Trenner und optionale Farbverläufe.",
         "HQ- und PAY-Farbverläufe lassen sich mit getrennten Profilen und Live-Vorschau individuell anpassen.",

@@ -340,6 +340,22 @@ public class BetterUCScreen extends Screen {
                         () -> BetterUCConfig.INSTANCE.autoFirstAidEnabled = !BetterUCConfig.INSTANCE.autoFirstAidEnabled);
             }
             case CHAT -> {
+                y = addSectionHeader(x, y, controlW, "Links & Klickaktionen", 0xFF22D3EE);
+                y = addToggle(x, y, controlW, "Links anklickbar",
+                        BetterUCConfig.INSTANCE.chatLinksClickableEnabled,
+                        () -> BetterUCConfig.INSTANCE.chatLinksClickableEnabled =
+                                !BetterUCConfig.INSTANCE.chatLinksClickableEnabled);
+                if (BetterUCConfig.INSTANCE.chatLinksClickableEnabled) {
+                    y = addToggle(x, y, controlW, "Links hervorheben",
+                            BetterUCConfig.INSTANCE.chatLinkHighlightEnabled,
+                            () -> BetterUCConfig.INSTANCE.chatLinkHighlightEnabled =
+                                    !BetterUCConfig.INSTANCE.chatLinkHighlightEnabled);
+                }
+                y = addToggle(x, y, controlW, "Command-Bestätigung",
+                        BetterUCConfig.INSTANCE.chatCommandConfirmationEnabled,
+                        () -> BetterUCConfig.INSTANCE.chatCommandConfirmationEnabled =
+                                !BetterUCConfig.INSTANCE.chatCommandConfirmationEnabled);
+
                 y = addSectionHeader(x, y, controlW, "Second Chat", 0xFF38BDF8);
                 y = addToggle(x, y, controlW, "Second Chat", BetterUCConfig.INSTANCE.secondChatEnabled,
                         () -> BetterUCConfig.INSTANCE.secondChatEnabled = !BetterUCConfig.INSTANCE.secondChatEnabled);
@@ -897,6 +913,12 @@ public class BetterUCScreen extends Screen {
             case "Second Chat" ->
                     "Aktiviert zusätzliche Chat-Tabs und frei platzierbare Chatfenster mit eigenen Filtern.";
             case "Hotkey Commands" -> "Öffnet die Verwaltung eigener Nachrichten- und Command-Hotkeys.";
+            case "Links anklickbar" ->
+                    "Erkennt HTTP-, HTTPS- und www-Adressen im normalen Chat und Second Chat als echte Links.";
+            case "Links hervorheben" ->
+                    "Kennzeichnet automatisch erkannte Links in Aqua und unterstreicht sie.";
+            case "Command-Bestätigung" ->
+                    "Ist diese Option AUS, werden vorhandene anklickbare Serverbefehle direkt ausgeführt. Normaler Text wird niemals automatisch gestartet.";
             case "Command Menu" -> "Öffnet das Schnellmenü für betterUC-Commands.";
             case "Mülleimer Filter" -> "Hebt ausgewählte Fundstücke im oberen Mülleimer-Inventar grün hervor.";
             case "5s Schließsperre" ->

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.List;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -63,5 +64,18 @@ class SecondChatTextCompatTest {
         assertEquals(TextColor.fromLegacyFormat(ChatFormatting.RED), segments.get(1).getStyle().getColor());
         assertEquals(TextColor.fromLegacyFormat(ChatFormatting.DARK_GRAY), segments.get(2).getStyle().getColor());
         assertNull(segments.get(3).getStyle().getColor());
+    }
+
+    @Test
+    void preservesClickableLinksForSecondChatWrapping() {
+        ClickEvent.OpenUrl openUrl = new ClickEvent.OpenUrl(
+                java.net.URI.create("https://betteruc.de/download")
+        );
+        Component message = Component.literal("https://betteruc.de/download")
+                .withStyle(style -> style.withClickEvent(openUrl));
+
+        Component copy = SecondChatTextCompat.copyWithResolvedStyles(message);
+
+        assertEquals(openUrl, copy.toFlatList().get(0).getStyle().getClickEvent());
     }
 }

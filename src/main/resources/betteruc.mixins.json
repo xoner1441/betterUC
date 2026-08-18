@@ -5,6 +5,7 @@
   "mixins": [
     "ChatBadgeBoundaryMixin",
     "ChatBlacklistMixin",
+    "ChatCommandConfirmationMixin",
     "ChatSizeMixin",
     "ChatScreenCommandShortcutMixin",
     "SecondChatScreenMixin",

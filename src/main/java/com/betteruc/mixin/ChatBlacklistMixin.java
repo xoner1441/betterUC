@@ -13,6 +13,7 @@ import com.betteruc.client.AutoWinzerClient;
 import com.betteruc.client.AutomationController;
 import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ChatCustomizationFormatter;
+import com.betteruc.client.ChatLinkifier;
 import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.DutyRejoinClient;
@@ -22,6 +23,7 @@ import com.betteruc.client.ReinforcementAcceptClient;
 import com.betteruc.client.SecondChatManager;
 import com.betteruc.client.SecondChatTextCompat;
 import com.betteruc.client.ServerCommandUtil;
+import com.betteruc.client.TrustedChatCommands;
 import com.betteruc.client.UserStatsClient;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.BankBalanceHud;
@@ -153,6 +155,16 @@ public class ChatBlacklistMixin {
     ) {
         if (addingTimestamp) return;
         if (!ServerGate.isAllowedServer(Minecraft.getInstance())) return;
+        if (origin != ChatMessageOrigin.PLAYER) {
+            TrustedChatCommands.remember(message);
+        }
+        Component originalMessage = message;
+        message = ChatLinkifier.linkify(
+                message,
+                BetterUCConfig.INSTANCE.chatLinksClickableEnabled,
+                BetterUCConfig.INSTANCE.chatLinkHighlightEnabled
+        );
+        boolean linkStyleAdded = message != originalMessage;
         BetterUCSuppressFlags.cleanupStaleSilentStatsState();
         if (capturingStats && !BetterUCSuppressFlags.suppressStatsOutput && !BetterUCSuppressFlags.activeSilentStatsCapture) {
             capturingStats = false;
@@ -188,7 +200,7 @@ public class ChatBlacklistMixin {
         RichTaxAlertHud.handleChatLine(Minecraft.getInstance(), raw);
 
         if (BetterUCSuppressFlags.consumeBlacklistInfoLocalMessageBypass()) {
-            appendTimestampIfConfigured(message, ci, origin, signatureData, indicator);
+            appendTimestampIfConfigured(message, linkStyleAdded, ci, origin, signatureData, indicator);
             return;
         }
 
@@ -246,7 +258,7 @@ public class ChatBlacklistMixin {
         if (handleBlacklistHeader(raw, ci)) return;
         if (capturingBlacklist && handleCapturingBlacklist(raw, ci)) return;
 
-        appendTimestampIfConfigured(message, ci, origin, signatureData, indicator);
+        appendTimestampIfConfigured(message, linkStyleAdded, ci, origin, signatureData, indicator);
     }
 
     private boolean handleHackTimer(String raw) {
@@ -669,6 +681,7 @@ public class ChatBlacklistMixin {
 
     private void appendTimestampIfConfigured(
             Component message,
+            boolean forceReplacement,
             CallbackInfo ci,
             ChatMessageOrigin origin,
             MessageSignature signatureData,
@@ -676,8 +689,8 @@ public class ChatBlacklistMixin {
     ) {
         Component finalMessage = withTimestampIfEnabled(message);
         SecondChatManager.RouteResult routed = SecondChatManager.route(message);
-        boolean timestampAdded = finalMessage != message;
-        if (!timestampAdded && !routed.suppressMain()) return;
+        boolean messageChanged = forceReplacement || finalMessage != message;
+        if (!messageChanged && !routed.suppressMain()) return;
 
         ci.cancel();
         if (routed.suppressMain()) {

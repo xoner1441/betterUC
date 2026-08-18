@@ -19,6 +19,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 
@@ -146,6 +147,17 @@ public final class SecondChatHud {
             drawOutline(context, x, y, tooltipWidth, 16, 0xFF475569);
             context.text(client.font, Component.literal(hitbox.text), x + 6, y + 4, TEXT_PRIMARY);
             return;
+        }
+        for (TextHitbox hitbox : textHitboxes) {
+            if (!hitbox.box.contains(mouseX, mouseY)) {
+                continue;
+            }
+            int localX = Math.max(0, (int) Math.floor((mouseX - hitbox.textX) / hitbox.scale));
+            var style = SecondChatTextCompat.styleAtWidth(client.font, hitbox.text, localX);
+            if (style != null && style.getHoverEvent() instanceof HoverEvent.ShowText showText) {
+                context.setTooltipForNextFrame(client.font, showText.value(), mouseX, mouseY);
+                return;
+            }
         }
     }
 

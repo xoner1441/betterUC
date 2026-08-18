@@ -23,6 +23,7 @@ import com.betteruc.client.CloudSettingsClient;
 import com.betteruc.client.CommandShortcutClient;
 import com.betteruc.client.DutyRejoinClient;
 import com.betteruc.client.TrashFilterClient;
+import com.betteruc.client.TrustedChatCommands;
 import com.betteruc.client.BetterUCFontManager;
 import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.MovementController;
@@ -1261,6 +1262,7 @@ public class BetterUCClient implements ClientModInitializer {
         hotkeyPressedState.clear();
         resetPingPressState();
         MovementController.reset(client);
+        TrustedChatCommands.clear();
         PaydayHud.clear();
         AmmoHud.clear();
         BankBalanceHud.clear();

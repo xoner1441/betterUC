@@ -87,7 +87,8 @@ public class BetterUCConfig {
             "autoAtmInfoOnBalanceEnabled", "autoForceDepositEnabled", "richTaxAlertEnabled",
             "richTaxAlertSoundEnabled",
             "chatTimestampsEnabled", "chatCustomizationEnabled", "chatActionTextStyle", "chatHeadlineSeparatorStyle",
-            "chatCustomizationGradientEnabled",
+            "chatCustomizationGradientEnabled", "chatLinksClickableEnabled", "chatLinkHighlightEnabled",
+            "chatCommandConfirmationEnabled",
             "chatHqActionGradientStart", "chatHqActionGradientEnd",
             "chatHqActorGradientStart", "chatHqActorGradientEnd",
             "chatHqTargetGradientStart", "chatHqTargetGradientEnd",
@@ -508,6 +509,9 @@ public class BetterUCConfig {
     public int reloadIntervalMinutes = 5;
     public boolean chatTimestampsEnabled = true;
     public boolean chatCustomizationEnabled = true;
+    public boolean chatLinksClickableEnabled = true;
+    public boolean chatLinkHighlightEnabled = true;
+    public boolean chatCommandConfirmationEnabled = false;
     public String chatActionTextStyle = CHAT_ACTION_TEXT_SMALL_CAPS;
     public String chatHeadlineSeparatorStyle = CHAT_SEPARATOR_TECHNICAL;
     public boolean chatCustomizationGradientEnabled = true;
