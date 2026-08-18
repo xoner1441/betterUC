@@ -832,13 +832,14 @@ public final class SecondChatManager {
 
     private static boolean isHqOrWpsLine(String text) {
         return WANTED_LIST_ENTRY_PATTERN.matcher(text).matches()
-                || hasStructuredHqPrefix(text)
-                || containsAny(text,
-                "wantedlevel", "wantedpunkte", "fahndungsgrund", "fahndungszeit",
-                "gesuchter", "getotet", "eingesperrt", "akten geloscht", "waffen abnahme",
-                "drogen abnahme", "fuhrerschein abnahme", "fuhrerschein ruckgabe",
-                "fuhrerschein abgenommen", "fuhrerschein zuruckgegeben",
-                "ticket ausgestellt", "ticket bestatigt", "verandert");
+                || isWantedListHeader(text)
+                || hasStructuredHqPrefix(text);
+    }
+
+    private static boolean isWantedListHeader(String text) {
+        return text != null
+                && (text.equals("online spieler mit wantedpunkten")
+                || text.equals("online spieler mit wantedpunkten keine belohnung"));
     }
 
     private static boolean hasStructuredHqPrefix(String text) {

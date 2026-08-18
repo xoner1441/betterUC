@@ -111,4 +111,24 @@ class SecondChatManagerTest {
                 "[betterUC Second Chat] HQ: NuRisk wurde von mteii getötet."
         ));
     }
+
+    @Test
+    void keepsAdministrativePunishmentsOutOfTheHqFilter() {
+        assertFalse(SecondChatManager.isHqOrWpsMessage(
+                "Metrickz wurde von [UC]Knosbe für 120min gebannt! Grund: Metagaming"
+        ));
+        assertFalse(SecondChatManager.isHqOrWpsMessage(
+                "Metrickz wurde von [UC]Knosbe zu 300 Checkpoints eingesperrt! Grund: Metagaming"
+        ));
+        assertFalse(SecondChatManager.isHqOrWpsMessage(
+                "Metrickz wurde von [UC]Knosbe gekickt! Grund: Metagaming"
+        ));
+
+        assertTrue(SecondChatManager.isHqOrWpsMessage(
+                "HQ: Level10Rizzler wurde von FABI1441 eingesperrt."
+        ));
+        assertTrue(SecondChatManager.isHqOrWpsMessage(
+                "Online Spieler mit WantedPunkten!"
+        ));
+    }
 }
