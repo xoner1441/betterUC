@@ -41,6 +41,7 @@
             "HQ- und PAY-Nachrichten besitzen getrennte Farbprofile mit frei wählbaren Start- und Endfarben für Aktionen, Spieler und Details.",
             "Ein eigener Konfigurationsbildschirm zeigt die gewählten Farbverläufe direkt in einer Vorschau.",
             "Pulver-Plantagenmeldungen werden als zusammengehörige persönliche und HQ-Aktion mit eigenem Feuerdesign formatiert.",
+            "Eingehende Notrufe werden mit Anrufer, ID, Meldung, Einsatzort und den nächsten Einsatzkräften als kompakter Block dargestellt; angenommene Notrufe erhalten ein eigenes Erfolgsdesign.",
             "Ticket- und Führerscheinmeldungen werden einschließlich ihrer zugehörigen Detailzeilen vollständig vom HQ-Second-Chat übernommen.",
             "/wantedinfo wird mit WantedPunkten, Grund, Fahndungsdauer und zuständigem Beamten vollständig erkannt.",
             "Normale Fraktionsnachrichten mit HQ-Ortsangaben sowie administrative Ban-, Kick- und Checkpoint-Strafen bleiben außerhalb des HQ-Filters."
@@ -98,6 +99,7 @@
         "Armor-HUD, Position, Skalierung, Stil, Farbe und Farbverlauf lassen sich frei konfigurieren.",
         "HQ- und PAY-Nachrichten besitzen getrennte anpassbare Farbprofile mit Live-Vorschau.",
         "Pulver-Plantagenmeldungen erhalten ein zusammengehöriges persönliches und HQ-Design mit eigenem Feuerverlauf.",
+        "Notruf-Eingänge und -Annahmen erhalten eigene mehrzeilige HQ-Patterns mit frei konfigurierbaren Farbverläufen.",
         "Ticket- und Führerscheinmeldungen werden vollständig einschließlich ihrer Detailzeilen vom HQ-Second-Chat übernommen.",
         "/wantedinfo wird einschließlich WantedPunkten, Grund, Fahndungsdauer und Beamten vollständig gefiltert.",
         "Normale Fraktionsnachrichten mit HQ-Ortsangaben lösen den HQ-Filter nicht mehr aus.",

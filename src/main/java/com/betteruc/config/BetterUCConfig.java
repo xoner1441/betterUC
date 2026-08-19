@@ -98,6 +98,10 @@ public class BetterUCConfig {
             "chatHqTicketDetailGradientStart", "chatHqTicketDetailGradientEnd",
             "chatHqPlantageActionGradientStart", "chatHqPlantageActionGradientEnd",
             "chatHqPlantageDetailGradientStart", "chatHqPlantageDetailGradientEnd",
+            "chatHqEmergencyActionGradientStart", "chatHqEmergencyActionGradientEnd",
+            "chatHqEmergencyAcceptedGradientStart", "chatHqEmergencyAcceptedGradientEnd",
+            "chatHqEmergencyTextGradientStart", "chatHqEmergencyTextGradientEnd",
+            "chatHqEmergencyDetailGradientStart", "chatHqEmergencyDetailGradientEnd",
             "chatPayActionGradientStart", "chatPayActionGradientEnd",
             "chatPayActorGradientStart", "chatPayActorGradientEnd",
             "chatPayTargetGradientStart", "chatPayTargetGradientEnd",
@@ -239,6 +243,14 @@ public class BetterUCConfig {
     public static final int DEFAULT_CHAT_HQ_PLANTAGE_ACTION_GRADIENT_END = 0xFFFF9500;
     public static final int DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_START = 0xFFFFD75A;
     public static final int DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_END = 0xFFFF8C42;
+    public static final int DEFAULT_CHAT_HQ_EMERGENCY_ACTION_GRADIENT_START = 0xFFFF3B30;
+    public static final int DEFAULT_CHAT_HQ_EMERGENCY_ACTION_GRADIENT_END = 0xFFFF9500;
+    public static final int DEFAULT_CHAT_HQ_EMERGENCY_ACCEPTED_GRADIENT_START = 0xFF55FF55;
+    public static final int DEFAULT_CHAT_HQ_EMERGENCY_ACCEPTED_GRADIENT_END = 0xFF22D3EE;
+    public static final int DEFAULT_CHAT_HQ_EMERGENCY_TEXT_GRADIENT_START = 0xFFFFFFFF;
+    public static final int DEFAULT_CHAT_HQ_EMERGENCY_TEXT_GRADIENT_END = 0xFFD1D5DB;
+    public static final int DEFAULT_CHAT_HQ_EMERGENCY_DETAIL_GRADIENT_START = 0xFF55AAFF;
+    public static final int DEFAULT_CHAT_HQ_EMERGENCY_DETAIL_GRADIENT_END = 0xFFAA55FF;
     public static final int DEFAULT_CHAT_PAY_ACTION_GRADIENT_START = DEFAULT_CHAT_HQ_ACTION_GRADIENT_START;
     public static final int DEFAULT_CHAT_PAY_ACTION_GRADIENT_END = DEFAULT_CHAT_HQ_ACTION_GRADIENT_END;
     public static final int DEFAULT_CHAT_PAY_ACTOR_GRADIENT_START = DEFAULT_CHAT_HQ_ACTOR_GRADIENT_START;
@@ -547,6 +559,14 @@ public class BetterUCConfig {
     public int chatHqPlantageActionGradientEnd = DEFAULT_CHAT_HQ_PLANTAGE_ACTION_GRADIENT_END;
     public int chatHqPlantageDetailGradientStart = DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_START;
     public int chatHqPlantageDetailGradientEnd = DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_END;
+    public int chatHqEmergencyActionGradientStart = DEFAULT_CHAT_HQ_EMERGENCY_ACTION_GRADIENT_START;
+    public int chatHqEmergencyActionGradientEnd = DEFAULT_CHAT_HQ_EMERGENCY_ACTION_GRADIENT_END;
+    public int chatHqEmergencyAcceptedGradientStart = DEFAULT_CHAT_HQ_EMERGENCY_ACCEPTED_GRADIENT_START;
+    public int chatHqEmergencyAcceptedGradientEnd = DEFAULT_CHAT_HQ_EMERGENCY_ACCEPTED_GRADIENT_END;
+    public int chatHqEmergencyTextGradientStart = DEFAULT_CHAT_HQ_EMERGENCY_TEXT_GRADIENT_START;
+    public int chatHqEmergencyTextGradientEnd = DEFAULT_CHAT_HQ_EMERGENCY_TEXT_GRADIENT_END;
+    public int chatHqEmergencyDetailGradientStart = DEFAULT_CHAT_HQ_EMERGENCY_DETAIL_GRADIENT_START;
+    public int chatHqEmergencyDetailGradientEnd = DEFAULT_CHAT_HQ_EMERGENCY_DETAIL_GRADIENT_END;
     public int chatPayActionGradientStart = DEFAULT_CHAT_PAY_ACTION_GRADIENT_START;
     public int chatPayActionGradientEnd = DEFAULT_CHAT_PAY_ACTION_GRADIENT_END;
     public int chatPayActorGradientStart = DEFAULT_CHAT_PAY_ACTOR_GRADIENT_START;
@@ -763,6 +783,14 @@ public class BetterUCConfig {
         INSTANCE.chatHqPlantageActionGradientEnd = sanitizeHudColor(INSTANCE.chatHqPlantageActionGradientEnd, DEFAULT_CHAT_HQ_PLANTAGE_ACTION_GRADIENT_END);
         INSTANCE.chatHqPlantageDetailGradientStart = sanitizeHudColor(INSTANCE.chatHqPlantageDetailGradientStart, DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_START);
         INSTANCE.chatHqPlantageDetailGradientEnd = sanitizeHudColor(INSTANCE.chatHqPlantageDetailGradientEnd, DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_END);
+        INSTANCE.chatHqEmergencyActionGradientStart = sanitizeHudColor(INSTANCE.chatHqEmergencyActionGradientStart, DEFAULT_CHAT_HQ_EMERGENCY_ACTION_GRADIENT_START);
+        INSTANCE.chatHqEmergencyActionGradientEnd = sanitizeHudColor(INSTANCE.chatHqEmergencyActionGradientEnd, DEFAULT_CHAT_HQ_EMERGENCY_ACTION_GRADIENT_END);
+        INSTANCE.chatHqEmergencyAcceptedGradientStart = sanitizeHudColor(INSTANCE.chatHqEmergencyAcceptedGradientStart, DEFAULT_CHAT_HQ_EMERGENCY_ACCEPTED_GRADIENT_START);
+        INSTANCE.chatHqEmergencyAcceptedGradientEnd = sanitizeHudColor(INSTANCE.chatHqEmergencyAcceptedGradientEnd, DEFAULT_CHAT_HQ_EMERGENCY_ACCEPTED_GRADIENT_END);
+        INSTANCE.chatHqEmergencyTextGradientStart = sanitizeHudColor(INSTANCE.chatHqEmergencyTextGradientStart, DEFAULT_CHAT_HQ_EMERGENCY_TEXT_GRADIENT_START);
+        INSTANCE.chatHqEmergencyTextGradientEnd = sanitizeHudColor(INSTANCE.chatHqEmergencyTextGradientEnd, DEFAULT_CHAT_HQ_EMERGENCY_TEXT_GRADIENT_END);
+        INSTANCE.chatHqEmergencyDetailGradientStart = sanitizeHudColor(INSTANCE.chatHqEmergencyDetailGradientStart, DEFAULT_CHAT_HQ_EMERGENCY_DETAIL_GRADIENT_START);
+        INSTANCE.chatHqEmergencyDetailGradientEnd = sanitizeHudColor(INSTANCE.chatHqEmergencyDetailGradientEnd, DEFAULT_CHAT_HQ_EMERGENCY_DETAIL_GRADIENT_END);
         INSTANCE.chatPayActionGradientStart = sanitizeHudColor(INSTANCE.chatPayActionGradientStart, DEFAULT_CHAT_PAY_ACTION_GRADIENT_START);
         INSTANCE.chatPayActionGradientEnd = sanitizeHudColor(INSTANCE.chatPayActionGradientEnd, DEFAULT_CHAT_PAY_ACTION_GRADIENT_END);
         INSTANCE.chatPayActorGradientStart = sanitizeHudColor(INSTANCE.chatPayActorGradientStart, DEFAULT_CHAT_PAY_ACTOR_GRADIENT_START);

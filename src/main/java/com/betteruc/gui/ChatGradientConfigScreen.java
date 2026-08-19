@@ -42,17 +42,22 @@ public final class ChatGradientConfigScreen extends Screen {
         panelWidth = Math.min(540, width - 32);
         panelX = (width - panelWidth) / 2;
 
-        int tabWidth = Math.min(150, (panelWidth - 8) / 2);
-        int tabX = width / 2 - tabWidth - 2;
+        int tabWidth = Math.min(140, (panelWidth - 8) / 3);
+        int tabX = width / 2 - (tabWidth * 3 + 8) / 2;
         addRenderableWidget(Button.builder(tabLabel("HQ", profile == Profile.HQ), button -> switchProfile(Profile.HQ))
                 .bounds(tabX, 58, tabWidth, 20)
                 .build());
+        addRenderableWidget(Button.builder(tabLabel("Notruf", profile == Profile.EMERGENCY), button -> switchProfile(Profile.EMERGENCY))
+                .bounds(tabX + tabWidth + 4, 58, tabWidth, 20)
+                .build());
         addRenderableWidget(Button.builder(tabLabel("PAY", profile == Profile.PAY), button -> switchProfile(Profile.PAY))
-                .bounds(width / 2 + 2, 58, tabWidth, 20)
+                .bounds(tabX + (tabWidth + 4) * 2, 58, tabWidth, 20)
                 .build());
 
         if (profile == Profile.HQ) {
             addHqRows();
+        } else if (profile == Profile.EMERGENCY) {
+            addEmergencyRows();
         } else {
             addPayRows();
         }
@@ -95,13 +100,15 @@ public final class ChatGradientConfigScreen extends Screen {
                 width,
                 height,
                 "Chat-Farbverläufe",
-                "HQ- und PAY-Nachrichten unabhängig gestalten"
+                "HQ-, Notruf- und PAY-Nachrichten unabhängig gestalten"
         );
         SecondChatSettingsUi.renderPanel(context, panelX - 10, 85, panelWidth + 20, 83);
         context.text(font, Component.literal("Live-Vorschau"), panelX, 91, TEXT_MUTED);
-        List<Component> preview = profile == Profile.HQ
-                ? ChatCustomizationFormatter.hqGradientPreview()
-                : ChatCustomizationFormatter.payGradientPreview();
+        List<Component> preview = switch (profile) {
+            case HQ -> ChatCustomizationFormatter.hqGradientPreview();
+            case EMERGENCY -> ChatCustomizationFormatter.emergencyGradientPreview();
+            case PAY -> ChatCustomizationFormatter.payGradientPreview();
+        };
         int previewY = 104;
         for (int index = 0; index < preview.size(); index++) {
             context.text(font, preview.get(index), panelX, previewY + index * 9, TEXT_PRIMARY);
@@ -200,6 +207,26 @@ public final class ChatGradientConfigScreen extends Screen {
                 () -> config.chatPayIncomingGradientEnd, value -> config.chatPayIncomingGradientEnd = value));
     }
 
+    private void addEmergencyRows() {
+        BetterUCConfig config = BetterUCConfig.INSTANCE;
+        rows.add(row("Notruf-Aktion", () -> config.chatHqEmergencyActionGradientStart,
+                value -> config.chatHqEmergencyActionGradientStart = value,
+                () -> config.chatHqEmergencyActionGradientEnd,
+                value -> config.chatHqEmergencyActionGradientEnd = value));
+        rows.add(row("Annahme-Aktion", () -> config.chatHqEmergencyAcceptedGradientStart,
+                value -> config.chatHqEmergencyAcceptedGradientStart = value,
+                () -> config.chatHqEmergencyAcceptedGradientEnd,
+                value -> config.chatHqEmergencyAcceptedGradientEnd = value));
+        rows.add(row("Notruf-Text", () -> config.chatHqEmergencyTextGradientStart,
+                value -> config.chatHqEmergencyTextGradientStart = value,
+                () -> config.chatHqEmergencyTextGradientEnd,
+                value -> config.chatHqEmergencyTextGradientEnd = value));
+        rows.add(row("Ort & Details", () -> config.chatHqEmergencyDetailGradientStart,
+                value -> config.chatHqEmergencyDetailGradientStart = value,
+                () -> config.chatHqEmergencyDetailGradientEnd,
+                value -> config.chatHqEmergencyDetailGradientEnd = value));
+    }
+
     private void switchProfile(Profile next) {
         if (profile == next) {
             return;
@@ -244,6 +271,15 @@ public final class ChatGradientConfigScreen extends Screen {
             config.chatHqPlantageActionGradientEnd = BetterUCConfig.DEFAULT_CHAT_HQ_PLANTAGE_ACTION_GRADIENT_END;
             config.chatHqPlantageDetailGradientStart = BetterUCConfig.DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_START;
             config.chatHqPlantageDetailGradientEnd = BetterUCConfig.DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_END;
+        } else if (profile == Profile.EMERGENCY) {
+            config.chatHqEmergencyActionGradientStart = BetterUCConfig.DEFAULT_CHAT_HQ_EMERGENCY_ACTION_GRADIENT_START;
+            config.chatHqEmergencyActionGradientEnd = BetterUCConfig.DEFAULT_CHAT_HQ_EMERGENCY_ACTION_GRADIENT_END;
+            config.chatHqEmergencyAcceptedGradientStart = BetterUCConfig.DEFAULT_CHAT_HQ_EMERGENCY_ACCEPTED_GRADIENT_START;
+            config.chatHqEmergencyAcceptedGradientEnd = BetterUCConfig.DEFAULT_CHAT_HQ_EMERGENCY_ACCEPTED_GRADIENT_END;
+            config.chatHqEmergencyTextGradientStart = BetterUCConfig.DEFAULT_CHAT_HQ_EMERGENCY_TEXT_GRADIENT_START;
+            config.chatHqEmergencyTextGradientEnd = BetterUCConfig.DEFAULT_CHAT_HQ_EMERGENCY_TEXT_GRADIENT_END;
+            config.chatHqEmergencyDetailGradientStart = BetterUCConfig.DEFAULT_CHAT_HQ_EMERGENCY_DETAIL_GRADIENT_START;
+            config.chatHqEmergencyDetailGradientEnd = BetterUCConfig.DEFAULT_CHAT_HQ_EMERGENCY_DETAIL_GRADIENT_END;
         } else {
             config.chatPayActionGradientStart = BetterUCConfig.DEFAULT_CHAT_PAY_ACTION_GRADIENT_START;
             config.chatPayActionGradientEnd = BetterUCConfig.DEFAULT_CHAT_PAY_ACTION_GRADIENT_END;
@@ -302,6 +338,7 @@ public final class ChatGradientConfigScreen extends Screen {
 
     private enum Profile {
         HQ,
+        EMERGENCY,
         PAY
     }
 

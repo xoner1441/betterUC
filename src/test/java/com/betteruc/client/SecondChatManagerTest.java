@@ -92,6 +92,22 @@ class SecondChatManagerTest {
     }
 
     @Test
+    void recognizesFormattedEmergencyCallBlocks() {
+        assertEquals(2, SecondChatManager.formattedHqContinuationLineCount(
+                "ɴᴏᴛʀᴜꜰ ✦ ardasaatci » ID 221"
+        ));
+        assertEquals(1, SecondChatManager.formattedHqContinuationLineCount(
+                "ɴᴏᴛʀᴜꜰ ᴀɴɢᴇɴᴏᴍᴍᴇɴ ✦ _toobi » ardasaatci"
+        ));
+        assertTrue(SecondChatManager.isHqOrWpsMessage(
+                "HQ: Achtung! Ein Notruf von ardasaatci (221): \"Hilfe\"."
+        ));
+        assertTrue(SecondChatManager.isHqOrWpsMessage(
+                "HQ: _toobi hat den Notruf von ardasaatci angenommen, over. (11m entfernt)"
+        ));
+    }
+
+    @Test
     void doesNotTreatHqLocationsInNormalFactionChatAsHqMessages() {
         assertFalse(SecondChatManager.isHqOrWpsMessage(
                 "Calderón Kartell TikaKorth: Alles klar ich setze nen Vertrag auf "

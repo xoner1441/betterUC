@@ -839,6 +839,12 @@ public final class SecondChatManager {
     }
 
     private static int formattedHqContinuationLines(String text) {
+        if (text.startsWith("notruf angenommen ")) {
+            return 1;
+        }
+        if (text.startsWith("notruf ")) {
+            return 2;
+        }
         if (text.startsWith("gesucht ")) {
             return 2;
         }

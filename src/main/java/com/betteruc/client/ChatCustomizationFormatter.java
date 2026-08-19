@@ -84,6 +84,26 @@ public final class ChatCustomizationFormatter {
             "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*Agent\\s+((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)\\s+hat\\s+erfolgreich\\s+eine\\s+Pulver\\s*-?\\s*Plant(?:age)?\\s+verbrannt,?\\s*over\\.?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
+    private static final Pattern EMERGENCY_INCOMING_BLOCK_PATTERN = Pattern.compile(
+            "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*Achtung!\\s*Ein\\s+Notruf\\s+von\\s+((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)\\s*\\((\\d+)\\)\\s*:\\s*(.+?)\\s*(?:\\R|\\\\n)\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*Der\\s+n(?:ä|ae)chste\\s+Punkt\\s+ist\\s+(.+?)\\.\\s*Die\\s+n(?:ä|ae)chsten\\s+Personen\\s+sind\\s+(.+?)[.!]?\\s*$",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern EMERGENCY_INCOMING_PATTERN = Pattern.compile(
+            "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*Achtung!\\s*Ein\\s+Notruf\\s+von\\s+((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)\\s*\\((\\d+)\\)\\s*:\\s*(.+?)\\s*$",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern EMERGENCY_DETAILS_PATTERN = Pattern.compile(
+            "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*Der\\s+n(?:ä|ae)chste\\s+Punkt\\s+ist\\s+(.+?)\\.\\s*Die\\s+n(?:ä|ae)chsten\\s+Personen\\s+sind\\s+(.+?)[.!]?\\s*$",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern EMERGENCY_ACCEPTED_PATTERN = Pattern.compile(
+            "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)\\s+hat\\s+den\\s+Notruf\\s+von\\s+((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)\\s+angenommen,?\\s*over\\.?\\s*(?:(?:\\R|\\\\n)?\\s*\\((\\d+)\\s*m\\s+entfernt\\))?\\.?\\s*$",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern EMERGENCY_PERSON_PATTERN = Pattern.compile(
+            "((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)\\s*\\((\\d+)\\s*m\\)",
+            Pattern.CASE_INSENSITIVE
+    );
 
     private static final Pattern PAY_SENT_PATTERN = Pattern.compile(
             "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:[^\\p{L}\\p{N}_\\[]+\\s*)?Du\\s+hast\\s+([^\\s]+)\\s+([+-]?[0-9.]+)\\$\\s+gegeben!\\s*$",
@@ -233,6 +253,48 @@ public final class ChatCustomizationFormatter {
         }
 
         if (!wpsHqEnabled) return null;
+
+        Matcher emergencyIncomingBlock = EMERGENCY_INCOMING_BLOCK_PATTERN.matcher(clean);
+        if (emergencyIncomingBlock.matches()) {
+            return Result.replaceHq(emergencyIncomingMessages(
+                    playerName(emergencyIncomingBlock.group(1)),
+                    emergencyIncomingBlock.group(2),
+                    cleanEmergencyMessage(emergencyIncomingBlock.group(3)),
+                    emergencyIncomingBlock.group(4),
+                    emergencyIncomingBlock.group(5),
+                    headlineStyle
+            ));
+        }
+
+        Matcher emergencyIncoming = EMERGENCY_INCOMING_PATTERN.matcher(clean);
+        if (emergencyIncoming.matches()) {
+            return Result.replaceHq(List.of(
+                    emergencyIncomingHeadline(playerName(emergencyIncoming.group(1)),
+                            emergencyIncoming.group(2), headlineStyle),
+                    emergencyMessageDetail(cleanEmergencyMessage(emergencyIncoming.group(3)), headlineStyle)
+            ));
+        }
+
+        Matcher emergencyDetails = EMERGENCY_DETAILS_PATTERN.matcher(clean);
+        if (emergencyDetails.matches()) {
+            return Result.replaceHq(List.of(
+                    emergencyLocationDetail(emergencyDetails.group(1), emergencyDetails.group(2), headlineStyle)
+            ));
+        }
+
+        Matcher emergencyAccepted = EMERGENCY_ACCEPTED_PATTERN.matcher(clean);
+        if (emergencyAccepted.matches()) {
+            List<Component> messages = new ArrayList<>();
+            messages.add(emergencyAcceptedHeadline(
+                    playerName(emergencyAccepted.group(1)),
+                    playerName(emergencyAccepted.group(2)),
+                    headlineStyle
+            ));
+            if (emergencyAccepted.group(3) != null) {
+                messages.add(emergencyDistanceDetail(emergencyAccepted.group(3), headlineStyle));
+            }
+            return Result.replaceHq(messages);
+        }
 
         Matcher personalPlantageBurned = PERSONAL_PLANTAGE_BURNED_PATTERN.matcher(clean);
         if (personalPlantageBurned.matches()) {
@@ -471,6 +533,112 @@ public final class ChatCustomizationFormatter {
                 .append(plantageDetailText(value, headlineStyle));
     }
 
+    private static List<Component> emergencyIncomingMessages(
+            String caller,
+            String callId,
+            String message,
+            String location,
+            String people,
+            HeadlineStyle headlineStyle
+    ) {
+        return List.of(
+                emergencyIncomingHeadline(caller, callId, headlineStyle),
+                emergencyMessageDetail(message, headlineStyle),
+                emergencyLocationDetail(location, people, headlineStyle)
+        );
+    }
+
+    private static Component emergencyIncomingHeadline(
+            String caller,
+            String callId,
+            HeadlineStyle headlineStyle
+    ) {
+        return emergencyAction("NOTRUF", false, headlineStyle)
+                .append(separator(" \u2726 "))
+                .append(actorName(caller, headlineStyle))
+                .append(separator(" \u00BB "))
+                .append(Component.literal("ID " + callId).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+    }
+
+    private static Component emergencyAcceptedHeadline(
+            String officer,
+            String caller,
+            HeadlineStyle headlineStyle
+    ) {
+        return emergencyAction("NOTRUF ANGENOMMEN", true, headlineStyle)
+                .append(separator(" \u2726 "))
+                .append(actorName(officer, headlineStyle))
+                .append(separator(" \u00BB "))
+                .append(targetName(caller, headlineStyle));
+    }
+
+    private static Component emergencyMessageDetail(String message, HeadlineStyle headlineStyle) {
+        return Component.literal("\u00BB ").withStyle(ChatFormatting.GRAY)
+                .append(emergencyMessageText(message, headlineStyle));
+    }
+
+    private static Component emergencyLocationDetail(
+            String location,
+            String people,
+            HeadlineStyle headlineStyle
+    ) {
+        MutableComponent result = Component.literal("\u00BB ").withStyle(ChatFormatting.GRAY)
+                .append(emergencyDetailText(location, headlineStyle));
+        Matcher matcher = EMERGENCY_PERSON_PATTERN.matcher(people == null ? "" : people);
+        boolean matched = false;
+        while (matcher.find()) {
+            matched = true;
+            result.append(separator(" \u00B7 "))
+                    .append(targetName(playerName(matcher.group(1)), headlineStyle))
+                    .append(separator(" "))
+                    .append(emergencyDistanceText(matcher.group(2)));
+        }
+        if (!matched && people != null && !people.isBlank()) {
+            result.append(separator(" \u00B7 "))
+                    .append(emergencyDetailText(people.trim(), headlineStyle));
+        }
+        return result;
+    }
+
+    private static Component emergencyDistanceDetail(String meters, HeadlineStyle headlineStyle) {
+        return Component.literal("\u00BB ").withStyle(ChatFormatting.GRAY)
+                .append(emergencyDistanceText(meters))
+                .append(separator(" "))
+                .append(emergencyMessageText("entfernt", headlineStyle));
+    }
+
+    private static MutableComponent emergencyDistanceText(String meters) {
+        String value = meters == null ? "0" : meters.trim();
+        int distance;
+        try {
+            distance = Integer.parseInt(value);
+        } catch (NumberFormatException ignored) {
+            distance = Integer.MAX_VALUE;
+        }
+        ChatFormatting color = distance <= 25
+                ? ChatFormatting.GREEN
+                : distance <= 75 ? ChatFormatting.YELLOW : ChatFormatting.RED;
+        return Component.literal(value + "m").withStyle(color, ChatFormatting.BOLD);
+    }
+
+    private static String cleanEmergencyMessage(String value) {
+        String result = value == null ? "" : value.trim();
+        while (!result.isEmpty() && (result.charAt(0) == '"'
+                || result.charAt(0) == '\u201E'
+                || result.charAt(0) == '\u201C')) {
+            result = result.substring(1).trim();
+        }
+        while (!result.isEmpty()) {
+            char last = result.charAt(result.length() - 1);
+            if (last == '"' || last == '\u201C' || last == '\u201D' || last == '.') {
+                result = result.substring(0, result.length() - 1).trim();
+            } else {
+                break;
+            }
+        }
+        return result;
+    }
+
     private static Component detail(String reason, String suffix, HeadlineStyle headlineStyle) {
         MutableComponent text = Component.literal("» ").withStyle(ChatFormatting.GRAY)
                 .append(detailText(reason, headlineStyle));
@@ -616,6 +784,17 @@ public final class ChatCustomizationFormatter {
         );
     }
 
+    public static List<Component> emergencyGradientPreview() {
+        HeadlineStyle style = previewHeadlineStyle();
+        return List.of(
+                emergencyIncomingHeadline("ardasaatci", "221", style),
+                emergencyMessageDetail("hilfe eymen sagt mir er will kämpfen", style),
+                emergencyLocationDetail("Tellerwäscher", "Eymenn (3m), _toobi (36m)", style),
+                emergencyAcceptedHeadline("_toobi", "ardasaatci", style),
+                emergencyDistanceDetail("11", style)
+        );
+    }
+
     private static HeadlineStyle previewHeadlineStyle() {
         BetterUCConfig config = BetterUCConfig.INSTANCE;
         return new HeadlineStyle(
@@ -707,6 +886,48 @@ public final class ChatCustomizationFormatter {
                     headlineStyle.palette().hqPlantageDetailEnd(), true);
         }
         return Component.literal(text).withStyle(ChatFormatting.GOLD);
+    }
+
+    private static MutableComponent emergencyAction(
+            String value,
+            boolean accepted,
+            HeadlineStyle headlineStyle
+    ) {
+        String label = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+        if (BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS.equals(headlineStyle.actionTextStyle())) {
+            label = SmallCapsText.convert(label);
+        }
+        if (headlineStyle.gradientEnabled()) {
+            GradientPalette palette = headlineStyle.palette();
+            return gradientText(
+                    label,
+                    accepted ? palette.hqEmergencyAcceptedStart() : palette.hqEmergencyActionStart(),
+                    accepted ? palette.hqEmergencyAcceptedEnd() : palette.hqEmergencyActionEnd(),
+                    true
+            );
+        }
+        return Component.literal(label).withStyle(
+                accepted ? ChatFormatting.GREEN : ChatFormatting.RED,
+                ChatFormatting.BOLD
+        );
+    }
+
+    private static MutableComponent emergencyMessageText(String value, HeadlineStyle headlineStyle) {
+        String text = value == null ? "" : value.trim();
+        if (headlineStyle.gradientEnabled()) {
+            return gradientText(text, headlineStyle.palette().hqEmergencyTextStart(),
+                    headlineStyle.palette().hqEmergencyTextEnd(), true);
+        }
+        return Component.literal(text).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD);
+    }
+
+    private static MutableComponent emergencyDetailText(String value, HeadlineStyle headlineStyle) {
+        String text = value == null ? "" : value.trim();
+        if (headlineStyle.gradientEnabled()) {
+            return gradientText(text, headlineStyle.palette().hqEmergencyDetailStart(),
+                    headlineStyle.palette().hqEmergencyDetailEnd(), true);
+        }
+        return Component.literal(text).withStyle(ChatFormatting.BLUE, ChatFormatting.BOLD);
     }
 
     private static String headlineLeadSeparator(HeadlineStyle headlineStyle) {
@@ -899,6 +1120,14 @@ public final class ChatCustomizationFormatter {
             int hqPlantageActionEnd,
             int hqPlantageDetailStart,
             int hqPlantageDetailEnd,
+            int hqEmergencyActionStart,
+            int hqEmergencyActionEnd,
+            int hqEmergencyAcceptedStart,
+            int hqEmergencyAcceptedEnd,
+            int hqEmergencyTextStart,
+            int hqEmergencyTextEnd,
+            int hqEmergencyDetailStart,
+            int hqEmergencyDetailEnd,
             int payActionStart,
             int payActionEnd,
             int payActorStart,
@@ -930,6 +1159,14 @@ public final class ChatCustomizationFormatter {
                     BetterUCConfig.DEFAULT_CHAT_HQ_PLANTAGE_ACTION_GRADIENT_END,
                     BetterUCConfig.DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_START,
                     BetterUCConfig.DEFAULT_CHAT_HQ_PLANTAGE_DETAIL_GRADIENT_END,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_EMERGENCY_ACTION_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_EMERGENCY_ACTION_GRADIENT_END,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_EMERGENCY_ACCEPTED_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_EMERGENCY_ACCEPTED_GRADIENT_END,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_EMERGENCY_TEXT_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_EMERGENCY_TEXT_GRADIENT_END,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_EMERGENCY_DETAIL_GRADIENT_START,
+                    BetterUCConfig.DEFAULT_CHAT_HQ_EMERGENCY_DETAIL_GRADIENT_END,
                     BetterUCConfig.DEFAULT_CHAT_PAY_ACTION_GRADIENT_START,
                     BetterUCConfig.DEFAULT_CHAT_PAY_ACTION_GRADIENT_END,
                     BetterUCConfig.DEFAULT_CHAT_PAY_ACTOR_GRADIENT_START,
@@ -963,6 +1200,14 @@ public final class ChatCustomizationFormatter {
                     config.chatHqPlantageActionGradientEnd,
                     config.chatHqPlantageDetailGradientStart,
                     config.chatHqPlantageDetailGradientEnd,
+                    config.chatHqEmergencyActionGradientStart,
+                    config.chatHqEmergencyActionGradientEnd,
+                    config.chatHqEmergencyAcceptedGradientStart,
+                    config.chatHqEmergencyAcceptedGradientEnd,
+                    config.chatHqEmergencyTextGradientStart,
+                    config.chatHqEmergencyTextGradientEnd,
+                    config.chatHqEmergencyDetailGradientStart,
+                    config.chatHqEmergencyDetailGradientEnd,
                     config.chatPayActionGradientStart,
                     config.chatPayActionGradientEnd,
                     config.chatPayActorGradientStart,
@@ -982,6 +1227,10 @@ public final class ChatCustomizationFormatter {
                     hqDetailStart, hqDetailEnd, hqPositiveStart, hqPositiveEnd,
                     hqTicketActionStart, hqTicketActionEnd, hqTicketDetailStart, hqTicketDetailEnd,
                     hqPlantageActionStart, hqPlantageActionEnd, hqPlantageDetailStart, hqPlantageDetailEnd,
+                    hqEmergencyActionStart, hqEmergencyActionEnd,
+                    hqEmergencyAcceptedStart, hqEmergencyAcceptedEnd,
+                    hqEmergencyTextStart, hqEmergencyTextEnd,
+                    hqEmergencyDetailStart, hqEmergencyDetailEnd,
                     payActionStart, payActionEnd, payActorStart, payActorEnd, payTargetStart, payTargetEnd,
                     payOutgoingStart, payOutgoingEnd, payIncomingStart, payIncomingEnd
             );
@@ -993,6 +1242,10 @@ public final class ChatCustomizationFormatter {
                     hqDetailStart, hqDetailEnd, hqPositiveStart, hqPositiveEnd,
                     hqTicketActionStart, hqTicketActionEnd, hqTicketDetailStart, hqTicketDetailEnd,
                     hqPlantageActionStart, hqPlantageActionEnd, hqPlantageDetailStart, hqPlantageDetailEnd,
+                    hqEmergencyActionStart, hqEmergencyActionEnd,
+                    hqEmergencyAcceptedStart, hqEmergencyAcceptedEnd,
+                    hqEmergencyTextStart, hqEmergencyTextEnd,
+                    hqEmergencyDetailStart, hqEmergencyDetailEnd,
                     start, end, payActorStart, payActorEnd, payTargetStart, payTargetEnd,
                     payOutgoingStart, payOutgoingEnd, payIncomingStart, payIncomingEnd
             );
@@ -1004,6 +1257,10 @@ public final class ChatCustomizationFormatter {
                     hqDetailStart, hqDetailEnd, hqPositiveStart, hqPositiveEnd,
                     hqTicketActionStart, hqTicketActionEnd, hqTicketDetailStart, hqTicketDetailEnd,
                     hqPlantageActionStart, hqPlantageActionEnd, hqPlantageDetailStart, hqPlantageDetailEnd,
+                    hqEmergencyActionStart, hqEmergencyActionEnd,
+                    hqEmergencyAcceptedStart, hqEmergencyAcceptedEnd,
+                    hqEmergencyTextStart, hqEmergencyTextEnd,
+                    hqEmergencyDetailStart, hqEmergencyDetailEnd,
                     payActionStart, payActionEnd, payActorStart, payActorEnd, payTargetStart, payTargetEnd,
                     start, end, payIncomingStart, payIncomingEnd
             );

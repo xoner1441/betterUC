@@ -266,6 +266,52 @@ class ChatCustomizationStyleTest {
     }
 
     @Test
+    void formatsIncomingEmergencyCallAsOneThreeLineHqBlock() {
+        ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
+                "00:02:02 HQ: Achtung! Ein Notruf von ardasaatci (221): \"hilfe eymen sagt mir er will kämpfen\".\n"
+                        + "HQ: Der nächste Punkt ist Tellerwäscher. Die nächsten Personen sind Eymenn (3m), _toobi (36m).",
+                true,
+                false,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
+        );
+
+        assertNotNull(result);
+        assertTrue(result.hq());
+        assertEquals(3, result.replacementMessages().size());
+        assertEquals("ɴᴏᴛʀᴜꜰ ✦ ardasaatci » ID 221",
+                result.replacementMessages().get(0).getString());
+        assertEquals("» hilfe eymen sagt mir er will kämpfen",
+                result.replacementMessages().get(1).getString());
+        assertEquals("» Tellerwäscher · Eymenn 3m · _toobi 36m",
+                result.replacementMessages().get(2).getString());
+        assertEquals(0xFF3B30,
+                result.replacementMessages().get(0).toFlatList().get(0).getStyle().getColor().getValue());
+    }
+
+    @Test
+    void formatsAcceptedEmergencyCallWithOfficerCallerAndDistance() {
+        ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
+                "HQ: _toobi hat den Notruf von ardasaatci angenommen, over. (11m entfernt)",
+                true,
+                false,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
+        );
+
+        assertNotNull(result);
+        assertTrue(result.hq());
+        assertEquals(2, result.replacementMessages().size());
+        assertEquals("ɴᴏᴛʀᴜꜰ ᴀɴɢᴇɴᴏᴍᴍᴇɴ ✦ _toobi » ardasaatci",
+                result.replacementMessages().get(0).getString());
+        assertEquals("» 11m entfernt", result.replacementMessages().get(1).getString());
+        assertEquals(0x55FF55,
+                result.replacementMessages().get(0).toFlatList().get(0).getStyle().getColor().getValue());
+    }
+
+    @Test
     void keepsHqAndPayGradientProfilesIndependent() {
         ChatCustomizationFormatter.GradientPalette palette =
                 ChatCustomizationFormatter.GradientPalette.defaults()
