@@ -10,16 +10,110 @@
         "title": "Weitere Verbesserungen folgen",
         "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
         "lines": [
-          "Version 1.3.9 erweitert betterUC um Ingame-Bugmeldungen, frei platzierbare Zeit-HUDs und umfassend überarbeitete Chatfunktionen."
+          "Version 1.4.0 erweitert betterUC um ein kompaktes Armor-HUD, neue Job-Automationen und deutlich flexiblere Chatfunktionen."
         ]
       }
     ]
   },
   "releases": [
     {
+      "version": "1.4.0",
+      "date": "19.08.2026",
+      "current": true,
+      "pages": [
+        {
+          "eyebrow": "ARMOR-HUD",
+          "title": "Getragene Rüstung direkt im Blick",
+          "description": "Ein neues, frei konfigurierbares HUD zeigt ausschließlich die tatsächlich getragenen Rüstungsteile und ihren aktuellen Zustand.",
+          "lines": [
+            "Helm, Brustplatte, Hose und Schuhe werden als echte Minecraft-Item-Icons dargestellt.",
+            "Leere Rüstungsslots werden vollständig ausgeblendet und belegte Slots kompakt zusammengerückt.",
+            "Die verbleibende Haltbarkeit erscheint als Prozentwert und farbcodierter Zustandsbalken.",
+            "Anzeige, Haltbarkeit, Farbe, Stil, Farbverlauf, Position und Skalierung lassen sich individuell einstellen.",
+            "Das Armor-HUD ist vollständig in HUD-Profile und Cloud-Einstellungen eingebunden."
+          ]
+        },
+        {
+          "eyebrow": "CHAT & HQ-DESIGN",
+          "title": "Mehr Kontrolle über Farben und Einsatzmeldungen",
+          "description": "Eigene Farbprofile, zusätzliche Servermuster und präzisere Filter machen Hauptchat und Second Chat übersichtlicher.",
+          "lines": [
+            "HQ- und PAY-Nachrichten besitzen getrennte Farbprofile mit frei wählbaren Start- und Endfarben für Aktionen, Spieler und Details.",
+            "Ein eigener Konfigurationsbildschirm zeigt die gewählten Farbverläufe direkt in einer Vorschau.",
+            "Pulver-Plantagenmeldungen werden als zusammengehörige persönliche und HQ-Aktion mit eigenem Feuerdesign formatiert.",
+            "Ticket- und Führerscheinmeldungen werden einschließlich ihrer zugehörigen Detailzeilen vollständig vom HQ-Second-Chat übernommen.",
+            "/wantedinfo wird mit WantedPunkten, Grund, Fahndungsdauer und zuständigem Beamten vollständig erkannt.",
+            "Normale Fraktionsnachrichten mit HQ-Ortsangaben sowie administrative Ban-, Kick- und Checkpoint-Strafen bleiben außerhalb des HQ-Filters."
+          ]
+        },
+        {
+          "eyebrow": "LINKS & CHAT-AKTIONEN",
+          "title": "Links wieder direkt verwenden",
+          "description": "Weblinks funktionieren wieder in beiden Chats, während anklickbare Befehle weiterhin kontrolliert und sicher behandelt werden.",
+          "lines": [
+            "HTTP-, HTTPS- und www-Links werden im Hauptchat und Second Chat erkannt und anklickbar dargestellt.",
+            "Erkannte Links können optional farblich hervorgehoben werden.",
+            "Die Sicherheitsabfrage vorhandener RUN_COMMAND-Aktionen lässt sich separat ein- oder ausschalten.",
+            "Normaler Nachrichtentext wird dabei niemals eigenständig in einen ausführbaren Befehl umgewandelt."
+          ]
+        },
+        {
+          "eyebrow": "AUTOMATIONEN & KOMFORT",
+          "title": "Weniger Wiederholungen im Alltag",
+          "description": "Neue Job-Helfer und überarbeitete Bedienelemente halten wiederkehrende Abläufe zuverlässig und übersichtlich.",
+          "lines": [
+            "Der Geldtransport führt /dropmoney einmalig nach der passenden Job- und Navi-Zielmeldung aus.",
+            "Der Transport-Helfer liest die Kistenanzahl aus dem aktiven Job-Scoreboard und führt /droptransport mit zehn Sekunden Abstand aus.",
+            "Abgearbeitete Gärtner-Blumentöpfe werden auch bei sofort schließendem Unkrautfenster zuverlässig und deutlich grün markiert.",
+            "ToggleSprint nimmt das Sprinten nach vorübergehenden Unterbrechungen automatisch wieder auf.",
+            "Die Modulleisten der HUD-, Client- und Tools-Kategorien sind nun auch bei kleinen Fensterhöhen vollständig scrollbar."
+          ]
+        }
+      ],
+      "summary": [
+        {
+          "title": "Armor-HUD",
+          "description": "Getragene Rüstung erscheint kompakt mit Item-Icons, Prozentwerten und farbcodierter Haltbarkeit.",
+          "color": "cyan"
+        },
+        {
+          "title": "Neue Job-Automationen",
+          "description": "Geldtransport und Transport liefern am erkannten Ziel automatisch und kontrolliert ab.",
+          "color": "amber"
+        },
+        {
+          "title": "Flexibleres Chat-Design",
+          "description": "HQ, PAY und Pulver-Plantagen erhalten getrennte Farbprofile und präzisere Second-Chat-Filter.",
+          "color": "purple"
+        },
+        {
+          "title": "Links & Komfort",
+          "description": "Anklickbare Weblinks, stabileres ToggleSprint und scrollbare Modulleisten verbessern die tägliche Bedienung.",
+          "color": "green"
+        }
+      ],
+      "changes": [
+        "Ein neues Armor-HUD zeigt ausschließlich belegte Rüstungsslots mit echten Item-Icons an.",
+        "Die Rüstungshaltbarkeit wird optional als Prozentwert und farbcodierter Balken dargestellt.",
+        "Armor-HUD, Position, Skalierung, Stil, Farbe und Farbverlauf lassen sich frei konfigurieren.",
+        "HQ- und PAY-Nachrichten besitzen getrennte anpassbare Farbprofile mit Live-Vorschau.",
+        "Pulver-Plantagenmeldungen erhalten ein zusammengehöriges persönliches und HQ-Design mit eigenem Feuerverlauf.",
+        "Ticket- und Führerscheinmeldungen werden vollständig einschließlich ihrer Detailzeilen vom HQ-Second-Chat übernommen.",
+        "/wantedinfo wird einschließlich WantedPunkten, Grund, Fahndungsdauer und Beamten vollständig gefiltert.",
+        "Normale Fraktionsnachrichten mit HQ-Ortsangaben lösen den HQ-Filter nicht mehr aus.",
+        "Administrative Ban-, Kick- und Checkpoint-Meldungen werden nicht mehr als HQ-Verhaftung erkannt.",
+        "Weblinks sind im Hauptchat und Second Chat wieder anklickbar und optional hervorgehoben.",
+        "Die Bestätigung vorhandener RUN_COMMAND-Chataktionen lässt sich separat abschalten.",
+        "Die Geldtransport-Automation führt /dropmoney ausschließlich nach erkannter Job- und Zielmeldung aus.",
+        "Die Transport-Automation liefert die erkannte Kistenanzahl im Abstand von zehn Sekunden per /droptransport ab.",
+        "Abgearbeitete Gärtner-Blumentöpfe werden zuverlässig und deutlich grün hervorgehoben.",
+        "ToggleSprint setzt den aktivierten Sprintwunsch nach temporären Unterbrechungen fort.",
+        "HUD-, Client- und Tools-Modulleisten lassen sich bei begrenztem Platz unabhängig scrollen."
+      ]
+    },
+    {
       "version": "1.3.9",
       "date": "16.08.2026",
-      "current": true,
       "pages": [
         {
           "eyebrow": "BUGMELDUNGEN",
@@ -38,14 +132,10 @@
           "title": "Zeit und Nachrichten frei anordnen",
           "description": "Neue HUD-Optionen und präzisere Zusatz-Chats geben dir mehr Kontrolle über die Darstellung wichtiger Informationen.",
           "lines": [
-            "Ein neues Armor-HUD zeigt ausschließlich getragene Rüstungsteile als kompakte Item-Icons einschließlich farbcodierter Haltbarkeit an.",
-            "Armor-HUD, Prozentwerte, Farbe, Stil, Farbverlauf, Position und Skalierung lassen sich individuell konfigurieren.",
             "Datum und Uhrzeit stehen als neues HUD zur Verfügung und lassen sich gemeinsam oder getrennt positionieren.",
             "Datum, Uhrzeit und Sekunden können einzeln ein- oder ausgeschaltet sowie farblich angepasst werden.",
             "Jeder Second-Chat-Tab kann den globalen Zeitstempel übernehmen oder ein eigenes Format verwenden.",
             "Doppelte Zeitstempel werden vermieden und verschobene Second-Chat-Nachrichten erscheinen nun zuverlässig in latest.log.",
-            "HTTP-, HTTPS- und www-Links werden im normalen Chat sowie im Second Chat erkannt, hervorgehoben und anklickbar dargestellt.",
-            "Die Bestätigung für vorhandene anklickbare Serverbefehle kann separat ein- oder ausgeschaltet werden.",
             "Bündnis- und Fraktionspräfixe wie FBI, Polizei und Rettungsdienst lösen keine falschen Ortsfilter mehr aus."
           ]
         },
@@ -56,12 +146,6 @@
           "lines": [
             "Aktionsbezeichnungen können als technische Small Caps dargestellt werden.",
             "Optionale Farbverläufe und fette Aktions- sowie Detailtexte heben Namen, Status und Fahndungsdaten voneinander ab.",
-            "HQ und PAY besitzen getrennte Farbprofile; Start- und Endfarben für Aktionen, Spielernamen und Details lassen sich frei anpassen.",
-            "Ticket- und Führerscheinmeldungen werden einschließlich ihrer zugehörigen Detailzeilen vollständig vom HQ-Second-Chat-Filter erfasst.",
-            "Der HQ-Second-Chat übernimmt /wantedinfo vollständig mit WantedPunkten, Grund, Fahndungsdauer und zuständigem Beamten.",
-            "Das Verbrennen einer Pulver-Plantage erhält im Hauptchat und HQ-Second-Chat ein eigenes Feuerdesign mit Agent und Erfolgsdetail.",
-            "Normale Fraktionsnachrichten mit Ortsangaben wie Cop HQ oder FBI HQ werden nicht mehr fälschlich als HQ-Meldung gefiltert.",
-            "Administrative Ban-, Kick- und Checkpoint-Strafen mit Formulierungen wie „wurde von“ oder „eingesperrt“ bleiben außerhalb des HQ-Second-Chats.",
             "Neue Muster formatieren Führerscheinabnahmen, Führerscheinrückgaben und ausgestellte Tickets.",
             "Ticketbetrag und beteiligte Spieler werden bis zur passenden Aktenlöschung gespeichert und anschließend als bestätigter Vorgang dargestellt.",
             "Verhaftungen und Tötungen werden auch als kombinierte mehrzeilige Servernachricht einschließlich Fahndungsgrund erkannt.",
@@ -86,11 +170,6 @@
           "description": "Kleine technische Verbesserungen sparen Zeit und halten automatische Hintergrundfunktionen zuverlässig.",
           "lines": [
             "Screenshots werden unter Windows zuerst direkt in die Zwischenablage kopiert; der langsamere Fallback wird nur noch bei Bedarf verwendet.",
-            "Beim Geldtransport führt betterUC nach erkannter Job- und Zielmeldung automatisch einmalig /dropmoney aus.",
-            "Der Transport-Helfer erkennt Auftrag und Lieferziel, liest die Kistenanzahl aus dem Scoreboard und führt /droptransport mit zehn Sekunden Abstand aus.",
-            "Beim Gärtner wird der angeklickte Topf auch bei sofort schließendem Unkrautfenster zuverlässig gespeichert und mit einer kräftigen grünen Kontur markiert.",
-            "ToggleSprint hält den aktivierten Sprintwunsch konstant und setzt das Sprinten nach vorübergehenden Unterbrechungen automatisch fort.",
-            "Die Modulleiste der ClickGUI ist pro Kategorie scrollbar und bleibt auch bei kleinen Fensterhöhen vollständig bedienbar.",
             "Neue Spielzeitbonus- und Spielzeitzeilen werden bei stillen /stats-Abfragen korrekt unterdrückt.",
             "Die erkannte Gesamtspielzeit wird trotz unterdrückter Chatausgabe weiterhin für Website und Userpanel gespeichert.",
             "Aktualisierte HQ-, Drogenabnahme- und Chatmuster tolerieren unsichtbare Namenszeichen sowie neue Serverformulierungen."
@@ -123,22 +202,13 @@
         "Bugmeldungen können über einen hervorgehobenen Button direkt in der ClickGUI erstellt werden.",
         "Titel, Beschreibung, Schritte, letzter Screenshot und latest.log können an das Discord-Bugforum übermittelt werden.",
         "Access Codes werden vor dem Versand automatisch aus angehängten Protokolldateien entfernt.",
-        "Ein frei positionierbares Armor-HUD zeigt nur belegte Rüstungsslots mit Prozentwerten und farbcodierten Haltbarkeitsbalken.",
         "Datum und Uhrzeit wurden als konfigurierbares HUD mit optional getrennten Positionen hinzugefügt.",
         "Datum, Uhrzeit und Sekunden können unabhängig voneinander angezeigt werden.",
         "Second-Chat-Tabs unterstützen globale oder eigene Zeitstempelformate.",
         "Doppelte Second-Chat-Zeitstempel wurden behoben.",
         "In Second Chats verschobene Nachrichten werden nun in latest.log protokolliert.",
-        "Weblinks sind im Hauptchat und Second Chat wieder anklickbar und optional hervorgehoben.",
-        "Die Sicherheitsabfrage anklickbarer RUN_COMMAND-Aktionen lässt sich abschalten, ohne Befehle aus normalem Text zu erzeugen.",
         "Die Erkennung von Ortsfiltern ignoriert normale Bündnisnachrichten mit FBI-, Polizei- und Rettungsdienst-Präfixen.",
         "HQ-Aktionsbezeichnungen unterstützen Small Caps, technische Trenner und optionale Farbverläufe.",
-        "HQ- und PAY-Farbverläufe lassen sich mit getrennten Profilen und Live-Vorschau individuell anpassen.",
-        "Der HQ-Second-Chat-Filter übernimmt neue Ticket- und Führerscheinmeldungen vollständig einschließlich der Ticket-Detailzeile.",
-        "/wantedinfo wird einschließlich WantedPunkten, Grund, Fahndungsdauer und zuständigem Beamten vollständig vom HQ-Filter erfasst.",
-        "Pulver-Plantagenmeldungen werden als zusammengehörige persönliche und HQ-Aktion formatiert; ihre Feuerverläufe sind separat anpassbar.",
-        "HQ-Ortsangaben in normalen Fraktionsnachrichten lösen den HQ-Second-Chat-Filter nicht mehr aus.",
-        "Der HQ-Filter verwechselt administrative Ban-, Kick- und Checkpoint-Meldungen nicht mehr mit Verhaftungen.",
         "Führerscheinabnahmen und Führerscheinrückgaben werden im neuen HQ-Format dargestellt.",
         "Ausgestellte Tickets zeigen Officer, Empfänger, Betrag und ausstehende Bestätigung an.",
         "Passende Aktenlöschungen schließen einen vorgemerkten Ticketvorgang als bestätigt ab.",
@@ -148,11 +218,6 @@
         "Alle Reinf-Typen einschließlich Plantage können einzeln umgeschaltet werden.",
         "Reinforcement-Annahmen lassen sich optional auf den Survival-Modus beschränken.",
         "Screenshots werden unter Windows schneller in die Zwischenablage kopiert.",
-        "Die neue Geldtransport-Automation führt /dropmoney ausschließlich nach der passenden Job- und Navi-Zielmeldung aus.",
-        "Die Transport-Automation liefert ausschließlich die im aktiven Job-Scoreboard erkannten Kisten im Abstand von zehn Sekunden per /droptransport ab.",
-        "Bereits abgearbeitete Blumentöpfe des Gärtner-Jobs werden direkt nach dem letzten Unkraut-Klick zuverlässig und deutlich grün hervorgehoben.",
-        "ToggleSprint nimmt das Sprinten nach temporären Unterbrechungen zuverlässig wieder auf.",
-        "HUD-, Client- und Tools-Modulleisten lassen sich bei begrenztem Platz unabhängig scrollen.",
         "Neue /stats-Zeilen für Spielzeitbonus und Spielzeit werden bei stillen Abfragen ausgeblendet, ohne das Userpanel-Tracking zu unterbrechen."
       ]
     },

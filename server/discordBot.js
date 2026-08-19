@@ -241,7 +241,7 @@ function buildCommands() {
       .setDescription("Zeigt die Neuerungen einer betterUC-Version.")
       .addStringOption(option => option
         .setName("version")
-        .setDescription("Optional: zum Beispiel 1.3.9")
+        .setDescription("Optional: zum Beispiel 1.4.0")
         .setMaxLength(32)
         .setRequired(false)),
     new SlashCommandBuilder()
