@@ -330,6 +330,14 @@ public class BetterUCScreen extends Screen {
                         () -> BetterUCConfig.INSTANCE.autoGaertnerEnabled = !BetterUCConfig.INSTANCE.autoGaertnerEnabled);
                 y = addToggle(x, y, controlW, "M\u00FCllmann", BetterUCConfig.INSTANCE.autoMuellmannEnabled,
                         () -> BetterUCConfig.INSTANCE.autoMuellmannEnabled = !BetterUCConfig.INSTANCE.autoMuellmannEnabled);
+                y = addToggle(x, y, controlW, "Geldtransport /dropmoney",
+                        BetterUCConfig.INSTANCE.autoMoneyTransportEnabled,
+                        () -> BetterUCConfig.INSTANCE.autoMoneyTransportEnabled =
+                                !BetterUCConfig.INSTANCE.autoMoneyTransportEnabled);
+                y = addToggle(x, y, controlW, "Transport /droptransport",
+                        BetterUCConfig.INSTANCE.autoTransportEnabled,
+                        () -> BetterUCConfig.INSTANCE.autoTransportEnabled =
+                                !BetterUCConfig.INSTANCE.autoTransportEnabled);
 
                 y = addSectionHeader(x, y, controlW, "Einkaufen", 0xFF38BDF8);
                 y = addToggle(x, y, controlW, "Auto-Kauf /abuy", BetterUCConfig.INSTANCE.autoBuyEnabled,
@@ -900,6 +908,10 @@ public class BetterUCScreen extends Screen {
             case "Winzer" -> "Sammelt in den Winzer-Inventaren automatisch alle Trauben ein.";
             case "Gärtner" -> "Automatisiert Blumenabgabe und das Einsammeln verwelkter Büsche.";
             case "Müllmann" -> "Automatisiert die Müllabgabe in den konfigurierten Müllhalden-Bereichen.";
+            case "Geldtransport /dropmoney" ->
+                    "Führt am erkannten Einzahlungsziel automatisch einmalig /dropmoney aus.";
+            case "Transport /droptransport" ->
+                    "Liefert am Ziel automatisch die im Transport-Scoreboard erkannten Kisten ab.";
             case "Auto-Kauf /abuy" -> "Erlaubt automatische Mengenkäufe über /abuy <Menge>.";
             case "Folgeannahmen" ->
                     "Nimmt nach deiner ersten manuellen Bestätigung weitere Erste-Hilfe-Angebote automatisch an.";
@@ -1716,7 +1728,7 @@ public class BetterUCScreen extends Screen {
             case AUTO_STATS -> drawMiniInfo(context, previewX, previewY, "Auto-Stats", "Join /stats", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
             case AUTOMATIONS -> {
                 int enabled = AutomationController.localEnabledCount();
-                drawMiniInfo(context, previewX, previewY, "Automationen", enabled + "/7 aktiv", enabled > 0);
+                drawMiniInfo(context, previewX, previewY, "Automationen", enabled + "/9 aktiv", enabled > 0);
             }
             case CHAT -> drawReinfPreview(context, previewX, previewY);
             case CONNECTION -> drawMiniInfo(context, previewX, previewY, "Verbindung", PingRelayClient.statusLabel(),

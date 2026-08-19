@@ -26,6 +26,14 @@ public final class SecondChatManager {
     public static final int MAX_WINDOWS = 4;
     private static final long HQ_BLOCK_WINDOW_MS = 2_500L;
     private static final long PAYDAY_BLOCK_WINDOW_MS = 8_000L;
+    private static final int WANTED_INFO_POINTS = 1;
+    private static final int WANTED_INFO_REASON = 1 << 1;
+    private static final int WANTED_INFO_SINCE = 1 << 2;
+    private static final int WANTED_INFO_OFFICER = 1 << 3;
+    private static final int WANTED_INFO_ALL_DETAILS = WANTED_INFO_POINTS
+            | WANTED_INFO_REASON
+            | WANTED_INFO_SINCE
+            | WANTED_INFO_OFFICER;
     private static final Pattern WANTED_LIST_ENTRY_PATTERN = Pattern.compile(
             "^(?:\\[[a-z0-9_]+\\] )*[a-z0-9_]{1,32} \\d+ wps(?: .+)?$"
     );
@@ -39,6 +47,8 @@ public final class SecondChatManager {
     private static long lastMentionSoundAtMs;
     private static long hqContinuationUntilMs;
     private static int hqContinuationLinesRemaining;
+    private static long wantedInfoContinuationUntilMs;
+    private static int wantedInfoDetailsRemaining;
     private static long paydayContinuationUntilMs;
     private static boolean paydayBlockActive;
 
@@ -784,13 +794,37 @@ public final class SecondChatManager {
 
     private static synchronized boolean classifyHqOrWps(String text) {
         long now = System.currentTimeMillis();
+        if (isWantedInfoHeader(text)) {
+            wantedInfoDetailsRemaining = WANTED_INFO_ALL_DETAILS;
+            wantedInfoContinuationUntilMs = now + HQ_BLOCK_WINDOW_MS;
+            hqContinuationLinesRemaining = 0;
+            return true;
+        }
+
+        int wantedInfoDetail = wantedInfoDetailType(text);
+        if (now <= wantedInfoContinuationUntilMs
+                && (wantedInfoDetailsRemaining & wantedInfoDetail) != 0) {
+            wantedInfoDetailsRemaining &= ~wantedInfoDetail;
+            wantedInfoContinuationUntilMs = wantedInfoDetailsRemaining == 0
+                    ? 0L
+                    : now + HQ_BLOCK_WINDOW_MS;
+            return true;
+        }
+        if (now > wantedInfoContinuationUntilMs) {
+            wantedInfoDetailsRemaining = 0;
+        }
+
         int continuationLines = formattedHqContinuationLines(text);
         if (continuationLines >= 0) {
             hqContinuationLinesRemaining = continuationLines;
             hqContinuationUntilMs = now + HQ_BLOCK_WINDOW_MS;
+            wantedInfoDetailsRemaining = 0;
             return true;
         }
         if (isHqOrWpsLine(text)) {
+            if (hasStructuredHqPrefix(text)) {
+                wantedInfoDetailsRemaining = 0;
+            }
             return true;
         }
         if (now <= hqContinuationUntilMs && hqContinuationLinesRemaining > 0) {
@@ -840,6 +874,31 @@ public final class SecondChatManager {
         return text != null
                 && (text.equals("online spieler mit wantedpunkten")
                 || text.equals("online spieler mit wantedpunkten keine belohnung"));
+    }
+
+    private static boolean isWantedInfoHeader(String text) {
+        return text != null
+                && (text.startsWith("hq fahndungs informationen uber ")
+                || text.startsWith("hq fahndungsinformationen uber "));
+    }
+
+    private static int wantedInfoDetailType(String text) {
+        if (text == null || text.isBlank()) {
+            return 0;
+        }
+        if (text.matches("^wantedpunkte \\d+$")) {
+            return WANTED_INFO_POINTS;
+        }
+        if (text.matches("^grund .+$")) {
+            return WANTED_INFO_REASON;
+        }
+        if (text.matches("^gefahndet seit \\d+ minuten?$")) {
+            return WANTED_INFO_SINCE;
+        }
+        if (text.matches("^beamt(?:e r|er|in) [a-z0-9_\\[\\]^]{1,48}$")) {
+            return WANTED_INFO_OFFICER;
+        }
+        return 0;
     }
 
     private static boolean hasStructuredHqPrefix(String text) {
@@ -910,6 +969,18 @@ public final class SecondChatManager {
 
     static int formattedHqContinuationLineCount(String raw) {
         return raw == null ? -1 : formattedHqContinuationLines(normalize(raw));
+    }
+
+    static boolean isWantedInfoHeaderMessage(String raw) {
+        return raw != null && isWantedInfoHeader(normalize(raw));
+    }
+
+    static boolean isWantedInfoDetailMessage(String raw) {
+        return raw != null && wantedInfoDetailType(normalize(raw)) != 0;
+    }
+
+    static boolean classifyHqOrWpsBlockMessage(String raw) {
+        return raw != null && !raw.isBlank() && classifyHqOrWps(normalize(raw));
     }
 
     private static boolean isReinforcementAnchor(String text) {

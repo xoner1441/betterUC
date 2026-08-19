@@ -64,7 +64,9 @@ const FEATURE_FLAG_DEFINITIONS = Object.freeze([
   { key: "auto_fisher", label: "Auto-Fischer", description: "Automatische Fischer-Befehle" },
   { key: "auto_winzer", label: "Auto-Winzer", description: "Automatisches Leeren der Trauben-Fenster" },
   { key: "auto_gaertner", label: "Auto-Gärtner", description: "Automatische Blumenabgabe und Buschsammlung" },
-  { key: "auto_muellmann", label: "Auto-Müllmann", description: "Automatische Müllsortierung in markierten Bereichen" }
+  { key: "auto_muellmann", label: "Auto-Müllmann", description: "Automatische Müllsortierung in markierten Bereichen" },
+  { key: "auto_money_transport", label: "Auto-Geldtransport", description: "Automatische Geldabgabe am erkannten Einzahlungsziel" },
+  { key: "auto_transport", label: "Auto-Transport", description: "Scoreboard-gesteuerte Kistenabgabe am Lieferziel" }
 ]);
 
 const MIME_TYPES = new Map([

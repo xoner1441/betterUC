@@ -31,6 +31,8 @@ public final class RemoteFeatureFlagsClient {
     public static final String AUTO_WINZER = "auto_winzer";
     public static final String AUTO_GAERTNER = "auto_gaertner";
     public static final String AUTO_MUELLMANN = "auto_muellmann";
+    public static final String AUTO_MONEY_TRANSPORT = "auto_money_transport";
+    public static final String AUTO_TRANSPORT = "auto_transport";
 
     private static final long REFRESH_INTERVAL_MS = 60_000L;
     private static final Set<String> KNOWN_FLAGS = Set.of(
@@ -42,7 +44,9 @@ public final class RemoteFeatureFlagsClient {
             AUTO_FISHER,
             AUTO_WINZER,
             AUTO_GAERTNER,
-            AUTO_MUELLMANN
+            AUTO_MUELLMANN,
+            AUTO_MONEY_TRANSPORT,
+            AUTO_TRANSPORT
     );
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(6))

@@ -9,6 +9,8 @@ import com.betteruc.client.AutoFisherClient;
 import com.betteruc.client.AutoFirstAidClient;
 import com.betteruc.client.AutoGaertnerClient;
 import com.betteruc.client.AutoMuellmannClient;
+import com.betteruc.client.AutoMoneyTransportClient;
+import com.betteruc.client.AutoTransportClient;
 import com.betteruc.client.AutoWinzerClient;
 import com.betteruc.client.AutomationController;
 import com.betteruc.client.CarFindTracker;
@@ -175,6 +177,8 @@ public class ChatBlacklistMixin {
         ReinforcementAcceptClient.handleChatMessage(Minecraft.getInstance(), message);
         DutyRejoinClient.handleChatLine(raw);
         AutoBuyClient.handleChatLine(Minecraft.getInstance(), raw);
+        AutoMoneyTransportClient.handleChatLine(Minecraft.getInstance(), raw);
+        AutoTransportClient.handleChatLine(Minecraft.getInstance(), raw);
         if (AutomationController.isDropDrinkEnabled()) {
             AutoDropDrinkClient.handleChatLine(Minecraft.getInstance(), raw);
         }

@@ -14,6 +14,8 @@ import com.betteruc.client.AutoFisherClient;
 import com.betteruc.client.AutoFirstAidClient;
 import com.betteruc.client.AutoGaertnerClient;
 import com.betteruc.client.AutoMuellmannClient;
+import com.betteruc.client.AutoMoneyTransportClient;
+import com.betteruc.client.AutoTransportClient;
 import com.betteruc.client.AutoWinzerClient;
 import com.betteruc.client.AutomationController;
 import com.betteruc.client.CarFindTracker;
@@ -138,6 +140,8 @@ public class BetterUCClient implements ClientModInitializer {
     private boolean remoteWinzerEnabled = true;
     private boolean remoteGaertnerEnabled = true;
     private boolean remoteMuellmannEnabled = true;
+    private boolean remoteMoneyTransportEnabled = true;
+    private boolean remoteTransportEnabled = true;
 
     private static final class MatchedReason {
         private final String key;
@@ -244,6 +248,8 @@ public class BetterUCClient implements ClientModInitializer {
             SecondChatManager.clear();
             ReinforcementAcceptClient.reset();
             DutyRejoinClient.reset();
+            AutoMoneyTransportClient.reset();
+            AutoTransportClient.reset();
             CommunicationDeviceTracker.reset();
             resetRemoteFeatureStateTracking();
             RemoteFeatureFlagsClient.onJoin(client);
@@ -1046,6 +1052,8 @@ public class BetterUCClient implements ClientModInitializer {
                 AutoMuellmannClient.tick(client);
             }
             AutoFirstAidClient.tick(client);
+            AutoMoneyTransportClient.tick(client);
+            AutoTransportClient.tick(client);
             AutoBuyClient.tick(client);
             TrashFilterClient.tick(client);
             tickStatsOnJoin(client);
@@ -1091,6 +1099,14 @@ public class BetterUCClient implements ClientModInitializer {
         boolean muellmannEnabled = AutomationController.isMuellmannEnabled();
         if (!muellmannEnabled && remoteMuellmannEnabled) AutoMuellmannClient.reset();
         remoteMuellmannEnabled = muellmannEnabled;
+
+        boolean moneyTransportEnabled = AutomationController.isMoneyTransportEnabled();
+        if (!moneyTransportEnabled && remoteMoneyTransportEnabled) AutoMoneyTransportClient.reset();
+        remoteMoneyTransportEnabled = moneyTransportEnabled;
+
+        boolean transportEnabled = AutomationController.isTransportEnabled();
+        if (!transportEnabled && remoteTransportEnabled) AutoTransportClient.reset();
+        remoteTransportEnabled = transportEnabled;
     }
 
     private void resetRemoteFeatureStateTracking() {
@@ -1101,6 +1117,8 @@ public class BetterUCClient implements ClientModInitializer {
         remoteWinzerEnabled = true;
         remoteGaertnerEnabled = true;
         remoteMuellmannEnabled = true;
+        remoteMoneyTransportEnabled = true;
+        remoteTransportEnabled = true;
     }
 
     private void maybeOpenWelcomeChangelog(Minecraft client) {
@@ -1280,6 +1298,8 @@ public class BetterUCClient implements ClientModInitializer {
         AutoFirstAidClient.reset();
         AutoGaertnerClient.reset();
         AutoMuellmannClient.reset();
+        AutoMoneyTransportClient.reset();
+        AutoTransportClient.reset();
         AutoWinzerClient.reset();
 
         BetterUCSuppressFlags.suppressModBlOutput = false;

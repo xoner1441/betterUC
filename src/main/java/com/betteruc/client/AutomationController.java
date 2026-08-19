@@ -33,6 +33,16 @@ public final class AutomationController {
                 && RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_MUELLMANN);
     }
 
+    public static boolean isMoneyTransportEnabled() {
+        return BetterUCConfig.INSTANCE.autoMoneyTransportEnabled
+                && RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_MONEY_TRANSPORT);
+    }
+
+    public static boolean isTransportEnabled() {
+        return BetterUCConfig.INSTANCE.autoTransportEnabled
+                && RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_TRANSPORT);
+    }
+
     public static boolean isFirstAidEnabled() {
         return BetterUCConfig.INSTANCE.autoFirstAidEnabled;
     }
@@ -48,6 +58,8 @@ public final class AutomationController {
         if (BetterUCConfig.INSTANCE.autoWinzerEnabled) count++;
         if (BetterUCConfig.INSTANCE.autoGaertnerEnabled) count++;
         if (BetterUCConfig.INSTANCE.autoMuellmannEnabled) count++;
+        if (BetterUCConfig.INSTANCE.autoMoneyTransportEnabled) count++;
+        if (BetterUCConfig.INSTANCE.autoTransportEnabled) count++;
         if (BetterUCConfig.INSTANCE.autoFirstAidEnabled) count++;
         if (BetterUCConfig.INSTANCE.autoBuyEnabled) count++;
         return count;

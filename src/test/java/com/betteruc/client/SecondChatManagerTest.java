@@ -131,4 +131,38 @@ class SecondChatManagerTest {
                 "Online Spieler mit WantedPunkten!"
         ));
     }
+
+    @Test
+    void recognizesWantedInfoHeaderAndOnlyItsExpectedDetails() {
+        assertTrue(SecondChatManager.isWantedInfoHeaderMessage(
+                "HQ: Fahndungs-Informationen über Moxemilian:"
+        ));
+        assertTrue(SecondChatManager.isWantedInfoDetailMessage("» WantedPunkte: 55"));
+        assertTrue(SecondChatManager.isWantedInfoDetailMessage("» Grund: Versuchter Mord"));
+        assertTrue(SecondChatManager.isWantedInfoDetailMessage("» Gefahndet seit: 0 Minuten"));
+        assertTrue(SecondChatManager.isWantedInfoDetailMessage("» Beamte-/r: Schbastyyy787"));
+
+        assertFalse(SecondChatManager.isWantedInfoDetailMessage(
+                "Polizei FABI1441: Wir treffen uns am Cop HQ"
+        ));
+        assertFalse(SecondChatManager.isWantedInfoDetailMessage(
+                "Metrickz wurde von [UC]Knosbe für 120min gebannt! Grund: Metagaming"
+        ));
+    }
+
+    @Test
+    void keepsTheCompleteWantedInfoBlockInTheHqFilter() {
+        assertTrue(SecondChatManager.classifyHqOrWpsBlockMessage(
+                "HQ: Fahndungs-Informationen über Moxemilian:"
+        ));
+        assertTrue(SecondChatManager.classifyHqOrWpsBlockMessage("» WantedPunkte: 55"));
+        assertTrue(SecondChatManager.classifyHqOrWpsBlockMessage("» Grund: Versuchter Mord"));
+        assertTrue(SecondChatManager.classifyHqOrWpsBlockMessage("» Gefahndet seit: 0 Minuten"));
+        assertTrue(SecondChatManager.classifyHqOrWpsBlockMessage("» Beamte-/r: Schbastyyy787"));
+
+        assertFalse(SecondChatManager.classifyHqOrWpsBlockMessage("» WantedPunkte: 55"));
+        assertFalse(SecondChatManager.classifyHqOrWpsBlockMessage(
+                "Polizei FABI1441: Wir treffen uns am Cop HQ"
+        ));
+    }
 }

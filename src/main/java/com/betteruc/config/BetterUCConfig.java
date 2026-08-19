@@ -113,7 +113,8 @@ public class BetterUCConfig {
             "secondChatCustom3Mode", "secondChatCustom1Text", "secondChatCustom2Text",
             "secondChatCustom3Text", "secondChatTabs", "secondChatWindows", "secondChatActiveTabId",
             "autoDropDrinkEnabled", "autoFisherEnabled", "autoWinzerEnabled", "autoGaertnerEnabled",
-            "autoMuellmannEnabled", "autoFirstAidEnabled", "autoBuyEnabled",
+            "autoMuellmannEnabled", "autoMoneyTransportEnabled", "autoTransportEnabled",
+            "autoFirstAidEnabled", "autoBuyEnabled",
             "reinfCustomizationEnabled", "reinfUniformColorEnabled", "reinfLabelColor", "reinfTextColor",
             "reinfDistanceColor", "reinfUniformColor", "reinfAcceptEnabled", "reinfAcceptAutomatic",
             "reinfAcceptSurvivalOnly",
@@ -495,6 +496,8 @@ public class BetterUCConfig {
     public boolean autoWinzerEnabled = true;
     public boolean autoGaertnerEnabled = true;
     public boolean autoMuellmannEnabled = true;
+    public boolean autoMoneyTransportEnabled = true;
+    public boolean autoTransportEnabled = true;
     public boolean autoFirstAidEnabled = false;
     public boolean autoBuyEnabled = true;
     public Map<String, PlantTimerState> plantTimerStates = new LinkedHashMap<>();

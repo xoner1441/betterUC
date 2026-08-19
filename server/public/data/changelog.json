@@ -56,6 +56,7 @@
             "Optionale Farbverläufe und fette Aktions- sowie Detailtexte heben Namen, Status und Fahndungsdaten voneinander ab.",
             "HQ und PAY besitzen getrennte Farbprofile; Start- und Endfarben für Aktionen, Spielernamen und Details lassen sich frei anpassen.",
             "Ticket- und Führerscheinmeldungen werden einschließlich ihrer zugehörigen Detailzeilen vollständig vom HQ-Second-Chat-Filter erfasst.",
+            "Der HQ-Second-Chat übernimmt /wantedinfo vollständig mit WantedPunkten, Grund, Fahndungsdauer und zuständigem Beamten.",
             "Das Verbrennen einer Pulver-Plantage erhält im Hauptchat und HQ-Second-Chat ein eigenes Feuerdesign mit Agent und Erfolgsdetail.",
             "Normale Fraktionsnachrichten mit Ortsangaben wie Cop HQ oder FBI HQ werden nicht mehr fälschlich als HQ-Meldung gefiltert.",
             "Administrative Ban-, Kick- und Checkpoint-Strafen mit Formulierungen wie „wurde von“ oder „eingesperrt“ bleiben außerhalb des HQ-Second-Chats.",
@@ -83,6 +84,8 @@
           "description": "Kleine technische Verbesserungen sparen Zeit und halten automatische Hintergrundfunktionen zuverlässig.",
           "lines": [
             "Screenshots werden unter Windows zuerst direkt in die Zwischenablage kopiert; der langsamere Fallback wird nur noch bei Bedarf verwendet.",
+            "Beim Geldtransport führt betterUC nach erkannter Job- und Zielmeldung automatisch einmalig /dropmoney aus.",
+            "Der Transport-Helfer erkennt Auftrag und Lieferziel, liest die Kistenanzahl aus dem Scoreboard und führt /droptransport mit zehn Sekunden Abstand aus.",
             "ToggleSprint hält den aktivierten Sprintwunsch konstant und setzt das Sprinten nach vorübergehenden Unterbrechungen automatisch fort.",
             "Die Modulleiste der ClickGUI ist pro Kategorie scrollbar und bleibt auch bei kleinen Fensterhöhen vollständig bedienbar.",
             "Neue Spielzeitbonus- und Spielzeitzeilen werden bei stillen /stats-Abfragen korrekt unterdrückt.",
@@ -128,6 +131,7 @@
         "HQ-Aktionsbezeichnungen unterstützen Small Caps, technische Trenner und optionale Farbverläufe.",
         "HQ- und PAY-Farbverläufe lassen sich mit getrennten Profilen und Live-Vorschau individuell anpassen.",
         "Der HQ-Second-Chat-Filter übernimmt neue Ticket- und Führerscheinmeldungen vollständig einschließlich der Ticket-Detailzeile.",
+        "/wantedinfo wird einschließlich WantedPunkten, Grund, Fahndungsdauer und zuständigem Beamten vollständig vom HQ-Filter erfasst.",
         "Pulver-Plantagenmeldungen werden als zusammengehörige persönliche und HQ-Aktion formatiert; ihre Feuerverläufe sind separat anpassbar.",
         "HQ-Ortsangaben in normalen Fraktionsnachrichten lösen den HQ-Second-Chat-Filter nicht mehr aus.",
         "Der HQ-Filter verwechselt administrative Ban-, Kick- und Checkpoint-Meldungen nicht mehr mit Verhaftungen.",
@@ -140,6 +144,8 @@
         "Alle Reinf-Typen einschließlich Plantage können einzeln umgeschaltet werden.",
         "Reinforcement-Annahmen lassen sich optional auf den Survival-Modus beschränken.",
         "Screenshots werden unter Windows schneller in die Zwischenablage kopiert.",
+        "Die neue Geldtransport-Automation führt /dropmoney ausschließlich nach der passenden Job- und Navi-Zielmeldung aus.",
+        "Die Transport-Automation liefert ausschließlich die im aktiven Job-Scoreboard erkannten Kisten im Abstand von zehn Sekunden per /droptransport ab.",
         "ToggleSprint nimmt das Sprinten nach temporären Unterbrechungen zuverlässig wieder auf.",
         "HUD-, Client- und Tools-Modulleisten lassen sich bei begrenztem Platz unabhängig scrollen.",
         "Neue /stats-Zeilen für Spielzeitbonus und Spielzeit werden bei stillen Abfragen ausgeblendet, ohne das Userpanel-Tracking zu unterbrechen."
