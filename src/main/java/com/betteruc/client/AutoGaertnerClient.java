@@ -24,6 +24,8 @@ import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.FlowerPotBlock;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -63,7 +65,7 @@ public final class AutoGaertnerClient {
                     && hand == InteractionHand.MAIN_HAND
                     && bushCollectorActive
                     && AutomationController.isGaertnerEnabled()
-                    && level.getBlockState(hitResult.getBlockPos()).getBlock() instanceof FlowerPotBlock) {
+                    && isFlowerPot(level.getBlockState(hitResult.getBlockPos()).getBlock())) {
                 recordPotInteraction(hitResult.getBlockPos(), System.currentTimeMillis());
             }
             return InteractionResult.PASS;
@@ -118,10 +120,12 @@ public final class AutoGaertnerClient {
             return;
         }
 
+        long now = System.currentTimeMillis();
         Screen screen = ClientCompat.currentScreen(client);
         if (!(screen instanceof MenuAccess<?> access)
                 || !isFlowerStandMenu(screen)
                 || !(access.getMenu() instanceof AbstractContainerMenu menu)) {
+            captureTargetedPot(client, now);
             currentContainerId = -1;
             activePotPos = null;
             activePotCompleted = false;
@@ -131,12 +135,14 @@ public final class AutoGaertnerClient {
         if (menu.containerId != currentContainerId) {
             currentContainerId = menu.containerId;
             clickedSlotsInContainer.clear();
-            activePotPos = consumeRecentPotInteraction(System.currentTimeMillis());
-            menuOpenedAtMs = System.currentTimeMillis();
+            activePotPos = consumeRecentPotInteraction(now);
+            if (activePotPos == null) {
+                activePotPos = targetedPotPosition(client);
+            }
+            menuOpenedAtMs = now;
             activePotCompleted = false;
         }
 
-        long now = System.currentTimeMillis();
         if (nextClickAtMs > now) return;
 
         Slot bushSlot = findNextDeadBushSlot(client, menu);
@@ -144,8 +150,7 @@ public final class AutoGaertnerClient {
             if (!activePotCompleted
                     && activePotPos != null
                     && now - menuOpenedAtMs >= MENU_SETTLE_MS) {
-                completedPotPositions.add(activePotPos.immutable());
-                activePotCompleted = true;
+                completeActivePot();
             }
             return;
         }
@@ -154,6 +159,9 @@ public final class AutoGaertnerClient {
         clickedSlotsInContainer.add(bushSlot.index);
         collectedBushes++;
         nextClickAtMs = now + CLICK_INTERVAL_MS;
+        if (activePotPos != null && findNextDeadBushSlot(client, menu) == null) {
+            completeActivePot();
+        }
     }
 
     public static void reset() {
@@ -263,6 +271,55 @@ public final class AutoGaertnerClient {
         if (pos != null) completedPotPositions.add(pos.immutable());
     }
 
+    private static void completeActivePot() {
+        if (activePotCompleted || activePotPos == null) return;
+        markPotCompleted(activePotPos);
+        activePotCompleted = true;
+    }
+
+    private static void captureTargetedPot(Minecraft client, long now) {
+        BlockPos targetedPot = targetedPotPosition(client);
+        if (targetedPot != null) {
+            recordPotInteraction(targetedPot, now);
+        }
+    }
+
+    private static BlockPos targetedPotPosition(Minecraft client) {
+        if (client == null || client.level == null || client.hitResult == null) return null;
+        HitResult hitResult = client.hitResult;
+        if (hitResult.getType() == HitResult.Type.MISS) return null;
+
+        if (hitResult instanceof BlockHitResult blockHit) {
+            BlockPos directPos = blockHit.getBlockPos();
+            if (isFlowerPot(client.level.getBlockState(directPos).getBlock())) {
+                return directPos.immutable();
+            }
+        }
+
+        Vec3 hitLocation = hitResult.getLocation();
+        BlockPos center = BlockPos.containing(hitLocation);
+        BlockPos nearest = null;
+        double nearestDistance = Double.MAX_VALUE;
+        for (int x = center.getX() - 2; x <= center.getX() + 2; x++) {
+            for (int y = center.getY() - 2; y <= center.getY() + 2; y++) {
+                for (int z = center.getZ() - 2; z <= center.getZ() + 2; z++) {
+                    BlockPos candidate = new BlockPos(x, y, z);
+                    if (!isFlowerPot(client.level.getBlockState(candidate).getBlock())) continue;
+                    double distance = hitLocation.distanceToSqr(x + 0.5D, y + 0.5D, z + 0.5D);
+                    if (distance < nearestDistance) {
+                        nearest = candidate;
+                        nearestDistance = distance;
+                    }
+                }
+            }
+        }
+        return nearest == null ? null : nearest.immutable();
+    }
+
+    private static boolean isFlowerPot(net.minecraft.world.level.block.Block block) {
+        return block instanceof FlowerPotBlock;
+    }
+
     private static void clearPotProgress() {
         pendingPotPos = null;
         pendingPotAtMs = 0L;
@@ -294,8 +351,8 @@ public final class AutoGaertnerClient {
                     COMPLETED_POT_SHAPE,
                     RenderTypes.lines(),
                     COMPLETED_POT_COLOR,
-                    3.0F,
-                    false
+                    5.0F,
+                    true
             );
             poseStack.popPose();
         }

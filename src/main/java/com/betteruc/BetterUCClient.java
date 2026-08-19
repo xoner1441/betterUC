@@ -44,6 +44,7 @@ import com.betteruc.gui.BetterUCScreen;
 import com.betteruc.gui.ChangelogScreen;
 import com.betteruc.gui.PingWheelScreen;
 import com.betteruc.hud.AmmoHud;
+import com.betteruc.hud.ArmorHud;
 import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.CashHud;
 import com.betteruc.hud.DealerTimerHud;
@@ -215,6 +216,7 @@ public class BetterUCClient implements ClientModInitializer {
     private void registerHudElements() {
         HackTimerHud.register();
         AmmoHud.register();
+        ArmorHud.register();
         BankBalanceHud.register();
         CashHud.register();
         DealerTimerHud.register();
