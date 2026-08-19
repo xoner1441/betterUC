@@ -906,7 +906,8 @@ public class BetterUCScreen extends Screen {
             case "Lieferant /adropdrink" -> "Automatisiert die Getränkeabgabe des Lieferanten-Jobs.";
             case "Fischer" -> "Automatisiert Fischschwarm-Suche, Fangen und Abgabe.";
             case "Winzer" -> "Sammelt in den Winzer-Inventaren automatisch alle Trauben ein.";
-            case "Gärtner" -> "Automatisiert Blumenabgabe und das Einsammeln verwelkter Büsche.";
+            case "Gärtner" ->
+                    "Automatisiert Blumenabgabe und Unkrautentfernung und markiert erledigte Töpfe grün.";
             case "Müllmann" -> "Automatisiert die Müllabgabe in den konfigurierten Müllhalden-Bereichen.";
             case "Geldtransport /dropmoney" ->
                     "Führt am erkannten Einzahlungsziel automatisch einmalig /dropmoney aus.";

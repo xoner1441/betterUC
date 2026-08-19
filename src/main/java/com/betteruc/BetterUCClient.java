@@ -191,6 +191,7 @@ public class BetterUCClient implements ClientModInitializer {
         CloudSettingsClient.initialize();
         BetterUCFontManager.initialize();
         ScreenshotActionsClient.initialize();
+        AutoGaertnerClient.initialize();
         registerKeyMappings();
         registerHudElements();
         registerConnectionEvents();
