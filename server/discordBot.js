@@ -1391,8 +1391,10 @@ function suggestionGuidePayload() {
 }
 
 function suggestionAuthor(context, suggestion) {
+  const discordId = clean(suggestion?.authorDiscordId);
+  if (discordId) return `<@${discordId}>`;
   const account = context.getAccounts().find(entry => entry.id === suggestion.accountId);
-  return account?.minecraftName || `<@${suggestion.authorDiscordId}>`;
+  return account?.minecraftName || "Unbekannt";
 }
 
 async function updateSuggestionMessage(client, context, suggestion) {
@@ -1429,7 +1431,7 @@ async function handleSuggestionCommand(interaction, context) {
       description: clean(interaction.options.getString("beschreibung", true))
     });
     const message = await channel.send({
-      embeds: [suggestionEmbed(suggestion, account.minecraftName)],
+      embeds: [suggestionEmbed(suggestion, suggestionAuthor(context, suggestion))],
       components: [suggestionVoteRow(suggestion)],
       allowedMentions: { parse: [] }
     });
