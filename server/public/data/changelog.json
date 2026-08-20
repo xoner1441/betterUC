@@ -53,6 +53,7 @@
           "description": "Weblinks funktionieren wieder in beiden Chats, während anklickbare Befehle weiterhin kontrolliert und sicher behandelt werden.",
           "lines": [
             "HTTP-, HTTPS- und www-Links werden im Hauptchat und Second Chat erkannt und anklickbar dargestellt.",
+            "Eine gehoverte Nachricht lässt sich im Hauptchat und Second Chat vollständig per Mittelklick kopieren.",
             "Erkannte Links können optional farblich hervorgehoben werden.",
             "Die Sicherheitsabfrage vorhandener RUN_COMMAND-Aktionen lässt sich separat ein- oder ausschalten.",
             "Normaler Nachrichtentext wird dabei niemals eigenständig in einen ausführbaren Befehl umgewandelt."
@@ -67,6 +68,7 @@
             "Der Transport-Helfer liest die Kistenanzahl aus dem aktiven Job-Scoreboard und führt /droptransport mit zehn Sekunden Abstand aus.",
             "Abgearbeitete Gärtner-Blumentöpfe werden auch bei sofort schließendem Unkrautfenster zuverlässig und deutlich grün markiert.",
             "Beim Betreten des Friedhofs setzt das Bargeld-HUD den temporären Bestand auf 0$ und übernimmt die Rückzahlung nach der Wiederbelebung automatisch.",
+            "Das Health-HUD zeigt halbe Herzen präzise mit einem ,5-Wert an.",
             "ToggleSprint nimmt das Sprinten nach vorübergehenden Unterbrechungen automatisch wieder auf.",
             "Die Modulleisten der HUD-, Client- und Tools-Kategorien sind nun auch bei kleinen Fensterhöhen vollständig scrollbar."
           ]
@@ -106,11 +108,14 @@
         "Normale Fraktionsnachrichten mit HQ-Ortsangaben lösen den HQ-Filter nicht mehr aus.",
         "Administrative Ban-, Kick- und Checkpoint-Meldungen werden nicht mehr als HQ-Verhaftung erkannt.",
         "Weblinks sind im Hauptchat und Second Chat wieder anklickbar und optional hervorgehoben.",
+        "Chatnachrichten lassen sich im Hauptchat und Second Chat per Mittelklick vollständig kopieren.",
         "Die Bestätigung vorhandener RUN_COMMAND-Chataktionen lässt sich separat abschalten.",
         "Die Geldtransport-Automation führt /dropmoney ausschließlich nach erkannter Job- und Zielmeldung aus.",
         "Die Transport-Automation liefert die erkannte Kistenanzahl im Abstand von zehn Sekunden per /droptransport ab.",
         "Abgearbeitete Gärtner-Blumentöpfe werden zuverlässig und deutlich grün hervorgehoben.",
         "Das Bargeld-HUD berücksichtigt den temporären Geldverlust auf dem Friedhof und die anschließende Rückzahlung.",
+        "Das Health-HUD stellt halbe Herzen als Dezimalwert mit ,5 dar.",
+        "Discord-Vorschläge zeigen zuverlässig den tatsächlichen Discord-Einreicher statt eines falsch zugeordneten Minecraft-Accounts.",
         "ToggleSprint setzt den aktivierten Sprintwunsch nach temporären Unterbrechungen fort.",
         "HUD-, Client- und Tools-Modulleisten lassen sich bei begrenztem Platz unabhängig scrollen."
       ]

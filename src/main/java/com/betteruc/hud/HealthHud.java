@@ -16,8 +16,8 @@ public class HealthHud {
     private static final Component EMPTY_TEXT = Component.literal("");
     private static final Component PREVIEW_HEALTH_TEXT = Component.literal("10");
     private static final Component PREVIEW_ABSORPTION_TEXT = Component.literal("2");
-    private static int cachedHearts = Integer.MIN_VALUE;
-    private static int cachedAbsorptionHearts = Integer.MIN_VALUE;
+    private static int cachedHealthHalfUnits = Integer.MIN_VALUE;
+    private static int cachedAbsorptionHalfUnits = Integer.MIN_VALUE;
     private static Component cachedHealthText = Component.literal("");
     private static Component cachedAbsorptionText = Component.literal("");
 
@@ -33,13 +33,12 @@ public class HealthHud {
         if (!BetterUCConfig.INSTANCE.showHealthHud) return;
 
         Player player = client.player;
-        int health = (int) Math.ceil(player.getHealth());
-        int fullHearts = health / 2;
-        int absorptionHearts = BetterUCConfig.INSTANCE.showHealthAbsorption
-                ? Math.max(0, (int) Math.ceil(player.getAbsorptionAmount() / 2.0F))
+        int healthHalfUnits = displayedHalfHeartUnits(player.getHealth());
+        int absorptionHalfUnits = BetterUCConfig.INSTANCE.showHealthAbsorption
+                ? displayedHalfHeartUnits(player.getAbsorptionAmount())
                 : 0;
-        Component healthText = getHealthText(fullHearts);
-        Component absorptionText = getAbsorptionText(absorptionHearts);
+        Component healthText = getHealthText(healthHalfUnits);
+        Component absorptionText = getAbsorptionText(absorptionHalfUnits);
 
         int centerX = client.getWindow().getGuiScaledWidth() / 2;
         int centerY = client.getWindow().getGuiScaledHeight() / 2;
@@ -82,22 +81,35 @@ public class HealthHud {
         );
     }
 
-    private static Component getHealthText(int fullHearts) {
-        if (fullHearts != cachedHearts) {
-            cachedHearts = fullHearts;
-            cachedHealthText = Component.literal(String.valueOf(fullHearts));
+    private static Component getHealthText(int halfHeartUnits) {
+        if (halfHeartUnits != cachedHealthHalfUnits) {
+            cachedHealthHalfUnits = halfHeartUnits;
+            cachedHealthText = Component.literal(formatHeartCount(halfHeartUnits));
         }
         return cachedHealthText;
     }
 
-    private static Component getAbsorptionText(int absorptionHearts) {
-        if (absorptionHearts != cachedAbsorptionHearts) {
-            cachedAbsorptionHearts = absorptionHearts;
-            cachedAbsorptionText = absorptionHearts > 0
-                    ? Component.literal(String.valueOf(absorptionHearts))
+    private static Component getAbsorptionText(int halfHeartUnits) {
+        if (halfHeartUnits != cachedAbsorptionHalfUnits) {
+            cachedAbsorptionHalfUnits = halfHeartUnits;
+            cachedAbsorptionText = halfHeartUnits > 0
+                    ? Component.literal(formatHeartCount(halfHeartUnits))
                     : Component.literal("");
         }
         return cachedAbsorptionText;
+    }
+
+    static int displayedHalfHeartUnits(float healthPoints) {
+        if (!Float.isFinite(healthPoints) || healthPoints <= 0.0F) {
+            return 0;
+        }
+        return Math.max(0, (int) Math.ceil(healthPoints));
+    }
+
+    static String formatHeartCount(int halfHeartUnits) {
+        int safeUnits = Math.max(0, halfHeartUnits);
+        int wholeHearts = safeUnits / 2;
+        return (safeUnits & 1) == 0 ? Integer.toString(wholeHearts) : wholeHearts + ",5";
     }
 
     public static int getPreviewWidth(Font renderer, String style) {
