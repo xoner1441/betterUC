@@ -93,6 +93,11 @@ public final class SecondChatOverlay {
         if (!BetterUCConfig.INSTANCE.secondChatEnabled) {
             return false;
         }
+        if (button == 2) {
+            tabDrag = null;
+            closeMenu();
+            return SecondChatHud.copyHoveredText(mouseX, mouseY);
+        }
         if (button != 0 && button != 1) {
             return false;
         }

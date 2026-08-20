@@ -1,5 +1,6 @@
 package com.betteruc.hud;
 
+import com.betteruc.client.ChatCopyClient;
 import com.betteruc.client.ClientCompat;
 import com.betteruc.client.ChatGeometryCompat;
 import com.betteruc.client.SecondChatManager;
@@ -202,6 +203,19 @@ public final class SecondChatHud {
         return false;
     }
 
+    public static boolean copyHoveredText(double mouseX, double mouseY) {
+        Minecraft client = Minecraft.getInstance();
+        if (client == null) {
+            return false;
+        }
+        for (TextHitbox hitbox : textHitboxes) {
+            if (hitbox.box.contains(mouseX, mouseY)) {
+                return ChatCopyClient.copyText(client, hitbox.copyText);
+            }
+        }
+        return false;
+    }
+
     public static void jumpToFirstUnread(String windowId, String tabId, long firstUnreadAt) {
         if (firstUnreadAt <= 0L) {
             return;
@@ -354,6 +368,7 @@ public final class SecondChatHud {
                 textActions.add(new TextHitbox(
                         new Bounds(x + 9, lineY, renderedTextWidth, lineHeight),
                         line.text,
+                        line.copyText,
                         textScale,
                         x + 9
                 ));
@@ -438,6 +453,7 @@ public final class SecondChatHud {
                     for (FormattedCharSequence line : SecondChatTextCompat.wrap(client.font, displayMessage, contentWidth)) {
                         rebuilt.add(new RenderLine(
                                  line,
+                                 displayMessage.getString(),
                                  entry.highlighted(),
                                  entry.highlightColor(),
                                  entry.tooltip(),
@@ -449,6 +465,7 @@ public final class SecondChatHud {
                         for (FormattedCharSequence line : SecondChatTextCompat.wrap(client.font, repeat, contentWidth)) {
                             rebuilt.add(new RenderLine(
                                      line,
+                                     repeat.getString(),
                                      entry.highlighted(),
                                      entry.highlightColor(),
                                      entry.tooltip(),
@@ -509,7 +526,7 @@ public final class SecondChatHud {
             String tooltip
     ) {
         for (FormattedCharSequence line : SecondChatTextCompat.wrap(client.font, message, width)) {
-            target.add(new RenderLine(line, highlighted, highlightColor, tooltip, 0L));
+            target.add(new RenderLine(line, message.getString(), highlighted, highlightColor, tooltip, 0L));
         }
     }
 
@@ -604,6 +621,7 @@ public final class SecondChatHud {
 
     private record RenderLine(
             FormattedCharSequence text,
+            String copyText,
             boolean highlighted,
             int highlightColor,
             String tooltip,
@@ -623,6 +641,7 @@ public final class SecondChatHud {
     private record TextHitbox(
             Bounds box,
             FormattedCharSequence text,
+            String copyText,
             float scale,
             int textX
     ) {
