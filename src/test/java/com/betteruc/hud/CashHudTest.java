@@ -72,6 +72,19 @@ class CashHudTest {
     }
 
     @Test
+    void recognizesCemeteryEntryAsTemporaryCashReset() {
+        assertTrue(CashHud.isCemeteryEntryMessage(
+                "02:03:40 Du bist nun für 5 Minuten auf dem Friedhof."
+        ));
+        assertTrue(CashHud.isCemeteryEntryMessage(
+                "Du bist nun fuer 1 Minute auf dem Friedhof"
+        ));
+        assertFalse(CashHud.isCemeteryEntryMessage(
+                "[Friedhof] Du lebst nun wieder."
+        ));
+    }
+
+    @Test
     void repeatedSignedPurchaseAmountsAreSeparateTransactions() {
         assertFalse(CashHud.isComplementarySourcePair(
                 CashHud.DeltaSource.SIGNED_LINE,

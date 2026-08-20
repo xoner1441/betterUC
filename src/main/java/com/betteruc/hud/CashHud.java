@@ -58,6 +58,9 @@ public class CashHud {
     private static final Pattern CASH_SIGNED_DELTA_PATTERN = Pattern.compile(
             "^\\s*([+-])\\s*([0-9][0-9\\.]*)\\s*\\$\\s*$"
     );
+    private static final Pattern CEMETERY_ENTRY_PATTERN = Pattern.compile(
+            "(?iu)^du\\s+bist\\s+nun\\s+f(?:ü|ue)r\\s+\\d+\\s+minute(?:n)?\\s+auf\\s+dem\\s+friedhof[.!]?\\s*$"
+    );
     private static final DecimalFormat MONEY_FORMAT = createMoneyFormat();
 
     private static int currentCash = -1;
@@ -85,6 +88,12 @@ public class CashHud {
 
     private static void updateFromCleanLine(String raw) {
         if (raw == null || raw.isBlank()) return;
+
+        if (isCemeteryEntryMessage(raw)) {
+            resetDeltaDeduplication();
+            setCashAndPersist(0);
+            return;
+        }
 
         Matcher factionDepositMatcher = FACTION_BANK_DEPOSIT_PATTERN.matcher(raw);
         if (factionDepositMatcher.find() && isCurrentPlayer(factionDepositMatcher.group(1))) {
@@ -331,6 +340,12 @@ public class CashHud {
         return amount == null || amount <= 0 ? null : amount;
     }
 
+    static boolean isCemeteryEntryMessage(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        String cleaned = stripChatPrefix(stripFormatting(raw));
+        return CEMETERY_ENTRY_PATTERN.matcher(cleaned).matches();
+    }
+
     record CasinoCashDelta(char sign, int amount) {
     }
 
@@ -407,6 +422,15 @@ public class CashHud {
     private static void recordRawDelta(String rawKey) {
         lastRawDeltaKey = rawKey == null ? "" : rawKey;
         lastRawDeltaMs = System.currentTimeMillis();
+    }
+
+    private static void resetDeltaDeduplication() {
+        lastSemanticDeltaAmount = -1;
+        lastSemanticDeltaSign = '\0';
+        lastSemanticDeltaSource = DeltaSource.CONTEXT;
+        lastSemanticDeltaMs = 0L;
+        lastRawDeltaKey = "";
+        lastRawDeltaMs = 0L;
     }
 
     private static String normalizeRawKey(String raw) {

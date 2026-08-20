@@ -66,6 +66,7 @@
             "Der Geldtransport führt /dropmoney einmalig nach der passenden Job- und Navi-Zielmeldung aus.",
             "Der Transport-Helfer liest die Kistenanzahl aus dem aktiven Job-Scoreboard und führt /droptransport mit zehn Sekunden Abstand aus.",
             "Abgearbeitete Gärtner-Blumentöpfe werden auch bei sofort schließendem Unkrautfenster zuverlässig und deutlich grün markiert.",
+            "Beim Betreten des Friedhofs setzt das Bargeld-HUD den temporären Bestand auf 0$ und übernimmt die Rückzahlung nach der Wiederbelebung automatisch.",
             "ToggleSprint nimmt das Sprinten nach vorübergehenden Unterbrechungen automatisch wieder auf.",
             "Die Modulleisten der HUD-, Client- und Tools-Kategorien sind nun auch bei kleinen Fensterhöhen vollständig scrollbar."
           ]
@@ -109,6 +110,7 @@
         "Die Geldtransport-Automation führt /dropmoney ausschließlich nach erkannter Job- und Zielmeldung aus.",
         "Die Transport-Automation liefert die erkannte Kistenanzahl im Abstand von zehn Sekunden per /droptransport ab.",
         "Abgearbeitete Gärtner-Blumentöpfe werden zuverlässig und deutlich grün hervorgehoben.",
+        "Das Bargeld-HUD berücksichtigt den temporären Geldverlust auf dem Friedhof und die anschließende Rückzahlung.",
         "ToggleSprint setzt den aktivierten Sprintwunsch nach temporären Unterbrechungen fort.",
         "HUD-, Client- und Tools-Modulleisten lassen sich bei begrenztem Platz unabhängig scrollen."
       ]
