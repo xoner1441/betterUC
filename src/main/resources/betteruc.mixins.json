@@ -9,6 +9,7 @@
     "ChatCommandConfirmationMixin",
     "ChatSizeMixin",
     "ChatScreenCommandShortcutMixin",
+    "CameraZoomMixin",
     "SecondChatScreenMixin",
     "SecondChatVisibilityMixin",
     "SecondChatClearMixin",
@@ -17,7 +18,8 @@
     "PlayerListHudRenderContextMixin",
     "ScreenshotMixin",
     "TextRendererTabBadgeMixin",
-    "TrashFilterScreenMixin"
+    "TrashFilterScreenMixin",
+    "ZoomMouseHandlerMixin"
   ],
   "client": [],
   "injectors": {

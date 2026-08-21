@@ -12,6 +12,7 @@ import com.betteruc.client.RemoteFeatureFlagsClient;
 import com.betteruc.client.SyncRefreshActions;
 import com.betteruc.client.UserStatsClient;
 import com.betteruc.client.VersionChecker;
+import com.betteruc.client.ZoomController;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.ArmorHud;
@@ -319,6 +320,50 @@ public class BetterUCScreen extends Screen {
                             () -> BetterUCConfig.INSTANCE.showProductionTimerHud = !BetterUCConfig.INSTANCE.showProductionTimerHud);
                     y = addColorButton(x, y, controlW, "Produktion Farbe", BetterUCConfig.INSTANCE.productionTimerHudColor,
                             color -> BetterUCConfig.INSTANCE.productionTimerHudColor = color);
+                }
+            }
+            case ZOOM -> {
+                y = addSectionHeader(x, y, controlW, "Funktion", 0xFF60A5FA);
+                y = addToggle(x, y, controlW, "Zoom", BetterUCConfig.INSTANCE.zoomEnabled,
+                        () -> BetterUCConfig.INSTANCE.zoomEnabled = !BetterUCConfig.INSTANCE.zoomEnabled);
+                y = addInfo(x, y, controlW, "Hotkey", "Minecraft-Steuerung > betterUC > Zoom");
+                if (ZoomController.isZoomifyLoaded()) {
+                    y = addInfo(x, y, controlW, "Kompatibilität", "Zoomify erkannt – Keybinds trennen");
+                }
+
+                if (BetterUCConfig.INSTANCE.zoomEnabled) {
+                    y = addToggle(x, y, controlW, "Umschaltmodus", BetterUCConfig.INSTANCE.zoomToggleMode,
+                            () -> BetterUCConfig.INSTANCE.zoomToggleMode = !BetterUCConfig.INSTANCE.zoomToggleMode);
+                    y = addZoomFactorSlider(x, y, controlW, "Vergrößerung",
+                            BetterUCConfig.INSTANCE.zoomFactor,
+                            value -> BetterUCConfig.INSTANCE.zoomFactor = value);
+
+                    y = addSectionHeader(x, y, controlW, "Bedienung", 0xFF38BDF8);
+                    y = addToggle(x, y, controlW, "Mausrad-Zoomstufe",
+                            BetterUCConfig.INSTANCE.zoomScrollAdjustEnabled,
+                            () -> BetterUCConfig.INSTANCE.zoomScrollAdjustEnabled =
+                                    !BetterUCConfig.INSTANCE.zoomScrollAdjustEnabled);
+                    if (BetterUCConfig.INSTANCE.zoomScrollAdjustEnabled) {
+                        y = addToggle(x, y, controlW, "Zoomstufe merken",
+                                BetterUCConfig.INSTANCE.zoomRememberLevel,
+                                () -> BetterUCConfig.INSTANCE.zoomRememberLevel =
+                                        !BetterUCConfig.INSTANCE.zoomRememberLevel);
+                    }
+                    y = addToggle(x, y, controlW, "Maus-Sensitivität anpassen",
+                            BetterUCConfig.INSTANCE.zoomSensitivityScalingEnabled,
+                            () -> BetterUCConfig.INSTANCE.zoomSensitivityScalingEnabled =
+                                    !BetterUCConfig.INSTANCE.zoomSensitivityScalingEnabled);
+
+                    y = addSectionHeader(x, y, controlW, "Animation", 0xFFA78BFA);
+                    y = addToggle(x, y, controlW, "Weicher Übergang",
+                            BetterUCConfig.INSTANCE.zoomSmoothEnabled,
+                            () -> BetterUCConfig.INSTANCE.zoomSmoothEnabled =
+                                    !BetterUCConfig.INSTANCE.zoomSmoothEnabled);
+                    if (BetterUCConfig.INSTANCE.zoomSmoothEnabled) {
+                        y = addRangeIntSlider(x, y, controlW, "Übergang (ms)",
+                                BetterUCConfig.INSTANCE.zoomAnimationDurationMs, 50, 600,
+                                value -> BetterUCConfig.INSTANCE.zoomAnimationDurationMs = value);
+                    }
                 }
             }
             case AUTO_STATS -> {
@@ -1176,6 +1221,49 @@ public class BetterUCScreen extends Screen {
         return y + 24;
     }
 
+    private int addZoomFactorSlider(
+            int x,
+            int y,
+            int width,
+            String label,
+            double current,
+            DoubleConsumer setter
+    ) {
+        double min = ZoomController.MIN_ZOOM_FACTOR;
+        double max = ZoomController.MAX_ZOOM_FACTOR;
+        double safeCurrent = Math.max(min, Math.min(max, current));
+        AbstractSliderButton slider = new AbstractSliderButton(
+                x,
+                y,
+                width,
+                BUTTON_H,
+                Component.literal(label + ": " + zoomFactorLabel(safeCurrent)),
+                (safeCurrent - min) / (max - min)
+        ) {
+            private double factor() {
+                double raw = min + value * (max - min);
+                return Math.round(raw * 10.0D) / 10.0D;
+            }
+
+            @Override
+            protected void updateMessage() {
+                setMessage(Component.literal(label + ": " + zoomFactorLabel(factor())));
+            }
+
+            @Override
+            protected void applyValue() {
+                setter.accept(factor());
+            }
+        };
+        addScrollableControl(slider);
+        registerTooltip(slider, tooltipForField(label));
+        return y + 24;
+    }
+
+    private static String zoomFactorLabel(double factor) {
+        return String.format(Locale.GERMANY, "%.1fx", factor);
+    }
+
     private int addTimestampField(int x, int y, int width) {
         EditBox timestampField = new EditBox(
                 font,
@@ -1219,6 +1307,8 @@ public class BetterUCScreen extends Screen {
             case "Ping Größe" -> "Skaliert die Darstellung aller Pings in der Spielwelt.";
             case "Sichtweite" -> "Pings außerhalb dieser Entfernung werden weder angezeigt noch abgespielt.";
             case "Cooldown ms" -> "Bestimmt die Mindestpause zwischen zwei eigenen Pings.";
+            case "Vergrößerung" -> "Legt die anfängliche Vergrößerung des Zooms fest.";
+            case "Übergang (ms)" -> "Bestimmt, wie schnell der Zoom weich ein- und ausgeblendet wird.";
             case "Access Code" -> "Dein persönlicher Code verbindet diese Mod-Installation mit deinem Account.";
             case "Ping Gruppe" -> "Erweiterte Relay-Gruppe. Normalerweise sollte hier global stehen.";
             case "Relay Server" -> "Erweiterte WebSocket-Adresse des betterUC-Relay-Servers.";
@@ -1746,6 +1836,14 @@ public class BetterUCScreen extends Screen {
                     ModernHudRenderer.drawHudTextWithShadow(context, this.font, "Reif: 1:30:00 | Wasser: 20:00", previewX, previewY + 10, 0xFFFFD866);
                 }
             }
+            case ZOOM -> drawMiniInfo(
+                    context,
+                    previewX,
+                    previewY,
+                    "Zoom",
+                    ZoomController.configuredFactorLabel(),
+                    BetterUCConfig.INSTANCE.zoomEnabled
+            );
             case AUTO_STATS -> drawMiniInfo(context, previewX, previewY, "Auto-Stats", "Join /stats", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
             case AUTOMATIONS -> {
                 int enabled = AutomationController.localEnabledCount();
@@ -2211,6 +2309,7 @@ public class BetterUCScreen extends Screen {
             case MASK_TIMER -> BetterUCConfig.INSTANCE.showMaskTimerHud;
             case PRODUCTION_TIMER -> BetterUCConfig.INSTANCE.showProductionTimerHud;
             case AUTO_STATS -> BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled;
+            case ZOOM -> BetterUCConfig.INSTANCE.zoomEnabled;
             case CLOUD_SYNC -> BetterUCConfig.INSTANCE.cloudSettingsEnabled;
             case SCREENSHOTS -> BetterUCConfig.INSTANCE.screenshotActionsEnabled;
             case PING -> BetterUCConfig.INSTANCE.pingRelayEnabled;
@@ -2799,6 +2898,7 @@ public class BetterUCScreen extends Screen {
         PRODUCTION_TIMER(Category.HUD, "Produktion", "Fabrik-Produktion & Navi", 0xFFFBBF24, true),
         PLANT_TIMER(Category.HUD, "Plant Timer", "Plantage-Timer", 0xFF6CF27D, true),
 
+        ZOOM(Category.GAMEPLAY, "Zoom", "Weicher, frei einstellbarer Kamera-Zoom", 0xFF60A5FA, true),
         AUTO_STATS(Category.GAMEPLAY, "Auto Stats", "Automatisches /stats", 0xFF34D399, true),
         AUTOMATIONS(Category.GAMEPLAY, "Automationen", "Job-Helfer einzeln steuern", 0xFFFBBF24, false),
         CHAT(Category.GAMEPLAY, "Chat", "Zeitstempel & Customization", 0xFF38BDF8, false),

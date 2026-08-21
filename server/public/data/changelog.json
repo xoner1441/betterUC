@@ -60,6 +60,18 @@
           ]
         },
         {
+          "eyebrow": "KAMERA-ZOOM",
+          "title": "Entfernte Details wieder bequem erkennen",
+          "description": "Ein eigener betterUC-Zoom verbindet eine weiche Kamerafahrt mit frei einstellbarer Vergrößerung und direkter Mausradsteuerung.",
+          "lines": [
+            "Der frei belegbare Zoom-Key liegt in den Minecraft-Steuerungen unter der betterUC-Kategorie und verwendet standardmäßig C.",
+            "Der Zoom kann wahlweise nur beim Halten der Taste oder als Ein-/Aus-Umschalter verwendet werden.",
+            "Vergrößerung, Übergangsdauer, Mausrad-Anpassung und das Merken der letzten Zoomstufe lassen sich im Client-Tab konfigurieren.",
+            "Die Maus-Empfindlichkeit wird auf Wunsch passend zur aktuellen Vergrößerung reduziert.",
+            "Bei gleichzeitig installiertem Zoomify warnt betterUC vor doppelten Zoom-Keybinds."
+          ]
+        },
+        {
           "eyebrow": "AUTOMATIONEN & KOMFORT",
           "title": "Weniger Wiederholungen im Alltag",
           "description": "Neue Job-Helfer und überarbeitete Bedienelemente halten wiederkehrende Abläufe zuverlässig und übersichtlich.",
@@ -116,6 +128,7 @@
         "Das Bargeld-HUD berücksichtigt den temporären Geldverlust auf dem Friedhof und die anschließende Rückzahlung.",
         "Das Health-HUD stellt halbe Herzen als Dezimalwert mit ,5 dar.",
         "Discord-Vorschläge zeigen zuverlässig den tatsächlichen Discord-Einreicher statt eines falsch zugeordneten Minecraft-Accounts.",
+        "Ein eigener konfigurierbarer Kamera-Zoom unterstützt Halten, Umschalten, weiche Übergänge, Mausradstufen und angepasste Maus-Empfindlichkeit.",
         "ToggleSprint setzt den aktivierten Sprintwunsch nach temporären Unterbrechungen fort.",
         "HUD-, Client- und Tools-Modulleisten lassen sich bei begrenztem Platz unabhängig scrollen."
       ]

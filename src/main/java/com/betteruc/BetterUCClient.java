@@ -38,6 +38,7 @@ import com.betteruc.client.ServerCommandUtil;
 import com.betteruc.client.UserPanelClient;
 import com.betteruc.client.UserStatsClient;
 import com.betteruc.client.VersionChecker;
+import com.betteruc.client.ZoomController;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.gui.CommandGui;
 import com.betteruc.gui.BetterUCScreen;
@@ -127,6 +128,12 @@ public class BetterUCClient implements ClientModInitializer {
             GLFW.GLFW_KEY_UNKNOWN,
             BETTERUC_KEY_CATEGORY
     );
+    private static final KeyMapping ZOOM_KEY = new KeyMapping(
+            "key.betteruc.zoom",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_C,
+            BETTERUC_KEY_CATEGORY
+    );
     private int statsOnJoinDelay = -1;
     private final Map<Integer, Boolean> hotkeyPressedState = new HashMap<>();
     private final Set<Integer> activeHotkeyKeys = new HashSet<>();
@@ -206,6 +213,7 @@ public class BetterUCClient implements ClientModInitializer {
         KeyMappingHelper.registerKeyMapping(COMMANDS_KEY);
         KeyMappingHelper.registerKeyMapping(PING_KEY);
         KeyMappingHelper.registerKeyMapping(REINF_ACCEPT_KEY);
+        KeyMappingHelper.registerKeyMapping(ZOOM_KEY);
     }
 
     private void registerMessageEvents() {
@@ -1062,6 +1070,7 @@ public class BetterUCClient implements ClientModInitializer {
             tickStatsOnJoin(client);
             ReinforcementAcceptClient.tick(client);
             DutyRejoinClient.tick(client);
+            ZoomController.tick(client, ZOOM_KEY);
             handleConfiguredHotkeys(client);
             handlePingHotkey(client);
             handleScreenHotkeys(client);
@@ -1283,6 +1292,7 @@ public class BetterUCClient implements ClientModInitializer {
         hotkeyPressedState.clear();
         resetPingPressState();
         MovementController.reset(client);
+        ZoomController.reset();
         TrustedChatCommands.clear();
         PaydayHud.clear();
         AmmoHud.clear();

@@ -3,5 +3,6 @@
   "key.betteruc.settings": "Settings ClickGUI öffnen",
   "key.betteruc.commands": "Command GUI öffnen",
   "key.betteruc.ping": "Ping setzen",
-  "key.betteruc.reinf_accept": "Reinf annehmen"
+  "key.betteruc.reinf_accept": "Reinf annehmen",
+  "key.betteruc.zoom": "Zoom"
 }

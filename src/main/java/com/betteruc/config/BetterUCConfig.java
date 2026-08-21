@@ -86,6 +86,8 @@ public class BetterUCConfig {
             "toggleSprintEnabled", "autoStatsOnJoinEnabled", "autoFactionBankOnBalanceEnabled",
             "autoAtmInfoOnBalanceEnabled", "autoForceDepositEnabled", "richTaxAlertEnabled",
             "richTaxAlertSoundEnabled",
+            "zoomEnabled", "zoomToggleMode", "zoomSmoothEnabled", "zoomScrollAdjustEnabled",
+            "zoomRememberLevel", "zoomSensitivityScalingEnabled", "zoomFactor", "zoomAnimationDurationMs",
             "chatTimestampsEnabled", "chatCustomizationEnabled", "chatActionTextStyle", "chatHeadlineSeparatorStyle",
             "chatCustomizationGradientEnabled", "chatLinksClickableEnabled", "chatLinkHighlightEnabled",
             "chatCommandConfirmationEnabled",
@@ -508,6 +510,14 @@ public class BetterUCConfig {
     public boolean showMaskTimerHud = true;
     public boolean showProductionTimerHud = true;
     public boolean toggleSprintEnabled = false;
+    public boolean zoomEnabled = false;
+    public boolean zoomToggleMode = false;
+    public boolean zoomSmoothEnabled = true;
+    public boolean zoomScrollAdjustEnabled = true;
+    public boolean zoomRememberLevel = true;
+    public boolean zoomSensitivityScalingEnabled = true;
+    public double zoomFactor = 4.0D;
+    public int zoomAnimationDurationMs = 180;
     public boolean autoStatsOnJoinEnabled = true;
     public boolean autoFactionBankOnBalanceEnabled = false;
     public boolean autoAtmInfoOnBalanceEnabled = false;
@@ -921,6 +931,14 @@ public class BetterUCConfig {
         if (INSTANCE.ammoHudKr47MagazineSize != 25 && INSTANCE.ammoHudKr47MagazineSize != 30) {
             INSTANCE.ammoHudKr47MagazineSize = 0;
         }
+    }
+
+    private static void sanitizeZoomSettings() {
+        if (!Double.isFinite(INSTANCE.zoomFactor)) {
+            INSTANCE.zoomFactor = 4.0D;
+        }
+        INSTANCE.zoomFactor = Math.max(1.5D, Math.min(20.0D, INSTANCE.zoomFactor));
+        INSTANCE.zoomAnimationDurationMs = Math.max(50, Math.min(600, INSTANCE.zoomAnimationDurationMs));
     }
 
     private static void sanitizeReinfColors() {
@@ -1671,6 +1689,7 @@ public class BetterUCConfig {
         sanitizeReinfColors();
         sanitizeChatCustomizationStyles();
         sanitizeSecondChat();
+        sanitizeZoomSettings();
         sanitizePingRelay();
         sanitizeDiscordInvite();
         sanitizeTrackedFactions();
@@ -1770,6 +1789,7 @@ public class BetterUCConfig {
             sanitizeHudScales();
             sanitizeHudPrefixes();
             sanitizeAmmoHud();
+            sanitizeZoomSettings();
             sanitizePingRelay();
             sanitizeDiscordInvite();
             if (INSTANCE.blReasons == null || INSTANCE.blReasons.isEmpty()) {
@@ -1862,6 +1882,7 @@ public class BetterUCConfig {
         sanitizeChatCustomizationStyles();
         sanitizeSecondChat();
         sanitizeAmmoHud();
+        sanitizeZoomSettings();
         sanitizePingRelay();
         sanitizeDiscordInvite();
         sanitizeTrackedFactions();
