@@ -10,16 +10,99 @@
         "title": "Weitere Verbesserungen folgen",
         "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
         "lines": [
-          "Version 1.4.0 erweitert betterUC um ein kompaktes Armor-HUD, neue Job-Automationen und deutlich flexiblere Chatfunktionen."
+          "Version 1.4.1 erweitert betterUC um einen flexiblen Kamera-Zoom, schnellere Chatbedienung und gezielte HUD- sowie Discord-Korrekturen."
         ]
       }
     ]
   },
   "releases": [
     {
+      "version": "1.4.1",
+      "date": "21.08.2026",
+      "current": true,
+      "pages": [
+        {
+          "eyebrow": "KAMERA-ZOOM",
+          "title": "Entfernte Details wieder bequem erkennen",
+          "description": "Ein eigener betterUC-Zoom verbindet eine weiche Kamerafahrt mit frei einstellbarer Vergrößerung und direkter Mausradsteuerung.",
+          "lines": [
+            "Der frei belegbare Zoom-Key liegt in den Minecraft-Steuerungen unter der betterUC-Kategorie und verwendet standardmäßig C.",
+            "Der Zoom kann wahlweise nur beim Halten der Taste oder als Ein-/Aus-Umschalter verwendet werden.",
+            "Vergrößerung, Übergangsdauer, Mausrad-Anpassung und das Merken der letzten Zoomstufe lassen sich im Client-Tab konfigurieren.",
+            "Die Maus-Empfindlichkeit wird auf Wunsch passend zur aktuellen Vergrößerung reduziert.",
+            "Bei gleichzeitig installiertem Zoomify warnt betterUC vor doppelten Zoom-Keybinds."
+          ]
+        },
+        {
+          "eyebrow": "CHAT-BEDIENUNG",
+          "title": "Nachrichten mit einem Klick übernehmen",
+          "description": "Hauptchat und Second Chat lassen sich schneller weiterverwenden, ohne Nachrichten mühsam abzutippen.",
+          "lines": [
+            "Eine gehoverte Nachricht lässt sich im Hauptchat vollständig per Mittelklick kopieren.",
+            "Auch im Second Chat kopiert der Mittelklick die vollständige Nachricht einschließlich ihres konfigurierten Zeitstempels.",
+            "Bei umgebrochenen Nachrichten wird der gesamte logische Text statt nur der angeklickten Zeile übernommen."
+          ]
+        },
+        {
+          "eyebrow": "HQ-NOTRUFE",
+          "title": "Notrufe kompakt und eindeutig darstellen",
+          "description": "Neue mehrzeilige Patterns bündeln alle wichtigen Notrufdaten und unterscheiden Eingang und Annahme klar voneinander.",
+          "lines": [
+            "Eingehende Notrufe zeigen Anrufer, ID, Meldung, Einsatzort und die nächsten Einsatzkräfte als zusammengehörigen Block.",
+            "Angenommene Notrufe erhalten ein eigenes Erfolgsdesign mit Beamtem, Anrufer und Entfernung.",
+            "Die neuen Notruf-Farbverläufe können gemeinsam mit den übrigen HQ-Farben angepasst werden."
+          ]
+        },
+        {
+          "eyebrow": "HUD & DISCORD",
+          "title": "Präzisere Werte und richtige Zuordnungen",
+          "description": "Kleine, gezielte Korrekturen halten HUD-Werte und Community-Einträge zuverlässig auf dem tatsächlichen Stand.",
+          "lines": [
+            "Beim Betreten des Friedhofs setzt das Bargeld-HUD den temporären Bestand auf 0$ und übernimmt die Rückzahlung nach der Wiederbelebung automatisch.",
+            "Das Health-HUD zeigt halbe Herzen präzise mit einem ,5-Wert an.",
+            "Discord-Vorschläge nennen den tatsächlichen Discord-Einreicher statt eines möglicherweise falsch zugeordneten Minecraft-Accounts."
+          ]
+        }
+      ],
+      "summary": [
+        {
+          "title": "Konfigurierbarer Zoom",
+          "description": "Weiche Übergänge, Mausradstufen, Halten oder Umschalten und passende Maus-Empfindlichkeit.",
+          "color": "cyan"
+        },
+        {
+          "title": "Chattext kopieren",
+          "description": "Vollständige Nachrichten lassen sich in beiden Chats direkt per Mittelklick übernehmen.",
+          "color": "green"
+        },
+        {
+          "title": "HQ-Notrufdesign",
+          "description": "Notrufe und ihre Annahme erscheinen als klar strukturierte, mehrzeilige Einsatzblöcke.",
+          "color": "purple"
+        },
+        {
+          "title": "HUD & Discord Fixes",
+          "description": "Bargeld, halbe Herzen und Vorschlagseinreicher werden zuverlässig korrekt dargestellt.",
+          "color": "amber"
+        }
+      ],
+      "changes": [
+        "Ein eigenes Zoom-Modul wurde in den Client-Tab der ClickGUI aufgenommen.",
+        "Der frei belegbare Zoom-Key unterstützt Halten und Umschalten.",
+        "Zoomfaktor, weicher Übergang, Mausradstufen und das Merken der letzten Stufe sind konfigurierbar.",
+        "Die Maus-Empfindlichkeit kann passend zur aktuellen Zoomstufe reduziert werden.",
+        "Eine Zoomify-Konflikterkennung warnt vor doppelten Zoom-Keybinds.",
+        "Chatnachrichten lassen sich im Hauptchat und Second Chat vollständig per Mittelklick kopieren.",
+        "Umgebrochene Second-Chat-Nachrichten werden als vollständiger Nachrichtentext kopiert.",
+        "Notruf-Eingänge und -Annahmen erhalten eigene mehrzeilige HQ-Patterns mit frei konfigurierbaren Farbverläufen.",
+        "Das Bargeld-HUD berücksichtigt den temporären Geldverlust auf dem Friedhof und die anschließende Rückzahlung.",
+        "Das Health-HUD stellt halbe Herzen als Dezimalwert mit ,5 dar.",
+        "Discord-Vorschläge zeigen zuverlässig den tatsächlichen Discord-Einreicher statt eines falsch zugeordneten Minecraft-Accounts."
+      ]
+    },
+    {
       "version": "1.4.0",
       "date": "19.08.2026",
-      "current": true,
       "pages": [
         {
           "eyebrow": "ARMOR-HUD",
@@ -41,7 +124,6 @@
             "HQ- und PAY-Nachrichten besitzen getrennte Farbprofile mit frei wählbaren Start- und Endfarben für Aktionen, Spieler und Details.",
             "Ein eigener Konfigurationsbildschirm zeigt die gewählten Farbverläufe direkt in einer Vorschau.",
             "Pulver-Plantagenmeldungen werden als zusammengehörige persönliche und HQ-Aktion mit eigenem Feuerdesign formatiert.",
-            "Eingehende Notrufe werden mit Anrufer, ID, Meldung, Einsatzort und den nächsten Einsatzkräften als kompakter Block dargestellt; angenommene Notrufe erhalten ein eigenes Erfolgsdesign.",
             "Ticket- und Führerscheinmeldungen werden einschließlich ihrer zugehörigen Detailzeilen vollständig vom HQ-Second-Chat übernommen.",
             "/wantedinfo wird mit WantedPunkten, Grund, Fahndungsdauer und zuständigem Beamten vollständig erkannt.",
             "Normale Fraktionsnachrichten mit HQ-Ortsangaben sowie administrative Ban-, Kick- und Checkpoint-Strafen bleiben außerhalb des HQ-Filters."
@@ -53,22 +135,9 @@
           "description": "Weblinks funktionieren wieder in beiden Chats, während anklickbare Befehle weiterhin kontrolliert und sicher behandelt werden.",
           "lines": [
             "HTTP-, HTTPS- und www-Links werden im Hauptchat und Second Chat erkannt und anklickbar dargestellt.",
-            "Eine gehoverte Nachricht lässt sich im Hauptchat und Second Chat vollständig per Mittelklick kopieren.",
             "Erkannte Links können optional farblich hervorgehoben werden.",
             "Die Sicherheitsabfrage vorhandener RUN_COMMAND-Aktionen lässt sich separat ein- oder ausschalten.",
             "Normaler Nachrichtentext wird dabei niemals eigenständig in einen ausführbaren Befehl umgewandelt."
-          ]
-        },
-        {
-          "eyebrow": "KAMERA-ZOOM",
-          "title": "Entfernte Details wieder bequem erkennen",
-          "description": "Ein eigener betterUC-Zoom verbindet eine weiche Kamerafahrt mit frei einstellbarer Vergrößerung und direkter Mausradsteuerung.",
-          "lines": [
-            "Der frei belegbare Zoom-Key liegt in den Minecraft-Steuerungen unter der betterUC-Kategorie und verwendet standardmäßig C.",
-            "Der Zoom kann wahlweise nur beim Halten der Taste oder als Ein-/Aus-Umschalter verwendet werden.",
-            "Vergrößerung, Übergangsdauer, Mausrad-Anpassung und das Merken der letzten Zoomstufe lassen sich im Client-Tab konfigurieren.",
-            "Die Maus-Empfindlichkeit wird auf Wunsch passend zur aktuellen Vergrößerung reduziert.",
-            "Bei gleichzeitig installiertem Zoomify warnt betterUC vor doppelten Zoom-Keybinds."
           ]
         },
         {
@@ -79,8 +148,6 @@
             "Der Geldtransport führt /dropmoney einmalig nach der passenden Job- und Navi-Zielmeldung aus.",
             "Der Transport-Helfer liest die Kistenanzahl aus dem aktiven Job-Scoreboard und führt /droptransport mit zehn Sekunden Abstand aus.",
             "Abgearbeitete Gärtner-Blumentöpfe werden auch bei sofort schließendem Unkrautfenster zuverlässig und deutlich grün markiert.",
-            "Beim Betreten des Friedhofs setzt das Bargeld-HUD den temporären Bestand auf 0$ und übernimmt die Rückzahlung nach der Wiederbelebung automatisch.",
-            "Das Health-HUD zeigt halbe Herzen präzise mit einem ,5-Wert an.",
             "ToggleSprint nimmt das Sprinten nach vorübergehenden Unterbrechungen automatisch wieder auf.",
             "Die Modulleisten der HUD-, Client- und Tools-Kategorien sind nun auch bei kleinen Fensterhöhen vollständig scrollbar."
           ]
@@ -114,21 +181,15 @@
         "Armor-HUD, Position, Skalierung, Stil, Farbe und Farbverlauf lassen sich frei konfigurieren.",
         "HQ- und PAY-Nachrichten besitzen getrennte anpassbare Farbprofile mit Live-Vorschau.",
         "Pulver-Plantagenmeldungen erhalten ein zusammengehöriges persönliches und HQ-Design mit eigenem Feuerverlauf.",
-        "Notruf-Eingänge und -Annahmen erhalten eigene mehrzeilige HQ-Patterns mit frei konfigurierbaren Farbverläufen.",
         "Ticket- und Führerscheinmeldungen werden vollständig einschließlich ihrer Detailzeilen vom HQ-Second-Chat übernommen.",
         "/wantedinfo wird einschließlich WantedPunkten, Grund, Fahndungsdauer und Beamten vollständig gefiltert.",
         "Normale Fraktionsnachrichten mit HQ-Ortsangaben lösen den HQ-Filter nicht mehr aus.",
         "Administrative Ban-, Kick- und Checkpoint-Meldungen werden nicht mehr als HQ-Verhaftung erkannt.",
         "Weblinks sind im Hauptchat und Second Chat wieder anklickbar und optional hervorgehoben.",
-        "Chatnachrichten lassen sich im Hauptchat und Second Chat per Mittelklick vollständig kopieren.",
         "Die Bestätigung vorhandener RUN_COMMAND-Chataktionen lässt sich separat abschalten.",
         "Die Geldtransport-Automation führt /dropmoney ausschließlich nach erkannter Job- und Zielmeldung aus.",
         "Die Transport-Automation liefert die erkannte Kistenanzahl im Abstand von zehn Sekunden per /droptransport ab.",
         "Abgearbeitete Gärtner-Blumentöpfe werden zuverlässig und deutlich grün hervorgehoben.",
-        "Das Bargeld-HUD berücksichtigt den temporären Geldverlust auf dem Friedhof und die anschließende Rückzahlung.",
-        "Das Health-HUD stellt halbe Herzen als Dezimalwert mit ,5 dar.",
-        "Discord-Vorschläge zeigen zuverlässig den tatsächlichen Discord-Einreicher statt eines falsch zugeordneten Minecraft-Accounts.",
-        "Ein eigener konfigurierbarer Kamera-Zoom unterstützt Halten, Umschalten, weiche Übergänge, Mausradstufen und angepasste Maus-Empfindlichkeit.",
         "ToggleSprint setzt den aktivierten Sprintwunsch nach temporären Unterbrechungen fort.",
         "HUD-, Client- und Tools-Modulleisten lassen sich bei begrenztem Platz unabhängig scrollen."
       ]
