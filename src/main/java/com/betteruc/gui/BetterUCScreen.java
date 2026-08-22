@@ -486,13 +486,9 @@ public class BetterUCScreen extends Screen {
                 }
 
                 y = addSectionHeader(x, y, controlW, "Reinf-Annahme", 0xFFFBBF24);
-                y = addToggle(x, y, controlW, "Reinfs annehmen", BetterUCConfig.INSTANCE.reinfAcceptEnabled,
+                y = addToggle(x, y, controlW, "Reinfs per Hotkey", BetterUCConfig.INSTANCE.reinfAcceptEnabled,
                         () -> BetterUCConfig.INSTANCE.reinfAcceptEnabled = !BetterUCConfig.INSTANCE.reinfAcceptEnabled);
                 if (BetterUCConfig.INSTANCE.reinfAcceptEnabled) {
-                    y = addToggle(x, y, controlW, "Automatisch annehmen",
-                            BetterUCConfig.INSTANCE.reinfAcceptAutomatic,
-                            () -> BetterUCConfig.INSTANCE.reinfAcceptAutomatic =
-                                    !BetterUCConfig.INSTANCE.reinfAcceptAutomatic);
                     y = addToggle(x, y, controlW, "Nur im Survival-Modus",
                             BetterUCConfig.INSTANCE.reinfAcceptSurvivalOnly,
                             () -> BetterUCConfig.INSTANCE.reinfAcceptSurvivalOnly =
@@ -976,6 +972,8 @@ public class BetterUCScreen extends Screen {
                     : "Formatiert WPS- und HQ-Servermeldungen kompakter und übersichtlicher.";
             case "Einheitliche Reinf-Farbe" -> "Verwendet für den gesamten Verstärkungsruf nur eine Farbe.";
             case "Reinf Farben zurücksetzen" -> "Setzt alle Farben der Verstärkungsrufe auf die Standardwerte zurück.";
+            case "Reinfs per Hotkey" ->
+                    "Erkennt passende Verstärkungsrufe und nimmt sie ausschließlich über deinen Reinf-Hotkey an.";
             case "Zeitstempel" -> "Blendet vor Chatnachrichten die aktuelle Uhrzeit ein.";
             case "Blacklist Gründe" -> "Öffnet die Verwaltung der gespeicherten Blacklist-Gründe.";
             case "Second Chat" ->

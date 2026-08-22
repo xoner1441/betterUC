@@ -62,10 +62,8 @@ public final class ReinforcementAcceptClient {
         }
 
         pending = new PendingReinforcement(latestType, command, fingerprint, now);
-        if (!BetterUCConfig.INSTANCE.reinfAcceptAutomatic) {
-            notify(client, "\u00A7b[betterUC] \u00A7f" + latestType.label()
-                    + "-Reinf bereit. Nutze deinen Reinf-Hotkey.");
-        }
+        notify(client, "\u00A7b[betterUC] \u00A7f" + latestType.label()
+                + "-Reinf bereit. Nutze deinen Reinf-Hotkey.");
     }
 
     public static void tick(Minecraft client) {
@@ -76,10 +74,7 @@ public final class ReinforcementAcceptClient {
                 || !isGameModeAllowed(client)
                 || now - pending.createdAtMs > PENDING_EXPIRY_MS) {
             pending = null;
-            return;
         }
-        if (!BetterUCConfig.INSTANCE.reinfAcceptAutomatic) return;
-        tryAccept(client, false);
     }
 
     public static void acceptPending(Minecraft client) {
