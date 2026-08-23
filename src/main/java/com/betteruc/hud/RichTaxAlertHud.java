@@ -2,7 +2,11 @@ package com.betteruc.hud;
 
 import com.betteruc.config.BetterUCConfig;
 import java.text.Normalizer;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -26,11 +30,16 @@ public final class RichTaxAlertHud {
     private static final int TEXT_PRIMARY = 0xFFF8FAFC;
     private static final int TEXT_MUTED = 0xFFCBD5E1;
     private static final int TRACK = 0xFF293241;
+    private static final Set<Integer> WARNING_MINUTES = Set.of(5, 3, 2, 1);
+    private static final Pattern PAYDAY_WARNING_PATTERN = Pattern.compile(
+            "(?:^| )info du hast in (\\d+) minute(?:n)? deinen payday(?: |$)"
+    );
 
-    private static boolean warningHandled;
+    private static final Set<Integer> handledWarningMinutes = new HashSet<>();
     private static long shownAtMs;
     private static long visibleUntilMs;
     private static int shownBalance = -1;
+    private static int shownWarningMinutes = -1;
 
     private RichTaxAlertHud() {
     }
@@ -49,48 +58,63 @@ public final class RichTaxAlertHud {
     public static void handleChatLine(Minecraft client, String raw) {
         if (client == null || client.player == null) return;
         if (!BetterUCConfig.INSTANCE.richTaxAlertEnabled) return;
-        if (warningHandled || !matchesPaydayWarning(raw)) return;
+        int warningMinutes = paydayWarningMinutes(raw);
+        if (warningMinutes < 0 || !handledWarningMinutes.add(warningMinutes)) return;
 
-        warningHandled = true;
-        evaluateBalance(client, BankBalanceHud.getCurrentBankBalance());
+        evaluateBalance(client, BankBalanceHud.getCurrentBankBalance(), warningMinutes);
     }
 
     public static void resetForNewPayday() {
-        warningHandled = false;
+        handledWarningMinutes.clear();
     }
 
     public static void clear() {
-        warningHandled = false;
+        handledWarningMinutes.clear();
         shownAtMs = 0L;
         visibleUntilMs = 0L;
         shownBalance = -1;
+        shownWarningMinutes = -1;
     }
 
     public static boolean matchesPaydayWarning(String raw) {
-        String folded = fold(raw);
-        return folded.contains("info du hast in 5 minuten deinen payday");
+        return paydayWarningMinutes(raw) >= 0;
     }
 
-    private static void evaluateBalance(Minecraft client, int balance) {
+    static int paydayWarningMinutes(String raw) {
+        String folded = fold(raw);
+        Matcher matcher = PAYDAY_WARNING_PATTERN.matcher(folded);
+        if (!matcher.find()) return -1;
+
+        try {
+            int minutes = Integer.parseInt(matcher.group(1));
+            return WARNING_MINUTES.contains(minutes) ? minutes : -1;
+        } catch (NumberFormatException ignored) {
+            return -1;
+        }
+    }
+
+    private static void evaluateBalance(Minecraft client, int balance, int warningMinutes) {
         if (!BetterUCConfig.INSTANCE.richTaxAlertEnabled) return;
         if (balance <= TAX_THRESHOLD) return;
-        show(client, balance);
+        show(client, balance, warningMinutes);
     }
 
-    private static void show(Minecraft client, int balance) {
+    private static void show(Minecraft client, int balance, int warningMinutes) {
         if (client == null || client.player == null) return;
 
         long now = System.currentTimeMillis();
         shownAtMs = now;
         visibleUntilMs = now + DISPLAY_DURATION_MS;
         shownBalance = balance;
+        shownWarningMinutes = warningMinutes;
 
         MutableComponent message = Component.literal("[betterUC] ")
                 .withStyle(ChatFormatting.GRAY)
                 .append(Component.literal("Reichensteuer-Warnung! ").withStyle(ChatFormatting.RED, ChatFormatting.BOLD))
                 .append(Component.literal("Bank: " + BankBalanceHud.formatMoney(balance) + "$")
                         .withStyle(ChatFormatting.YELLOW))
-                .append(Component.literal(" | PayDay in 5 Minuten.").withStyle(ChatFormatting.GRAY));
+                .append(Component.literal(" | PayDay in " + minuteLabel(warningMinutes) + ".")
+                        .withStyle(ChatFormatting.GRAY));
         client.player.sendSystemMessage(message);
 
         if (BetterUCConfig.INSTANCE.richTaxAlertSoundEnabled) {
@@ -126,7 +150,7 @@ public final class RichTaxAlertHud {
         context.text(client.font, Component.literal("Reichensteuer-Warnung"), x + 11, y + 6, ACCENT);
         String balanceText = "Bank: " + BankBalanceHud.formatMoney(shownBalance) + "$";
         context.text(client.font, Component.literal(balanceText), x + 11, y + 19, TEXT_PRIMARY);
-        String detail = "Grenze: 100.000$ | PayDay in 5 Min.";
+        String detail = "Grenze: 100.000$ | PayDay in " + shownWarningMinutes + " Min.";
         context.text(client.font, Component.literal(detail), x + 11, y + 31, TEXT_MUTED);
 
         int barX = x + 11;
@@ -135,6 +159,10 @@ public final class RichTaxAlertHud {
         context.fill(barX, barY, barX + barWidth, barY + 2, TRACK);
         int filled = (int) Math.round(barWidth * clamp01(remainingMs / (double) DISPLAY_DURATION_MS));
         context.fill(barX, barY, barX + filled, barY + 2, ACCENT);
+    }
+
+    private static String minuteLabel(int minutes) {
+        return minutes + (minutes == 1 ? " Minute" : " Minuten");
     }
 
     private static String fold(String raw) {

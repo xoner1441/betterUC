@@ -943,7 +943,7 @@ public class BetterUCScreen extends Screen {
             case "Automatisch trotzdem einzahlen" ->
                     "Sendet bei einem vollen oder nicht ausreichend freien Bankautomaten nach 1 Sekunde automatisch /einzahlen force.";
             case "Reichensteuer-Alert" ->
-                    "Warnt dich 5 Minuten vor dem PayDay, wenn mehr als 100.000$ auf deinem Konto liegen.";
+                    "Warnt dich bei 5, 3, 2 und 1 Minute Restzeit, wenn mehr als 100.000$ auf deinem Konto liegen.";
             case "Alert-Ton" -> "Spielt zusätzlich einen kurzen Ton für den Reichensteuer-Alert ab.";
             case "Bargeld HUD" -> "Zeigt und aktualisiert dein erkanntes Bargeld.";
             case "Potion HUD" -> "Zeigt aktive Trankeffekte und ihre verbleibende Dauer.";
@@ -992,7 +992,8 @@ public class BetterUCScreen extends Screen {
             case "Verrottetes Fleisch", "Papier", "Kartoffel", "Karotte", "Apfel", "Truhe",
                     "Redstone-Truhe", "Endertruhe" ->
                     "Legt fest, ob dieses Fundstück im Mülleimer grün hervorgehoben wird.";
-            case "Auto-Updater" -> "Lädt neue betterUC-Versionen automatisch für deine Minecraft-Version vor.";
+            case "Auto-Updater" ->
+                    "Prüft bereits im Hauptmenü auf Updates und lädt die passende mc26.x-JAR automatisch vor.";
             case "Update installieren" -> "Lädt das verfügbare Update und bereitet den Neustart vor.";
             case "Changelog öffnen" -> "Öffnet die Neuerungen der aktuellen betterUC-Version.";
             case "Ping System" -> "Aktiviert das private Ping-System zwischen verifizierten Mod-Nutzern.";

@@ -14,15 +14,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ParserSmokeTest {
 
     @Test
-    void richTaxAlertRecognizesOnlyFiveMinutePaydayWarning() {
+    void richTaxAlertRecognizesConfiguredPaydayWarningStages() {
         assertTrue(RichTaxAlertHud.matchesPaydayWarning(
                 "\u00A7719:55:00 \u00A7bInfo: Du hast in 5 Minuten deinen PayDay"
         ));
         assertTrue(RichTaxAlertHud.matchesPaydayWarning(
-                "Info: Du hast in 5 Minuten deinen Payday."
+                "13:20:23 Info: Du hast in 3 Minuten deinen PayDay"
+        ));
+        assertTrue(RichTaxAlertHud.matchesPaydayWarning(
+                "13:21:23 Info: Du hast in 2 Minuten deinen PayDay"
+        ));
+        assertTrue(RichTaxAlertHud.matchesPaydayWarning(
+                "13:22:23 Info: Du hast in 1 Minute deinen PayDay"
         ));
         assertFalse(RichTaxAlertHud.matchesPaydayWarning(
-                "Info: Du hast in 3 Minuten deinen PayDay"
+                "Info: Du hast in 4 Minuten deinen PayDay"
         ));
         assertFalse(RichTaxAlertHud.matchesPaydayWarning(
                 "======== PayDay ========"
