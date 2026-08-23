@@ -12,6 +12,7 @@ const { promisify } = require("util");
 const { WebSocketServer } = require("ws");
 const { startDiscordBot } = require("./discordBot");
 const { createDatabase } = require("./database");
+const { startTeamSpeakFactionSync } = require("./teamSpeakFactionSync");
 
 const PORT = Number(process.env.PORT || 3000);
 const MAX_CLIENTS = Number(process.env.MAX_CLIENTS || 500);
@@ -112,6 +113,7 @@ let discordBot = {
   createBugReport() { return Promise.reject(new Error("Discord-Bot ist nicht verfuegbar.")); },
   stop() {}
 };
+let teamSpeakFactionSync = { stop() {} };
 const database = createDatabase();
 
 function nowIso() {
@@ -3203,6 +3205,7 @@ async function main() {
   startReleaseWatcher().catch(error => {
     console.warn("Could not start betterUC release watcher", error.message);
   });
+  teamSpeakFactionSync = startTeamSpeakFactionSync();
   startDiscordBot({
     getOnlinePlayers: onlinePlayersForResponse,
     getAccounts: () => store.accounts.map(adminAccount),
@@ -3296,6 +3299,11 @@ async function main() {
       await saveStore();
     } catch (error) {
       console.error("Could not flush betterUC data during shutdown", error);
+    }
+    try {
+      teamSpeakFactionSync.stop();
+    } catch (error) {
+      console.error("Could not stop TeamSpeak faction sync", error);
     }
     try {
       await discordBot.stop();

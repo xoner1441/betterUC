@@ -15,6 +15,7 @@ crash-reports/
 .vscode/
 
 # Local scratch and generated inspection files
+.local/
 .tmp-java*/
 .git-index-codex*
 discord-setup-bot/.env

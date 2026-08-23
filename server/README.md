@@ -81,9 +81,33 @@ Node service for the betterUC website, automatic Minecraft authentication and We
 - `DISCORD_ANNOUNCE_EXISTING_RELEASE=false`
 - `DISCORD_CHANGELOG_DATA_URL=https://betteruc.de/data/changelog.json`
 - `PUBLIC_CHANGELOG_URL=https://betteruc.de/changelog`
+- `TEAMSPEAK_FACTION_SYNC_ENABLED=true` enables the official UnicaCity faction list sync
+- `TEAMSPEAK_FACTION_SLUG=police` selects the police faction
+- `TEAMSPEAK_FACTION_SYNC_MS=600000` refresh interval, with a minimum of one minute
+- `TEAMSPEAK_FACTION_SLOT_LIMIT=42` police faction slot limit shown below the roster
+- `TEAMSPEAK_FACTION_SECTION_START=PERSONALAKTE` start heading of the managed description section
+- `TEAMSPEAK_FACTION_SECTION_END=STRAFZAHLUNGEN` end heading after the managed description section
+- `TEAMSPEAK_FACTION_UNIT_OVERRIDES=FABI1441:SWAT,mteii:SWAT` optional units missing from the public API
+- `TEAMSPEAK_QUERY_HOST=...` TeamSpeak ServerQuery host
+- `TEAMSPEAK_QUERY_PORT=10011` TeamSpeak raw ServerQuery port
+- `TEAMSPEAK_QUERY_USERNAME=...` restricted ServerQuery login
+- `TEAMSPEAK_QUERY_PASSWORD=...` restricted ServerQuery password
+- `TEAMSPEAK_VIRTUAL_SERVER_PORT=9987` TeamSpeak virtual server port
+- `TEAMSPEAK_VIRTUAL_SERVER_ID=...` optional virtual server ID instead of the port
+- `TEAMSPEAK_CHANNEL_ID=...` channel whose description receives the member list
+- `TEAMSPEAK_QUERY_TIMEOUT_MS=10000`
 
 Access codes are only shown once. The server stores SHA-256 hashes with a secret pepper.
 Account data is backed up automatically once per day and can also be backed up manually in the admin panel.
+
+## TeamSpeak police member list
+
+When `TEAMSPEAK_FACTION_SYNC_ENABLED=true`, the relay reads the official police roster from
+`https://api.unicacity.eu/api/factions/police/members` and groups the players by rank. It reads the existing TeamSpeak
+channel description and replaces only the content between the `PERSONALAKTE` and `STRAFZAHLUNGEN` headings. Images,
+introductory text and the penalty catalog remain unchanged. The description is only written when that managed roster
+section differs. The query user should be restricted to the selected virtual server and the permissions to read the
+channel information and edit that channel description.
 
 ## Discord bot
 
