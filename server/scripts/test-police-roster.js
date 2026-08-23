@@ -73,10 +73,32 @@ test("loads members, caches heads and renders the TeamSpeak PNG", async () => {
   assert.equal(roster.members.find(member => member.username === "FABI1441").unit, "SWAT");
   assert.match(roster.hash, /^[a-f0-9]{12}$/);
   assert.equal(metadata.format, "png");
-  assert.equal(metadata.width, 760);
-  assert.ok(metadata.height > 600);
+  assert.equal(metadata.width, 620);
+  assert.ok(metadata.height > 500);
   assert.ok(metadata.height < 2048, `TeamSpeak image is too tall: ${metadata.height}px`);
   assert.equal(image.buffer, secondImage.buffer);
   assert.equal(apiRequests, 1);
   assert.equal(headRequests, MEMBERS.length);
+});
+
+test("keeps a full 42-member roster below TeamSpeak's image height limit", async () => {
+  const ranks = [5, 4, 3, 2, 1, ...Array(37).fill(0)];
+  const members = ranks.map((rankNumber, index) => ({
+    username: `Member${index + 1}`,
+    uuid: "",
+    rankNumber,
+    rankName: rankNumber === 5 ? "Chief" : rankNumber === 4 ? "Commander" : `Rank ${rankNumber}`,
+    isLeader: rankNumber === 5
+  }));
+  const service = createPoliceRosterService({ slotLimit: 42 });
+  const buffer = await service.renderImage({
+    members,
+    groups: groupMembers(members),
+    count: members.length,
+    slotLimit: 42
+  });
+  const metadata = await sharp(buffer).metadata();
+
+  assert.equal(metadata.width, 620);
+  assert.ok(metadata.height < 2048, `Full TeamSpeak image is too tall: ${metadata.height}px`);
 });

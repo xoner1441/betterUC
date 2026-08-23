@@ -12,7 +12,7 @@ const DEFAULT_API_URL = "https://api.unicacity.eu/api/factions/police/members";
 const DEFAULT_HEAD_BASE_URL = "https://mc-heads.net/head";
 const DEFAULT_ROSTER_CACHE_MS = 5 * 60 * 1000;
 const DEFAULT_HEAD_CACHE_MS = 24 * 60 * 60 * 1000;
-const IMAGE_WIDTH = 760;
+const IMAGE_WIDTH = 620;
 
 const PIXEL_GLYPHS = Object.freeze({
   " ": "00000/00000/00000/00000/00000/00000/00000",
@@ -267,16 +267,16 @@ function createPoliceRosterService(options = {}) {
   }
 
   async function renderImage(roster) {
-    const columns = 4;
+    const columns = 3;
     const pagePadding = 24;
     const cardGap = 10;
-    const rowGap = 8;
+    const rowGap = 6;
     const cardWidth = Math.floor((IMAGE_WIDTH - pagePadding * 2 - cardGap * (columns - 1)) / columns);
-    const cardHeight = 82;
-    const sectionHeaderHeight = 32;
-    const sectionGap = 14;
-    const headerHeight = 176;
-    const footerHeight = 64;
+    const cardHeight = 76;
+    const sectionHeaderHeight = 30;
+    const sectionGap = 10;
+    const headerHeight = 170;
+    const footerHeight = 54;
     let contentHeight = 0;
     for (const group of roster.groups) {
       contentHeight += sectionHeaderHeight + Math.ceil(group.members.length / columns) * (cardHeight + rowGap) + sectionGap;
@@ -309,7 +309,7 @@ function createPoliceRosterService(options = {}) {
           <rect x="${x + 4}" y="${cardY + 4}" width="${cardWidth}" height="${cardHeight}" rx="3" fill="#111820" opacity="0.18"/>
           <rect x="${x}" y="${cardY}" width="${cardWidth}" height="${cardHeight}" rx="3" fill="#f9fbfd" stroke="#111820" stroke-width="2"/>
           <rect x="${x + (cardWidth - 50) / 2}" y="${cardY + 5}" width="50" height="50" fill="#dbeef8" stroke="#111820" stroke-width="2"/>
-          ${pixelTextSvg(member.username, x + cardWidth / 2, cardY + 62, { scale: 2, maxChars: 13, align: "center" })}
+          ${pixelTextSvg(member.username, x + cardWidth / 2, cardY + 59, { scale: 2, maxChars: 15, align: "center" })}
         `);
         composites.push({
           input: resizedHeads.get(member.username.toLowerCase()),
@@ -329,11 +329,11 @@ function createPoliceRosterService(options = {}) {
         ${pixelTextSvg("UNICACITY POLICE DEPARTMENT", 26, 40, { scale: 2, color: "#2787b5" })}
         ${pixelTextSvg("POLIZEI", 26, 70, { scale: 7 })}
         ${pixelTextSvg("MITGLIEDERUEBERSICHT", 26, 130, { scale: 2, color: "#52626f" })}
-        <rect x="540" y="62" width="194" height="64" rx="3" fill="#ffffff" stroke="#111820" stroke-width="3"/>
-        ${pixelTextSvg(`${roster.count}/${roster.slotLimit}`, 637, 73, { scale: 5, align: "center" })}
-        ${pixelTextSvg("MITGLIEDER", 637, 111, { scale: 1, align: "center", color: "#2787b5" })}
-        <rect x="24" y="156" width="712" height="4" fill="#111820"/>
-        <rect x="24" y="164" width="712" height="4" fill="#2ba8e0"/>
+        <rect x="426" y="62" width="168" height="64" rx="3" fill="#ffffff" stroke="#111820" stroke-width="3"/>
+        ${pixelTextSvg(`${roster.count}/${roster.slotLimit}`, 510, 78, { scale: 4, align: "center" })}
+        ${pixelTextSvg("MITGLIEDER", 510, 111, { scale: 1, align: "center", color: "#2787b5" })}
+        <rect x="24" y="156" width="${IMAGE_WIDTH - 48}" height="4" fill="#111820"/>
+        <rect x="24" y="164" width="${IMAGE_WIDTH - 48}" height="4" fill="#2ba8e0"/>
         ${fragments.join("\n")}
         <rect x="0" y="${height - footerHeight}" width="${IMAGE_WIDTH}" height="${footerHeight}" fill="#111820"/>
         ${pixelTextSvg("KLICKEN: BETTERUC.DE/POLIZEI/MITGLIEDER", IMAGE_WIDTH / 2, height - 45, { scale: 2, align: "center", color: "#ffffff" })}
