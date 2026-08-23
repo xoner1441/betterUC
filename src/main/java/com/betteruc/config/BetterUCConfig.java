@@ -645,6 +645,12 @@ public class BetterUCConfig {
     public String pingHudStyle = HUD_STYLE_MODERN;
     public String pingHudCustomFont = "";
     public String pingRelayUrl = DEFAULT_PING_RELAY_URL;
+    public String pingRelaySessionToken = "";
+    public long pingRelaySessionExpiresAt = 0L;
+    public String pingRelaySessionUuid = "";
+    public String pingRelaySessionName = "";
+    // Kept temporarily so existing 1.4.1 installations can migrate without
+    // losing access before their Minecraft session has been verified.
     public String pingRelayToken = "";
     public String pingRelayChannel = "global";
     public String pingRelayScope = "global";
@@ -1142,6 +1148,18 @@ public class BetterUCConfig {
         }
         if (INSTANCE.pingRelayToken == null) {
             INSTANCE.pingRelayToken = "";
+        }
+        if (INSTANCE.pingRelaySessionToken == null) {
+            INSTANCE.pingRelaySessionToken = "";
+        }
+        if (INSTANCE.pingRelaySessionUuid == null) {
+            INSTANCE.pingRelaySessionUuid = "";
+        }
+        if (INSTANCE.pingRelaySessionName == null) {
+            INSTANCE.pingRelaySessionName = "";
+        }
+        if (INSTANCE.pingRelaySessionExpiresAt < 0L) {
+            INSTANCE.pingRelaySessionExpiresAt = 0L;
         }
         if (INSTANCE.pingRelayChannel == null || INSTANCE.pingRelayChannel.isBlank()) {
             INSTANCE.pingRelayChannel = "global";

@@ -226,7 +226,7 @@ public final class BugReportScreen extends Screen {
         context.text(font, Component.literal("Titel *"), x, panelY + 49, MUTED);
         context.text(font, Component.literal("Beschreibung *"), x, titleField.getY() + 28, MUTED);
         context.text(font, Component.literal("Schritte zum Nachstellen (optional)"), x, descriptionField.getY() + descriptionField.getHeight() + 7, MUTED);
-        context.text(font, Component.literal("Anhänge werden nur nach deiner Auswahl gesendet. Access Codes werden aus dem Log entfernt."),
+        context.text(font, Component.literal("Anhänge werden nur nach deiner Auswahl gesendet. Sitzungsdaten werden aus dem Log entfernt."),
                 x, screenshotButton.getY() - 12, 0xFFFBBF24);
         if (!status.isBlank()) {
             context.text(font, Component.literal(status), x, panelY + panelH - 55, statusColor);

@@ -41,9 +41,9 @@
         <section>
           <h2>Welche Daten verarbeitet betterUC?</h2>
           <ul>
-            <li>Minecraft-Name und optional Minecraft-UUID</li>
-            <li>Access-Code-Hash, Rolle und Accountstatus</li>
-            <li>Fraktion, Server, Version und letzter Kontakt</li>
+            <li>Minecraft-Name und verifizierte Minecraft-UUID</li>
+            <li>Automatische betterUC-Sitzung, Rolle und Accountstatus; während der Übergangszeit gegebenenfalls ein bestehender Access-Code-Hash</li>
+            <li>Fraktion, Server, Mod-Version, Minecraft-Version und letzter Kontakt</li>
             <li>Vom Client erkannte Spielwerte wie Bankgeld, Bargeld, Häuser, Treuebonus, Spielzeit, Votepoints und Warns</li>
             <li>Technische Verbindungsdaten wie IP-Adresse, Zeitpunkt und WebSocket-Verbindungsstatus</li>
           </ul>
@@ -52,7 +52,8 @@
         <section>
           <h2>Zweck der Verarbeitung</h2>
           <p>
-            Die Daten werden genutzt, um den betterUC Access, das Userpanel, Adminfunktionen, private Pings und Mod-User-Funktionen bereitzustellen.
+            Die Daten werden genutzt, um die automatische Minecraft-Anmeldung, das Userpanel, Adminfunktionen, private Pings,
+            Mod-User-Funktionen sowie anonyme Gesamtzahlen zu aktiven betterUC-Versionen bereitzustellen.
           </p>
         </section>
 
@@ -66,7 +67,10 @@
         <section>
           <h2>Weitergabe an Dritte</h2>
           <p>
-            Eine Weitergabe an Dritte erfolgt nicht, außer sie ist technisch erforderlich, gesetzlich vorgeschrieben oder du hast ausdrücklich zugestimmt.
+            Zur Bestätigung, dass das aktive Minecraft-Konto dir gehört, wird eine einmalige Anmelde-Challenge über den
+            Minecraft-Sitzungsdienst von Mojang/Microsoft bestätigt. Dein Minecraft-Zugriffstoken wird ausschließlich
+            direkt an diesen Dienst gesendet und niemals an betterUC übermittelt. Eine weitere Weitergabe erfolgt nur,
+            wenn sie technisch erforderlich, gesetzlich vorgeschrieben oder von dir ausdrücklich bestätigt wurde.
           </p>
         </section>
 

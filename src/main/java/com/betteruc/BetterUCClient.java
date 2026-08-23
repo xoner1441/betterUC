@@ -18,6 +18,7 @@ import com.betteruc.client.AutoMoneyTransportClient;
 import com.betteruc.client.AutoTransportClient;
 import com.betteruc.client.AutoWinzerClient;
 import com.betteruc.client.AutomationController;
+import com.betteruc.client.BetterUCAuthClient;
 import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ClientCompat;
 import com.betteruc.client.ClientScheduler;
@@ -264,6 +265,7 @@ public class BetterUCClient implements ClientModInitializer {
             CommunicationDeviceTracker.reset();
             resetRemoteFeatureStateTracking();
             RemoteFeatureFlagsClient.onJoin(client);
+            BetterUCAuthClient.onJoin(client);
             PingRelayClient.onJoin(client);
             CloudSettingsClient.onJoin(client);
             statsOnJoinDelay = BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled
@@ -276,6 +278,7 @@ public class BetterUCClient implements ClientModInitializer {
             ServerCommandUtil.markDisconnected();
             CommunicationDeviceTracker.reset();
             RemoteFeatureFlagsClient.onDisconnect();
+            BetterUCAuthClient.onDisconnect();
             PingRelayClient.onDisconnect();
             CloudSettingsClient.onDisconnect();
             resetRemoteFeatureStateTracking();
@@ -1043,6 +1046,7 @@ public class BetterUCClient implements ClientModInitializer {
             PlantageHud.tick();
             AmmoHud.tickReloadKey(client);
             RemoteFeatureFlagsClient.tick(client);
+            BetterUCAuthClient.tick(client);
             applyRemoteFeatureState(client);
             if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.PING_SYSTEM)) {
                 PingRelayClient.tick(client);

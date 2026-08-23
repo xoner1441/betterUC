@@ -1,6 +1,7 @@
 package com.betteruc.gui;
 
 import com.betteruc.BetterUCMod;
+import com.betteruc.client.BetterUCAuthClient;
 import com.betteruc.client.BetterUCFontManager;
 import com.betteruc.client.AutomationController;
 import com.betteruc.client.ClientCompat;
@@ -694,15 +695,9 @@ public class BetterUCScreen extends Screen {
         y = addToggle(x, y, width, "Hologramme", BetterUCConfig.INSTANCE.showRoleHolograms,
                 () -> BetterUCConfig.INSTANCE.showRoleHolograms = !BetterUCConfig.INSTANCE.showRoleHolograms);
 
-        y = addSectionHeader(x, y, width, "Zugang", 0xFFFACC15);
-        y = addTextField(x, y, width, "Access Code", BetterUCConfig.INSTANCE.pingRelayToken, 160,
-                value -> {
-                    BetterUCConfig.INSTANCE.pingRelayToken = value.trim();
-                    if (!BetterUCConfig.INSTANCE.pingRelayToken.isEmpty()) {
-                        BetterUCConfig.INSTANCE.pingRelayEnabled = true;
-                    }
-                });
-        y = addButton(x, y, width, "Access Code holen", b -> Util.getPlatform().openUri(URI.create("https://betteruc.de/access")));
+        y = addSectionHeader(x, y, width, "Automatische Anmeldung", 0xFF4ADE80);
+        y = addInfo(x, y, width, "Minecraft-Konto", BetterUCAuthClient.statusLabel());
+        y = addButton(x, y, width, "Anmeldung erneuern", b -> BetterUCAuthClient.renew(minecraft));
         y = addButton(x, y, width, "Stats neu senden", b -> {
             UserStatsClient.uploadCurrentStats(minecraft);
             if (minecraft != null && minecraft.player != null) {
@@ -1002,7 +997,7 @@ public class BetterUCScreen extends Screen {
             case "Ping testen" -> "Setzt einen normalen Test-Ping an deiner angesehenen Position.";
             case "Relay-Verbindung" -> "Aktiviert oder deaktiviert die Verbindung zum betterUC-Relay.";
             case "Hologramme" -> "Blendet betterUC-Rollen über den Köpfen anderer Mod-Nutzer ein oder aus.";
-            case "Access Code holen" -> "Öffnet die Website zum Erstellen deines persönlichen Access Codes.";
+            case "Anmeldung erneuern" -> "Bestätigt dein aktives Minecraft-Konto erneut und erstellt eine neue betterUC-Sitzung.";
             case "Stats neu senden" -> "Überträgt die zuletzt erkannten Spielerdaten erneut an dein Userpanel.";
             case "Standardserver nutzen" -> "Setzt die Relay-Adresse auf den offiziellen betterUC-Server zurück.";
             case "Neu verbinden" -> "Trennt die aktuelle Relay-Verbindung und baut sie neu auf.";
@@ -1308,7 +1303,6 @@ public class BetterUCScreen extends Screen {
             case "Cooldown ms" -> "Bestimmt die Mindestpause zwischen zwei eigenen Pings.";
             case "Vergrößerung" -> "Legt die anfängliche Vergrößerung des Zooms fest.";
             case "Übergang (ms)" -> "Bestimmt, wie schnell der Zoom weich ein- und ausgeblendet wird.";
-            case "Access Code" -> "Dein persönlicher Code verbindet diese Mod-Installation mit deinem Account.";
             case "Ping Gruppe" -> "Erweiterte Relay-Gruppe. Normalerweise sollte hier global stehen.";
             case "Relay Server" -> "Erweiterte WebSocket-Adresse des betterUC-Relay-Servers.";
             case "Profilname" -> "Name für ein neues, dupliziertes oder umbenanntes HUD-Profil.";

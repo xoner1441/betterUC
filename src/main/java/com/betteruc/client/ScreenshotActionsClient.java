@@ -140,11 +140,9 @@ public final class ScreenshotActionsClient {
     }
 
     public static CompletableFuture<String> uploadForBug(Path path) {
-        String token = BetterUCConfig.INSTANCE.pingRelayToken == null
-                ? ""
-                : BetterUCConfig.INSTANCE.pingRelayToken.trim();
+        String token = BetterUCAuthClient.credential();
         if (token.isEmpty()) {
-            return CompletableFuture.failedFuture(new IllegalStateException("Für den Screenshot wird ein gültiger Access Code benötigt."));
+            return CompletableFuture.failedFuture(new IllegalStateException("Die automatische betterUC-Anmeldung läuft noch."));
         }
         try {
             long size = Files.size(path);
@@ -161,9 +159,13 @@ public final class ScreenshotActionsClient {
             return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
                     .thenApply(response -> {
                         if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                            if (response.statusCode() == 401) {
+                                Minecraft client = Minecraft.getInstance();
+                                client.execute(() -> BetterUCAuthClient.invalidateSession(client));
+                            }
                             throw new CompletionException(new IllegalStateException(
                                     response.statusCode() == 401 || response.statusCode() == 403
-                                            ? "Access Code ungültig oder gesperrt."
+                                            ? "betterUC-Sitzung ungültig oder Account gesperrt."
                                             : "Screenshot-Upload fehlgeschlagen (HTTP " + response.statusCode() + ")."));
                         }
                         JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
@@ -271,11 +273,9 @@ public final class ScreenshotActionsClient {
             return 0;
         }
 
-        String token = BetterUCConfig.INSTANCE.pingRelayToken == null
-                ? ""
-                : BetterUCConfig.INSTANCE.pingRelayToken.trim();
+        String token = BetterUCAuthClient.credential();
         if (token.isEmpty()) {
-            sendMessage(Component.literal("\u00A7c[betterUC] F\u00FCr Uploads wird ein g\u00FCltiger Access Code ben\u00F6tigt."));
+            sendMessage(Component.literal("\u00A7c[betterUC] Die automatische Anmeldung l\u00E4uft noch."));
             return 0;
         }
 
@@ -330,7 +330,11 @@ public final class ScreenshotActionsClient {
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 String message;
                 if (response.statusCode() == 401 || response.statusCode() == 403) {
-                    message = "\u00A7c[betterUC] Access Code ung\u00FCltig oder gesperrt.";
+                    if (response.statusCode() == 401) {
+                        Minecraft client = Minecraft.getInstance();
+                        client.execute(() -> BetterUCAuthClient.invalidateSession(client));
+                    }
+                    message = "\u00A7c[betterUC] betterUC-Sitzung ung\u00FCltig oder Account gesperrt.";
                 } else if (response.statusCode() == 404) {
                     message = "\u00A7c[betterUC] Screenshot-Upload ist auf dem Relay noch nicht installiert (HTTP 404).";
                 } else {

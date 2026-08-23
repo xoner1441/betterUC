@@ -29,7 +29,7 @@ public final class UserPanelClient {
         if (client == null || client.player == null) return;
         String token = accessToken();
         if (token.isBlank()) {
-            sendLocalMessage(client, "\u00A7cBitte zuerst deinen Access Code im ClickGUI eintragen.");
+            sendLocalMessage(client, "\u00A7cDie automatische betterUC-Anmeldung läuft noch.");
             return;
         }
         if (password == null || password.length() < 6 || password.length() > 72 || password.trim().length() < 6) {
@@ -67,6 +67,7 @@ public final class UserPanelClient {
                     if (response.statusCode() >= 200 && response.statusCode() < 300 && boolValue(json, "ok")) {
                         sendLocalMessage(client, "\u00A7aWeb-Login eingerichtet. Du kannst dich jetzt im Userpanel anmelden.");
                     } else {
+                        if (response.statusCode() == 401) BetterUCAuthClient.invalidateSession(client);
                         sendLocalMessage(client, "\u00A7c" + stringValue(json, "error", "Web-Login fehlgeschlagen."));
                     }
                 }));
@@ -95,6 +96,9 @@ public final class UserPanelClient {
                     if (error != null) {
                         BetterUCMod.LOGGER.debug("betterUC stats upload failed", error);
                     } else if (response.statusCode() >= 400) {
+                        if (response.statusCode() == 401) {
+                            client.execute(() -> BetterUCAuthClient.invalidateSession(client));
+                        }
                         BetterUCMod.LOGGER.debug("betterUC stats upload rejected with status {}", response.statusCode());
                     }
                 });
@@ -141,7 +145,7 @@ public final class UserPanelClient {
     }
 
     private static String accessToken() {
-        return BetterUCConfig.INSTANCE.pingRelayToken == null ? "" : BetterUCConfig.INSTANCE.pingRelayToken.trim();
+        return BetterUCAuthClient.credential();
     }
 
     private static String playerName(Minecraft client) {

@@ -39,9 +39,9 @@ public final class BugReportClient {
             Path screenshot,
             boolean attachLog
     ) {
-        String token = safe(BetterUCConfig.INSTANCE.pingRelayToken);
+        String token = BetterUCAuthClient.credential();
         if (token.isBlank()) {
-            return CompletableFuture.failedFuture(new IllegalStateException("Bitte zuerst einen gültigen Access Code eintragen."));
+            return CompletableFuture.failedFuture(new IllegalStateException("Die automatische betterUC-Anmeldung läuft noch."));
         }
         CompletableFuture<String> screenshotUpload = screenshot == null
                 ? CompletableFuture.completedFuture("")
@@ -72,6 +72,10 @@ public final class BugReportClient {
                     // Some reverse proxies return HTML for a missing or unavailable endpoint.
                 }
                 if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                    if (response.statusCode() == 401) {
+                        Minecraft client = Minecraft.getInstance();
+                        client.execute(() -> BetterUCAuthClient.invalidateSession(client));
+                    }
                     String error = json != null && json.has("error")
                             ? json.get("error").getAsString()
                             : response.statusCode() == 404
@@ -103,7 +107,7 @@ public final class BugReportClient {
                 // Read only the bounded tail of the file.
             }
             String text = new String(buffer.array(), 0, buffer.position(), StandardCharsets.UTF_8);
-            return token.isBlank() ? text : text.replace(token, "[ACCESS_CODE ENTFERNT]");
+            return token.isBlank() ? text : text.replace(token, "[BETTERUC_SITZUNG ENTFERNT]");
         } catch (IOException exception) {
             BetterUCMod.LOGGER.warn("Could not read latest.log for bug report", exception);
             return "";

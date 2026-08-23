@@ -36,6 +36,16 @@ const ALLOW_LEGACY_TOKEN = String(process.env.ALLOW_LEGACY_TOKEN || "true").toLo
 const ADMIN_KEY = (process.env.ADMIN_KEY || "").trim();
 const SESSION_SECRET = process.env.SESSION_SECRET || TOKEN_PEPPER;
 const USER_SESSION_TTL_MS = Number(process.env.USER_SESSION_TTL_MS || 1000 * 60 * 60 * 24 * 14);
+const MOD_SESSION_TTL_MS = Math.max(
+  60 * 60 * 1000,
+  Number(process.env.MOD_SESSION_TTL_MS || 1000 * 60 * 60 * 24 * 30)
+);
+const AUTH_CHALLENGE_TTL_MS = Math.max(
+  15 * 1000,
+  Math.min(2 * 60 * 1000, Number(process.env.AUTH_CHALLENGE_TTL_MS || 60 * 1000))
+);
+const MOJANG_HAS_JOINED_URL = process.env.MOJANG_HAS_JOINED_URL
+  || "https://sessionserver.mojang.com/session/minecraft/hasJoined";
 const GITHUB_RELEASES_URL = "https://github.com/xoner1441/betterUC/releases";
 const GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/xoner1441/betterUC/releases/latest";
 const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || "https://betteruc.de").replace(/\/+$/, "");
@@ -94,6 +104,7 @@ let latestKnownReleaseVersion = "";
 let wasteDropAreas = {};
 const clients = new Set();
 const rateLimits = new Map();
+const loginChallenges = new Map();
 let lastAnnouncementAt = 0;
 let discordBot = {
   notifyStateChanged() {},
@@ -632,6 +643,12 @@ function cleanMinecraftName(value) {
   return /^[A-Za-z0-9_]{3,16}$/.test(raw) ? raw : null;
 }
 
+function normalizeMinecraftUuid(value) {
+  const compact = String(value || "").trim().toLowerCase().replace(/-/g, "");
+  if (!/^[0-9a-f]{32}$/.test(compact)) return "";
+  return `${compact.slice(0, 8)}-${compact.slice(8, 12)}-${compact.slice(12, 16)}-${compact.slice(16, 20)}-${compact.slice(20)}`;
+}
+
 function cleanSmallLabel(value, fallback = "") {
   const raw = String(value || "").trim();
   if (!raw) return fallback;
@@ -1041,6 +1058,15 @@ function findAccountByMinecraftName(name) {
   ) || null;
 }
 
+function findAccountByMinecraftUuid(uuid, includeRevoked = false) {
+  const normalized = normalizeMinecraftUuid(uuid);
+  if (!normalized) return null;
+  return store.accounts.find(account =>
+    (includeRevoked || cleanStatus(account.status) === "active")
+    && normalizeMinecraftUuid(account.minecraftUuid) === normalized
+  ) || null;
+}
+
 function findAccountByMinecraftLogin(name, password) {
   const cleaned = cleanMinecraftName(name);
   if (!cleaned) return null;
@@ -1105,6 +1131,45 @@ function constantTimeEquals(left, right) {
 
 function signSessionPayload(payload) {
   return crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("base64url");
+}
+
+function createModSession(account) {
+  const issuedAt = Date.now();
+  const expiresAt = issuedAt + MOD_SESSION_TTL_MS;
+  const payload = Buffer.from(JSON.stringify({
+    sub: account.id,
+    aud: "betteruc-mod",
+    uuid: normalizeMinecraftUuid(account.minecraftUuid),
+    name: account.minecraftName || "",
+    iat: issuedAt,
+    exp: expiresAt
+  })).toString("base64url");
+  return {
+    token: `${payload}.${signSessionPayload(payload)}`,
+    expiresAt
+  };
+}
+
+function verifyModSession(token) {
+  const raw = String(token || "").trim();
+  const dot = raw.indexOf(".");
+  if (dot <= 0) return null;
+
+  const payload = raw.slice(0, dot);
+  const signature = raw.slice(dot + 1);
+  if (!constantTimeEquals(signature, signSessionPayload(payload))) return null;
+
+  try {
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (!data || data.aud !== "betteruc-mod" || data.exp < Date.now()) return null;
+    const account = findAccountById(data.sub);
+    if (!account || cleanStatus(account.status) !== "active") return null;
+    const accountUuid = normalizeMinecraftUuid(account.minecraftUuid);
+    if (!accountUuid || accountUuid !== normalizeMinecraftUuid(data.uuid)) return null;
+    return account;
+  } catch {
+    return null;
+  }
 }
 
 function createUserSession(account) {
@@ -1187,6 +1252,15 @@ function authenticate(req, url) {
   const token = tokenFromRequest(req, url);
   if (!token) return null;
 
+  const sessionAccount = verifyModSession(token);
+  if (sessionAccount) {
+    return {
+      type: "session",
+      role: cleanRole(sessionAccount.role),
+      account: sessionAccount
+    };
+  }
+
   if (ALLOW_LEGACY_TOKEN && LEGACY_RELAY_TOKEN && token === LEGACY_RELAY_TOKEN) {
     return {
       type: "legacy",
@@ -1209,6 +1283,83 @@ function authenticate(req, url) {
   }
 
   return null;
+}
+
+function pruneLoginChallenges() {
+  const now = Date.now();
+  for (const [id, challenge] of loginChallenges) {
+    if (!challenge || challenge.expiresAt <= now) loginChallenges.delete(id);
+  }
+}
+
+function createLoginChallenge(name, uuid) {
+  pruneLoginChallenges();
+  const challenge = {
+    id: crypto.randomBytes(24).toString("base64url"),
+    serverId: crypto.randomBytes(20).toString("hex"),
+    name,
+    uuid,
+    expiresAt: Date.now() + AUTH_CHALLENGE_TTL_MS
+  };
+  loginChallenges.set(challenge.id, challenge);
+  return challenge;
+}
+
+async function verifyMojangJoin(challenge) {
+  const target = new URL(MOJANG_HAS_JOINED_URL);
+  target.searchParams.set("username", challenge.name);
+  target.searchParams.set("serverId", challenge.serverId);
+  const response = await fetch(target, {
+    headers: { accept: "application/json", "user-agent": "betterUC-platform/1.0" },
+    signal: AbortSignal.timeout(8000)
+  });
+  if (response.status === 204 || response.status === 404) return null;
+  if (!response.ok) throw new Error(`Mojang session server returned HTTP ${response.status}`);
+  const profile = await response.json();
+  const name = cleanMinecraftName(profile && profile.name);
+  const uuid = normalizeMinecraftUuid(profile && profile.id);
+  if (!name || !uuid) return null;
+  return { name, uuid };
+}
+
+async function accountForVerifiedMinecraftProfile(profile, clientInfo = {}) {
+  let account = findAccountByMinecraftUuid(profile.uuid, true);
+  if (account && cleanStatus(account.status) === "revoked") {
+    throw Object.assign(new Error("Dieser betterUC-Account ist gesperrt."), { statusCode: 403 });
+  }
+
+  if (!account) {
+    const nameMatch = findAccountByMinecraftName(profile.name);
+    if (nameMatch && !normalizeMinecraftUuid(nameMatch.minecraftUuid)) account = nameMatch;
+  }
+
+  if (!account) {
+    account = {
+      id: crypto.randomUUID(),
+      minecraftName: profile.name,
+      minecraftUuid: profile.uuid,
+      faction: "",
+      role: "user",
+      status: "active",
+      createdAt: nowIso(),
+      createdBy: "minecraft-session",
+      lastSeenAt: null,
+      lastServer: "",
+      lastChannel: "",
+      lastVersion: "",
+      lastGameVersion: ""
+    };
+    store.accounts.push(account);
+  }
+
+  account.minecraftName = profile.name;
+  account.minecraftUuid = profile.uuid;
+  account.activatedAt = account.activatedAt || nowIso();
+  account.lastSeenAt = nowIso();
+  if (clientInfo.version) account.lastVersion = cleanSmallLabel(clientInfo.version, "");
+  if (clientInfo.gameVersion) account.lastGameVersion = cleanSmallLabel(clientInfo.gameVersion, "");
+  await saveStore();
+  return account;
 }
 
 function mergeStats(account, incoming) {
@@ -1245,8 +1396,10 @@ function mergeStats(account, incoming) {
 function updateAccountFromClient(account, info) {
   if (!account || account.id === "legacy") return;
 
-  if (info.name) account.minecraftName = info.name;
-  if (info.uuid) account.minecraftUuid = info.uuid;
+  if (info.authType !== "session") {
+    if (info.name) account.minecraftName = info.name;
+    if (info.uuid) account.minecraftUuid = info.uuid;
+  }
   if (info.server) account.lastServer = info.server;
   if (info.channel) account.lastChannel = info.channel;
   if (info.version) account.lastVersion = info.version;
@@ -1409,8 +1562,8 @@ async function cleanupExpiredScreenshots() {
 
 async function handleScreenshotUpload(req, res, url) {
   const auth = authenticate(req, url);
-  if (!auth || auth.type !== "access" || !auth.account || auth.account.id === "legacy") {
-    json(res, 401, { ok: false, error: "Access-Code fehlt oder ist ungueltig." });
+  if (!auth || !auth.account || auth.account.id === "legacy") {
+    json(res, 401, { ok: false, error: "betterUC-Anmeldung fehlt oder ist ungueltig." });
     return;
   }
   if (!database.enabled) {
@@ -1480,8 +1633,8 @@ function cleanBugScreenshotUrl(value) {
 
 async function handleBugReport(req, res, url) {
   const auth = authenticate(req, url);
-  if (!auth || auth.type !== "access" || !auth.account || auth.account.id === "legacy") {
-    json(res, 401, { ok: false, error: "Access-Code fehlt oder ist ungueltig." });
+  if (!auth || !auth.account || auth.account.id === "legacy") {
+    json(res, 401, { ok: false, error: "betterUC-Anmeldung fehlt oder ist ungueltig." });
     return;
   }
   if (isRateLimited(req, `bug-report:${auth.account.id}`, 5, 15 * 60 * 1000)) {
@@ -1744,6 +1897,48 @@ function sendUpdateAvailable(client, release) {
   }));
 }
 
+function uniqueAccountsByMinecraftIdentity(accounts) {
+  const unique = new Map();
+  for (const account of accounts) {
+    if (!account || cleanStatus(account.status) !== "active") continue;
+    const uuid = normalizeMinecraftUuid(account.minecraftUuid);
+    if (!uuid) continue;
+    unique.set(uuid, account);
+  }
+  return [...unique.values()];
+}
+
+function versionDistribution(entries, versionSelector) {
+  const counts = new Map();
+  for (const entry of entries) {
+    const version = cleanSmallLabel(versionSelector(entry) || "", "unbekannt");
+    counts.set(version, (counts.get(version) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([version, count]) => ({ version, count }))
+    .sort((left, right) => right.count - left.count || left.version.localeCompare(right.version));
+}
+
+function activitySummary() {
+  const now = Date.now();
+  const knownAccounts = uniqueAccountsByMinecraftIdentity(store.accounts);
+  const activeSince = duration => knownAccounts.filter(account => {
+    const lastSeen = Date.parse(account.lastSeenAt || "");
+    return Number.isFinite(lastSeen) && now - lastSeen <= duration;
+  });
+  const active24h = activeSince(24 * 60 * 60 * 1000);
+  const active7d = activeSince(7 * 24 * 60 * 60 * 1000);
+  const onlinePlayers = onlinePlayersForResponse();
+  return {
+    online: onlinePlayers.length,
+    active24h: active24h.length,
+    active7d: active7d.length,
+    known: knownAccounts.length,
+    versionsOnline: versionDistribution(onlinePlayers, entry => entry.version),
+    versions7d: versionDistribution(active7d, entry => entry.lastVersion)
+  };
+}
+
 function broadcastUpdateAvailable(release) {
   for (const client of clients) {
     sendUpdateAvailable(client, release);
@@ -1877,6 +2072,63 @@ async function handleApi(req, res, url) {
       adminConfigured: Boolean(ADMIN_KEY),
       github: GITHUB_RELEASES_URL,
       time: Date.now()
+    });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/auth/challenge") {
+    if (isRateLimited(req, "minecraft-auth-challenge", 12, 60_000)) {
+      json(res, 429, { ok: false, error: "Zu viele Anmeldeversuche. Bitte kurz warten." });
+      return;
+    }
+    const body = await readJsonBody(req, 4096);
+    const name = cleanMinecraftName(body.name);
+    const uuid = normalizeMinecraftUuid(body.uuid);
+    if (!name || !uuid) {
+      json(res, 400, { ok: false, error: "Minecraft-Profil ist ungueltig." });
+      return;
+    }
+    const challenge = createLoginChallenge(name, uuid);
+    json(res, 201, {
+      ok: true,
+      challengeId: challenge.id,
+      serverId: challenge.serverId,
+      expiresAt: challenge.expiresAt
+    });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/auth/complete") {
+    if (isRateLimited(req, "minecraft-auth-complete", 12, 60_000)) {
+      json(res, 429, { ok: false, error: "Zu viele Anmeldeversuche. Bitte kurz warten." });
+      return;
+    }
+    const body = await readJsonBody(req, 4096);
+    pruneLoginChallenges();
+    const challengeId = String(body.challengeId || "").trim();
+    const challenge = loginChallenges.get(challengeId);
+    loginChallenges.delete(challengeId);
+    if (!challenge || challenge.expiresAt <= Date.now()) {
+      json(res, 401, { ok: false, error: "Anmelde-Challenge ist abgelaufen." });
+      return;
+    }
+    const profile = await verifyMojangJoin(challenge);
+    if (!profile
+        || profile.name.toLowerCase() !== challenge.name.toLowerCase()
+        || profile.uuid !== challenge.uuid) {
+      json(res, 401, { ok: false, error: "Minecraft-Sitzung konnte nicht bestaetigt werden." });
+      return;
+    }
+    const account = await accountForVerifiedMinecraftProfile(profile, {
+      version: body.version,
+      gameVersion: body.gameVersion
+    });
+    const session = createModSession(account);
+    json(res, 200, {
+      ok: true,
+      sessionToken: session.token,
+      expiresAt: session.expiresAt,
+      account: publicAccount(account)
     });
     return;
   }
@@ -2247,13 +2499,14 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/players") {
     const auth = authenticate(req, url);
     if (!auth) {
-      json(res, 401, { ok: false, error: "Access Code fehlt oder ist ungueltig." });
+      json(res, 401, { ok: false, error: "betterUC-Anmeldung fehlt oder ist ungueltig." });
       return;
     }
 
     json(res, 200, {
       ok: true,
-      players: onlinePlayersForResponse()
+      players: onlinePlayersForResponse(),
+      summary: activitySummary()
     });
     return;
   }
@@ -2284,7 +2537,7 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/user/settings") {
     const auth = authenticate(req, url);
     if (!auth || !auth.account || auth.account.id === "legacy") {
-      json(res, 401, { ok: false, error: "Access Code fehlt oder ist ungueltig." });
+      json(res, 401, { ok: false, error: "betterUC-Anmeldung fehlt oder ist ungueltig." });
       return;
     }
     if (persistenceMode !== "postgres") {
@@ -2315,7 +2568,7 @@ async function handleApi(req, res, url) {
     }
     const auth = authenticate(req, url);
     if (!auth || !auth.account || auth.account.id === "legacy") {
-      json(res, 401, { ok: false, error: "Access Code fehlt oder ist ungueltig." });
+      json(res, 401, { ok: false, error: "betterUC-Anmeldung fehlt oder ist ungueltig." });
       return;
     }
     if (persistenceMode !== "postgres") {
@@ -2412,7 +2665,7 @@ async function handleApi(req, res, url) {
 
     const auth = authenticate(req, url);
     if (!auth || !auth.account || auth.account.id === "legacy") {
-      json(res, 401, { ok: false, error: "Access Code fehlt oder ist ungueltig." });
+      json(res, 401, { ok: false, error: "betterUC-Anmeldung fehlt oder ist ungueltig." });
       return;
     }
 
@@ -2423,7 +2676,7 @@ async function handleApi(req, res, url) {
     }
 
     const account = auth.account;
-    if (Object.hasOwn(body, "minecraftName")) {
+    if (auth.type !== "session" && Object.hasOwn(body, "minecraftName")) {
       const minecraftName = cleanMinecraftName(body.minecraftName);
       if (minecraftName === null) {
         json(res, 400, { ok: false, error: "Minecraft-Name muss 3-16 Zeichen haben." });
@@ -2431,8 +2684,8 @@ async function handleApi(req, res, url) {
       }
       if (minecraftName) account.minecraftName = minecraftName;
     }
-    if (Object.hasOwn(body, "minecraftUuid")) {
-      account.minecraftUuid = cleanSmallLabel(body.minecraftUuid || "", "");
+    if (auth.type !== "session" && Object.hasOwn(body, "minecraftUuid")) {
+      account.minecraftUuid = normalizeMinecraftUuid(body.minecraftUuid) || account.minecraftUuid;
     }
     if (Object.hasOwn(body, "faction")) {
       account.faction = cleanSmallLabel(body.faction || "");
@@ -2524,17 +2777,19 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/user/stats") {
     const auth = authenticate(req, url);
     if (!auth || !auth.account || auth.account.id === "legacy") {
-      json(res, 401, { ok: false, error: "Access Code fehlt oder ist ungueltig." });
+      json(res, 401, { ok: false, error: "betterUC-Anmeldung fehlt oder ist ungueltig." });
       return;
     }
 
     const body = await readJsonBody(req, 16384);
     const account = auth.account;
-    if (Object.hasOwn(body, "minecraftName")) {
+    if (auth.type !== "session" && Object.hasOwn(body, "minecraftName")) {
       const minecraftName = cleanMinecraftName(body.minecraftName);
       if (minecraftName) account.minecraftName = minecraftName;
     }
-    if (Object.hasOwn(body, "minecraftUuid")) account.minecraftUuid = cleanSmallLabel(body.minecraftUuid || "", "");
+    if (auth.type !== "session" && Object.hasOwn(body, "minecraftUuid")) {
+      account.minecraftUuid = normalizeMinecraftUuid(body.minecraftUuid) || account.minecraftUuid;
+    }
     if (Object.hasOwn(body, "server")) account.lastServer = cleanSmallLabel(body.server || "", "").toLowerCase();
     if (Object.hasOwn(body, "version")) account.lastVersion = cleanSmallLabel(body.version || "", "");
     if (Object.hasOwn(body, "gameVersion")) account.lastGameVersion = cleanSmallLabel(body.gameVersion || "", "");
@@ -2851,14 +3106,19 @@ async function handleWsMessage(client, raw) {
 }
 
 function handleWsConnection(ws, req, auth, url) {
+  const sessionAuthenticated = auth.type === "session";
   const client = {
     ws,
     account: auth.account,
     authType: auth.type,
     role: cleanRole(auth.role),
     priority: rolePriority(auth.role),
-    name: cleanMinecraftName(url.searchParams.get("name")) || auth.account.minecraftName || "unknown",
-    uuid: cleanSmallLabel(url.searchParams.get("uuid") || "", ""),
+    name: sessionAuthenticated
+      ? auth.account.minecraftName
+      : cleanMinecraftName(url.searchParams.get("name")) || auth.account.minecraftName || "unknown",
+    uuid: sessionAuthenticated
+      ? normalizeMinecraftUuid(auth.account.minecraftUuid)
+      : normalizeMinecraftUuid(url.searchParams.get("uuid")) || "",
     server: normalizeServerId(url.searchParams.get("server") || "unknown"),
     channel: cleanChannel(url.searchParams.get("channel") || "global"),
     faction: cleanSmallLabel(url.searchParams.get("faction") || "", ""),

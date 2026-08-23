@@ -93,7 +93,7 @@ public final class PingRelayClient {
 
         if (!hasRelayCredential()) {
             disconnect();
-            status = "Zugangscode fehlt";
+            status = BetterUCAuthClient.statusLabel();
             return;
         }
 
@@ -381,7 +381,7 @@ public final class PingRelayClient {
         URI uri = playersApiUri();
         String token = accessToken();
         if (uri == null || token.isBlank()) {
-            sendLocalMessage(client, "Online-Liste nicht verfuegbar: Zugangscode oder Relay-Adresse fehlt.");
+            sendLocalMessage(client, "Online-Liste nicht verfügbar: Automatische Anmeldung läuft noch.");
             return;
         }
 
@@ -400,7 +400,8 @@ public final class PingRelayClient {
                         return;
                     }
                     if (response.statusCode() == 401) {
-                        sendLocalMessage(client, "Online-Liste konnte nicht geladen werden: Access Code ungueltig.");
+                        BetterUCAuthClient.invalidateSession(client);
+                        sendLocalMessage(client, "Online-Liste konnte nicht geladen werden: Sitzung wird erneuert.");
                         return;
                     }
                     if (response.statusCode() != 200) {
@@ -414,7 +415,8 @@ public final class PingRelayClient {
                                 ? json.getAsJsonArray("players")
                                 : new JsonArray();
                         List<OnlineListEntry> entries = parseOnlineListEntries(players);
-                        renderOnlineList(client, entries);
+                        OnlineSummary summary = parseOnlineSummary(json.get("summary"), entries.size());
+                        renderOnlineList(client, entries, summary);
                     } catch (Exception e) {
                         BetterUCMod.LOGGER.debug("Ignored invalid betterUC online list response", e);
                         sendLocalMessage(client, "Online-Liste konnte nicht gelesen werden.");
@@ -899,7 +901,8 @@ public final class PingRelayClient {
             if (current instanceof WebSocketHandshakeException handshakeException) {
                 int code = handshakeException.getResponse().statusCode();
                 if (code == 401 || code == 403) {
-                    return "Access Code ungültig";
+                    BetterUCAuthClient.invalidateSession(Minecraft.getInstance());
+                    return "Sitzung wird erneuert";
                 }
                 if (code == 404) {
                     return "Relay-Route fehlt";
@@ -1023,11 +1026,59 @@ public final class PingRelayClient {
         return entries;
     }
 
-    private static void renderOnlineList(Minecraft client, List<OnlineListEntry> entries) {
+    private static OnlineSummary parseOnlineSummary(JsonElement element, int onlineFallback) {
+        if (element == null || !element.isJsonObject()) {
+            return new OnlineSummary(onlineFallback, onlineFallback, onlineFallback, onlineFallback, List.of());
+        }
+        JsonObject summary = element.getAsJsonObject();
+        List<VersionCount> versions = new ArrayList<>();
+        JsonArray versionEntries = summary.has("versionsOnline") && summary.get("versionsOnline").isJsonArray()
+                ? summary.getAsJsonArray("versionsOnline")
+                : new JsonArray();
+        for (JsonElement versionElement : versionEntries) {
+            if (!versionElement.isJsonObject()) continue;
+            JsonObject version = versionElement.getAsJsonObject();
+            versions.add(new VersionCount(
+                    stringValue(version, "version", "unbekannt"),
+                    longValue(version, "count", 0L)
+            ));
+        }
+        return new OnlineSummary(
+                longValue(summary, "online", onlineFallback),
+                longValue(summary, "active24h", onlineFallback),
+                longValue(summary, "active7d", onlineFallback),
+                longValue(summary, "known", onlineFallback),
+                versions
+        );
+    }
+
+    private static void renderOnlineList(Minecraft client, List<OnlineListEntry> entries, OnlineSummary summary) {
         MutableComponent header = Component.literal("[betterUC] ").withStyle(ChatFormatting.GRAY)
-                .append(Component.literal("Online Mod-User: ").withStyle(ChatFormatting.AQUA))
-                .append(Component.literal(String.valueOf(entries.size())).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD));
+                .append(Component.literal("Nutzerstatistik").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
         sendText(client, header);
+
+        MutableComponent totals = Component.literal("Online: ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(String.valueOf(summary.online())).withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD))
+                .append(Component.literal(" | 24h: ").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal(String.valueOf(summary.active24h())).withStyle(ChatFormatting.AQUA))
+                .append(Component.literal(" | 7 Tage: ").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal(String.valueOf(summary.active7d())).withStyle(ChatFormatting.AQUA))
+                .append(Component.literal(" | Bekannt: ").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal(String.valueOf(summary.known())).withStyle(ChatFormatting.WHITE));
+        sendText(client, totals);
+
+        if (!summary.versionsOnline().isEmpty()) {
+            String versions = summary.versionsOnline().stream()
+                    .filter(entry -> entry.count() > 0L)
+                    .limit(8)
+                    .map(entry -> versionLabel(entry.version()) + ": " + entry.count())
+                    .reduce((left, right) -> left + " | " + right)
+                    .orElse("");
+            if (!versions.isBlank()) {
+                sendText(client, Component.literal("Versionen online: ").withStyle(ChatFormatting.DARK_GRAY)
+                        .append(Component.literal(versions).withStyle(ChatFormatting.GRAY)));
+            }
+        }
 
         sendText(client, Component.literal("User | Fraktion | Mod-Version").withStyle(ChatFormatting.DARK_GRAY));
         if (entries.isEmpty()) {
@@ -1099,11 +1150,11 @@ public final class PingRelayClient {
     }
 
     private static boolean hasRelayCredential() {
-        return !accessToken().isBlank();
+        return BetterUCAuthClient.hasCredential();
     }
 
     private static String accessToken() {
-        return BetterUCConfig.INSTANCE.pingRelayToken == null ? "" : BetterUCConfig.INSTANCE.pingRelayToken.trim();
+        return BetterUCAuthClient.credential();
     }
 
     private static RelayPlayer findRelayPlayer(PlayerInfo entry) {
@@ -1303,6 +1354,12 @@ public final class PingRelayClient {
     }
 
     private record OnlineListEntry(String name, String faction, String version, String role, long priority) {
+    }
+
+    private record VersionCount(String version, long count) {
+    }
+
+    private record OnlineSummary(long online, long active24h, long active7d, long known, List<VersionCount> versionsOnline) {
     }
 
     public enum PingType {

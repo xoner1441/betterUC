@@ -1,6 +1,6 @@
 # betterUC Platform
 
-Node service for the betterUC website, access-code API and WebSocket ping relay.
+Node service for the betterUC website, automatic Minecraft authentication and WebSocket ping relay.
 
 ## Routes
 
@@ -10,7 +10,9 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `GET /access` access-code section
 - `POST /api/access` creates a personal access code
 - `GET /api/status` public status
-- `GET /api/players` online mod users, requires an access code
+- `POST /api/auth/challenge` creates a one-time Minecraft session challenge
+- `POST /api/auth/complete` verifies the Mojang session and issues a betterUC mod session
+- `GET /api/players` online users plus 24h/7d/version statistics, requires a mod session or legacy access code
 - `POST /api/screenshots` uploads an authenticated PNG screenshot for seven days
 - `POST /api/bugs` creates a public Discord forum report; requires an access code
 - `GET /admin` admin control panel
@@ -30,6 +32,10 @@ Node service for the betterUC website, access-code API and WebSocket ping relay.
 - `PORT=3000`
 - `BETTERUC_TOKEN=...` optional legacy shared token
 - `TOKEN_PEPPER=...` secret pepper for access-code hashes
+- `SESSION_SECRET=...` secret for signed web and mod sessions
+- `MOD_SESSION_TTL_MS=2592000000` lifetime of an automatically issued mod session
+- `AUTH_CHALLENGE_TTL_MS=60000` lifetime of a one-time Minecraft challenge
+- `MOJANG_HAS_JOINED_URL=...` optional session-server override for local integration tests
 - `ADMIN_KEY=...` optional fallback secret for the admin control panel
 - `BACKUP_DIR=/opt/betteruc-relay/data/backups`
 - `BACKUP_RETENTION_DAYS=30`

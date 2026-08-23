@@ -2,15 +2,28 @@
   "schema": 1,
   "development": {
     "label": "In Entwicklung",
-    "title": "Weitere Verbesserungen folgen",
+    "title": "Automatische Anmeldung und echte Nutzerstatistiken",
     "date": "Aktueller Stand",
     "pages": [
       {
         "eyebrow": "NÄCHSTE VERSION",
-        "title": "Weitere Verbesserungen folgen",
-        "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
+        "title": "Ohne Access Code direkt verbunden",
+        "description": "betterUC bestätigt das aktive Minecraft-Konto automatisch und stellt alle Relay-Funktionen ohne manuelle Code-Eingabe bereit.",
         "lines": [
-          "Version 1.4.1 erweitert betterUC um einen flexiblen Kamera-Zoom, schnellere Chatbedienung und gezielte HUD- sowie Discord-Korrekturen."
+          "Eine einmalige Minecraft-Session-Challenge verifiziert Name und UUID, ohne das Minecraft-Zugriffstoken an betterUC zu übertragen.",
+          "Bestehende Accounts behalten anhand ihrer UUID Rollen, Discord-Verknüpfung, Statistiken und Cloud-Einstellungen.",
+          "Relay, Pings, Cloud-Sync, Userpanel, Statistiken, Screenshots und Bugmeldungen verwenden anschließend automatisch eine erneuerbare betterUC-Sitzung.",
+          "Der bisherige Access Code bleibt während der Übergangszeit ausschließlich als unsichtbarer Fallback für ältere Mod-Versionen erhalten."
+        ]
+      },
+      {
+        "eyebrow": "NUTZERSTATISTIK",
+        "title": "/buonline zeigt mehr als den Moment",
+        "description": "Die bisherige Live-Liste wird um nachvollziehbare Aktivitäts- und Versionszahlen ergänzt.",
+        "lines": [
+          "Neben den aktuell verbundenen Spielern erscheinen eindeutige Nutzer der letzten 24 Stunden und sieben Tage.",
+          "Die Gesamtzahl bekannter, verifizierter Minecraft-UUIDs macht die tatsächliche Reichweite unabhängig von GitHub-Downloadzahlen sichtbar.",
+          "Eine Versionsverteilung zeigt direkt, welche betterUC-Versionen momentan online sind."
         ]
       }
     ]

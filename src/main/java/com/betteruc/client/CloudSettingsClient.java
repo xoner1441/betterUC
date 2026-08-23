@@ -76,7 +76,7 @@ public final class CloudSettingsClient {
             activeToken = "";
             initialized = false;
             dirty = false;
-            if (!inFlight) status = "Access Code fehlt";
+            if (!inFlight) status = BetterUCAuthClient.statusLabel();
             return;
         }
         if (!token.equals(activeToken)) {
@@ -86,7 +86,7 @@ public final class CloudSettingsClient {
             revision = 0L;
             lastSyncedSnapshot = "";
             if (token.isBlank()) {
-                status = "Access Code fehlt";
+                status = BetterUCAuthClient.statusLabel();
                 return;
             }
             if (BetterUCConfig.INSTANCE.cloudSettingsEnabled && !inFlight) {
@@ -146,8 +146,8 @@ public final class CloudSettingsClient {
         }
         String token = accessToken();
         if (token.isBlank()) {
-            status = "Access Code fehlt";
-            sendLocalMessage(client, "\u00A7cBitte zuerst deinen Access Code eintragen.");
+            status = BetterUCAuthClient.statusLabel();
+            sendLocalMessage(client, "\u00A7cDie automatische betterUC-Anmeldung läuft noch.");
             return false;
         }
         activeToken = token;
@@ -162,7 +162,7 @@ public final class CloudSettingsClient {
         }
         String token = accessToken();
         if (token.isBlank()) {
-            status = "Access Code fehlt";
+            status = BetterUCAuthClient.statusLabel();
             return;
         }
 
@@ -187,6 +187,7 @@ public final class CloudSettingsClient {
                     }
                     JsonObject body = parseJson(response.body());
                     if (response.statusCode() < 200 || response.statusCode() >= 300 || !boolValue(body, "ok")) {
+                        if (response.statusCode() == 401) BetterUCAuthClient.invalidateSession(client);
                         fail(client, manual, stringValue(body, "error", "Cloud-Download fehlgeschlagen."), null);
                         return;
                     }
@@ -235,6 +236,7 @@ public final class CloudSettingsClient {
                     }
                     JsonObject body = parseJson(response.body());
                     if (response.statusCode() < 200 || response.statusCode() >= 300 || !boolValue(body, "ok")) {
+                        if (response.statusCode() == 401) BetterUCAuthClient.invalidateSession(client);
                         fail(client, true, stringValue(body, "error", "Cloud-Pr\u00FCfung fehlgeschlagen."), null);
                         return;
                     }
@@ -302,6 +304,7 @@ public final class CloudSettingsClient {
                     }
                     if (response.statusCode() < 200 || response.statusCode() >= 300
                             || !boolValue(responseBody, "ok") || !responseBody.has("profile")) {
+                        if (response.statusCode() == 401) BetterUCAuthClient.invalidateSession(client);
                         fail(client, manual, stringValue(responseBody, "error", "Cloud-Speichern fehlgeschlagen."), null);
                         return;
                     }
@@ -384,7 +387,7 @@ public final class CloudSettingsClient {
     }
 
     private static String accessToken() {
-        return BetterUCConfig.INSTANCE.pingRelayToken == null ? "" : BetterUCConfig.INSTANCE.pingRelayToken.trim();
+        return BetterUCAuthClient.credential();
     }
 
     private static String modVersion() {
