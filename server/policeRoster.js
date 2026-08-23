@@ -14,13 +14,87 @@ const DEFAULT_ROSTER_CACHE_MS = 5 * 60 * 1000;
 const DEFAULT_HEAD_CACHE_MS = 24 * 60 * 60 * 1000;
 const IMAGE_WIDTH = 760;
 
-function xml(value) {
+const PIXEL_GLYPHS = Object.freeze({
+  " ": "00000/00000/00000/00000/00000/00000/00000",
+  A: "01110/10001/10001/11111/10001/10001/10001",
+  B: "11110/10001/10001/11110/10001/10001/11110",
+  C: "01111/10000/10000/10000/10000/10000/01111",
+  D: "11110/10001/10001/10001/10001/10001/11110",
+  E: "11111/10000/10000/11110/10000/10000/11111",
+  F: "11111/10000/10000/11110/10000/10000/10000",
+  G: "01111/10000/10000/10111/10001/10001/01111",
+  H: "10001/10001/10001/11111/10001/10001/10001",
+  I: "11111/00100/00100/00100/00100/00100/11111",
+  J: "00111/00010/00010/00010/10010/10010/01100",
+  K: "10001/10010/10100/11000/10100/10010/10001",
+  L: "10000/10000/10000/10000/10000/10000/11111",
+  M: "10001/11011/10101/10101/10001/10001/10001",
+  N: "10001/11001/10101/10011/10001/10001/10001",
+  O: "01110/10001/10001/10001/10001/10001/01110",
+  P: "11110/10001/10001/11110/10000/10000/10000",
+  Q: "01110/10001/10001/10001/10101/10010/01101",
+  R: "11110/10001/10001/11110/10100/10010/10001",
+  S: "01111/10000/10000/01110/00001/00001/11110",
+  T: "11111/00100/00100/00100/00100/00100/00100",
+  U: "10001/10001/10001/10001/10001/10001/01110",
+  V: "10001/10001/10001/10001/10001/01010/00100",
+  W: "10001/10001/10001/10101/10101/10101/01010",
+  X: "10001/10001/01010/00100/01010/10001/10001",
+  Y: "10001/10001/01010/00100/00100/00100/00100",
+  Z: "11111/00001/00010/00100/01000/10000/11111",
+  0: "01110/10001/10011/10101/11001/10001/01110",
+  1: "00100/01100/00100/00100/00100/00100/01110",
+  2: "01110/10001/00001/00010/00100/01000/11111",
+  3: "11110/00001/00001/01110/00001/00001/11110",
+  4: "00010/00110/01010/10010/11111/00010/00010",
+  5: "11111/10000/10000/11110/00001/00001/11110",
+  6: "01110/10000/10000/11110/10001/10001/01110",
+  7: "11111/00001/00010/00100/01000/01000/01000",
+  8: "01110/10001/10001/01110/10001/10001/01110",
+  9: "01110/10001/10001/01111/00001/00001/01110",
+  "/": "00001/00010/00010/00100/01000/01000/10000",
+  ":": "00000/00100/00100/00000/00100/00100/00000",
+  ".": "00000/00000/00000/00000/00000/00100/00100",
+  "-": "00000/00000/00000/11111/00000/00000/00000",
+  _: "00000/00000/00000/00000/00000/00000/11111",
+  "~": "00000/00000/01001/10110/00000/00000/00000",
+  "?": "01110/10001/00001/00010/00100/00000/00100"
+});
+
+function normalizePixelText(value) {
   return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
+    .replace(/Ä/g, "AE").replace(/Ö/g, "OE").replace(/Ü/g, "UE")
+    .replace(/ä/g, "AE").replace(/ö/g, "OE").replace(/ü/g, "UE")
+    .replace(/ß/g, "SS")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9 _./:~-]/g, "?");
+}
+
+function pixelTextSvg(value, x, y, options = {}) {
+  const scale = positiveInteger(options.scale, 1);
+  const maxChars = positiveInteger(options.maxChars, 0, 0);
+  let text = normalizePixelText(value);
+  if (maxChars && text.length > maxChars) text = `${text.slice(0, Math.max(1, maxChars - 1))}~`;
+  const step = 6 * scale;
+  const width = text.length ? text.length * step - scale : 0;
+  let cursor = Number(x);
+  if (options.align === "center") cursor -= width / 2;
+  if (options.align === "right") cursor -= width;
+  const rectangles = [];
+  for (const character of text) {
+    const rows = (PIXEL_GLYPHS[character] || PIXEL_GLYPHS["?"]).split("/");
+    for (let row = 0; row < rows.length; row += 1) {
+      for (let column = 0; column < rows[row].length; column += 1) {
+        if (rows[row][column] === "1") {
+          rectangles.push(`<rect x="${cursor + column * scale}" y="${Number(y) + row * scale}" width="${scale}" height="${scale}"/>`);
+        }
+      }
+    }
+    cursor += step;
+  }
+  return `<g fill="${options.color || "#111820"}">${rectangles.join("")}</g>`;
 }
 
 function positiveInteger(value, fallback, minimum = 1) {
@@ -69,12 +143,13 @@ function colorForName(name) {
 
 function placeholderHeadSvg(username) {
   const background = colorForName(username);
-  const initial = xml(String(username || "?").slice(0, 1).toUpperCase());
   return Buffer.from(`
     <svg width="128" height="128" xmlns="http://www.w3.org/2000/svg">
       <rect width="128" height="128" fill="${background}"/>
       <rect x="10" y="10" width="108" height="108" fill="none" stroke="#111820" stroke-width="8"/>
-      <text x="64" y="84" text-anchor="middle" font-family="Arial, sans-serif" font-size="62" font-weight="800" fill="#fff">${initial}</text>
+      <rect x="30" y="40" width="22" height="22" fill="#111820"/>
+      <rect x="76" y="40" width="22" height="22" fill="#111820"/>
+      <rect x="42" y="82" width="44" height="10" fill="#ffffff"/>
     </svg>
   `);
 }
@@ -192,25 +267,26 @@ function createPoliceRosterService(options = {}) {
   }
 
   async function renderImage(roster) {
-    const columns = 2;
-    const pagePadding = 34;
-    const cardGap = 14;
-    const cardWidth = Math.floor((IMAGE_WIDTH - pagePadding * 2 - cardGap) / columns);
-    const cardHeight = 96;
-    const sectionHeaderHeight = 44;
-    const sectionGap = 22;
-    const headerHeight = 222;
-    const footerHeight = 72;
+    const columns = 4;
+    const pagePadding = 24;
+    const cardGap = 10;
+    const rowGap = 8;
+    const cardWidth = Math.floor((IMAGE_WIDTH - pagePadding * 2 - cardGap * (columns - 1)) / columns);
+    const cardHeight = 82;
+    const sectionHeaderHeight = 32;
+    const sectionGap = 14;
+    const headerHeight = 176;
+    const footerHeight = 64;
     let contentHeight = 0;
     for (const group of roster.groups) {
-      contentHeight += sectionHeaderHeight + Math.ceil(group.members.length / columns) * (cardHeight + cardGap) + sectionGap;
+      contentHeight += sectionHeaderHeight + Math.ceil(group.members.length / columns) * (cardHeight + rowGap) + sectionGap;
     }
     const height = headerHeight + contentHeight + footerHeight;
     const fragments = [];
     const composites = [];
     const resizedHeadEntries = await mapLimit(roster.members, 6, async member => {
       const head = await getHead(member.uuid, member.username);
-      const resized = await sharp(head).resize(64, 64, { kernel: "nearest" }).png().toBuffer();
+      const resized = await sharp(head).resize(46, 46, { kernel: "nearest" }).png().toBuffer();
       return [member.username.toLowerCase(), resized];
     });
     const resizedHeads = new Map(resizedHeadEntries);
@@ -218,9 +294,9 @@ function createPoliceRosterService(options = {}) {
 
     for (const group of roster.groups) {
       fragments.push(`
-        <rect x="34" y="${y}" width="692" height="34" rx="2" fill="${group.key === "leader" ? "#e8bd4b" : "#54bde9"}" stroke="#111820" stroke-width="3"/>
-        <text x="50" y="${y + 24}" font-family="Arial, sans-serif" font-size="17" font-weight="900" letter-spacing="1.8" fill="#111820">${xml(group.label)}</text>
-        <text x="708" y="${y + 24}" text-anchor="end" font-family="Arial, sans-serif" font-size="14" font-weight="800" fill="#111820">${group.members.length}</text>
+        <rect x="${pagePadding}" y="${y}" width="${IMAGE_WIDTH - pagePadding * 2}" height="26" rx="2" fill="${group.key === "leader" ? "#e8bd4b" : "#54bde9"}" stroke="#111820" stroke-width="2"/>
+        ${pixelTextSvg(group.label, pagePadding + 12, y + 6, { scale: 2, maxChars: 22 })}
+        ${pixelTextSvg(group.members.length, IMAGE_WIDTH - pagePadding - 12, y + 6, { scale: 2, align: "right" })}
       `);
       y += sectionHeaderHeight;
       for (let index = 0; index < group.members.length; index += 1) {
@@ -228,42 +304,40 @@ function createPoliceRosterService(options = {}) {
         const column = index % columns;
         const row = Math.floor(index / columns);
         const x = pagePadding + column * (cardWidth + cardGap);
-        const cardY = y + row * (cardHeight + cardGap);
+        const cardY = y + row * (cardHeight + rowGap);
         fragments.push(`
-          <rect x="${x + 5}" y="${cardY + 5}" width="${cardWidth}" height="${cardHeight}" rx="4" fill="#111820" opacity="0.22"/>
-          <rect x="${x}" y="${cardY}" width="${cardWidth}" height="${cardHeight}" rx="4" fill="#f9fbfd" stroke="#111820" stroke-width="3"/>
-          <rect x="${x + 12}" y="${cardY + 12}" width="72" height="72" fill="#dbeef8" stroke="#111820" stroke-width="2"/>
-          <text x="${x + 98}" y="${cardY + 34}" font-family="Arial, sans-serif" font-size="19" font-weight="900" fill="#111820">${xml(member.username)}</text>
-          <text x="${x + 98}" y="${cardY + 57}" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#52626f">${xml(member.rankName)}</text>
-          <rect x="${x + 98}" y="${cardY + 67}" width="66" height="19" rx="3" fill="#111820"/>
-          <text x="${x + 131}" y="${cardY + 81}" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="900" fill="#ffffff">${xml(member.unit)}</text>
-          <text x="${x + cardWidth - 14}" y="${cardY + 81}" text-anchor="end" font-family="Arial, sans-serif" font-size="12" font-weight="800" fill="#277da8">RANG ${member.rankNumber}</text>
+          <rect x="${x + 4}" y="${cardY + 4}" width="${cardWidth}" height="${cardHeight}" rx="3" fill="#111820" opacity="0.18"/>
+          <rect x="${x}" y="${cardY}" width="${cardWidth}" height="${cardHeight}" rx="3" fill="#f9fbfd" stroke="#111820" stroke-width="2"/>
+          <rect x="${x + (cardWidth - 50) / 2}" y="${cardY + 5}" width="50" height="50" fill="#dbeef8" stroke="#111820" stroke-width="2"/>
+          ${pixelTextSvg(member.username, x + cardWidth / 2, cardY + 62, { scale: 2, maxChars: 13, align: "center" })}
         `);
         composites.push({
           input: resizedHeads.get(member.username.toLowerCase()),
-          left: x + 16,
-          top: cardY + 16,
+          left: Math.round(x + (cardWidth - 46) / 2),
+          top: cardY + 7,
           blend: "over"
         });
       }
-      y += Math.ceil(group.members.length / columns) * (cardHeight + cardGap) + sectionGap;
+      y += Math.ceil(group.members.length / columns) * (cardHeight + rowGap) + sectionGap;
     }
 
     const svg = Buffer.from(`
       <svg width="${IMAGE_WIDTH}" height="${height}" xmlns="http://www.w3.org/2000/svg">
         <rect width="${IMAGE_WIDTH}" height="${height}" fill="#eef6fa"/>
         <rect x="0" y="0" width="${IMAGE_WIDTH}" height="16" fill="#111820"/>
-        <rect x="0" y="16" width="${IMAGE_WIDTH}" height="9" fill="#2ba8e0"/>
-        <text x="34" y="75" font-family="Arial, sans-serif" font-size="16" font-weight="900" letter-spacing="2.4" fill="#2787b5">UNICACITY POLICE DEPARTMENT</text>
-        <text x="34" y="125" font-family="Arial, sans-serif" font-size="42" font-weight="900" letter-spacing="1.2" fill="#111820">MITGLIEDERÜBERSICHT</text>
-        <text x="34" y="157" font-family="Arial, sans-serif" font-size="17" font-weight="600" fill="#52626f">Aktueller Personalbestand und verfügbare Dienstnummern</text>
-        <rect x="34" y="180" width="692" height="4" fill="#111820"/>
-        <rect x="558" y="147" width="168" height="31" rx="3" fill="#ffffff" stroke="#111820" stroke-width="3"/>
-        <text x="642" y="168" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="900" fill="#111820">SLOTS ${roster.count}/${roster.slotLimit}</text>
+        <rect x="0" y="16" width="${IMAGE_WIDTH}" height="8" fill="#2ba8e0"/>
+        ${pixelTextSvg("UNICACITY POLICE DEPARTMENT", 26, 40, { scale: 2, color: "#2787b5" })}
+        ${pixelTextSvg("POLIZEI", 26, 70, { scale: 7 })}
+        ${pixelTextSvg("MITGLIEDERUEBERSICHT", 26, 130, { scale: 2, color: "#52626f" })}
+        <rect x="540" y="62" width="194" height="64" rx="3" fill="#ffffff" stroke="#111820" stroke-width="3"/>
+        ${pixelTextSvg(`${roster.count}/${roster.slotLimit}`, 637, 73, { scale: 5, align: "center" })}
+        ${pixelTextSvg("MITGLIEDER", 637, 111, { scale: 1, align: "center", color: "#2787b5" })}
+        <rect x="24" y="156" width="712" height="4" fill="#111820"/>
+        <rect x="24" y="164" width="712" height="4" fill="#2ba8e0"/>
         ${fragments.join("\n")}
         <rect x="0" y="${height - footerHeight}" width="${IMAGE_WIDTH}" height="${footerHeight}" fill="#111820"/>
-        <text x="34" y="${height - 38}" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="#ffffff">Vollständige Ansicht: betteruc.de/polizei/mitglieder</text>
-        <text x="34" y="${height - 17}" font-family="Arial, sans-serif" font-size="11" font-weight="600" fill="#94a9b5">Quelle: offizielle UnicaCity Fraktions-API · Stand ${xml(new Date(roster.generatedAt).toLocaleString("de-DE"))}</text>
+        ${pixelTextSvg("KLICKEN: BETTERUC.DE/POLIZEI/MITGLIEDER", IMAGE_WIDTH / 2, height - 45, { scale: 2, align: "center", color: "#ffffff" })}
+        ${pixelTextSvg("AUTOMATISCH SYNCHRONISIERT", IMAGE_WIDTH / 2, height - 19, { scale: 1, align: "center", color: "#94a9b5" })}
       </svg>
     `);
     const base = await sharp(svg).png().toBuffer();

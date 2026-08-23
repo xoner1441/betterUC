@@ -112,7 +112,8 @@ When `TEAMSPEAK_FACTION_SYNC_ENABLED=true`, the relay reads the official police 
 channel description and replaces only the content between the `PERSONALAKTE` and `STRAFZAHLUNGEN` headings. With the
 default `image` render mode this section contains a cache-busted, clickable PNG. It links to the responsive public view
 at `/polizei/mitglieder`; the PNG itself is served at `/api/teamspeak/police-roster.png`. Both views include cached 3D
-Minecraft heads. Introductory text and the penalty catalog remain unchanged. The description is only written when that
+Minecraft heads. The TeamSpeak PNG stays below 2048 pixels and uses an embedded pixel glyph renderer, so it does not
+depend on fonts installed on the relay host. Introductory text and the penalty catalog remain unchanged. The description is only written when that
 managed section differs. Set `TEAMSPEAK_FACTION_RENDER_MODE=text` to keep the legacy raw-text list. The query user
 should be restricted to the selected virtual server and the permissions to read the channel information and edit that
 channel description.

@@ -7,6 +7,7 @@ const DEFAULT_API_BASE_URL = "https://api.unicacity.eu/api/factions";
 const DEFAULT_SYNC_INTERVAL_MS = 10 * 60 * 1000;
 const DEFAULT_QUERY_TIMEOUT_MS = 10 * 1000;
 const MIN_SYNC_INTERVAL_MS = 60 * 1000;
+const TEAM_SPEAK_ROSTER_RENDER_REVISION = "ts3-2";
 
 function envBoolean(value, fallback = false) {
   if (value === undefined || value === null || String(value).trim() === "") return fallback;
@@ -158,7 +159,7 @@ function rosterVersion(members) {
 
 function formatPersonnelImageEmbed(members, options = {}) {
   const baseUrl = String(options.publicBaseUrl || "https://betteruc.de").replace(/\/+$/, "");
-  const version = rosterVersion(members);
+  const version = `${TEAM_SPEAK_ROSTER_RENDER_REVISION}-${rosterVersion(members)}`;
   return `[url=${baseUrl}/polizei/mitglieder][img]${baseUrl}/api/teamspeak/police-roster.png?v=${version}[/img][/url]`;
 }
 
@@ -475,5 +476,6 @@ module.exports = {
   rosterVersion,
   startTeamSpeakFactionSync,
   synchronizeFactionChannel,
+  TEAM_SPEAK_ROSTER_RENDER_REVISION,
   updateChannelDescription
 };

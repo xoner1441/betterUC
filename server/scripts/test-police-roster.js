@@ -75,6 +75,7 @@ test("loads members, caches heads and renders the TeamSpeak PNG", async () => {
   assert.equal(metadata.format, "png");
   assert.equal(metadata.width, 760);
   assert.ok(metadata.height > 600);
+  assert.ok(metadata.height < 2048, `TeamSpeak image is too tall: ${metadata.height}px`);
   assert.equal(image.buffer, secondImage.buffer);
   assert.equal(apiRequests, 1);
   assert.equal(headRequests, MEMBERS.length);
