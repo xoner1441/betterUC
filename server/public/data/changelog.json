@@ -2,37 +2,129 @@
   "schema": 1,
   "development": {
     "label": "In Entwicklung",
-    "title": "Automatische Anmeldung und echte Nutzerstatistiken",
+    "title": "Weitere Verbesserungen folgen",
     "date": "Aktueller Stand",
     "pages": [
       {
         "eyebrow": "NÄCHSTE VERSION",
-        "title": "Ohne Access Code direkt verbunden",
-        "description": "betterUC bestätigt das aktive Minecraft-Konto automatisch und stellt alle Relay-Funktionen ohne manuelle Code-Eingabe bereit.",
+        "title": "Neue Ideen werden gesammelt",
+        "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
         "lines": [
-          "Eine einmalige Minecraft-Session-Challenge verifiziert Name und UUID, ohne das Minecraft-Zugriffstoken an betterUC zu übertragen.",
-          "Bestehende Accounts behalten anhand ihrer UUID Rollen, Discord-Verknüpfung, Statistiken und Cloud-Einstellungen.",
-          "Relay, Pings, Cloud-Sync, Userpanel, Statistiken, Screenshots und Bugmeldungen verwenden anschließend automatisch eine erneuerbare betterUC-Sitzung.",
-          "Der bisherige Access Code bleibt während der Übergangszeit ausschließlich als unsichtbarer Fallback für ältere Mod-Versionen erhalten."
-        ]
-      },
-      {
-        "eyebrow": "NUTZERSTATISTIK",
-        "title": "/buonline zeigt mehr als den Moment",
-        "description": "Die bisherige Live-Liste wird um nachvollziehbare Aktivitäts- und Versionszahlen ergänzt.",
-        "lines": [
-          "Neben den aktuell verbundenen Spielern erscheinen eindeutige Nutzer der letzten 24 Stunden und sieben Tage.",
-          "Die Gesamtzahl bekannter, verifizierter Minecraft-UUIDs macht die tatsächliche Reichweite unabhängig von GitHub-Downloadzahlen sichtbar.",
-          "Eine Versionsverteilung zeigt direkt, welche betterUC-Versionen momentan online sind."
+          "Version 1.4.2 verbindet betterUC automatisch, erweitert die Nutzerstatistik und bringt dynamische Polizei- sowie SWAT-Listen in Website und TeamSpeak."
         ]
       }
     ]
   },
   "releases": [
     {
+      "version": "1.4.2",
+      "date": "24.08.2026",
+      "current": true,
+      "pages": [
+        {
+          "eyebrow": "VERBINDUNG & IDENTITÄT",
+          "title": "Ohne Access Code direkt einsatzbereit",
+          "description": "betterUC bestätigt das aktive Minecraft-Konto automatisch und verbindet alle Online-Funktionen ohne manuelle Code-Eingabe.",
+          "lines": [
+            "Eine einmalige Minecraft-Session-Challenge verifiziert Name und UUID, ohne das Minecraft-Zugriffstoken an betterUC zu übertragen.",
+            "Bestehende Accounts behalten anhand ihrer UUID Rollen, Discord-Verknüpfung, Statistiken und Cloud-Einstellungen.",
+            "Relay, Pings, Cloud-Sync, Userpanel, Screenshots und Bugmeldungen verwenden anschließend automatisch eine erneuerbare betterUC-Sitzung.",
+            "Der bisherige Access Code bleibt während der Übergangszeit ausschließlich als unsichtbarer Fallback für ältere Mod-Versionen erhalten."
+          ]
+        },
+        {
+          "eyebrow": "NUTZERSTATISTIK",
+          "title": "/buonline zeigt die tatsächliche Reichweite",
+          "description": "Die Live-Liste wird um nachvollziehbare Aktivitäts- und Versionszahlen ergänzt.",
+          "lines": [
+            "Neben den aktuell verbundenen Spielern erscheinen eindeutige Nutzer der letzten 24 Stunden und sieben Tage.",
+            "Die Gesamtzahl bekannter, verifizierter Minecraft-UUIDs macht die Reichweite unabhängig von GitHub-Downloadzahlen sichtbar.",
+            "Eine Versionsverteilung zeigt direkt, welche betterUC-Versionen momentan online sind."
+          ]
+        },
+        {
+          "eyebrow": "POLIZEI-MITGLIEDERLISTE",
+          "title": "Personalbestand automatisch in Website und TeamSpeak",
+          "description": "Die offizielle Fraktionsliste wird zu einer kompakten Übersicht mit Minecraft-Köpfen aufbereitet und automatisch aktuell gehalten.",
+          "lines": [
+            "Die Website zeigt Leitung, Polizeirat und alle Dienstränge in einer responsiven Mitgliederübersicht.",
+            "Ein schmales TeamSpeak-PNG übernimmt dieselben Mitglieder, Köpfe, Ranggruppen und den aktuellen Slotstand.",
+            "Die Farbgebung entspricht dem betterUC-Webdesign und verwendet eine gut lesbare Standardschrift.",
+            "Cachekennungen verhindern dauerhaft defekte oder veraltete Bilder in TeamSpeak.",
+            "Der Server aktualisiert die Personalabteilung mit Channel-ID 109, ohne Header oder Strafzahlungen zu überschreiben."
+          ]
+        },
+        {
+          "eyebrow": "SWAT-SYNCHRONISIERUNG",
+          "title": "Einheitsliste aus dem Spiel bis in TeamSpeak",
+          "description": "Die SWAT-Liste wird authentifiziert im Spiel abgefragt, strukturiert aufbereitet und als eigenes Mitglieder-PNG bereitgestellt.",
+          "lines": [
+            "Beim Join von FABI1441 führt betterUC /sfinfoall SWAT nach kurzer Wartezeit unsichtbar aus.",
+            "[L] und [S] unterscheiden Leitung und SWAT-Prüfer; alle übrigen Namen werden als Member übernommen.",
+            "Die erkannten Daten werden über die automatische betterUC-Sitzung sicher an den Server übertragen.",
+            "Website und PNG zeigen Leitung, SWAT-Prüfer, vollständige Memberliste, Minecraft-Köpfe und den Slotstand.",
+            "Der TeamSpeak-Sync aktualisiert die EINHEITSLISTE im SWAT-Channel 108 und entfernt die alte manuelle Textliste."
+          ]
+        },
+        {
+          "eyebrow": "UPDATER & KOMFORT",
+          "title": "Zuverlässiger aktualisieren und gezielter reagieren",
+          "description": "Mehrstufige Warnungen, kontrollierte Reinf-Annahme und ein robusterer Updateweg verbessern den täglichen Einsatz.",
+          "lines": [
+            "Reinforcements werden nur noch vorbereitet und ausschließlich über den frei belegbaren Hotkey angenommen.",
+            "Der Reichensteuer-Alert warnt nun bei 5, 3, 2 und 1 Minute vor dem PayDay.",
+            "Der Auto-Updater prüft bereits im Hauptmenü, erkennt ausschließlich passende mc26.x-Releases und validiert die geladene JAR vor dem Neustart.",
+            "Das aktuelle Notruf-Serverformat mit ,näheste‘ und ,nähesten‘ wird wieder vollständig vom HQ-Design erkannt.",
+            "Das Adminpanel erzeugt kompakten, direkt kopierbaren HTML-Quellcode für Release-Changelogs im UnicaCity-Forum."
+          ]
+        }
+      ],
+      "summary": [
+        {
+          "title": "Automatische Verbindung",
+          "description": "Alle betterUC-Onlinedienste funktionieren ohne manuell eingegebenen Access Code.",
+          "color": "cyan"
+        },
+        {
+          "title": "Echte Nutzerstatistik",
+          "description": "/buonline zeigt Live-Nutzer, Aktivität, bekannte Accounts und die Versionsverteilung.",
+          "color": "green"
+        },
+        {
+          "title": "Dynamische TeamSpeak-Listen",
+          "description": "Polizei und SWAT erhalten automatisch erzeugte Mitglieder-PNGs mit Köpfen und Slotstand.",
+          "color": "purple"
+        },
+        {
+          "title": "Updater & Komfort",
+          "description": "Hotkey-Reinfs, mehrere PayDay-Warnungen und ein robuster mc26.x-Updater.",
+          "color": "amber"
+        }
+      ],
+      "changes": [
+        "betterUC authentifiziert das aktive Minecraft-Konto automatisch über eine sichere Session-Challenge.",
+        "Relay, Pings, Cloud-Einstellungen, Userpanel, Screenshots und Bugmeldungen benötigen keinen manuell eingegebenen Access Code mehr.",
+        "Bestehende Accounts, Rollen, Discord-Verknüpfungen und Statistiken werden anhand der Minecraft-UUID übernommen.",
+        "/buonline zeigt aktuell verbundene Nutzer, Aktivität der letzten 24 Stunden und sieben Tage, bekannte UUIDs und Online-Versionen.",
+        "Die offizielle Polizei-Mitgliederliste steht als responsive Website und TeamSpeak-PNG mit Minecraft-Köpfen bereit.",
+        "Polizeiränge, Slotstand, Schrift und Farbschema werden im PNG kompakt und einheitlich dargestellt.",
+        "TeamSpeak-Bildrevisionen umgehen fehlgeschlagene oder veraltete Client-Caches.",
+        "Die Personalabteilung mit Channel-ID 109 wird zwischen PERSONALAKTE und STRAFZAHLUNGEN automatisch aktualisiert.",
+        "FABI1441 fragt die SWAT-Liste beim Join unsichtbar über /sfinfoall SWAT ab.",
+        "SWAT-Leitung, SWAT-Prüfer und Member werden anhand von [L] und [S] getrennt und authentifiziert hochgeladen.",
+        "Die SWAT-Liste steht als Website und TeamSpeak-PNG mit Köpfen, Gruppen und Slotstand bereit.",
+        "Der SWAT-Channel 108 ersetzt seine alte Textliste ab EINHEITSLISTE automatisch durch das aktuelle PNG.",
+        "Reinforcements können ausschließlich per Hotkey angenommen werden; die vollständig automatische Annahme wurde entfernt.",
+        "Der Reichensteuer-Alert unterstützt PayDay-Warnungen bei 5, 3, 2 und 1 Minute.",
+        "Das aktuelle mehrzeilige Notruf-Serverformat wird wieder zuverlässig vom eigenen HQ-Design erfasst.",
+        "Der Auto-Updater prüft im Hauptmenü, filtert auf mc26.x und validiert Version sowie Minecraft-Abhängigkeit der heruntergeladenen JAR.",
+        "Vorbereitete Updates werden beim nächsten passenden Zeitpunkt erneut angeboten und können direkt per Neustart installiert werden.",
+        "Das Adminpanel erstellt Release-Changelogs als kompakten HTML-Quellcode innerhalb des 10.000-Zeichen-Limits des UnicaCity-Forums."
+      ]
+    },
+    {
       "version": "1.4.1",
       "date": "21.08.2026",
-      "current": true,
       "pages": [
         {
           "eyebrow": "KAMERA-ZOOM",
