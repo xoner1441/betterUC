@@ -13,6 +13,8 @@ const DEFAULT_HEAD_BASE_URL = "https://mc-heads.net/head";
 const DEFAULT_ROSTER_CACHE_MS = 5 * 60 * 1000;
 const DEFAULT_HEAD_CACHE_MS = 24 * 60 * 60 * 1000;
 const IMAGE_WIDTH = 620;
+const FONT_REGULAR = require.resolve("dejavu-fonts-ttf/ttf/DejaVuSans.ttf");
+const FONT_BOLD = require.resolve("dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf");
 const WEBSITE_COLORS = Object.freeze({
   background: "#0d1110",
   surface: "#151b1a",
@@ -110,6 +112,40 @@ function pixelTextSvg(value, x, y, options = {}) {
   return `<g fill="${options.color || WEBSITE_COLORS.text}">${rectangles.join("")}</g>`;
 }
 
+function escapePangoMarkup(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+async function normalTextComposite(value, anchorX, top, options = {}) {
+  const fontSize = positiveInteger(options.size, 16);
+  const bold = options.bold !== false;
+  const color = options.color || WEBSITE_COLORS.text;
+  const fontfile = bold ? FONT_BOLD : FONT_REGULAR;
+  const rendered = await sharp({
+    text: {
+      text: `<span foreground="${color}">${escapePangoMarkup(value)}</span>`,
+      font: `DejaVu Sans ${fontSize}`,
+      fontfile,
+      rgba: true,
+      dpi: 72
+    }
+  }).png().toBuffer({ resolveWithObject: true });
+  let left = Number(anchorX);
+  if (options.align === "center") left -= rendered.info.width / 2;
+  if (options.align === "right") left -= rendered.info.width;
+  return {
+    input: rendered.data,
+    left: Math.max(0, Math.round(left)),
+    top: Math.max(0, Math.round(top)),
+    blend: "over"
+  };
+}
+
 function positiveInteger(value, fallback, minimum = 1) {
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed >= minimum ? parsed : fallback;
@@ -125,8 +161,8 @@ function groupMembers(members) {
   const council = members.filter(member => !leaders.includes(member) && member.rankNumber === 4);
   const regular = members.filter(member => !leaders.includes(member) && !council.includes(member));
   const groups = [];
-  if (leaders.length) groups.push({ key: "leader", label: "LEITUNG", members: leaders });
-  if (council.length) groups.push({ key: "council", label: "POLIZEIRAT", members: council });
+  if (leaders.length) groups.push({ key: "leader", label: "Leitung (Leader)", members: leaders });
+  if (council.length) groups.push({ key: "council", label: "Polizeirat (Rang 4)", members: council });
 
   const rankGroups = new Map();
   for (const member of regular) {
@@ -134,7 +170,7 @@ function groupMembers(members) {
     if (!rankGroups.has(key)) {
       rankGroups.set(key, {
         key: `rank-${member.rankNumber}`,
-        label: String(member.rankName || "MEMBER").toLocaleUpperCase("de-DE"),
+        label: `${String(member.rankName || "Mitglied")} (Rang ${member.rankNumber})`,
         members: []
       });
     }
@@ -264,9 +300,10 @@ function createPoliceRosterService(options = {}) {
     if (cached && cached.expiresAt > Date.now()) return cached.buffer;
 
     let source = placeholderHeadSvg(username);
-    if (normalized) {
+    const headKey = normalized || (/^[A-Za-z0-9_]{1,16}$/.test(String(username)) ? String(username) : "");
+    if (headKey) {
       try {
-        source = await fetchBuffer(`${headBaseUrl}/${normalized}/128`, "image/*");
+        source = await fetchBuffer(`${headBaseUrl}/${encodeURIComponent(headKey)}/128`, "image/*");
       } catch (error) {
         console.warn(`Minecraft-Kopf für ${username} konnte nicht geladen werden: ${error.message}`);
       }
@@ -297,6 +334,10 @@ function createPoliceRosterService(options = {}) {
     const height = headerHeight + contentHeight + footerHeight;
     const fragments = [];
     const composites = [];
+    const textEntries = [];
+    const queueText = (value, x, top, options = {}) => {
+      textEntries.push({ value, x, top, options });
+    };
     const resizedHeadEntries = await mapLimit(roster.members, 6, async member => {
       const head = await getHead(member.uuid, member.username);
       const resized = await sharp(head).resize(46, 46, { kernel: "nearest" }).png().toBuffer();
@@ -308,9 +349,13 @@ function createPoliceRosterService(options = {}) {
     for (const group of roster.groups) {
       fragments.push(`
         <rect x="${pagePadding}" y="${y}" width="${IMAGE_WIDTH - pagePadding * 2}" height="26" rx="2" fill="${group.key === "leader" ? WEBSITE_COLORS.amber : WEBSITE_COLORS.cyan}" stroke="${WEBSITE_COLORS.line}" stroke-width="2"/>
-        ${pixelTextSvg(group.label, pagePadding + 12, y + 6, { scale: 2, maxChars: 22, color: WEBSITE_COLORS.darkText })}
-        ${pixelTextSvg(group.members.length, IMAGE_WIDTH - pagePadding - 12, y + 6, { scale: 2, align: "right", color: WEBSITE_COLORS.darkText })}
       `);
+      queueText(group.label, pagePadding + 12, y + 4, { size: 16, color: WEBSITE_COLORS.darkText });
+      queueText(group.members.length, IMAGE_WIDTH - pagePadding - 12, y + 4, {
+        size: 16,
+        color: WEBSITE_COLORS.darkText,
+        align: "right"
+      });
       y += sectionHeaderHeight;
       for (let index = 0; index < group.members.length; index += 1) {
         const member = group.members[index];
@@ -322,8 +367,11 @@ function createPoliceRosterService(options = {}) {
           <rect x="${x + 4}" y="${cardY + 4}" width="${cardWidth}" height="${cardHeight}" rx="3" fill="#000000" opacity="0.35"/>
           <rect x="${x}" y="${cardY}" width="${cardWidth}" height="${cardHeight}" rx="3" fill="${WEBSITE_COLORS.surface}" stroke="${WEBSITE_COLORS.line}" stroke-width="2"/>
           <rect x="${x + (cardWidth - 50) / 2}" y="${cardY + 5}" width="50" height="50" fill="${WEBSITE_COLORS.surfaceRaised}" stroke="${WEBSITE_COLORS.cyan}" stroke-width="2"/>
-          ${pixelTextSvg(member.username, x + cardWidth / 2, cardY + 59, { scale: 2, maxChars: 15, align: "center" })}
         `);
+        queueText(member.username, x + cardWidth / 2, cardY + 56, {
+          size: member.username.length > 14 ? 14 : 16,
+          align: "center"
+        });
         composites.push({
           input: resizedHeads.get(member.username.toLowerCase()),
           left: Math.round(x + (cardWidth - 46) / 2),
@@ -339,22 +387,46 @@ function createPoliceRosterService(options = {}) {
         <rect width="${IMAGE_WIDTH}" height="${height}" fill="${WEBSITE_COLORS.background}"/>
         <rect x="0" y="0" width="${IMAGE_WIDTH}" height="16" fill="${WEBSITE_COLORS.surfaceRaised}"/>
         <rect x="0" y="16" width="${IMAGE_WIDTH}" height="8" fill="${WEBSITE_COLORS.cyan}"/>
-        ${pixelTextSvg("UNICACITY POLICE DEPARTMENT", 26, 40, { scale: 2, color: WEBSITE_COLORS.cyan })}
-        ${pixelTextSvg("POLIZEI", 26, 70, { scale: 7 })}
-        ${pixelTextSvg("MITGLIEDERUEBERSICHT", 26, 130, { scale: 2, color: WEBSITE_COLORS.muted })}
         <rect x="426" y="62" width="168" height="64" rx="3" fill="${WEBSITE_COLORS.surfaceRaised}" stroke="${WEBSITE_COLORS.cyan}" stroke-width="3"/>
-        ${pixelTextSvg(`${roster.count}/${roster.slotLimit}`, 510, 78, { scale: 4, align: "center" })}
-        ${pixelTextSvg("MITGLIEDER", 510, 111, { scale: 1, align: "center", color: WEBSITE_COLORS.green })}
         <rect x="24" y="156" width="${IMAGE_WIDTH - 48}" height="4" fill="${WEBSITE_COLORS.line}"/>
         <rect x="24" y="164" width="${IMAGE_WIDTH - 48}" height="4" fill="${WEBSITE_COLORS.cyan}"/>
         ${fragments.join("\n")}
         <rect x="0" y="${height - footerHeight}" width="${IMAGE_WIDTH}" height="${footerHeight}" fill="${WEBSITE_COLORS.footer}"/>
-        ${pixelTextSvg("KLICKEN: BETTERUC.DE/POLIZEI/MITGLIEDER", IMAGE_WIDTH / 2, height - 45, { scale: 2, align: "center", color: WEBSITE_COLORS.cyan })}
-        ${pixelTextSvg("AUTOMATISCH SYNCHRONISIERT", IMAGE_WIDTH / 2, height - 19, { scale: 1, align: "center", color: WEBSITE_COLORS.muted })}
       </svg>
     `);
+    queueText(roster.kicker || "UNICACITY POLICE DEPARTMENT", 26, 39, {
+      size: 15,
+      color: WEBSITE_COLORS.cyan
+    });
+    queueText(roster.title || "POLIZEI", 26, 65, { size: 52 });
+    queueText(roster.subtitle || "MITGLIEDERÜBERSICHT", 26, 130, {
+      size: 16,
+      color: WEBSITE_COLORS.muted
+    });
+    queueText(`${roster.count}/${roster.slotLimit}`, 510, 75, { size: 32, align: "center" });
+    queueText(roster.slotLabel || "MITGLIEDER", 510, 110, {
+      size: 10,
+      color: WEBSITE_COLORS.green,
+      align: "center"
+    });
+    queueText(roster.footerLink || "KLICKEN: BETTERUC.DE/POLIZEI/MITGLIEDER", IMAGE_WIDTH / 2, height - 42, {
+      size: 14,
+      color: WEBSITE_COLORS.cyan,
+      align: "center"
+    });
+    queueText("AUTOMATISCH SYNCHRONISIERT", IMAGE_WIDTH / 2, height - 18, {
+      size: 9,
+      color: WEBSITE_COLORS.muted,
+      align: "center"
+    });
+    const textComposites = await mapLimit(textEntries, 8, entry => normalTextComposite(
+      entry.value,
+      entry.x,
+      entry.top,
+      entry.options
+    ));
     const base = await sharp(svg).png().toBuffer();
-    return sharp(base).composite(composites).png({ compressionLevel: 9 }).toBuffer();
+    return sharp(base).composite([...composites, ...textComposites]).png({ compressionLevel: 9 }).toBuffer();
   }
 
   async function getImage() {

@@ -1,0 +1,171 @@
+"use strict";
+
+const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
+
+const fsp = fs.promises;
+const VALID_ROLES = new Set(["leader", "supervisor", "member"]);
+
+function positiveInteger(value, fallback, maximum = 64) {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 && parsed <= maximum ? parsed : fallback;
+}
+
+function normalizeMember(entry) {
+  if (!entry || !/^[A-Za-z0-9_]{1,16}$/.test(String(entry.username || ""))) return null;
+  const role = String(entry.role || "member").trim().toLowerCase();
+  return {
+    username: String(entry.username).trim(),
+    uuid: "",
+    factionRank: Math.max(0, Math.min(99, Number.parseInt(entry.factionRank, 10) || 0)),
+    role: VALID_ROLES.has(role) ? role : "member"
+  };
+}
+
+function rolePriority(role) {
+  if (role === "leader") return 2;
+  if (role === "supervisor") return 1;
+  return 0;
+}
+
+function normalizeMembers(entries) {
+  const byName = new Map();
+  for (const entry of Array.isArray(entries) ? entries : []) {
+    const member = normalizeMember(entry);
+    if (!member) continue;
+    const key = member.username.toLowerCase();
+    const previous = byName.get(key);
+    if (!previous || rolePriority(member.role) > rolePriority(previous.role)) byName.set(key, member);
+  }
+  return [...byName.values()].sort((left, right) => (
+    rolePriority(right.role) - rolePriority(left.role)
+    || right.factionRank - left.factionRank
+    || left.username.localeCompare(right.username, "de", { sensitivity: "base" })
+  ));
+}
+
+function rosterHash(members, slotLimit) {
+  const value = `${slotLimit}|${members.map(member => (
+    `${member.username}:${member.factionRank}:${member.role}`
+  )).join("|")}`;
+  return crypto.createHash("sha256").update(value).digest("hex").slice(0, 12);
+}
+
+function publicRoster(state) {
+  const members = state.members.map(member => ({
+    ...member,
+    rankNumber: member.factionRank,
+    rankName: member.role === "leader" ? "Leader" : member.role === "supervisor" ? "Supervisor" : "Mitglied",
+    isLeader: member.role === "leader",
+    unit: "SWAT"
+  }));
+  const groups = [
+    { key: "leader", label: "Leitung (Leader)", members: members.filter(member => member.role === "leader") },
+    { key: "supervisor", label: "Supervisor", members: members.filter(member => member.role === "supervisor") },
+    { key: "member", label: "Mitglieder", members: members.filter(member => member.role === "member") }
+  ].filter(group => group.members.length > 0);
+  return {
+    title: "SWAT",
+    kicker: "UNICACITY SPECIAL WEAPONS AND TACTICS",
+    subtitle: "MITGLIEDERÜBERSICHT",
+    slotLabel: "MITGLIEDER",
+    footerLink: "KLICKEN: BETTERUC.DE/POLIZEI/SWAT",
+    count: members.length,
+    slotLimit: state.slotLimit,
+    hash: state.hash,
+    generatedAt: state.updatedAt,
+    updatedBy: state.updatedBy,
+    members,
+    groups
+  };
+}
+
+function createSwatRosterStore(options = {}) {
+  if (!options.file) throw new Error("SWAT roster file is required.");
+  if (!options.renderer || typeof options.renderer.renderImage !== "function") {
+    throw new Error("SWAT roster renderer is required.");
+  }
+  const file = options.file;
+  const defaultSlotLimit = positiveInteger(options.slotLimit, 13);
+  const renderer = options.renderer;
+  let state = {
+    version: 1,
+    slotLimit: defaultSlotLimit,
+    updatedAt: null,
+    updatedBy: "",
+    members: [],
+    hash: rosterHash([], defaultSlotLimit)
+  };
+  let imageCache = null;
+
+  async function load() {
+    try {
+      const parsed = JSON.parse(await fsp.readFile(file, "utf8"));
+      const members = normalizeMembers(parsed.members);
+      const slotLimit = positiveInteger(parsed.slotLimit, defaultSlotLimit);
+      state = {
+        version: 1,
+        slotLimit,
+        updatedAt: parsed.updatedAt || null,
+        updatedBy: String(parsed.updatedBy || ""),
+        members,
+        hash: rosterHash(members, slotLimit)
+      };
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+    return publicRoster(state);
+  }
+
+  async function save() {
+    await fsp.mkdir(path.dirname(file), { recursive: true });
+    const temporary = `${file}.tmp`;
+    await fsp.writeFile(temporary, JSON.stringify(state, null, 2), "utf8");
+    await fsp.rename(temporary, file);
+  }
+
+  async function update(payload, updatedBy) {
+    const members = normalizeMembers(payload?.members);
+    if (members.length === 0) throw new Error("Die SWAT-Liste enthält keine gültigen Mitglieder.");
+    const slotLimit = positiveInteger(payload?.slotLimit, defaultSlotLimit);
+    state = {
+      version: 1,
+      slotLimit,
+      updatedAt: new Date().toISOString(),
+      updatedBy: String(updatedBy || ""),
+      members,
+      hash: rosterHash(members, slotLimit)
+    };
+    imageCache = null;
+    await save();
+    return publicRoster(state);
+  }
+
+  function getRoster() {
+    return publicRoster(state);
+  }
+
+  async function getImage() {
+    const roster = getRoster();
+    if (imageCache && imageCache.hash === roster.hash) return imageCache;
+    const buffer = await renderer.renderImage(roster);
+    imageCache = { buffer, hash: roster.hash, generatedAt: roster.generatedAt };
+    return imageCache;
+  }
+
+  return {
+    getHead: renderer.getHead,
+    getImage,
+    getRoster,
+    load,
+    update
+  };
+}
+
+module.exports = {
+  createSwatRosterStore,
+  normalizeMembers,
+  publicRoster,
+  rosterHash
+};

@@ -13,6 +13,7 @@ const { WebSocketServer } = require("ws");
 const { startDiscordBot } = require("./discordBot");
 const { createDatabase } = require("./database");
 const { createPoliceRosterService } = require("./policeRoster");
+const { createSwatRosterStore } = require("./swatRoster");
 const { startTeamSpeakFactionSync } = require("./teamSpeakFactionSync");
 
 const PORT = Number(process.env.PORT || 3000);
@@ -21,6 +22,7 @@ const PING_TTL_MS = Number(process.env.PING_TTL_MS || 15000);
 const PUBLIC_DIR = process.env.PUBLIC_DIR || path.join(__dirname, "public");
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 const STORE_FILE = path.join(DATA_DIR, "accounts.json");
+const SWAT_ROSTER_FILE = path.join(DATA_DIR, "swat-roster.json");
 const BACKUP_DIR = process.env.BACKUP_DIR || path.join(DATA_DIR, "backups");
 const POSTGRES_BACKUP_DIR = process.env.POSTGRES_BACKUP_DIR || path.join(DATA_DIR, "postgres-backups");
 const SCREENSHOT_DIR = process.env.SCREENSHOT_DIR || path.join(DATA_DIR, "screenshots");
@@ -63,6 +65,12 @@ const policeRoster = createPoliceRosterService({
   slotLimit: process.env.TEAMSPEAK_FACTION_SLOT_LIMIT,
   unitOverrides: process.env.TEAMSPEAK_FACTION_UNIT_OVERRIDES
 });
+const swatRoster = createSwatRosterStore({
+  file: SWAT_ROSTER_FILE,
+  renderer: policeRoster,
+  slotLimit: process.env.TEAMSPEAK_SWAT_SLOT_LIMIT
+});
+const SWAT_ROSTER_OWNER_NAME = String(process.env.SWAT_ROSTER_OWNER_NAME || "FABI1441").trim();
 const RELEASE_CACHE_TTL_MS = Number(process.env.RELEASE_CACHE_TTL_MS || 5 * 60 * 1000);
 const UPDATE_WATCH_INTERVAL_MS = Math.max(
   30 * 1000,
@@ -2166,6 +2174,103 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/teamspeak/swat-roster.json") {
+    const roster = swatRoster.getRoster();
+    json(res, 200, {
+      ok: true,
+      count: roster.count,
+      slotLimit: roster.slotLimit,
+      hash: roster.hash,
+      generatedAt: roster.generatedAt,
+      groups: roster.groups.map(group => ({
+        key: group.key,
+        label: group.label,
+        members: group.members.map(member => ({
+          username: member.username,
+          factionRank: member.factionRank,
+          role: member.role,
+          rankName: member.rankName,
+          unit: member.unit,
+          headUrl: `/api/teamspeak/swat-head/${encodeURIComponent(member.username)}.png`
+        }))
+      }))
+    }, {
+      "cache-control": "public, max-age=60"
+    });
+    return;
+  }
+
+  if ((req.method === "GET" || req.method === "HEAD")
+      && url.pathname === "/api/teamspeak/swat-roster.png") {
+    try {
+      const image = await swatRoster.getImage();
+      const etag = `"swat-${image.hash}"`;
+      if (req.headers["if-none-match"] === etag) {
+        res.writeHead(304, { etag, "cache-control": "public, max-age=60" });
+        res.end();
+        return;
+      }
+      res.writeHead(200, {
+        "content-type": "image/png",
+        "content-length": image.buffer.length,
+        "cache-control": "public, max-age=60",
+        etag
+      });
+      res.end(req.method === "HEAD" ? undefined : image.buffer);
+    } catch (error) {
+      console.error("Could not render SWAT roster", error);
+      json(res, 502, { ok: false, error: "Die SWAT-Grafik ist gerade nicht erreichbar." });
+    }
+    return;
+  }
+
+  const swatHeadMatch = url.pathname.match(/^\/api\/teamspeak\/swat-head\/([a-zA-Z0-9_-]{1,64})\.png$/);
+  if ((req.method === "GET" || req.method === "HEAD") && swatHeadMatch) {
+    try {
+      const username = decodeURIComponent(swatHeadMatch[1]);
+      const head = await swatRoster.getHead("", username);
+      res.writeHead(200, {
+        "content-type": "image/png",
+        "content-length": head.length,
+        "cache-control": "public, max-age=86400"
+      });
+      res.end(req.method === "HEAD" ? undefined : head);
+    } catch (error) {
+      console.error("Could not load SWAT member head", error);
+      json(res, 502, { ok: false, error: "Der Spielerkopf ist gerade nicht erreichbar." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/teamspeak/swat-roster") {
+    if (isRateLimited(req, "swat-roster-upload", 6, 60_000)) {
+      json(res, 429, { ok: false, error: "Die SWAT-Liste wurde zu häufig aktualisiert." });
+      return;
+    }
+    const auth = authenticate(req, url);
+    const accountName = String(auth?.account?.minecraftName || "");
+    if (!auth || auth.type !== "session" || !auth.account
+        || accountName.localeCompare(SWAT_ROSTER_OWNER_NAME, "de", { sensitivity: "base" }) !== 0) {
+      json(res, 403, { ok: false, error: "Diese SWAT-Liste darf nur der konfigurierte Besitzer aktualisieren." });
+      return;
+    }
+    try {
+      const body = await readJsonBody(req, 32768);
+      const roster = await swatRoster.update(body.roster || body, accountName);
+      teamSpeakFactionSync.syncSwatNow?.();
+      json(res, 200, {
+        ok: true,
+        count: roster.count,
+        slotLimit: roster.slotLimit,
+        hash: roster.hash,
+        generatedAt: roster.generatedAt
+      });
+    } catch (error) {
+      json(res, 400, { ok: false, error: error.message || "Die SWAT-Liste ist ungültig." });
+    }
+    return;
+  }
+
   if (req.method === "POST" && url.pathname === "/api/auth/challenge") {
     if (isRateLimited(req, "minecraft-auth-challenge", 12, 60_000)) {
       json(res, 429, { ok: false, error: "Zu viele Anmeldeversuche. Bitte kurz warten." });
@@ -2923,6 +3028,9 @@ async function serveStatic(req, res, url) {
   if (pathname === "/polizei/mitglieder" || pathname === "/polizei/mitglieder/") {
     pathname = "/polizei-mitglieder.html";
   }
+  if (pathname === "/polizei/swat" || pathname === "/polizei/swat/") {
+    pathname = "/polizei-swat.html";
+  }
   if (pathname === "/" || pathname === "/updates") {
     pathname = "/index.html";
   }
@@ -3283,6 +3391,7 @@ function removeClient(client) {
 
 async function main() {
   await loadStore();
+  await swatRoster.load();
   await loadWasteDropAreas();
   await fsp.mkdir(SCREENSHOT_DIR, { recursive: true });
   await cleanupExpiredScreenshots();
@@ -3296,7 +3405,9 @@ async function main() {
   startReleaseWatcher().catch(error => {
     console.warn("Could not start betterUC release watcher", error.message);
   });
-  teamSpeakFactionSync = startTeamSpeakFactionSync();
+  teamSpeakFactionSync = startTeamSpeakFactionSync({
+    getSwatRoster: () => swatRoster.getRoster()
+  });
   startDiscordBot({
     getOnlinePlayers: onlinePlayersForResponse,
     getAccounts: () => store.accounts.map(adminAccount),

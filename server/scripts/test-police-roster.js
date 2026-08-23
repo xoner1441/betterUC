@@ -37,7 +37,11 @@ async function fakeHead() {
 
 test("groups the official roster into leadership, council and ranks", () => {
   const groups = groupMembers(MEMBERS);
-  assert.deepEqual(groups.map(group => group.label), ["LEITUNG", "POLIZEIRAT", "SERGEANT"]);
+  assert.deepEqual(groups.map(group => group.label), [
+    "Leitung (Leader)",
+    "Polizeirat (Rang 4)",
+    "Sergeant (Rang 1)"
+  ]);
   assert.deepEqual(groups.map(group => group.members.length), [1, 1, 1]);
 });
 

@@ -148,6 +148,37 @@ public final class UserPanelClient {
         return BetterUCAuthClient.credential();
     }
 
+    static boolean uploadSwatRoster(Minecraft client, JsonObject roster) {
+        if (client == null || client.player == null || roster == null) return false;
+        String token = accessToken();
+        if (token.isBlank()) return false;
+
+        URI uri = apiUri("/api/teamspeak/swat-roster");
+        if (uri == null) return false;
+
+        JsonObject body = baseIdentityPayload(client);
+        body.add("roster", roster.deepCopy());
+        HttpRequest request = HttpRequest.newBuilder(uri)
+                .timeout(Duration.ofSeconds(8))
+                .header("content-type", "application/json")
+                .header("x-betteruc-token", token)
+                .POST(HttpRequest.BodyPublishers.ofString(GSON.toJson(body), StandardCharsets.UTF_8))
+                .build();
+
+        HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.discarding())
+                .whenComplete((response, error) -> {
+                    if (error != null) {
+                        BetterUCMod.LOGGER.debug("betterUC SWAT roster upload failed", error);
+                    } else if (response.statusCode() >= 400) {
+                        if (response.statusCode() == 401) {
+                            client.execute(() -> BetterUCAuthClient.invalidateSession(client));
+                        }
+                        BetterUCMod.LOGGER.warn("betterUC SWAT roster upload rejected with status {}", response.statusCode());
+                    }
+                });
+        return true;
+    }
+
     private static String playerName(Minecraft client) {
         if (client == null || client.player == null) return "unknown";
         String name = client.player.getName().getString();

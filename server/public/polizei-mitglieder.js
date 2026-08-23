@@ -4,6 +4,10 @@ const rosterRoot = document.getElementById("roster");
 const statusElement = document.getElementById("roster-status");
 const slotCount = document.getElementById("slot-count");
 const updatedAt = document.getElementById("updated-at");
+const rosterType = document.body.dataset.roster === "swat" ? "swat" : "police";
+const rosterEndpoint = rosterType === "swat"
+  ? "/api/teamspeak/swat-roster.json"
+  : "/api/teamspeak/police-roster.json";
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -26,7 +30,9 @@ function memberCard(member) {
   meta.append(element("p", "member-rank", member.rankName));
   const tags = element("div", "member-tags");
   tags.append(element("span", "member-tag", member.unit));
-  tags.append(element("span", "member-tag rank", `RANG ${member.rankNumber}`));
+  if (rosterType !== "swat") {
+    tags.append(element("span", "member-tag rank", `RANG ${member.rankNumber}`));
+  }
   meta.append(tags);
   card.append(head, meta);
   return card;
@@ -47,10 +53,12 @@ function renderRoster(data) {
   }
 
   slotCount.textContent = `${data.count} / ${data.slotLimit}`;
-  updatedAt.textContent = `Stand ${new Intl.DateTimeFormat("de-DE", {
-    dateStyle: "medium",
-    timeStyle: "short"
-  }).format(new Date(data.generatedAt))}`;
+  updatedAt.textContent = data.generatedAt
+    ? `Stand ${new Intl.DateTimeFormat("de-DE", {
+      dateStyle: "medium",
+      timeStyle: "short"
+    }).format(new Date(data.generatedAt))}`
+    : "Noch nicht synchronisiert";
   statusElement.hidden = true;
   rosterRoot.hidden = false;
   document.querySelector(".roster-shell").setAttribute("aria-busy", "false");
@@ -58,7 +66,7 @@ function renderRoster(data) {
 
 async function loadRoster() {
   try {
-    const response = await fetch("/api/teamspeak/police-roster.json", {
+    const response = await fetch(rosterEndpoint, {
       headers: { Accept: "application/json" }
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);

@@ -98,8 +98,15 @@ Node service for the betterUC website, automatic Minecraft authentication and We
 - `TEAMSPEAK_VIRTUAL_SERVER_PORT=9987` TeamSpeak virtual server port
 - `TEAMSPEAK_VIRTUAL_SERVER_ID=...` optional virtual server ID instead of the port
 - `TEAMSPEAK_CHANNEL_ID=...` channel whose description receives the member list
+- `TEAMSPEAK_SWAT_CHANNEL_ID=...` optional SWAT channel whose description receives the authenticated in-game SWAT list
+- `TEAMSPEAK_SWAT_SLOT_LIMIT=13` fallback slot limit for the SWAT list
+- `TEAMSPEAK_SWAT_SECTION_START=PERSONALAKTE` start marker in the SWAT channel description
+- `TEAMSPEAK_SWAT_SECTION_END=STRAFZAHLUNGEN` end marker in the SWAT channel description
+- `SWAT_ROSTER_OWNER_NAME=FABI1441` only Mojang-authenticated mod account allowed to upload `/sfinfoall SWAT`
 - `TEAMSPEAK_QUERY_TIMEOUT_MS=10000`
 - `PUBLIC_BASE_URL=https://betteruc.de` public origin used by the clickable TeamSpeak image
+
+The mod silently runs `/sfinfoall SWAT` after joining only for `SWAT_ROSTER_OWNER_NAME`, suppresses the command output, and uploads the parsed `[L]`/`[S]` roles through the authenticated mod session. The SWAT channel uses the same `PERSONALAKTE` and `STRAFZAHLUNGEN` markers as the police channel, but can override them with the SWAT-specific variables above.
 - `POLICE_ROSTER_HEAD_BASE_URL=https://mc-heads.net/head` Minecraft head image provider; images are cached by betterUC
 
 Access codes are only shown once. The server stores SHA-256 hashes with a secret pepper.

@@ -7,7 +7,8 @@ const DEFAULT_API_BASE_URL = "https://api.unicacity.eu/api/factions";
 const DEFAULT_SYNC_INTERVAL_MS = 10 * 60 * 1000;
 const DEFAULT_QUERY_TIMEOUT_MS = 10 * 1000;
 const MIN_SYNC_INTERVAL_MS = 60 * 1000;
-const TEAM_SPEAK_ROSTER_RENDER_REVISION = "ts3-4";
+const TEAM_SPEAK_ROSTER_RENDER_REVISION = "ts3-5";
+const TEAM_SPEAK_SWAT_RENDER_REVISION = "ts3-swat-1";
 
 function envBoolean(value, fallback = false) {
   if (value === undefined || value === null || String(value).trim() === "") return fallback;
@@ -161,6 +162,12 @@ function formatPersonnelImageEmbed(members, options = {}) {
   const baseUrl = String(options.publicBaseUrl || "https://betteruc.de").replace(/\/+$/, "");
   const version = `${TEAM_SPEAK_ROSTER_RENDER_REVISION}-${rosterVersion(members)}`;
   return `[url=${baseUrl}/polizei/mitglieder][img]${baseUrl}/api/teamspeak/police-roster.png?v=${version}[/img][/url]`;
+}
+
+function formatSwatImageEmbed(members, options = {}) {
+  const baseUrl = String(options.publicBaseUrl || "https://betteruc.de").replace(/\/+$/, "");
+  const version = `${TEAM_SPEAK_SWAT_RENDER_REVISION}-${rosterVersion(members)}`;
+  return `[url=${baseUrl}/polizei/swat][img]${baseUrl}/api/teamspeak/swat-roster.png?v=${version}[/img][/url]`;
 }
 
 function replacePersonnelSection(currentDescription, personnelSection, options = {}) {
@@ -330,7 +337,7 @@ async function updateChannelDescription(config, description) {
   }
 }
 
-async function synchronizeFactionChannel(config, members) {
+async function synchronizeFactionChannel(config, members, options = {}) {
   const query = connectQuery(config);
   try {
     await query.connected;
@@ -349,8 +356,9 @@ async function synchronizeFactionChannel(config, members) {
       throw new Error("TeamSpeak hat keine lesbare Channelbeschreibung geliefert.");
     }
 
+    const imageFormatter = options.formatImageEmbed || formatPersonnelImageEmbed;
     const personnelSection = config.renderMode === "image"
-      ? formatPersonnelImageEmbed(members, { publicBaseUrl: config.publicBaseUrl })
+      ? imageFormatter(members, { publicBaseUrl: config.publicBaseUrl })
       : formatPersonnelSection(members, {
         slotLimit: config.slotLimit,
         unitOverrides: config.unitOverrides
@@ -398,7 +406,11 @@ function readConfig(env) {
     password: String(env.TEAMSPEAK_QUERY_PASSWORD || ""),
     virtualServerId: positiveInteger(env.TEAMSPEAK_VIRTUAL_SERVER_ID, 0),
     virtualServerPort: positiveInteger(env.TEAMSPEAK_VIRTUAL_SERVER_PORT, 9987),
-    channelId: positiveInteger(env.TEAMSPEAK_CHANNEL_ID, 0)
+    channelId: positiveInteger(env.TEAMSPEAK_CHANNEL_ID, 0),
+    swatChannelId: positiveInteger(env.TEAMSPEAK_SWAT_CHANNEL_ID, 0),
+    swatSlotLimit: positiveInteger(env.TEAMSPEAK_SWAT_SLOT_LIMIT, 13),
+    swatSectionStartLabel: env.TEAMSPEAK_SWAT_SECTION_START || "PERSONALAKTE",
+    swatSectionEndLabel: env.TEAMSPEAK_SWAT_SECTION_END || "STRAFZAHLUNGEN"
   };
 }
 
@@ -406,6 +418,7 @@ function startTeamSpeakFactionSync(options = {}) {
   const env = options.env || process.env;
   const fetchImpl = options.fetchImpl || globalThis.fetch;
   const logger = options.logger || console;
+  const getSwatRoster = options.getSwatRoster;
   const config = readConfig(env);
 
   if (!config.enabled) {
@@ -429,6 +442,7 @@ function startTeamSpeakFactionSync(options = {}) {
   let timer = null;
   let stopped = false;
   let running = false;
+  let swatRunning = false;
 
   const syncNow = async () => {
     if (stopped || running) return false;
@@ -449,14 +463,49 @@ function startTeamSpeakFactionSync(options = {}) {
     }
   };
 
+  const syncSwatNow = async () => {
+    if (stopped || swatRunning || !config.swatChannelId || typeof getSwatRoster !== "function") return false;
+    swatRunning = true;
+    try {
+      const roster = await getSwatRoster();
+      const members = Array.isArray(roster?.members) ? roster.members : [];
+      if (members.length === 0) return false;
+      const swatConfig = {
+        ...config,
+        channelId: config.swatChannelId,
+        slotLimit: positiveInteger(roster.slotLimit, config.swatSlotLimit),
+        sectionStartLabel: config.swatSectionStartLabel,
+        sectionEndLabel: config.swatSectionEndLabel
+      };
+      const result = await synchronizeFactionChannel(swatConfig, members, {
+        formatImageEmbed: formatSwatImageEmbed
+      });
+      if (result.updated) {
+        logger.log(`TeamSpeak-SWAT-Liste synchronisiert (${members.length} Mitglieder).`);
+      }
+      return result.updated;
+    } catch (error) {
+      logger.warn("TeamSpeak-SWAT-Liste konnte nicht synchronisiert werden:", error.message);
+      return false;
+    } finally {
+      swatRunning = false;
+    }
+  };
+
+  const syncAll = () => {
+    syncNow();
+    syncSwatNow();
+  };
+
   logger.log(`TeamSpeak-Fraktionssync aktiv (${config.slug}, alle ${Math.round(config.syncIntervalMs / 60000)} Minuten).`);
-  syncNow();
-  timer = setInterval(syncNow, config.syncIntervalMs);
+  syncAll();
+  timer = setInterval(syncAll, config.syncIntervalMs);
   timer.unref?.();
 
   return {
     enabled: true,
     syncNow,
+    syncSwatNow,
     stop() {
       stopped = true;
       clearInterval(timer);
@@ -466,6 +515,7 @@ function startTeamSpeakFactionSync(options = {}) {
 
 module.exports = {
   formatPersonnelImageEmbed,
+  formatSwatImageEmbed,
   formatPersonnelSection,
   normalizeMembers,
   parseUnitOverrides,
@@ -477,5 +527,6 @@ module.exports = {
   startTeamSpeakFactionSync,
   synchronizeFactionChannel,
   TEAM_SPEAK_ROSTER_RENDER_REVISION,
+  TEAM_SPEAK_SWAT_RENDER_REVISION,
   updateChannelDescription
 };

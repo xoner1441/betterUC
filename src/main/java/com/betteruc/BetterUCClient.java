@@ -36,6 +36,7 @@ import com.betteruc.client.ReinforcementAcceptClient;
 import com.betteruc.client.ScreenshotActionsClient;
 import com.betteruc.client.SecondChatManager;
 import com.betteruc.client.ServerCommandUtil;
+import com.betteruc.client.SwatRosterClient;
 import com.betteruc.client.UserPanelClient;
 import com.betteruc.client.UserStatsClient;
 import com.betteruc.client.VersionChecker;
@@ -268,6 +269,7 @@ public class BetterUCClient implements ClientModInitializer {
             BetterUCAuthClient.onJoin(client);
             PingRelayClient.onJoin(client);
             CloudSettingsClient.onJoin(client);
+            SwatRosterClient.onJoin(client);
             statsOnJoinDelay = BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled
                     ? AUTO_STATS_ON_JOIN_DELAY_TICKS
                     : -1;
@@ -281,6 +283,7 @@ public class BetterUCClient implements ClientModInitializer {
             BetterUCAuthClient.onDisconnect();
             PingRelayClient.onDisconnect();
             CloudSettingsClient.onDisconnect();
+            SwatRosterClient.reset();
             resetRemoteFeatureStateTracking();
             resetRuntimeState(client);
         });
@@ -1071,6 +1074,7 @@ public class BetterUCClient implements ClientModInitializer {
             AutoTransportClient.tick(client);
             AutoBuyClient.tick(client);
             TrashFilterClient.tick(client);
+            SwatRosterClient.tick(client);
             tickStatsOnJoin(client);
             ReinforcementAcceptClient.tick(client);
             DutyRejoinClient.tick(client);
@@ -1318,6 +1322,7 @@ public class BetterUCClient implements ClientModInitializer {
         AutoMoneyTransportClient.reset();
         AutoTransportClient.reset();
         AutoWinzerClient.reset();
+        SwatRosterClient.reset();
 
         BetterUCSuppressFlags.suppressModBlOutput = false;
         BetterUCSuppressFlags.modBlCallback = null;

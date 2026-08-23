@@ -25,6 +25,7 @@ import com.betteruc.client.ReinforcementAcceptClient;
 import com.betteruc.client.SecondChatManager;
 import com.betteruc.client.SecondChatTextCompat;
 import com.betteruc.client.ServerCommandUtil;
+import com.betteruc.client.SwatRosterClient;
 import com.betteruc.client.TrustedChatCommands;
 import com.betteruc.client.UserStatsClient;
 import com.betteruc.config.BetterUCConfig;
@@ -174,6 +175,10 @@ public class ChatBlacklistMixin {
         }
 
         String raw = message.getString();
+        if (SwatRosterClient.handleChatLine(Minecraft.getInstance(), raw)) {
+            ci.cancel();
+            return;
+        }
         ReinforcementAcceptClient.handleChatMessage(Minecraft.getInstance(), message);
         DutyRejoinClient.handleChatLine(raw);
         AutoBuyClient.handleChatLine(Minecraft.getInstance(), raw);

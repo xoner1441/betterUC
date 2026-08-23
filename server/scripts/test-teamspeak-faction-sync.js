@@ -6,9 +6,11 @@ const test = require("node:test");
 const {
   formatPersonnelImageEmbed,
   formatPersonnelSection,
+  formatSwatImageEmbed,
   normalizeMembers,
   queryEscape,
   queryUnescape,
+  readConfig,
   replacePersonnelSection,
   synchronizeFactionChannel,
   updateChannelDescription
@@ -37,9 +39,33 @@ test("creates a cache-busted, clickable TeamSpeak roster image", () => {
   ]);
   const embed = formatPersonnelImageEmbed(members, { publicBaseUrl: "https://betteruc.de/" });
   assert.match(embed, /^\[url=https:\/\/betteruc\.de\/polizei\/mitglieder\]/);
-  assert.match(embed, /\[img\]https:\/\/betteruc\.de\/api\/teamspeak\/police-roster\.png\?v=ts3-4-[a-f0-9]{12}\[\/img\]/);
+  assert.match(embed, /\[img\]https:\/\/betteruc\.de\/api\/teamspeak\/police-roster\.png\?v=ts3-5-[a-f0-9]{12}\[\/img\]/);
   assert.match(embed, /\[\/url\]$/);
   assert.equal(members.find(member => member.username === "FABI1441").uuid.length, 32);
+});
+
+test("creates a separate cache-busted SWAT roster image", () => {
+  const members = [
+    { username: "36Flo", uuid: "", rankNumber: 6, rankName: "Leader", isLeader: true },
+    { username: "FABI1441", uuid: "", rankNumber: 4, rankName: "Supervisor", isLeader: false }
+  ];
+  const embed = formatSwatImageEmbed(members, { publicBaseUrl: "https://betteruc.de/" });
+  assert.match(embed, /^\[url=https:\/\/betteruc\.de\/polizei\/swat\]/);
+  assert.match(embed, /\[img\]https:\/\/betteruc\.de\/api\/teamspeak\/swat-roster\.png\?v=ts3-swat-1-[a-f0-9]{12}\[\/img\]/);
+  assert.match(embed, /\[\/url\]$/);
+});
+
+test("reads an independent SWAT TeamSpeak channel configuration", () => {
+  const config = readConfig({
+    TEAMSPEAK_SWAT_CHANNEL_ID: "208",
+    TEAMSPEAK_SWAT_SLOT_LIMIT: "13",
+    TEAMSPEAK_SWAT_SECTION_START: "SWAT-AKTE",
+    TEAMSPEAK_SWAT_SECTION_END: "SWAT-ENDE"
+  });
+  assert.equal(config.swatChannelId, 208);
+  assert.equal(config.swatSlotLimit, 13);
+  assert.equal(config.swatSectionStartLabel, "SWAT-AKTE");
+  assert.equal(config.swatSectionEndLabel, "SWAT-ENDE");
 });
 
 test("escapes TeamSpeak ServerQuery parameters", () => {
