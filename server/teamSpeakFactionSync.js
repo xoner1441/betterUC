@@ -8,7 +8,7 @@ const DEFAULT_SYNC_INTERVAL_MS = 10 * 60 * 1000;
 const DEFAULT_QUERY_TIMEOUT_MS = 10 * 1000;
 const MIN_SYNC_INTERVAL_MS = 60 * 1000;
 const TEAM_SPEAK_ROSTER_RENDER_REVISION = "ts3-6";
-const TEAM_SPEAK_SWAT_RENDER_REVISION = "ts3-swat-1";
+const TEAM_SPEAK_SWAT_RENDER_REVISION = "ts3-swat-2";
 
 function envBoolean(value, fallback = false) {
   if (value === undefined || value === null || String(value).trim() === "") return fallback;

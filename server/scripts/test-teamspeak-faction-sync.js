@@ -51,7 +51,7 @@ test("creates a separate cache-busted SWAT roster image", () => {
   ];
   const embed = formatSwatImageEmbed(members, { publicBaseUrl: "https://betteruc.de/" });
   assert.match(embed, /^\[url=https:\/\/betteruc\.de\/polizei\/swat\]/);
-  assert.match(embed, /\[img\]https:\/\/betteruc\.de\/api\/teamspeak\/swat-roster\.png\?v=ts3-swat-1-[a-f0-9]{12}\[\/img\]/);
+  assert.match(embed, /\[img\]https:\/\/betteruc\.de\/api\/teamspeak\/swat-roster\.png\?v=ts3-swat-2-[a-f0-9]{12}\[\/img\]/);
   assert.match(embed, /\[\/url\]$/);
 });
 

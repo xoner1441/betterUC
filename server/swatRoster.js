@@ -6,6 +6,19 @@ const path = require("path");
 
 const fsp = fs.promises;
 const VALID_ROLES = new Set(["leader", "supervisor", "member"]);
+const DEFAULT_SWAT_MEMBERS = Object.freeze([
+  { username: "36Flo", factionRank: 6, role: "leader" },
+  { username: "DuckOderSo", factionRank: 5, role: "member" },
+  { username: "H4cksLikeLoris", factionRank: 5, role: "member" },
+  { username: "mteii", factionRank: 4, role: "supervisor" },
+  { username: "73nici", factionRank: 4, role: "member" },
+  { username: "FABI1441", factionRank: 3, role: "supervisor" },
+  { username: "Aidjn", factionRank: 3, role: "member" },
+  { username: "Schbastyyy787", factionRank: 3, role: "member" },
+  { username: "reaax72", factionRank: 3, role: "member" },
+  { username: "Eymenn", factionRank: 3, role: "member" },
+  { username: "1022", factionRank: 3, role: "member" }
+]);
 
 function positiveInteger(value, fallback, maximum = 64) {
   const parsed = Number(value);
@@ -60,15 +73,20 @@ function publicRoster(state) {
     isLeader: member.role === "leader",
     unit: "SWAT"
   }));
+  const allMembers = [...members].sort((left, right) => (
+    right.factionRank - left.factionRank
+    || rolePriority(right.role) - rolePriority(left.role)
+    || left.username.localeCompare(right.username, "de", { sensitivity: "base" })
+  ));
   const groups = [
-    { key: "leader", label: "Leitung (Leader)", members: members.filter(member => member.role === "leader") },
-    { key: "supervisor", label: "Supervisor", members: members.filter(member => member.role === "supervisor") },
-    { key: "member", label: "Mitglieder", members: members.filter(member => member.role === "member") }
+    { key: "leader", label: "Leitung", members: members.filter(member => member.role === "leader") },
+    { key: "supervisor", label: "SWAT-Prüfer", members: members.filter(member => member.role === "supervisor") },
+    { key: "member", label: "Member", members: allMembers }
   ].filter(group => group.members.length > 0);
   return {
-    title: "SWAT",
-    kicker: "UNICACITY SPECIAL WEAPONS AND TACTICS",
-    subtitle: "MITGLIEDERÜBERSICHT",
+    title: "S.W.A.T.",
+    kicker: "SPECIAL WEAPONS AND TACTICS",
+    subtitle: "EINHEITSLISTE",
     slotLabel: "MITGLIEDER",
     footerLink: "KLICKEN: BETTERUC.DE/POLIZEI/SWAT",
     count: members.length,
@@ -89,20 +107,22 @@ function createSwatRosterStore(options = {}) {
   const file = options.file;
   const defaultSlotLimit = positiveInteger(options.slotLimit, 13);
   const renderer = options.renderer;
+  const defaultMembers = normalizeMembers(options.defaultMembers || DEFAULT_SWAT_MEMBERS);
   let state = {
     version: 1,
     slotLimit: defaultSlotLimit,
     updatedAt: null,
     updatedBy: "",
-    members: [],
-    hash: rosterHash([], defaultSlotLimit)
+    members: defaultMembers,
+    hash: rosterHash(defaultMembers, defaultSlotLimit)
   };
   let imageCache = null;
 
   async function load() {
     try {
       const parsed = JSON.parse(await fsp.readFile(file, "utf8"));
-      const members = normalizeMembers(parsed.members);
+      const parsedMembers = normalizeMembers(parsed.members);
+      const members = parsedMembers.length > 0 ? parsedMembers : defaultMembers;
       const slotLimit = positiveInteger(parsed.slotLimit, defaultSlotLimit);
       state = {
         version: 1,
@@ -164,6 +184,7 @@ function createSwatRosterStore(options = {}) {
 }
 
 module.exports = {
+  DEFAULT_SWAT_MEMBERS,
   createSwatRosterStore,
   normalizeMembers,
   publicRoster,

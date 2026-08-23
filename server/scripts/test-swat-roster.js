@@ -42,15 +42,41 @@ test("persists and groups an uploaded SWAT roster", async () => {
 
     assert.equal(roster.count, 3);
     assert.equal(roster.slotLimit, 13);
-    assert.deepEqual(roster.groups.map(group => group.label), ["Leitung (Leader)", "Supervisor", "Mitglieder"]);
+    assert.deepEqual(roster.groups.map(group => group.label), ["Leitung", "SWAT-Prüfer", "Member"]);
+    assert.deepEqual(roster.groups.map(group => group.members.length), [1, 1, 3]);
     assert.equal(roster.updatedBy, "FABI1441");
     assert.match(roster.hash, /^[a-f0-9]{12}$/);
     assert.equal((await store.getImage()).buffer.toString(), "png");
-    assert.equal(renderedTitle, "SWAT");
+    assert.equal(renderedTitle, "S.W.A.T.");
 
     const reloaded = createSwatRosterStore({ file, renderer, slotLimit: 13 });
     await reloaded.load();
     assert.deepEqual(reloaded.getRoster().members.map(member => member.username), ["36Flo", "FABI1441", "mteii"]);
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("uses the current SWAT channel roster until the first automatic upload", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "betteruc-swat-default-"));
+  const file = path.join(directory, "swat-roster.json");
+  const renderer = {
+    getHead: async () => Buffer.from("head"),
+    renderImage: async () => Buffer.from("png")
+  };
+  try {
+    const store = createSwatRosterStore({ file, renderer, slotLimit: 13 });
+    await store.load();
+    const roster = store.getRoster();
+    assert.equal(roster.title, "S.W.A.T.");
+    assert.equal(roster.subtitle, "EINHEITSLISTE");
+    assert.equal(roster.count, 11);
+    assert.equal(roster.slotLimit, 13);
+    assert.deepEqual(roster.groups.map(group => group.members.length), [1, 2, 11]);
+    assert.deepEqual(
+      roster.groups.find(group => group.key === "member").members.slice(0, 6).map(member => member.username),
+      ["36Flo", "DuckOderSo", "H4cksLikeLoris", "mteii", "73nici", "FABI1441"]
+    );
   } finally {
     await fs.rm(directory, { recursive: true, force: true });
   }
