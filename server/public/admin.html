@@ -102,6 +102,37 @@
         <p id="featureFlagMessage" class="form-message"></p>
       </section>
 
+      <section class="forum-changelog-overview" aria-labelledby="forumChangelogTitle">
+        <div class="database-overview-header">
+          <div>
+            <p class="section-label">UnicaCity Forum</p>
+            <h3 id="forumChangelogTitle">Release-Changelog vorbereiten</h3>
+          </div>
+          <span id="forumChangelogCount" class="status-pill">wird geladen</span>
+        </div>
+        <p class="quiet">Der Generator erstellt kompakten HTML-Quellcode aus dem zentralen betterUC-Changelog. Im Forum auf <strong>Antworten</strong> klicken, den <strong>Quellcode</strong>-Modus aktivieren und den kopierten Text einfügen.</p>
+        <div class="forum-changelog-controls">
+          <label>
+            Version
+            <select id="forumChangelogVersion" disabled>
+              <option>Changelog wird geladen</option>
+            </select>
+          </label>
+          <div class="forum-changelog-meta">
+            <span id="forumChangelogPrepared">Noch keine Version auf diesem Gerät vorbereitet.</span>
+          </div>
+        </div>
+        <label class="forum-changelog-source-label">
+          Forum-Quellcode
+          <textarea id="forumChangelogSource" rows="16" spellcheck="false" aria-describedby="forumChangelogMessage"></textarea>
+        </label>
+        <div class="forum-changelog-actions">
+          <button id="copyForumChangelog" class="button primary" type="button" disabled>Quellcode kopieren</button>
+          <a id="openForumThread" class="button secondary" href="https://forum.unicacity.eu/forum/index.php?thread/2147-fabric-betteruc-huds-clickgui-pings-statistiken-und-komfortfunktionen/" target="_blank" rel="noreferrer">Forenbeitrag öffnen</a>
+        </div>
+        <p id="forumChangelogMessage" class="form-message" role="status"></p>
+      </section>
+
       <div class="admin-grid">
         <form id="createAccount" class="tool-panel">
           <h3>Code erstellen</h3>
@@ -190,6 +221,6 @@
     </section>
   </main>
 
-  <script src="/admin.js?v=cloud-controls-1" defer></script>
+  <script src="/admin.js?v=forum-changelog-1" defer></script>
 </body>
 </html>

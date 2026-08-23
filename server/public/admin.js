@@ -1,5 +1,7 @@
 const ADMIN_STORAGE_KEY = "betteruc_admin_key";
 const PANEL_SESSION_KEY = "betteruc-panel-session";
+const FORUM_CHANGELOG_PREPARED_KEY = "betteruc_forum_changelog_prepared_version";
+const FORUM_CHANGELOG_LIMIT = 10_000;
 
 const loginPanel = document.querySelector("#loginPanel");
 const adminPanel = document.querySelector("#adminPanel");
@@ -35,6 +37,12 @@ const databaseDetail = document.querySelector("#databaseDetail");
 const featureFlagsStatus = document.querySelector("#featureFlagsStatus");
 const featureFlagsList = document.querySelector("#featureFlagsList");
 const featureFlagMessage = document.querySelector("#featureFlagMessage");
+const forumChangelogVersion = document.querySelector("#forumChangelogVersion");
+const forumChangelogSource = document.querySelector("#forumChangelogSource");
+const forumChangelogCount = document.querySelector("#forumChangelogCount");
+const forumChangelogPrepared = document.querySelector("#forumChangelogPrepared");
+const forumChangelogMessage = document.querySelector("#forumChangelogMessage");
+const copyForumChangelog = document.querySelector("#copyForumChangelog");
 
 let adminKey = localStorage.getItem(ADMIN_STORAGE_KEY) || "";
 let panelSession = localStorage.getItem(PANEL_SESSION_KEY) || "";
@@ -46,6 +54,8 @@ let cloudHistoryErrors = new Map();
 let featureFlags = [];
 let featureFlagsWritable = false;
 let featureFlagSaving = new Set();
+let forumChangelogReleases = [];
+let forumChangelogLoading = false;
 
 function setLoginMessage(text, type = "") {
   loginMessage.textContent = text;
@@ -61,6 +71,131 @@ function setFeatureFlagMessage(text, type = "") {
   if (!featureFlagMessage) return;
   featureFlagMessage.textContent = text;
   featureFlagMessage.className = `form-message ${type}`;
+}
+
+function setForumChangelogMessage(text, type = "") {
+  if (!forumChangelogMessage) return;
+  forumChangelogMessage.textContent = text;
+  forumChangelogMessage.className = `form-message ${type}`;
+}
+
+function forumChangelogItems(value) {
+  return Array.isArray(value) ? value.filter(item => item && typeof item === "object") : [];
+}
+
+function buildForumChangelogSource(release) {
+  if (!release) return "";
+  const version = escapeHtml(release.version || "aktuell");
+  const date = escapeHtml(release.date || "");
+  const summary = forumChangelogItems(release.summary);
+  const changes = Array.isArray(release.changes)
+    ? release.changes.map(item => String(item || "").trim()).filter(Boolean)
+    : [];
+  const blocks = [
+    `<h2>betterUC v${version}</h2>`,
+    date ? `<p><strong>Veröffentlicht am:</strong> ${date}</p>` : ""
+  ];
+
+  if (summary.length > 0) {
+    blocks.push("<h3>Highlights</h3>");
+    blocks.push(`<ul>${summary.map(item => {
+      const title = escapeHtml(item.title || "Neuerung");
+      const description = escapeHtml(item.description || "");
+      return `<li><strong>${title}</strong>${description ? ` – ${description}` : ""}</li>`;
+    }).join("")}</ul>`);
+  }
+
+  if (changes.length > 0) {
+    blocks.push("<h3>Änderungen</h3>");
+    blocks.push(`<ul>${changes.map(change => `<li>${escapeHtml(change)}</li>`).join("")}</ul>`);
+  }
+
+  blocks.push(
+    "<hr>",
+    '<p><strong>Download:</strong> <a href="https://betteruc.de/download">betteruc.de/download</a><br>',
+    '<strong>Vollständiger Changelog:</strong> <a href="https://betteruc.de/changelog">betteruc.de/changelog</a><br>',
+    '<strong>GitHub:</strong> <a href="https://github.com/xoner1441/betterUC">betterUC auf GitHub</a></p>'
+  );
+  return blocks.filter(Boolean).join("\n");
+}
+
+function selectedForumChangelogRelease() {
+  const version = forumChangelogVersion?.value || "";
+  return forumChangelogReleases.find(release => String(release.version || "") === version) || null;
+}
+
+function updateForumChangelogPreparedLabel() {
+  if (!forumChangelogPrepared) return;
+  const preparedVersion = localStorage.getItem(FORUM_CHANGELOG_PREPARED_KEY) || "";
+  const selectedVersion = selectedForumChangelogRelease()?.version || "";
+  if (!preparedVersion) {
+    forumChangelogPrepared.textContent = "Noch keine Version auf diesem Gerät vorbereitet.";
+    return;
+  }
+  forumChangelogPrepared.textContent = preparedVersion === selectedVersion
+    ? `v${preparedVersion} wurde auf diesem Gerät bereits kopiert.`
+    : `Zuletzt vorbereitet: v${preparedVersion}`;
+}
+
+function updateForumChangelogCount() {
+  if (!forumChangelogCount || !forumChangelogSource) return;
+  const length = forumChangelogSource.value.length;
+  forumChangelogCount.textContent = `${length.toLocaleString("de-DE")} / ${FORUM_CHANGELOG_LIMIT.toLocaleString("de-DE")} Zeichen`;
+  forumChangelogCount.classList.toggle("is-warning", length > FORUM_CHANGELOG_LIMIT);
+  if (copyForumChangelog) copyForumChangelog.disabled = length === 0 || length > FORUM_CHANGELOG_LIMIT;
+}
+
+function renderForumChangelogSource() {
+  if (!forumChangelogSource) return;
+  forumChangelogSource.value = buildForumChangelogSource(selectedForumChangelogRelease());
+  updateForumChangelogPreparedLabel();
+  updateForumChangelogCount();
+  setForumChangelogMessage("");
+}
+
+async function loadForumChangelog() {
+  if (!forumChangelogVersion || forumChangelogLoading) return;
+  forumChangelogLoading = true;
+  try {
+    const response = await fetch("/data/changelog.json", { cache: "no-store" });
+    const data = await response.json();
+    if (!response.ok || Number(data.schema) !== 1) throw new Error("Changelog-Daten sind ungültig.");
+    forumChangelogReleases = forumChangelogItems(data.releases);
+    if (forumChangelogReleases.length === 0) throw new Error("Keine Releases im Changelog gefunden.");
+
+    forumChangelogVersion.innerHTML = forumChangelogReleases
+      .map(release => `<option value="${escapeAttr(release.version)}">v${escapeHtml(release.version)} · ${escapeHtml(release.date || "ohne Datum")}</option>`)
+      .join("");
+    const current = forumChangelogReleases.find(release => release.current) || forumChangelogReleases[0];
+    forumChangelogVersion.value = String(current.version || "");
+    forumChangelogVersion.disabled = false;
+    renderForumChangelogSource();
+  } catch (error) {
+    forumChangelogReleases = [];
+    forumChangelogVersion.innerHTML = "<option>Changelog nicht verfügbar</option>";
+    forumChangelogVersion.disabled = true;
+    if (forumChangelogSource) forumChangelogSource.value = "";
+    updateForumChangelogCount();
+    setForumChangelogMessage(error.message || "Changelog konnte nicht geladen werden.", "error");
+  } finally {
+    forumChangelogLoading = false;
+  }
+}
+
+async function copyText(value) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+  const helper = document.createElement("textarea");
+  helper.value = value;
+  helper.style.position = "fixed";
+  helper.style.opacity = "0";
+  document.body.appendChild(helper);
+  helper.select();
+  const copied = document.execCommand("copy");
+  helper.remove();
+  if (!copied) throw new Error("Kopieren wurde vom Browser blockiert.");
 }
 
 function headers() {
@@ -88,6 +223,7 @@ async function api(path, options = {}) {
 function showAdmin() {
   loginPanel.hidden = true;
   adminPanel.hidden = false;
+  loadForumChangelog().catch(error => setForumChangelogMessage(error.message, "error"));
 }
 
 function showLogin() {
@@ -696,6 +832,26 @@ copyAdminToken.addEventListener("click", async () => {
   if (!token) return;
   await navigator.clipboard.writeText(token);
   setCreateMessage("Code kopiert.", "success");
+});
+
+forumChangelogVersion?.addEventListener("change", renderForumChangelogSource);
+forumChangelogSource?.addEventListener("input", updateForumChangelogCount);
+copyForumChangelog?.addEventListener("click", async () => {
+  const source = forumChangelogSource?.value || "";
+  const release = selectedForumChangelogRelease();
+  if (!source || !release) return;
+  if (source.length > FORUM_CHANGELOG_LIMIT) {
+    setForumChangelogMessage("Der Quellcode überschreitet das Forenlimit von 10.000 Zeichen.", "error");
+    return;
+  }
+  try {
+    await copyText(source);
+    localStorage.setItem(FORUM_CHANGELOG_PREPARED_KEY, String(release.version || ""));
+    updateForumChangelogPreparedLabel();
+    setForumChangelogMessage(`Changelog v${release.version} wurde als HTML-Quellcode kopiert.`, "success");
+  } catch (error) {
+    setForumChangelogMessage(error.message || "Changelog konnte nicht kopiert werden.", "error");
+  }
 });
 
 accountsTable.addEventListener("click", async event => {

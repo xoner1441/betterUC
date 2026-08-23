@@ -875,14 +875,26 @@ label {
 }
 
 input,
-select {
+select,
+textarea {
   background: #090d0c;
   border: 1px solid #34413f;
   color: var(--text);
   font: inherit;
-  min-height: 44px;
   outline: none;
+}
+
+input,
+select {
+  min-height: 44px;
   padding: 0 12px;
+}
+
+textarea {
+  line-height: 1.5;
+  min-height: 240px;
+  padding: 12px;
+  resize: vertical;
 }
 
 code {
@@ -893,7 +905,8 @@ code {
 }
 
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   border-color: var(--cyan);
 }
 
@@ -1571,6 +1584,55 @@ select:focus {
   padding: 0 0 18px;
 }
 
+.forum-changelog-overview {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+  padding: 0 0 22px;
+}
+
+.forum-changelog-controls {
+  align-items: end;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(220px, 340px) minmax(0, 1fr);
+  margin-top: 18px;
+}
+
+.forum-changelog-controls label,
+.forum-changelog-source-label {
+  margin-bottom: 0;
+}
+
+.forum-changelog-meta {
+  align-items: center;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  display: flex;
+  font-size: 13px;
+  min-height: 44px;
+  padding: 8px 12px;
+}
+
+.forum-changelog-source-label {
+  margin-top: 16px;
+}
+
+.forum-changelog-source-label textarea {
+  width: 100%;
+}
+
+.forum-changelog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+#forumChangelogCount.is-warning {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 .feature-flags-grid {
   display: grid;
   gap: 10px;
@@ -1989,6 +2051,11 @@ select:focus {
   }
 
   .feature-flags-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .forum-changelog-controls {
+    align-items: stretch;
     grid-template-columns: 1fr;
   }
 
