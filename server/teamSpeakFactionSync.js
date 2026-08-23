@@ -7,7 +7,7 @@ const DEFAULT_API_BASE_URL = "https://api.unicacity.eu/api/factions";
 const DEFAULT_SYNC_INTERVAL_MS = 10 * 60 * 1000;
 const DEFAULT_QUERY_TIMEOUT_MS = 10 * 1000;
 const MIN_SYNC_INTERVAL_MS = 60 * 1000;
-const TEAM_SPEAK_ROSTER_RENDER_REVISION = "ts3-3";
+const TEAM_SPEAK_ROSTER_RENDER_REVISION = "ts3-4";
 
 function envBoolean(value, fallback = false) {
   if (value === undefined || value === null || String(value).trim() === "") return fallback;

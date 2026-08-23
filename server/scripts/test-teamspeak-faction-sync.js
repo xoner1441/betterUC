@@ -37,7 +37,7 @@ test("creates a cache-busted, clickable TeamSpeak roster image", () => {
   ]);
   const embed = formatPersonnelImageEmbed(members, { publicBaseUrl: "https://betteruc.de/" });
   assert.match(embed, /^\[url=https:\/\/betteruc\.de\/polizei\/mitglieder\]/);
-  assert.match(embed, /\[img\]https:\/\/betteruc\.de\/api\/teamspeak\/police-roster\.png\?v=ts3-3-[a-f0-9]{12}\[\/img\]/);
+  assert.match(embed, /\[img\]https:\/\/betteruc\.de\/api\/teamspeak\/police-roster\.png\?v=ts3-4-[a-f0-9]{12}\[\/img\]/);
   assert.match(embed, /\[\/url\]$/);
   assert.equal(members.find(member => member.username === "FABI1441").uuid.length, 32);
 });

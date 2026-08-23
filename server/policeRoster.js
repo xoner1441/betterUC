@@ -13,6 +13,19 @@ const DEFAULT_HEAD_BASE_URL = "https://mc-heads.net/head";
 const DEFAULT_ROSTER_CACHE_MS = 5 * 60 * 1000;
 const DEFAULT_HEAD_CACHE_MS = 24 * 60 * 60 * 1000;
 const IMAGE_WIDTH = 620;
+const WEBSITE_COLORS = Object.freeze({
+  background: "#0d1110",
+  surface: "#151b1a",
+  surfaceRaised: "#1b2424",
+  line: "#2a3735",
+  text: "#eef7f3",
+  muted: "#9cafaa",
+  cyan: "#38bdf8",
+  green: "#86efac",
+  amber: "#facc15",
+  darkText: "#071014",
+  footer: "#071312"
+});
 
 const PIXEL_GLYPHS = Object.freeze({
   " ": "00000/00000/00000/00000/00000/00000/00000",
@@ -94,7 +107,7 @@ function pixelTextSvg(value, x, y, options = {}) {
     }
     cursor += step;
   }
-  return `<g fill="${options.color || "#111820"}">${rectangles.join("")}</g>`;
+  return `<g fill="${options.color || WEBSITE_COLORS.text}">${rectangles.join("")}</g>`;
 }
 
 function positiveInteger(value, fallback, minimum = 1) {
@@ -146,10 +159,10 @@ function placeholderHeadSvg(username) {
   return Buffer.from(`
     <svg width="128" height="128" xmlns="http://www.w3.org/2000/svg">
       <rect width="128" height="128" fill="${background}"/>
-      <rect x="10" y="10" width="108" height="108" fill="none" stroke="#111820" stroke-width="8"/>
-      <rect x="30" y="40" width="22" height="22" fill="#111820"/>
-      <rect x="76" y="40" width="22" height="22" fill="#111820"/>
-      <rect x="42" y="82" width="44" height="10" fill="#ffffff"/>
+      <rect x="10" y="10" width="108" height="108" fill="none" stroke="${WEBSITE_COLORS.line}" stroke-width="8"/>
+      <rect x="30" y="40" width="22" height="22" fill="${WEBSITE_COLORS.footer}"/>
+      <rect x="76" y="40" width="22" height="22" fill="${WEBSITE_COLORS.footer}"/>
+      <rect x="42" y="82" width="44" height="10" fill="${WEBSITE_COLORS.text}"/>
     </svg>
   `);
 }
@@ -294,9 +307,9 @@ function createPoliceRosterService(options = {}) {
 
     for (const group of roster.groups) {
       fragments.push(`
-        <rect x="${pagePadding}" y="${y}" width="${IMAGE_WIDTH - pagePadding * 2}" height="26" rx="2" fill="${group.key === "leader" ? "#e8bd4b" : "#54bde9"}" stroke="#111820" stroke-width="2"/>
-        ${pixelTextSvg(group.label, pagePadding + 12, y + 6, { scale: 2, maxChars: 22 })}
-        ${pixelTextSvg(group.members.length, IMAGE_WIDTH - pagePadding - 12, y + 6, { scale: 2, align: "right" })}
+        <rect x="${pagePadding}" y="${y}" width="${IMAGE_WIDTH - pagePadding * 2}" height="26" rx="2" fill="${group.key === "leader" ? WEBSITE_COLORS.amber : WEBSITE_COLORS.cyan}" stroke="${WEBSITE_COLORS.line}" stroke-width="2"/>
+        ${pixelTextSvg(group.label, pagePadding + 12, y + 6, { scale: 2, maxChars: 22, color: WEBSITE_COLORS.darkText })}
+        ${pixelTextSvg(group.members.length, IMAGE_WIDTH - pagePadding - 12, y + 6, { scale: 2, align: "right", color: WEBSITE_COLORS.darkText })}
       `);
       y += sectionHeaderHeight;
       for (let index = 0; index < group.members.length; index += 1) {
@@ -306,9 +319,9 @@ function createPoliceRosterService(options = {}) {
         const x = pagePadding + column * (cardWidth + cardGap);
         const cardY = y + row * (cardHeight + rowGap);
         fragments.push(`
-          <rect x="${x + 4}" y="${cardY + 4}" width="${cardWidth}" height="${cardHeight}" rx="3" fill="#111820" opacity="0.18"/>
-          <rect x="${x}" y="${cardY}" width="${cardWidth}" height="${cardHeight}" rx="3" fill="#f9fbfd" stroke="#111820" stroke-width="2"/>
-          <rect x="${x + (cardWidth - 50) / 2}" y="${cardY + 5}" width="50" height="50" fill="#dbeef8" stroke="#111820" stroke-width="2"/>
+          <rect x="${x + 4}" y="${cardY + 4}" width="${cardWidth}" height="${cardHeight}" rx="3" fill="#000000" opacity="0.35"/>
+          <rect x="${x}" y="${cardY}" width="${cardWidth}" height="${cardHeight}" rx="3" fill="${WEBSITE_COLORS.surface}" stroke="${WEBSITE_COLORS.line}" stroke-width="2"/>
+          <rect x="${x + (cardWidth - 50) / 2}" y="${cardY + 5}" width="50" height="50" fill="${WEBSITE_COLORS.surfaceRaised}" stroke="${WEBSITE_COLORS.cyan}" stroke-width="2"/>
           ${pixelTextSvg(member.username, x + cardWidth / 2, cardY + 59, { scale: 2, maxChars: 15, align: "center" })}
         `);
         composites.push({
@@ -323,21 +336,21 @@ function createPoliceRosterService(options = {}) {
 
     const svg = Buffer.from(`
       <svg width="${IMAGE_WIDTH}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-        <rect width="${IMAGE_WIDTH}" height="${height}" fill="#eef6fa"/>
-        <rect x="0" y="0" width="${IMAGE_WIDTH}" height="16" fill="#111820"/>
-        <rect x="0" y="16" width="${IMAGE_WIDTH}" height="8" fill="#2ba8e0"/>
-        ${pixelTextSvg("UNICACITY POLICE DEPARTMENT", 26, 40, { scale: 2, color: "#2787b5" })}
+        <rect width="${IMAGE_WIDTH}" height="${height}" fill="${WEBSITE_COLORS.background}"/>
+        <rect x="0" y="0" width="${IMAGE_WIDTH}" height="16" fill="${WEBSITE_COLORS.surfaceRaised}"/>
+        <rect x="0" y="16" width="${IMAGE_WIDTH}" height="8" fill="${WEBSITE_COLORS.cyan}"/>
+        ${pixelTextSvg("UNICACITY POLICE DEPARTMENT", 26, 40, { scale: 2, color: WEBSITE_COLORS.cyan })}
         ${pixelTextSvg("POLIZEI", 26, 70, { scale: 7 })}
-        ${pixelTextSvg("MITGLIEDERUEBERSICHT", 26, 130, { scale: 2, color: "#52626f" })}
-        <rect x="426" y="62" width="168" height="64" rx="3" fill="#ffffff" stroke="#111820" stroke-width="3"/>
+        ${pixelTextSvg("MITGLIEDERUEBERSICHT", 26, 130, { scale: 2, color: WEBSITE_COLORS.muted })}
+        <rect x="426" y="62" width="168" height="64" rx="3" fill="${WEBSITE_COLORS.surfaceRaised}" stroke="${WEBSITE_COLORS.cyan}" stroke-width="3"/>
         ${pixelTextSvg(`${roster.count}/${roster.slotLimit}`, 510, 78, { scale: 4, align: "center" })}
-        ${pixelTextSvg("MITGLIEDER", 510, 111, { scale: 1, align: "center", color: "#2787b5" })}
-        <rect x="24" y="156" width="${IMAGE_WIDTH - 48}" height="4" fill="#111820"/>
-        <rect x="24" y="164" width="${IMAGE_WIDTH - 48}" height="4" fill="#2ba8e0"/>
+        ${pixelTextSvg("MITGLIEDER", 510, 111, { scale: 1, align: "center", color: WEBSITE_COLORS.green })}
+        <rect x="24" y="156" width="${IMAGE_WIDTH - 48}" height="4" fill="${WEBSITE_COLORS.line}"/>
+        <rect x="24" y="164" width="${IMAGE_WIDTH - 48}" height="4" fill="${WEBSITE_COLORS.cyan}"/>
         ${fragments.join("\n")}
-        <rect x="0" y="${height - footerHeight}" width="${IMAGE_WIDTH}" height="${footerHeight}" fill="#111820"/>
-        ${pixelTextSvg("KLICKEN: BETTERUC.DE/POLIZEI/MITGLIEDER", IMAGE_WIDTH / 2, height - 45, { scale: 2, align: "center", color: "#ffffff" })}
-        ${pixelTextSvg("AUTOMATISCH SYNCHRONISIERT", IMAGE_WIDTH / 2, height - 19, { scale: 1, align: "center", color: "#94a9b5" })}
+        <rect x="0" y="${height - footerHeight}" width="${IMAGE_WIDTH}" height="${footerHeight}" fill="${WEBSITE_COLORS.footer}"/>
+        ${pixelTextSvg("KLICKEN: BETTERUC.DE/POLIZEI/MITGLIEDER", IMAGE_WIDTH / 2, height - 45, { scale: 2, align: "center", color: WEBSITE_COLORS.cyan })}
+        ${pixelTextSvg("AUTOMATISCH SYNCHRONISIERT", IMAGE_WIDTH / 2, height - 19, { scale: 1, align: "center", color: WEBSITE_COLORS.muted })}
       </svg>
     `);
     const base = await sharp(svg).png().toBuffer();
