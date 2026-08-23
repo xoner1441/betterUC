@@ -45,7 +45,7 @@ public final class UpdateRestartScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal(confirmLabel), button -> confirm())
                 .bounds(rowX, buttonY, confirmW, 20)
                 .build());
-        addRenderableWidget(Button.builder(Component.literal("Abbrechen"), button -> closeToParent())
+        addRenderableWidget(Button.builder(Component.literal("Später"), button -> closeToParent())
                 .bounds(rowX + confirmW + gap, buttonY, cancelW, 20)
                 .build());
     }

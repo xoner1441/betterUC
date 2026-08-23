@@ -37,24 +37,6 @@ const DOWNLOAD_VERSIONS = [
     minecraft: "26.2",
     target: "mc26.x",
     note: "Aktuelle UnicaCity-Version"
-  },
-  {
-    label: "26.1.2",
-    minecraft: "26.1.2",
-    target: "mc26.x",
-    note: "Fabric 26.x"
-  },
-  {
-    label: "1.21.11",
-    minecraft: "1.21.11",
-    target: "mc1.21.11",
-    note: "LabyMod- und Fabric-Version"
-  },
-  {
-    label: "1.21.10",
-    minecraft: "1.21.10",
-    target: "mc1.21.10",
-    note: "Legacy-Version"
   }
 ];
 let selectedDownloadVersion = null;
@@ -269,23 +251,10 @@ function ensureDownloadModal() {
         <button class="download-close" type="button" aria-label="Download-Fenster schließen" data-download-close>×</button>
       </header>
       <div class="download-dialog-body">
-        <div class="download-divider"><span>Version wählen</span></div>
-        <div class="download-select-block">
-          <button class="download-select" type="button" id="downloadVersionToggle" aria-expanded="false">
-            <span class="download-select-label">Select game version</span>
-            <span class="download-chevron">⌄</span>
-          </button>
-          <div class="download-version-menu" id="downloadVersionMenu" hidden>
-            <label class="download-search-label">
-              <span>Version suchen</span>
-              <input id="downloadVersionSearch" type="search" placeholder="Search game versions..." autocomplete="off">
-            </label>
-            <div class="download-version-list" id="downloadVersionList"></div>
-          </div>
-        </div>
+        <div class="download-divider"><span>Aktuelle Spielversion</span></div>
         <div class="download-platform locked" aria-label="Platform Fabric">
-          <span>Platform: Fabric</span>
-          <small>locked</small>
+          <span>Minecraft 26.2 | Fabric</span>
+          <small>mc26.x</small>
         </div>
         <div class="download-result" id="downloadResult" hidden>
           <div class="download-result-mark">bU</div>
@@ -295,7 +264,7 @@ function ensureDownloadModal() {
           </div>
           <a class="button primary" id="downloadResultButton" href="/download/latest.jar" data-direct-download="true">Download</a>
         </div>
-        <p class="download-modal-hint" id="downloadModalHint">Wähle deine Minecraft-Version aus. Danach erscheint der passende Download.</p>
+        <p class="download-modal-hint" id="downloadModalHint">Die mc26.x-JAR aktualisiert auch ältere betterUC-Installationen aus der 26.x-Zeit.</p>
       </div>
     </section>
   `;
@@ -305,25 +274,22 @@ function ensureDownloadModal() {
   wrapper.querySelectorAll("[data-download-close]").forEach(button => {
     button.addEventListener("click", closeDownloadModal);
   });
-  wrapper.querySelector("#downloadVersionToggle")?.addEventListener("click", toggleDownloadVersionMenu);
-  wrapper.querySelector("#downloadVersionSearch")?.addEventListener("input", renderDownloadVersionList);
   document.addEventListener("keydown", event => {
     if (event.key === "Escape" && !downloadModal.hidden) {
       closeDownloadModal();
     }
   });
-  renderDownloadVersionList();
   return wrapper;
 }
 
 function openDownloadModal() {
   ensureDownloadModal();
-  selectedDownloadVersion = null;
+  selectedDownloadVersion = DOWNLOAD_VERSIONS[0];
   updateDownloadModalState();
   downloadModal.hidden = false;
   document.body.classList.add("modal-open");
-  setDownloadMenuOpen(false);
-  downloadModal.querySelector("#downloadVersionToggle")?.focus();
+  refreshSelectedDownloadRelease(selectedDownloadVersion);
+  downloadModal.querySelector("#downloadResultButton")?.focus();
 }
 
 function closeDownloadModal() {
@@ -332,59 +298,8 @@ function closeDownloadModal() {
   document.body.classList.remove("modal-open");
 }
 
-function toggleDownloadVersionMenu() {
-  const menu = downloadModal?.querySelector("#downloadVersionMenu");
-  setDownloadMenuOpen(Boolean(menu?.hidden));
-}
-
-function setDownloadMenuOpen(open) {
-  const menu = downloadModal?.querySelector("#downloadVersionMenu");
-  const toggle = downloadModal?.querySelector("#downloadVersionToggle");
-  if (!menu || !toggle) return;
-  menu.hidden = !open;
-  toggle.setAttribute("aria-expanded", open ? "true" : "false");
-  toggle.querySelector(".download-chevron").textContent = open ? "⌃" : "⌄";
-  if (open) {
-    const search = downloadModal.querySelector("#downloadVersionSearch");
-    if (search) {
-      search.value = "";
-      renderDownloadVersionList();
-      setTimeout(() => search.focus(), 0);
-    }
-  }
-}
-
-function renderDownloadVersionList() {
-  const list = downloadModal?.querySelector("#downloadVersionList");
-  if (!list) return;
-  const query = downloadModal.querySelector("#downloadVersionSearch")?.value.trim().toLowerCase() || "";
-  const versions = DOWNLOAD_VERSIONS.filter(version =>
-    version.label.toLowerCase().includes(query)
-      || version.note.toLowerCase().includes(query)
-  );
-  list.innerHTML = versions.map(version => `
-    <button class="download-version-option" type="button" data-version="${escapeHtml(version.label)}">
-      <strong>${escapeHtml(version.label)}</strong>
-      <span>${escapeHtml(version.note)}</span>
-    </button>
-  `).join("") || `<p class="quiet">Keine passende Version gefunden.</p>`;
-  list.querySelectorAll("[data-version]").forEach(button => {
-    button.addEventListener("click", () => selectDownloadVersion(button.dataset.version));
-  });
-}
-
-function selectDownloadVersion(label) {
-  selectedDownloadVersion = DOWNLOAD_VERSIONS.find(version => version.label === label) || null;
-  setDownloadMenuOpen(false);
-  updateDownloadModalState();
-  if (selectedDownloadVersion) {
-    refreshSelectedDownloadRelease(selectedDownloadVersion);
-  }
-}
-
 function updateDownloadModalState(releaseInfo = null) {
   if (!downloadModal) return;
-  const label = downloadModal.querySelector(".download-select-label");
   const result = downloadModal.querySelector("#downloadResult");
   const title = downloadModal.querySelector("#downloadResultTitle");
   const meta = downloadModal.querySelector("#downloadResultMeta");
@@ -392,18 +307,12 @@ function updateDownloadModalState(releaseInfo = null) {
   const hint = downloadModal.querySelector("#downloadModalHint");
 
   if (!selectedDownloadVersion) {
-    if (label) label.textContent = "Select game version";
     if (result) result.hidden = true;
-    if (hint) hint.textContent = "Wähle deine Minecraft-Version aus. Danach erscheint der passende Download.";
+    if (hint) hint.textContent = "Der Download für Minecraft 26.2 wird vorbereitet.";
     return;
   }
 
-  const downloadUrl = selectedDownloadVersion.target === "mc1.21.11"
-    ? "/download/latest-mc1.21.11.jar"
-    : selectedDownloadVersion.target === "mc1.21.10"
-      ? "/download/latest-mc1.21.10.jar"
-      : "/download/latest-mc26.x.jar";
-  if (label) label.textContent = `Game version: ${selectedDownloadVersion.label}`;
+  const downloadUrl = "/download/latest-mc26.x.jar";
   if (result) result.hidden = false;
   if (button) button.href = releaseInfo?.downloadUrl || downloadUrl;
   if (title) title.textContent = releaseInfo?.assetName || `betterUC für ${selectedDownloadVersion.label}`;

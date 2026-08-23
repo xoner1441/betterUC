@@ -610,16 +610,17 @@ def minecraftBuildVariants = [
         [
                 id                  : "mc26_2",
                 taskName            : "buildMc26_2",
-                description         : "Builds betterUC for Minecraft 26.2 and copies it into the 26.2 mods folder.",
+                description         : "Builds the supported betterUC release for Minecraft 26.2.",
                 minecraftVersion    : "26.2",
-                minecraftDependency : ">=26.1.2 <26.3",
+                minecraftDependency : "26.2",
                 fabricVersion       : "0.153.0+26.2",
                 loaderVersion       : "0.19.3",
                 loaderDependency    : ">=0.19.3",
                 targetJavaVersion   : "25",
                 javaDependency      : ">=25",
-                archiveClassifier   : "mc26.2",
+                archiveClassifier   : "mc26.x",
                 variantSourceSet    : "mc26",
+                copyToMinecraftMods : false,
                 modsDir             : "C:/Users/huhns/AppData/Roaming/.minecraft/installations/fabric-loader-26.2/mods"
         ],
         [
@@ -635,6 +636,7 @@ def minecraftBuildVariants = [
                 javaDependency      : ">=25",
                 archiveClassifier   : "mc26.x",
                 variantSourceSet    : "mc26",
+                copyToMinecraftMods : false,
                 modsDir             : "C:/Users/huhns/AppData/Roaming/.minecraft/installations/fabric-loader-26.1.2/mods"
         ],
         [
@@ -706,7 +708,9 @@ def variantProjectProperties = { variant ->
             "betterucLegacySourceSet": variant.variantSourceSet ?: "mc1_21_10",
             "betterucUseLegacyGeneratedSources": (variant.useLegacyGeneratedSources ?: false).toString(),
             "betterucLegacyGeneratedJavaDir": betterucLegacyGeneratedJavaDir.get().asFile.absolutePath,
-            "copyToMinecraftMods"  : "true"
+            "copyToMinecraftMods"  : (variant.containsKey("copyToMinecraftMods")
+                    ? variant.copyToMinecraftMods
+                    : true).toString()
     ]
 }
 
@@ -752,63 +756,47 @@ tasks.named("buildMc1_21_11") {
 
 tasks.register("buildAllModernMinecraftVersions") {
     group = "multi-version"
-    description = "Builds the currently supported 26.x betterUC jars."
-    dependsOn "buildMc26_1_2", "buildMc26_2"
+    description = "Builds the currently supported Minecraft 26.2 betterUC jar."
+    dependsOn "buildMc26_2"
 }
 
 tasks.register("buildMc26_x") {
     group = "multi-version"
-    description = "Builds the release jar for Minecraft 26.1.2 through 26.2."
-    dependsOn "buildMc26_1_2"
+    description = "Builds the Minecraft 26.2 release jar under the updater-compatible mc26.x target."
+    dependsOn "buildMc26_2"
 }
 
 tasks.register("buildReleaseJars") {
     group = "multi-version"
-    description = "Builds the release jars that should be uploaded to GitHub."
-    dependsOn "buildMc26_x", "buildMc1_21_10", "buildMc1_21_11"
+    description = "Builds the single mc26.x release jar that should be uploaded to GitHub."
+    dependsOn "buildMc26_x"
     doLast {
         def releaseDir = layout.buildDirectory.dir("release").get().asFile
+        project.delete(releaseDir)
         if (!releaseDir.exists() && !releaseDir.mkdirs()) {
             throw new GradleException("Could not create release directory: ${releaseDir}")
         }
 
         def modernJar = layout.buildDirectory
-                .file("versions/mc26_1_2/libs/${project.base.archivesName.get()}-${project.version}-mc26.x.jar")
+                .file("versions/mc26_2/libs/${project.base.archivesName.get()}-${project.version}-mc26.x.jar")
                 .get()
                 .asFile
         if (!modernJar.isFile()) {
             throw new GradleException("Modern release jar was not built: ${modernJar}")
         }
-        def legacyJar = layout.buildDirectory
-                .file("versions/mc1_21_10/libs/${project.base.archivesName.get()}-${project.version}-mc1.21.10.jar")
-                .get()
-                .asFile
-        if (!legacyJar.isFile()) {
-            throw new GradleException("Legacy 1.21.10 release jar was not built: ${legacyJar}")
-        }
-        def legacy111Jar = layout.buildDirectory
-                .file("versions/mc1_21_11/libs/${project.base.archivesName.get()}-${project.version}-mc1.21.11.jar")
-                .get()
-                .asFile
-        if (!legacy111Jar.isFile()) {
-            throw new GradleException("Legacy 1.21.11 release jar was not built: ${legacy111Jar}")
-        }
-
         copy {
-            from modernJar, legacyJar, legacy111Jar
+            from modernJar
             into releaseDir
         }
 
         logger.lifecycle("Release jar ready: ${new File(releaseDir, modernJar.name)}")
-        logger.lifecycle("Release jar ready: ${new File(releaseDir, legacyJar.name)}")
-        logger.lifecycle("Release jar ready: ${new File(releaseDir, legacy111Jar.name)}")
     }
 }
 
 tasks.register("buildAllMinecraftVersions") {
     group = "multi-version"
-    description = "Builds every supported betterUC jar."
-    dependsOn "buildAllModernMinecraftVersions", "buildMc1_21_10", "buildMc1_21_11"
+    description = "Builds every currently supported betterUC 26.x jar."
+    dependsOn "buildAllModernMinecraftVersions"
 }
 
 tasks.register("buildAllConfiguredMinecraftVersions") {

@@ -1032,10 +1032,10 @@ public class BetterUCClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             BetterUCFontManager.tick(client);
+            VersionChecker.tick(client);
             maybeOpenWelcomeChangelog(client);
             if (client.player == null) return;
 
-            VersionChecker.tick(client);
             HackTimerHud.tick();
             DealerTimerHud.tick();
             MaskTimerHud.tick();

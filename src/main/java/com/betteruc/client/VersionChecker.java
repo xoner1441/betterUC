@@ -9,6 +9,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -51,11 +52,15 @@ public final class VersionChecker {
     private static final Pattern TAG_NAME_PATTERN = Pattern.compile("\"tag_name\"\\s*:\\s*\"([^\"]+)\"");
     private static final Pattern HTML_URL_PATTERN = Pattern.compile("\"html_url\"\\s*:\\s*\"([^\"]+)\"");
     private static final Pattern MOD_VERSION_PATTERN = Pattern.compile("(?m)^mod_version\\s*=\\s*([^\\r\\n]+)\\s*$");
+    private static final Pattern VERSION_CONSTRAINT_PATTERN = Pattern.compile(
+            "^(>=|<=|>|<|=)?([0-9][0-9A-Za-z.+_-]*)$"
+    );
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
     private static final long CHECK_COOLDOWN_MS = 5 * 60 * 1000L;
+    private static final long READY_REMINDER_INTERVAL_MS = 5 * 60 * 1000L;
     private static final long MIN_JAR_SIZE_BYTES = 50_000L;
 
     private static volatile boolean checkRunning = false;
@@ -65,16 +70,20 @@ public final class VersionChecker {
     private static volatile PreparedUpdate preparedUpdate;
     private static volatile String notifiedVersion = "";
     private static volatile long lastCheckMs = 0L;
+    private static volatile long lastReadyReminderMs = 0L;
 
     private VersionChecker() {
     }
 
     public static void checkOnJoin(Minecraft client) {
         lastCheckMs = 0L;
+        lastReadyReminderMs = 0L;
+        remindAboutPreparedUpdate(client, true);
         checkForUpdates(client, true);
     }
 
     public static void tick(Minecraft client) {
+        remindAboutPreparedUpdate(client, false);
         checkForUpdates(client, false);
     }
 
@@ -86,7 +95,7 @@ public final class VersionChecker {
     }
 
     private static void checkForUpdates(Minecraft client, boolean bypassCooldown) {
-        if (client == null || client.player == null || checkRunning) return;
+        if (client == null || checkRunning) return;
         long now = System.currentTimeMillis();
         if (!bypassCooldown && now - lastCheckMs < CHECK_COOLDOWN_MS) {
             return;
@@ -111,7 +120,6 @@ public final class VersionChecker {
                     }
 
                     client.execute(() -> {
-                        if (client.player == null) return;
                         announceUpdate(client, currentVersion, latestVersion);
                     });
                 });
@@ -220,12 +228,16 @@ public final class VersionChecker {
     private static void announceUpdate(Minecraft client, String currentVersion, LatestVersion latestVersion) {
         String normalizedLatest = normalizeVersion(latestVersion.version());
         boolean firstNotice = !normalizedLatest.equalsIgnoreCase(notifiedVersion);
-        if (firstNotice) {
+        if (firstNotice && client.player != null) {
             notifiedVersion = normalizedLatest;
             client.player.sendSystemMessage(buildUpdateMessage(currentVersion, latestVersion));
         }
 
-        if (preparedUpdate != null || installRunning || !latestVersion.hasJarAsset()) {
+        if (preparedUpdate != null) {
+            remindAboutPreparedUpdate(client, false);
+            return;
+        }
+        if (installRunning || !latestVersion.hasJarAsset()) {
             return;
         }
         if (BetterUCConfig.INSTANCE.autoUpdateEnabled) {
@@ -253,7 +265,7 @@ public final class VersionChecker {
                                 confirmationRequested = false;
                                 openRestartConfirmation(client, preparedUpdate);
                             } else {
-                                sendReadyMessage(client);
+                                remindAboutPreparedUpdate(client, true);
                             }
                         } else if (outcome != null && !outcome.message().isBlank()) {
                             sendLocalMessage(client, outcome.message());
@@ -262,8 +274,28 @@ public final class VersionChecker {
                 });
     }
 
+    private static void remindAboutPreparedUpdate(Minecraft client, boolean force) {
+        PreparedUpdate update = preparedUpdate;
+        if (client == null || update == null || restartTriggered) return;
+
+        long now = System.currentTimeMillis();
+        if (!force && now - lastReadyReminderMs < READY_REMINDER_INTERVAL_MS) return;
+
+        if (client.player != null) {
+            lastReadyReminderMs = now;
+            sendReadyMessage(client);
+            return;
+        }
+
+        if (ClientCompat.currentScreen(client) instanceof TitleScreen) {
+            lastReadyReminderMs = now;
+            openRestartConfirmation(client, update);
+        }
+    }
+
     private static void openRestartConfirmation(Minecraft client, PreparedUpdate update) {
         if (client == null || update == null) return;
+        if (ClientCompat.currentScreen(client) instanceof UpdateRestartScreen) return;
         ClientCompat.setScreen(client, new UpdateRestartScreen(
                 ClientCompat.currentScreen(client),
                 normalizeVersion(update.latestVersion().version()),
@@ -329,6 +361,12 @@ public final class VersionChecker {
             if (!downloadUrl.isBlank() && !looksLikeJarDownloadUrl(downloadUrl)) {
                 downloadUrl = "";
             }
+            if (!downloadUrl.isBlank()
+                    && !matchesReleaseTarget(assetTargetValue(assetName, downloadUrl), preferredReleaseTarget())) {
+                assetName = "";
+                downloadUrl = "";
+                sha256 = "";
+            }
 
             return Optional.of(new LatestVersion(version, pageUrl, assetName, downloadUrl, sha256));
         } catch (RuntimeException e) {
@@ -377,7 +415,6 @@ public final class VersionChecker {
 
             String releaseTarget = preferredReleaseTarget();
             JsonObject selectedAsset = null;
-            JsonObject unversionedFallback = null;
             JsonArray assets = object.has("assets") && object.get("assets").isJsonArray()
                     ? object.getAsJsonArray("assets")
                     : new JsonArray();
@@ -398,13 +435,6 @@ public final class VersionChecker {
                     selectedAsset = asset;
                     break;
                 }
-                if (!hasReleaseTargetMarker(assetValue) && unversionedFallback == null) {
-                    unversionedFallback = asset;
-                }
-            }
-
-            if (selectedAsset == null) {
-                selectedAsset = unversionedFallback;
             }
 
             String assetName = selectedAsset == null ? "" : jsonString(selectedAsset, "name");
@@ -464,16 +494,6 @@ public final class VersionChecker {
     }
 
     private static String preferredReleaseTarget() {
-        String minecraftVersion = getMinecraftVersion().toLowerCase(Locale.ROOT);
-        if (minecraftVersion.startsWith("1.21.11")) {
-            return "mc1.21.11";
-        }
-        if (minecraftVersion.startsWith("1.21.10")) {
-            return "mc1.21.10";
-        }
-        if (minecraftVersion.startsWith("26.")) {
-            return "mc26.x";
-        }
         return "mc26.x";
     }
 
@@ -496,16 +516,6 @@ public final class VersionChecker {
     private static boolean matchesReleaseTarget(String lowerValue, String target) {
         String value = lowerValue == null ? "" : lowerValue.toLowerCase(Locale.ROOT);
         String cleanedTarget = target == null ? "" : target.toLowerCase(Locale.ROOT);
-        if ("mc1.21.11".equals(cleanedTarget)) {
-            return value.contains("mc1.21.11")
-                    || value.contains("mc1_21_11")
-                    || value.contains("1.21.11");
-        }
-        if ("mc1.21.10".equals(cleanedTarget)) {
-            return value.contains("mc1.21.10")
-                    || value.contains("mc1_21_10")
-                    || value.contains("1.21.10");
-        }
         if ("mc26.x".equals(cleanedTarget)) {
             return value.contains("mc26.x")
                     || value.contains("mc26x")
@@ -514,15 +524,6 @@ public final class VersionChecker {
                     || (value.contains("mc26") && !value.contains("mc1.21") && !value.contains("1.21.10"));
         }
         return false;
-    }
-
-    private static boolean hasReleaseTargetMarker(String lowerValue) {
-        String value = lowerValue == null ? "" : lowerValue.toLowerCase(Locale.ROOT);
-        return value.contains("mc26")
-                || value.contains("mc1.21")
-                || value.contains("mc1_21")
-                || value.contains("1.21.10")
-                || value.contains("1.21.11");
     }
 
     private static Optional<String> fetchVersionFromGradleProperties(URI uri) {
@@ -587,13 +588,25 @@ public final class VersionChecker {
             Path stagingDir = stableStagingDirectory();
             Files.createDirectories(stagingDir);
             Path downloadedJar = stagingDir.resolve(targetName);
-            downloadJar(latestVersion, downloadedJar);
-
-            try {
-                validateDownloadedJar(downloadedJar, latestVersion);
-            } catch (IOException validationError) {
-                Files.deleteIfExists(downloadedJar);
-                throw validationError;
+            boolean stagedJarValid = false;
+            if (Files.isRegularFile(downloadedJar)) {
+                try {
+                    validateDownloadedJar(downloadedJar, latestVersion);
+                    stagedJarValid = true;
+                } catch (IOException validationError) {
+                    Files.deleteIfExists(downloadedJar);
+                    BetterUCMod.LOGGER.info("Discarded stale prepared betterUC update: {}",
+                            validationError.getMessage());
+                }
+            }
+            if (!stagedJarValid) {
+                downloadJar(latestVersion, downloadedJar);
+                try {
+                    validateDownloadedJar(downloadedJar, latestVersion);
+                } catch (IOException validationError) {
+                    Files.deleteIfExists(downloadedJar);
+                    throw validationError;
+                }
             }
 
             RestartCommand restartCommand = captureRestartCommand().orElse(null);
@@ -666,7 +679,69 @@ public final class VersionChecker {
             if (!normalizeVersion(latestVersion.version()).equalsIgnoreCase(jarVersion)) {
                 throw new IOException("JAR-Version stimmt nicht mit dem Release \u00FCberein");
             }
+            JsonElement minecraftDependency = metadata.has("depends") && metadata.get("depends").isJsonObject()
+                    ? metadata.getAsJsonObject("depends").get("minecraft")
+                    : null;
+            if (!matchesMinecraftDependency(minecraftDependency, getMinecraftVersion())) {
+                throw new IOException("Die JAR ist nicht mit der laufenden Minecraft-Version kompatibel");
+            }
         }
+    }
+
+    static boolean matchesMinecraftDependency(JsonElement requirement, String minecraftVersion) {
+        if (requirement == null || requirement.isJsonNull()
+                || minecraftVersion == null || minecraftVersion.isBlank()) {
+            return false;
+        }
+        if (requirement.isJsonArray()) {
+            for (JsonElement alternative : requirement.getAsJsonArray()) {
+                if (matchesMinecraftDependency(alternative, minecraftVersion)) return true;
+            }
+            return false;
+        }
+        if (!requirement.isJsonPrimitive()) return false;
+
+        String predicate;
+        try {
+            predicate = requirement.getAsString().trim();
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+        if (predicate.isBlank()) return false;
+
+        for (String alternative : predicate.split("\\s*\\|\\|\\s*")) {
+            if (matchesMinecraftConstraintGroup(alternative, minecraftVersion)) return true;
+        }
+        return false;
+    }
+
+    private static boolean matchesMinecraftConstraintGroup(String predicate, String minecraftVersion) {
+        String[] constraints = predicate == null ? new String[0] : predicate.trim().split("\\s+");
+        if (constraints.length == 0) return false;
+
+        for (String constraint : constraints) {
+            if (constraint.isBlank() || "*".equals(constraint)) continue;
+            String lower = constraint.toLowerCase(Locale.ROOT);
+            if (lower.endsWith(".x")) {
+                String prefix = lower.substring(0, lower.length() - 1);
+                if (!minecraftVersion.toLowerCase(Locale.ROOT).startsWith(prefix)) return false;
+                continue;
+            }
+
+            Matcher matcher = VERSION_CONSTRAINT_PATTERN.matcher(constraint);
+            if (!matcher.matches()) return false;
+            String operator = matcher.group(1) == null ? "=" : matcher.group(1);
+            int comparison = compareVersionNumbers(minecraftVersion, matcher.group(2));
+            boolean matches = switch (operator) {
+                case ">=" -> comparison >= 0;
+                case "<=" -> comparison <= 0;
+                case ">" -> comparison > 0;
+                case "<" -> comparison < 0;
+                default -> comparison == 0;
+            };
+            if (!matches) return false;
+        }
+        return true;
     }
 
     private static String sha256(Path path) throws IOException {
@@ -1024,19 +1099,21 @@ public final class VersionChecker {
         if (current.isBlank() || remote.isBlank() || "unknown".equalsIgnoreCase(current)) {
             return false;
         }
+        return compareVersionNumbers(remote, current) > 0;
+    }
 
-        String[] currentParts = current.split("[.-]");
-        String[] remoteParts = remote.split("[.-]");
-        int length = Math.max(currentParts.length, remoteParts.length);
+    static int compareVersionNumbers(String leftVersion, String rightVersion) {
+        String[] leftParts = normalizeVersion(leftVersion).split("[.-]");
+        String[] rightParts = normalizeVersion(rightVersion).split("[.-]");
+        int length = Math.max(leftParts.length, rightParts.length);
         for (int i = 0; i < length; i++) {
-            int currentPart = i < currentParts.length ? parseVersionPart(currentParts[i]) : 0;
-            int remotePart = i < remoteParts.length ? parseVersionPart(remoteParts[i]) : 0;
-            if (remotePart != currentPart) {
-                return remotePart > currentPart;
+            int leftPart = i < leftParts.length ? parseVersionPart(leftParts[i]) : 0;
+            int rightPart = i < rightParts.length ? parseVersionPart(rightParts[i]) : 0;
+            if (leftPart != rightPart) {
+                return Integer.compare(leftPart, rightPart);
             }
         }
-
-        return false;
+        return 0;
     }
 
     private static int parseVersionPart(String value) {

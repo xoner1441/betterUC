@@ -1562,8 +1562,8 @@ function weeklyStatsEmbed(stats, onlinePlayers) {
       { name: "Community", value: `Vorschl\u00e4ge: **${stats.suggestions.created}**\nStimmen: **${stats.suggestions.votes}**`, inline: true },
       { name: "Support", value: `Tickets erstellt: **${stats.tickets.opened}**\nGeschlossen: **${stats.tickets.closed}**\n\u00d8 Abschluss: **${stats.tickets.averageCloseMinutes} Min.**`, inline: true },
       { name: "Cloud", value: `Syncs: **${stats.cloud.syncs}**\nKonflikte: **${stats.cloud.conflicts}**\nFehler: **${stats.cloud.errors}**`, inline: true },
-      { name: "Mod-Versionen", value: distributionLabel(stats.versions), inline: true },
-      { name: "Minecraft-Versionen", value: distributionLabel(stats.gameVersions), inline: true }
+      { name: "Mod-Versionen | 7 Tage", value: distributionLabel(stats.versions), inline: true },
+      { name: "Minecraft | 7 Tage", value: distributionLabel(stats.gameVersions), inline: true }
     )
     .setTimestamp();
 }

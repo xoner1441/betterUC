@@ -1156,17 +1156,21 @@ function createDatabase(options = {}) {
       pool.query(`
         select last_version as label, count(*)::integer as count
         from accounts
-        where status = 'active' and last_version <> ''
+        where status = 'active'
+          and last_version <> ''
+          and last_seen_at >= $1
         group by last_version
         order by count desc, label
-      `),
+      `, [from]),
       pool.query(`
         select last_game_version as label, count(*)::integer as count
         from accounts
-        where status = 'active' and last_game_version <> ''
+        where status = 'active'
+          and last_game_version <> ''
+          and last_seen_at >= $1
         group by last_game_version
         order by count desc, label
-      `)
+      `, [from])
     ]);
     const activities = Object.fromEntries(activityResult.rows.map(row => [row.event_type, Number(row.count || 0)]));
     const tickets = ticketResult.rows[0] || {};
