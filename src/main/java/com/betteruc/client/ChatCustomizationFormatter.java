@@ -85,7 +85,7 @@ public final class ChatCustomizationFormatter {
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern EMERGENCY_INCOMING_BLOCK_PATTERN = Pattern.compile(
-            "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*Achtung!\\s*Ein\\s+Notruf\\s+von\\s+((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)\\s*\\((\\d+)\\)\\s*:\\s*(.+?)\\s*(?:\\R|\\\\n)\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*Der\\s+n(?:ä|ae)chste\\s+Punkt\\s+ist\\s+(.+?)\\.\\s*Die\\s+n(?:ä|ae)chsten\\s+Personen\\s+sind\\s+(.+?)[.!]?\\s*$",
+            "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*Achtung!\\s*Ein\\s+Notruf\\s+von\\s+((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)\\s*\\((\\d+)\\)\\s*:\\s*(.+?)\\s*(?:\\R|\\\\n)\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*Der\\s+n(?:ä|ae)(?:chste|heste)\\s+Punkt\\s+ist\\s+(.+?)\\.\\s*Die\\s+n(?:ä|ae)(?:chsten|hesten)\\s+Personen\\s+sind\\s+(.+?)[.!]?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern EMERGENCY_INCOMING_PATTERN = Pattern.compile(
@@ -93,7 +93,7 @@ public final class ChatCustomizationFormatter {
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern EMERGENCY_DETAILS_PATTERN = Pattern.compile(
-            "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*Der\\s+n(?:ä|ae)chste\\s+Punkt\\s+ist\\s+(.+?)\\.\\s*Die\\s+n(?:ä|ae)chsten\\s+Personen\\s+sind\\s+(.+?)[.!]?\\s*$",
+            "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*Der\\s+n(?:ä|ae)(?:chste|heste)\\s+Punkt\\s+ist\\s+(.+?)\\.\\s*Die\\s+n(?:ä|ae)(?:chsten|hesten)\\s+Personen\\s+sind\\s+(.+?)[.!]?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern EMERGENCY_ACCEPTED_PATTERN = Pattern.compile(

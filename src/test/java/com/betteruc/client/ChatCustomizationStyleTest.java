@@ -291,6 +291,29 @@ class ChatCustomizationStyleTest {
     }
 
     @Test
+    void formatsIncomingEmergencyCallWithServerNaehesteWording() {
+        ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
+                "[betterUC Second Chat] HQ: Achtung! Ein Notruf von FourJvst (858): \"Hilfe\"\\n"
+                        + "HQ: Der näheste Punkt ist Altstadt. Die nähesten Personen sind "
+                        + "reaax72 (350m), _toobi (805m).",
+                true,
+                false,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
+        );
+
+        assertNotNull(result);
+        assertTrue(result.hq());
+        assertEquals(3, result.replacementMessages().size());
+        assertEquals("ɴᴏᴛʀᴜꜰ ✦ FourJvst » ID 858",
+                result.replacementMessages().get(0).getString());
+        assertEquals("» Hilfe", result.replacementMessages().get(1).getString());
+        assertEquals("» Altstadt · reaax72 350m · _toobi 805m",
+                result.replacementMessages().get(2).getString());
+    }
+
+    @Test
     void formatsAcceptedEmergencyCallWithOfficerCallerAndDistance() {
         ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
                 "HQ: _toobi hat den Notruf von ardasaatci angenommen, over. (11m entfernt)",
