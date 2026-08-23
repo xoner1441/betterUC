@@ -1,5 +1,6 @@
 "use strict";
 
+const crypto = require("crypto");
 const net = require("net");
 
 const DEFAULT_API_BASE_URL = "https://api.unicacity.eu/api/factions";
@@ -74,6 +75,7 @@ function normalizeMembers(payload) {
     .filter(entry => entry && typeof entry.username === "string" && entry.username.trim())
     .map(entry => ({
       username: safeLabel(entry.username, "Unbekannt"),
+      uuid: String(entry.uuid || "").replace(/[^a-fA-F0-9]/g, "").toLowerCase(),
       rankNumber: Number.isFinite(Number(entry.rankNumber)) ? Number(entry.rankNumber) : -1,
       rankName: safeLabel(entry.rankName, "Mitglied"),
       isLeader: entry.isLeader === true
@@ -145,6 +147,19 @@ function formatPersonnelSection(members, options = {}) {
   }
   lines.push(`Slots: ${members.length}/${slotLimit}`);
   return lines.join("\n");
+}
+
+function rosterVersion(members) {
+  const value = members
+    .map(member => `${member.username}:${member.uuid}:${member.rankNumber}:${member.rankName}:${member.isLeader ? 1 : 0}`)
+    .join("|");
+  return crypto.createHash("sha256").update(value).digest("hex").slice(0, 12);
+}
+
+function formatPersonnelImageEmbed(members, options = {}) {
+  const baseUrl = String(options.publicBaseUrl || "https://betteruc.de").replace(/\/+$/, "");
+  const version = rosterVersion(members);
+  return `[url=${baseUrl}/polizei/mitglieder][img]${baseUrl}/api/teamspeak/police-roster.png?v=${version}[/img][/url]`;
 }
 
 function replacePersonnelSection(currentDescription, personnelSection, options = {}) {
@@ -333,10 +348,12 @@ async function synchronizeFactionChannel(config, members) {
       throw new Error("TeamSpeak hat keine lesbare Channelbeschreibung geliefert.");
     }
 
-    const personnelSection = formatPersonnelSection(members, {
-      slotLimit: config.slotLimit,
-      unitOverrides: config.unitOverrides
-    });
+    const personnelSection = config.renderMode === "image"
+      ? formatPersonnelImageEmbed(members, { publicBaseUrl: config.publicBaseUrl })
+      : formatPersonnelSection(members, {
+        slotLimit: config.slotLimit,
+        unitOverrides: config.unitOverrides
+      });
     const desiredDescription = replacePersonnelSection(currentDescription, personnelSection, {
       startLabel: config.sectionStartLabel,
       endLabel: config.sectionEndLabel
@@ -364,6 +381,8 @@ function readConfig(env) {
     apiUrl: `${apiBaseUrl}/${encodeURIComponent(slug)}/members`,
     slotLimit: positiveInteger(env.TEAMSPEAK_FACTION_SLOT_LIMIT, 42),
     unitOverrides: parseUnitOverrides(env.TEAMSPEAK_FACTION_UNIT_OVERRIDES),
+    renderMode: String(env.TEAMSPEAK_FACTION_RENDER_MODE || "image").trim().toLowerCase(),
+    publicBaseUrl: String(env.PUBLIC_BASE_URL || "https://betteruc.de").replace(/\/+$/, ""),
     sectionStartLabel: env.TEAMSPEAK_FACTION_SECTION_START || "PERSONALAKTE",
     sectionEndLabel: env.TEAMSPEAK_FACTION_SECTION_END || "STRAFZAHLUNGEN",
     syncIntervalMs: positiveInteger(
@@ -445,12 +464,15 @@ function startTeamSpeakFactionSync(options = {}) {
 }
 
 module.exports = {
+  formatPersonnelImageEmbed,
   formatPersonnelSection,
   normalizeMembers,
+  parseUnitOverrides,
   queryEscape,
   queryUnescape,
   readConfig,
   replacePersonnelSection,
+  rosterVersion,
   startTeamSpeakFactionSync,
   synchronizeFactionChannel,
   updateChannelDescription

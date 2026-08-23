@@ -1,5 +1,7 @@
 # betterUC Platform
 
+Requires Node.js 20.9 or newer. The generated police roster PNG uses Sharp's current, security-patched libvips build.
+
 Node service for the betterUC website, automatic Minecraft authentication and WebSocket ping relay.
 
 ## Routes
@@ -84,6 +86,7 @@ Node service for the betterUC website, automatic Minecraft authentication and We
 - `TEAMSPEAK_FACTION_SYNC_ENABLED=true` enables the official UnicaCity faction list sync
 - `TEAMSPEAK_FACTION_SLUG=police` selects the police faction
 - `TEAMSPEAK_FACTION_SYNC_MS=600000` refresh interval, with a minimum of one minute
+- `TEAMSPEAK_FACTION_RENDER_MODE=image` embeds the generated betterUC roster image instead of raw member text
 - `TEAMSPEAK_FACTION_SLOT_LIMIT=42` police faction slot limit shown below the roster
 - `TEAMSPEAK_FACTION_SECTION_START=PERSONALAKTE` start heading of the managed description section
 - `TEAMSPEAK_FACTION_SECTION_END=STRAFZAHLUNGEN` end heading after the managed description section
@@ -96,6 +99,8 @@ Node service for the betterUC website, automatic Minecraft authentication and We
 - `TEAMSPEAK_VIRTUAL_SERVER_ID=...` optional virtual server ID instead of the port
 - `TEAMSPEAK_CHANNEL_ID=...` channel whose description receives the member list
 - `TEAMSPEAK_QUERY_TIMEOUT_MS=10000`
+- `PUBLIC_BASE_URL=https://betteruc.de` public origin used by the clickable TeamSpeak image
+- `POLICE_ROSTER_HEAD_BASE_URL=https://mc-heads.net/head` Minecraft head image provider; images are cached by betterUC
 
 Access codes are only shown once. The server stores SHA-256 hashes with a secret pepper.
 Account data is backed up automatically once per day and can also be backed up manually in the admin panel.
@@ -104,10 +109,13 @@ Account data is backed up automatically once per day and can also be backed up m
 
 When `TEAMSPEAK_FACTION_SYNC_ENABLED=true`, the relay reads the official police roster from
 `https://api.unicacity.eu/api/factions/police/members` and groups the players by rank. It reads the existing TeamSpeak
-channel description and replaces only the content between the `PERSONALAKTE` and `STRAFZAHLUNGEN` headings. Images,
-introductory text and the penalty catalog remain unchanged. The description is only written when that managed roster
-section differs. The query user should be restricted to the selected virtual server and the permissions to read the
-channel information and edit that channel description.
+channel description and replaces only the content between the `PERSONALAKTE` and `STRAFZAHLUNGEN` headings. With the
+default `image` render mode this section contains a cache-busted, clickable PNG. It links to the responsive public view
+at `/polizei/mitglieder`; the PNG itself is served at `/api/teamspeak/police-roster.png`. Both views include cached 3D
+Minecraft heads. Introductory text and the penalty catalog remain unchanged. The description is only written when that
+managed section differs. Set `TEAMSPEAK_FACTION_RENDER_MODE=text` to keep the legacy raw-text list. The query user
+should be restricted to the selected virtual server and the permissions to read the channel information and edit that
+channel description.
 
 ## Discord bot
 

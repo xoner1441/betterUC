@@ -12,6 +12,7 @@ const { promisify } = require("util");
 const { WebSocketServer } = require("ws");
 const { startDiscordBot } = require("./discordBot");
 const { createDatabase } = require("./database");
+const { createPoliceRosterService } = require("./policeRoster");
 const { startTeamSpeakFactionSync } = require("./teamSpeakFactionSync");
 
 const PORT = Number(process.env.PORT || 3000);
@@ -53,6 +54,15 @@ const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || "https://betteruc.
 const SCREENSHOT_PUBLIC_BASE_URL = String(
   process.env.SCREENSHOT_PUBLIC_BASE_URL || PUBLIC_BASE_URL
 ).replace(/\/+$/, "");
+const policeRoster = createPoliceRosterService({
+  apiUrl: process.env.POLICE_ROSTER_API_URL,
+  headBaseUrl: process.env.POLICE_ROSTER_HEAD_BASE_URL,
+  rosterCacheMs: process.env.POLICE_ROSTER_CACHE_MS,
+  headCacheMs: process.env.POLICE_ROSTER_HEAD_CACHE_MS,
+  timeoutMs: process.env.POLICE_ROSTER_TIMEOUT_MS,
+  slotLimit: process.env.TEAMSPEAK_FACTION_SLOT_LIMIT,
+  unitOverrides: process.env.TEAMSPEAK_FACTION_UNIT_OVERRIDES
+});
 const RELEASE_CACHE_TTL_MS = Number(process.env.RELEASE_CACHE_TTL_MS || 5 * 60 * 1000);
 const UPDATE_WATCH_INTERVAL_MS = Math.max(
   30 * 1000,
@@ -273,12 +283,13 @@ async function sendAnnouncementFromDiscord(input) {
   return { ok: true, event };
 }
 
-function json(res, status, payload) {
+function json(res, status, payload, headers = {}) {
   const body = JSON.stringify(payload);
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
-    "access-control-allow-origin": "*"
+    "access-control-allow-origin": "*",
+    ...headers
   });
   res.end(body);
 }
@@ -2078,6 +2089,83 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/teamspeak/police-roster.json") {
+    try {
+      const roster = await policeRoster.getRoster();
+      json(res, 200, {
+        ok: true,
+        count: roster.count,
+        slotLimit: roster.slotLimit,
+        hash: roster.hash,
+        generatedAt: roster.generatedAt,
+        groups: roster.groups.map(group => ({
+          key: group.key,
+          label: group.label,
+          members: group.members.map(member => ({
+            username: member.username,
+            uuid: member.uuid,
+            rankNumber: member.rankNumber,
+            rankName: member.rankName,
+            isLeader: member.isLeader,
+            unit: member.unit,
+            headUrl: `/api/teamspeak/police-head/${member.uuid || encodeURIComponent(member.username)}.png`
+          }))
+        }))
+      }, {
+        "cache-control": "public, max-age=300"
+      });
+    } catch (error) {
+      console.error("Could not load police roster", error);
+      json(res, 502, { ok: false, error: "Die Polizeiliste ist gerade nicht erreichbar." });
+    }
+    return;
+  }
+
+  if ((req.method === "GET" || req.method === "HEAD")
+      && url.pathname === "/api/teamspeak/police-roster.png") {
+    try {
+      const image = await policeRoster.getImage();
+      const etag = `\"police-${image.hash}\"`;
+      if (req.headers["if-none-match"] === etag) {
+        res.writeHead(304, { etag, "cache-control": "public, max-age=300" });
+        res.end();
+        return;
+      }
+      res.writeHead(200, {
+        "content-type": "image/png",
+        "content-length": image.buffer.length,
+        "cache-control": "public, max-age=300",
+        etag
+      });
+      res.end(req.method === "HEAD" ? undefined : image.buffer);
+    } catch (error) {
+      console.error("Could not render police roster", error);
+      json(res, 502, { ok: false, error: "Die Polizeigrafik ist gerade nicht erreichbar." });
+    }
+    return;
+  }
+
+  const policeHeadMatch = url.pathname.match(/^\/api\/teamspeak\/police-head\/([a-zA-Z0-9_-]{1,64})\.png$/);
+  if ((req.method === "GET" || req.method === "HEAD") && policeHeadMatch) {
+    try {
+      const key = decodeURIComponent(policeHeadMatch[1]);
+      const roster = await policeRoster.getRoster();
+      const member = roster.members.find(entry => entry.uuid === key.replace(/[^a-fA-F0-9]/g, "").toLowerCase())
+        || roster.members.find(entry => entry.username.toLowerCase() === key.toLowerCase());
+      const head = await policeRoster.getHead(member?.uuid || key, member?.username || key);
+      res.writeHead(200, {
+        "content-type": "image/png",
+        "content-length": head.length,
+        "cache-control": "public, max-age=86400"
+      });
+      res.end(req.method === "HEAD" ? undefined : head);
+    } catch (error) {
+      console.error("Could not load police member head", error);
+      json(res, 502, { ok: false, error: "Der Spielerkopf ist gerade nicht erreichbar." });
+    }
+    return;
+  }
+
   if (req.method === "POST" && url.pathname === "/api/auth/challenge") {
     if (isRateLimited(req, "minecraft-auth-challenge", 12, 60_000)) {
       json(res, 429, { ok: false, error: "Zu viele Anmeldeversuche. Bitte kurz warten." });
@@ -2831,6 +2919,9 @@ async function serveStatic(req, res, url) {
   }
   if (pathname === "/datenschutz") {
     pathname = "/datenschutz.html";
+  }
+  if (pathname === "/polizei/mitglieder" || pathname === "/polizei/mitglieder/") {
+    pathname = "/polizei-mitglieder.html";
   }
   if (pathname === "/" || pathname === "/updates") {
     pathname = "/index.html";

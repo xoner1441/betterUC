@@ -9,6 +9,7 @@ scp -r .\server\* root@65.109.175.203:/opt/betteruc-relay/
 Then run this on the server as `root`:
 
 ```bash
+node --version # must be 20.9.0 or newer
 cd /opt/betteruc-relay
 npm install --omit=dev
 
@@ -45,6 +46,8 @@ grep -q '^POSTGRES_BACKUP_DIR=' /etc/betteruc-relay.env || echo "POSTGRES_BACKUP
 # TEAMSPEAK_FACTION_SYNC_ENABLED=true
 # TEAMSPEAK_FACTION_SLUG=police
 # TEAMSPEAK_FACTION_SYNC_MS=600000
+# TEAMSPEAK_FACTION_RENDER_MODE=image
+# PUBLIC_BASE_URL=https://betteruc.de
 # TEAMSPEAK_FACTION_SLOT_LIMIT=42
 # TEAMSPEAK_FACTION_SECTION_START=PERSONALAKTE
 # TEAMSPEAK_FACTION_SECTION_END=STRAFZAHLUNGEN
@@ -55,6 +58,7 @@ grep -q '^POSTGRES_BACKUP_DIR=' /etc/betteruc-relay.env || echo "POSTGRES_BACKUP
 # TEAMSPEAK_QUERY_PASSWORD=...
 # TEAMSPEAK_VIRTUAL_SERVER_PORT=9987
 # TEAMSPEAK_CHANNEL_ID=...
+# POLICE_ROSTER_HEAD_BASE_URL=https://mc-heads.net/head
 
 cat > /etc/caddy/Caddyfile <<'EOF'
 betteruc.de, www.betteruc.de {
@@ -78,6 +82,8 @@ After deployment:
 ```bash
 curl http://127.0.0.1:3000/health
 curl http://127.0.0.1:3000/api/status
+curl -I http://127.0.0.1:3000/api/teamspeak/police-roster.png
+curl http://127.0.0.1:3000/api/teamspeak/police-roster.json
 ```
 
 Read the fallback admin key:

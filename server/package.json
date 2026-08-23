@@ -4,16 +4,21 @@
   "private": true,
   "description": "betterUC website, access-code API and ping relay",
   "main": "index.js",
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "start": "node index.js",
     "db:check": "node scripts/check-database.js",
     "db:import-json": "node scripts/import-json.js",
     "teamspeak:sync": "node scripts/run-teamspeak-faction-sync.js",
-    "test:teamspeak": "node --test scripts/test-teamspeak-faction-sync.js"
+    "test:teamspeak": "node --test scripts/test-teamspeak-faction-sync.js",
+    "test:police-roster": "node --test scripts/test-police-roster.js"
   },
   "dependencies": {
-    "discord.js": "^14.20.0",
+    "discord.js": "^14.27.0",
     "pg": "^8.16.3",
+    "sharp": "^0.35.3",
     "ws": "^8.18.0"
   }
 }

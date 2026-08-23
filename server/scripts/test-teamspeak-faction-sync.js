@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const net = require("node:net");
 const test = require("node:test");
 const {
+  formatPersonnelImageEmbed,
   formatPersonnelSection,
   normalizeMembers,
   queryEscape,
@@ -27,6 +28,18 @@ test("normalizes, sorts and formats the official police roster", () => {
   assert.match(personnel, /Polizeirat/);
   assert.match(personnel, /\[UCPD\] \| 4 \| FABI1441/);
   assert.match(personnel, /Slots: 3\/42/);
+});
+
+test("creates a cache-busted, clickable TeamSpeak roster image", () => {
+  const members = normalizeMembers([
+    { ...SAMPLE_MEMBERS[0], uuid: "75b7ddae-c453-4f24-a7fe-6e0e9dbdc9ae" },
+    ...SAMPLE_MEMBERS.slice(1)
+  ]);
+  const embed = formatPersonnelImageEmbed(members, { publicBaseUrl: "https://betteruc.de/" });
+  assert.match(embed, /^\[url=https:\/\/betteruc\.de\/polizei\/mitglieder\]/);
+  assert.match(embed, /\[img\]https:\/\/betteruc\.de\/api\/teamspeak\/police-roster\.png\?v=[a-f0-9]{12}\[\/img\]/);
+  assert.match(embed, /\[\/url\]$/);
+  assert.equal(members.find(member => member.username === "FABI1441").uuid.length, 32);
 });
 
 test("escapes TeamSpeak ServerQuery parameters", () => {

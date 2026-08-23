@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eaf4f9">
+  <meta name="description" content="Aktuelle Mitgliederübersicht der Polizei-Fraktion auf UnicaCity.">
+  <title>Polizei – Mitgliederübersicht | betterUC</title>
+  <link rel="stylesheet" href="/polizei-mitglieder.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="betterUC Startseite">
+      <span class="brand-mark">bUC</span>
+      <span>betterUC</span>
+    </a>
+    <nav class="header-links" aria-label="Seitennavigation">
+      <a href="https://unicacity.eu/fraktionen" target="_blank" rel="noopener noreferrer">UnicaCity Fraktionen</a>
+      <a class="back-link" href="/">Zurück zu betterUC</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="page-title">
+      <div class="hero-kicker">UNICACITY POLICE DEPARTMENT</div>
+      <div class="hero-grid">
+        <div>
+          <h1 id="page-title">POLIZEI</h1>
+          <p>Offizielle Mitgliederübersicht</p>
+        </div>
+        <div class="slot-card" aria-live="polite">
+          <span>PERSONALBESTAND</span>
+          <strong id="slot-count">– / 42</strong>
+        </div>
+      </div>
+      <div class="hero-rule" aria-hidden="true"></div>
+    </section>
+
+    <section class="roster-shell" aria-live="polite" aria-busy="true">
+      <div id="roster-status" class="status-card">
+        <span class="status-pulse" aria-hidden="true"></span>
+        Mitglieder werden geladen …
+      </div>
+      <div id="roster" class="roster" hidden></div>
+    </section>
+  </main>
+
+  <footer>
+    <div>
+      <strong>Automatisch synchronisiert</strong>
+      <span id="updated-at">Stand wird geladen</span>
+    </div>
+    <p>Datenquelle: offizielle UnicaCity Fraktions-API. Darstellung durch betterUC.</p>
+  </footer>
+
+  <script src="/polizei-mitglieder.js" defer></script>
+</body>
+</html>
