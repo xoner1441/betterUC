@@ -66,6 +66,16 @@ test("reads an independent SWAT TeamSpeak channel configuration", () => {
   assert.equal(config.swatSlotLimit, 13);
   assert.equal(config.swatSectionStartLabel, "SWAT-AKTE");
   assert.equal(config.swatSectionEndLabel, "SWAT-ENDE");
+  assert.equal(config.swatReplaceToEnd, false);
+});
+
+test("uses the production police and SWAT channel defaults", () => {
+  const config = readConfig({});
+  assert.equal(config.channelId, 109);
+  assert.equal(config.swatChannelId, 108);
+  assert.equal(config.swatSectionStartLabel, "EINHEITSLISTE");
+  assert.equal(config.swatSectionEndLabel, "");
+  assert.equal(config.swatReplaceToEnd, true);
 });
 
 test("escapes TeamSpeak ServerQuery parameters", () => {
@@ -98,6 +108,25 @@ test("replaces only the personnel section in the existing description", () => {
   assert.match(result, /Slots: 3\/42/);
   assert.doesNotMatch(result, /AlterName/);
   assert.match(result, /\[size=18\]STRAFZAHLUNGEN\[\/size\]\nIngame -\nFehlverhalten 2\.000\$/);
+});
+
+test("replaces the SWAT list through the end while preserving closing BBCode", () => {
+  const current = [
+    "[center]",
+    "[size=15]• EINHEITSLISTE •[/size] [size=12]",
+    "Leitung",
+    "[CHIEF] | 6 | 36Flo",
+    "Aktuelle Besetzung: 10/13",
+    "[/size] [/center]"
+  ].join("\n");
+  const image = "[url=https://betteruc.de/polizei/swat][img]https://betteruc.de/api/teamspeak/swat-roster.png?v=test[/img][/url]";
+  const result = replacePersonnelSection(current, image, {
+    startLabel: "EINHEITSLISTE",
+    replaceToEnd: true
+  });
+  assert.match(result, /\[img\]https:\/\/betteruc\.de\/api\/teamspeak\/swat-roster\.png\?v=test\[\/img\]/);
+  assert.doesNotMatch(result, /Aktuelle Besetzung|\[CHIEF\]/);
+  assert.match(result, /\[\/size\] \[\/center\]$/);
 });
 
 test("logs in and updates only the configured TeamSpeak channel", async () => {

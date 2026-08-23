@@ -173,7 +173,8 @@ function formatSwatImageEmbed(members, options = {}) {
 function replacePersonnelSection(currentDescription, personnelSection, options = {}) {
   const current = String(currentDescription || "");
   const startLabel = String(options.startLabel || "PERSONALAKTE").trim();
-  const endLabel = String(options.endLabel || "STRAFZAHLUNGEN").trim();
+  const replaceToEnd = options.replaceToEnd === true;
+  const endLabel = replaceToEnd ? "" : String(options.endLabel || "STRAFZAHLUNGEN").trim();
   const searchable = current.toLocaleUpperCase("de-DE");
   const startLabelIndex = searchable.indexOf(startLabel.toLocaleUpperCase("de-DE"));
   if (startLabelIndex < 0) {
@@ -189,13 +190,18 @@ function replacePersonnelSection(currentDescription, personnelSection, options =
   const followingSizeTag = current.slice(contentStart).match(/^\s*\[size=[^\]]+\]/i);
   if (followingSizeTag) contentStart += followingSizeTag[0].length;
 
-  const endLabelIndex = searchable.indexOf(endLabel.toLocaleUpperCase("de-DE"), contentStart);
-  if (endLabelIndex < 0) {
-    throw new Error(`Endmarke "${endLabel}" wurde in der Channelbeschreibung nicht gefunden.`);
+  let contentEnd;
+  if (replaceToEnd) {
+    const trailingTags = current.match(/(?:\s*\[\/(?:size|center|url|b|i|u)\])+\s*$/i);
+    contentEnd = trailingTags ? trailingTags.index : current.length;
+  } else {
+    const endLabelIndex = searchable.indexOf(endLabel.toLocaleUpperCase("de-DE"), contentStart);
+    if (endLabelIndex < 0) {
+      throw new Error(`Endmarke "${endLabel}" wurde in der Channelbeschreibung nicht gefunden.`);
+    }
+    contentEnd = searchable.lastIndexOf("[SIZE=", endLabelIndex);
+    if (contentEnd < contentStart) contentEnd = endLabelIndex;
   }
-
-  let contentEnd = searchable.lastIndexOf("[SIZE=", endLabelIndex);
-  if (contentEnd < contentStart) contentEnd = endLabelIndex;
 
   const prefix = current.slice(0, contentStart).replace(/\s*$/, "");
   const suffix = current.slice(contentEnd).replace(/^\s*/, "");
@@ -365,7 +371,8 @@ async function synchronizeFactionChannel(config, members, options = {}) {
       });
     const desiredDescription = replacePersonnelSection(currentDescription, personnelSection, {
       startLabel: config.sectionStartLabel,
-      endLabel: config.sectionEndLabel
+      endLabel: config.sectionEndLabel,
+      replaceToEnd: config.sectionReplaceToEnd
     });
     if (desiredDescription === currentDescription) {
       return { updated: false, description: currentDescription };
@@ -384,6 +391,7 @@ async function synchronizeFactionChannel(config, members, options = {}) {
 function readConfig(env) {
   const slug = String(env.TEAMSPEAK_FACTION_SLUG || "police").trim().toLowerCase();
   const apiBaseUrl = String(env.TEAMSPEAK_FACTION_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, "");
+  const swatSectionEndLabel = String(env.TEAMSPEAK_SWAT_SECTION_END || "").trim();
   return {
     enabled: envBoolean(env.TEAMSPEAK_FACTION_SYNC_ENABLED, false),
     slug,
@@ -406,11 +414,12 @@ function readConfig(env) {
     password: String(env.TEAMSPEAK_QUERY_PASSWORD || ""),
     virtualServerId: positiveInteger(env.TEAMSPEAK_VIRTUAL_SERVER_ID, 0),
     virtualServerPort: positiveInteger(env.TEAMSPEAK_VIRTUAL_SERVER_PORT, 9987),
-    channelId: positiveInteger(env.TEAMSPEAK_CHANNEL_ID, 0),
-    swatChannelId: positiveInteger(env.TEAMSPEAK_SWAT_CHANNEL_ID, 0),
+    channelId: positiveInteger(env.TEAMSPEAK_CHANNEL_ID, 109),
+    swatChannelId: positiveInteger(env.TEAMSPEAK_SWAT_CHANNEL_ID, 108),
     swatSlotLimit: positiveInteger(env.TEAMSPEAK_SWAT_SLOT_LIMIT, 13),
-    swatSectionStartLabel: env.TEAMSPEAK_SWAT_SECTION_START || "PERSONALAKTE",
-    swatSectionEndLabel: env.TEAMSPEAK_SWAT_SECTION_END || "STRAFZAHLUNGEN"
+    swatSectionStartLabel: env.TEAMSPEAK_SWAT_SECTION_START || "EINHEITSLISTE",
+    swatSectionEndLabel,
+    swatReplaceToEnd: swatSectionEndLabel.length === 0
   };
 }
 
@@ -475,7 +484,8 @@ function startTeamSpeakFactionSync(options = {}) {
         channelId: config.swatChannelId,
         slotLimit: positiveInteger(roster.slotLimit, config.swatSlotLimit),
         sectionStartLabel: config.swatSectionStartLabel,
-        sectionEndLabel: config.swatSectionEndLabel
+        sectionEndLabel: config.swatSectionEndLabel,
+        sectionReplaceToEnd: config.swatReplaceToEnd
       };
       const result = await synchronizeFactionChannel(swatConfig, members, {
         formatImageEmbed: formatSwatImageEmbed
