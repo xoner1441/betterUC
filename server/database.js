@@ -528,6 +528,16 @@ function createDatabase(options = {}) {
     return result.rowCount > 0 ? cloudSettingsFromRow(result.rows[0]) : null;
   }
 
+  async function listCloudSettingRevisions() {
+    const result = await pool.query(
+      "select account_id, revision from cloud_settings"
+    );
+    return result.rows.map(row => ({
+      accountId: row.account_id,
+      revision: Number(row.revision || 0)
+    }));
+  }
+
   async function putCloudSettings(accountId, update) {
     const client = await pool.connect();
     try {
@@ -1275,6 +1285,7 @@ function createDatabase(options = {}) {
     loadAccounts,
     replaceAccounts,
     getCloudSettings,
+    listCloudSettingRevisions,
     putCloudSettings,
     listCloudSettingsMetadata,
     getCloudSettingsHistory,

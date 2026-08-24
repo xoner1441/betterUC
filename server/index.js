@@ -12,6 +12,7 @@ const { promisify } = require("util");
 const { WebSocketServer } = require("ws");
 const { startDiscordBot } = require("./discordBot");
 const { createDatabase } = require("./database");
+const { selectPreferredAccount } = require("./accountResolution");
 const { createPoliceRosterService } = require("./policeRoster");
 const { createSwatRosterStore } = require("./swatRoster");
 const { startTeamSpeakFactionSync } = require("./teamSpeakFactionSync");
@@ -121,6 +122,7 @@ let persistenceMode = "json";
 let latestReleaseCache = { fetchedAt: 0, release: null };
 let latestKnownReleaseVersion = "";
 let wasteDropAreas = {};
+let cloudRevisionByAccountId = new Map();
 const clients = new Set();
 const rateLimits = new Map();
 const loginChallenges = new Map();
@@ -366,6 +368,10 @@ async function loadStore() {
         store = { version: 1, accounts: databaseAccounts };
       }
       persistenceMode = "postgres";
+      cloudRevisionByAccountId = new Map(
+        (await database.listCloudSettingRevisions())
+          .map(entry => [entry.accountId, Number(entry.revision || 0)])
+      );
       await writeJsonStore(store);
       console.log(`betterUC persistence: PostgreSQL (${store.accounts.length} accounts)`);
       return;
@@ -376,6 +382,7 @@ async function loadStore() {
   }
 
   persistenceMode = "json";
+  cloudRevisionByAccountId = new Map();
   store = jsonStore || { version: 1, accounts: [] };
   await writeJsonStore(store);
   console.log(`betterUC persistence: JSON fallback (${store.accounts.length} accounts)`);
@@ -1082,10 +1089,11 @@ function findAccountByMinecraftName(name) {
 function findAccountByMinecraftUuid(uuid, includeRevoked = false) {
   const normalized = normalizeMinecraftUuid(uuid);
   if (!normalized) return null;
-  return store.accounts.find(account =>
+  const matches = store.accounts.filter(account =>
     (includeRevoked || cleanStatus(account.status) === "active")
     && normalizeMinecraftUuid(account.minecraftUuid) === normalized
-  ) || null;
+  );
+  return selectPreferredAccount(matches, cloudRevisionByAccountId);
 }
 
 function findAccountByMinecraftLogin(name, password) {
@@ -1187,7 +1195,10 @@ function verifyModSession(token) {
     if (!account || cleanStatus(account.status) !== "active") return null;
     const accountUuid = normalizeMinecraftUuid(account.minecraftUuid);
     if (!accountUuid || accountUuid !== normalizeMinecraftUuid(data.uuid)) return null;
-    return account;
+    // Access-code based installations could leave multiple records for one
+    // Minecraft UUID. Keep an already verified session on the established
+    // active identity so cloud data and linked services remain together.
+    return findAccountByMinecraftUuid(accountUuid) || account;
   } catch {
     return null;
   }
@@ -1350,8 +1361,13 @@ async function accountForVerifiedMinecraftProfile(profile, clientInfo = {}) {
   }
 
   if (!account) {
-    const nameMatch = findAccountByMinecraftName(profile.name);
-    if (nameMatch && !normalizeMinecraftUuid(nameMatch.minecraftUuid)) account = nameMatch;
+    const normalizedName = String(profile.name || "").toLowerCase();
+    const nameMatches = store.accounts.filter(candidate =>
+      cleanStatus(candidate.status) === "active"
+      && String(candidate.minecraftName || "").toLowerCase() === normalizedName
+      && !normalizeMinecraftUuid(candidate.minecraftUuid)
+    );
+    account = selectPreferredAccount(nameMatches, cloudRevisionByAccountId);
   }
 
   if (!account) {
@@ -2619,6 +2635,7 @@ async function handleApi(req, res, url) {
         json(res, 404, { ok: false, error: "Cloud-Revision wurde nicht gefunden." });
         return;
       }
+      cloudRevisionByAccountId.set(account.id, Number(profile.revision || 0));
       json(res, 200, { ok: true, profile });
       return;
     }
@@ -2629,6 +2646,7 @@ async function handleApi(req, res, url) {
         return;
       }
       const deleted = await database.deleteCloudSettings(account.id, "admin:panel");
+      if (deleted) cloudRevisionByAccountId.delete(account.id);
       json(res, 200, {
         ok: true,
         deleted,
@@ -2827,6 +2845,7 @@ async function handleApi(req, res, url) {
       updatedByVersion: modVersion
     });
     if (result.conflict) {
+      cloudRevisionByAccountId.set(auth.account.id, Number(result.current?.revision || 0));
       await recordCloudSyncEvent(auth.account.id, {
         type: "conflict",
         revision: result.current?.revision ?? baseRevision,
@@ -2841,6 +2860,7 @@ async function handleApi(req, res, url) {
       });
       return;
     }
+    cloudRevisionByAccountId.set(auth.account.id, Number(result.current?.revision || 0));
     await recordCloudSyncEvent(auth.account.id, {
       type: "upload",
       revision: result.current?.revision,

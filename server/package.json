@@ -14,7 +14,8 @@
     "teamspeak:sync": "node scripts/run-teamspeak-faction-sync.js",
     "test:teamspeak": "node --test scripts/test-teamspeak-faction-sync.js",
     "test:police-roster": "node --test scripts/test-police-roster.js",
-    "test:swat-roster": "node --test scripts/test-swat-roster.js"
+    "test:swat-roster": "node --test scripts/test-swat-roster.js",
+    "test:account-resolution": "node --test scripts/test-account-resolution.js"
   },
   "dependencies": {
     "dejavu-fonts-ttf": "^2.37.3",
