@@ -83,7 +83,7 @@ public class BetterUCConfig {
             "dateTimeHudShowSeconds", "dateTimeHudSeparate", "showPaydayHud", "showAmmoHud", "showBankHud", "showCashHud",
             "showPotionEffectsHud", "showArmorHud", "armorHudDurabilityEnabled", "showPlantTimerHud", "showDealerTimerHud", "showMaskTimerHud",
             "showProductionTimerHud",
-            "toggleSprintEnabled", "autoStatsOnJoinEnabled", "autoFactionBankOnBalanceEnabled",
+            "toggleSprintEnabled", "autoStatsOnJoinEnabled", "manualStatsKdVisible", "autoFactionBankOnBalanceEnabled",
             "autoAtmInfoOnBalanceEnabled", "autoForceDepositEnabled", "richTaxAlertEnabled",
             "richTaxAlertSoundEnabled",
             "zoomEnabled", "zoomToggleMode", "zoomSmoothEnabled", "zoomScrollAdjustEnabled",
@@ -518,6 +518,7 @@ public class BetterUCConfig {
     public double zoomFactor = 4.0D;
     public int zoomAnimationDurationMs = 180;
     public boolean autoStatsOnJoinEnabled = true;
+    public boolean manualStatsKdVisible = true;
     public boolean autoFactionBankOnBalanceEnabled = false;
     public boolean autoAtmInfoOnBalanceEnabled = false;
     public boolean autoForceDepositEnabled = false;
@@ -1727,6 +1728,7 @@ public class BetterUCConfig {
             boolean hasCloudSettingsSetting = rawJson.contains("\"cloudSettingsEnabled\"");
             boolean hasRichTaxAlertSetting = rawJson.contains("\"richTaxAlertEnabled\"");
             boolean hasRichTaxAlertSoundSetting = rawJson.contains("\"richTaxAlertSoundEnabled\"");
+            boolean hasManualStatsKdVisibleSetting = rawConfig.has("manualStatsKdVisible");
             boolean hasDateTimeSeparateSetting = rawConfig.has("dateTimeHudSeparate");
             boolean legacyDateTimeTwoLines = rawConfig.has("dateTimeHudTwoLines")
                     && rawConfig.get("dateTimeHudTwoLines").getAsBoolean();
@@ -1748,6 +1750,9 @@ public class BetterUCConfig {
             }
             if (!hasRichTaxAlertSoundSetting) {
                 INSTANCE.richTaxAlertSoundEnabled = true;
+            }
+            if (!hasManualStatsKdVisibleSetting) {
+                INSTANCE.manualStatsKdVisible = true;
             }
             if (!hasDateTimeSeparateSetting && legacyDateTimeTwoLines) {
                 INSTANCE.dateTimeHudSeparate = true;

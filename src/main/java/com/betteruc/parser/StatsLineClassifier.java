@@ -70,6 +70,18 @@ public final class StatsLineClassifier {
                 || STANDALONE_KD_STATS_LINE_PATTERN.matcher(raw == null ? "" : raw.replaceAll("(?i)\\u00A7[0-9A-FK-OR]", "")).matches();
     }
 
+    public static boolean shouldSuppressStatsLine(
+            String raw,
+            boolean silentStatsExpected,
+            boolean manualStatsKdVisible
+    ) {
+        String trimmed = raw == null ? "" : raw.trim();
+        if (silentStatsExpected) {
+            return isDetailLine(trimmed) || isImplicitDetailLine(trimmed);
+        }
+        return !manualStatsKdVisible && isStandaloneKdStatsLine(trimmed);
+    }
+
     public static boolean shouldForceHideLine(
             String raw,
             long now,

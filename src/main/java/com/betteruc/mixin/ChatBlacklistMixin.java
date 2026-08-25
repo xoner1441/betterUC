@@ -252,7 +252,11 @@ public class ChatBlacklistMixin {
         }
         if (capturingStats && handleCapturingStats(raw, ci)) return;
 
-        if (StatsLineClassifier.isStandaloneKdStatsLine(raw)) {
+        if (StatsLineClassifier.shouldSuppressStatsLine(
+                raw,
+                false,
+                BetterUCConfig.INSTANCE.manualStatsKdVisible
+        )) {
             ci.cancel();
             return;
         }
@@ -815,19 +819,16 @@ public class ChatBlacklistMixin {
             markStatsLineSuppressed();
             return true;
         }
-        if (StatsLineClassifier.isStandaloneKdStatsLine(raw)) return true;
-
         boolean silentStatsExpected = capturingStats
                 || activeStatsCaptureIsSilent
                 || BetterUCSuppressFlags.suppressStatsOutput
                 || BetterUCSuppressFlags.pendingSilentStatsRequests > 0
                 || BetterUCSuppressFlags.isSilentStatsCaptureActive();
-        if (!silentStatsExpected) return false;
-
-        String trimmed = raw == null ? "" : raw.trim();
-        if (StatsLineClassifier.isDetailLine(trimmed)) return true;
-        if (StatsLineClassifier.isImplicitDetailLine(trimmed)) return true;
-        return false;
+        return StatsLineClassifier.shouldSuppressStatsLine(
+                raw,
+                silentStatsExpected,
+                BetterUCConfig.INSTANCE.manualStatsKdVisible
+        );
     }
 
 }

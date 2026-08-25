@@ -119,6 +119,16 @@ class ParserSmokeTest {
     }
 
     @Test
+    void manualKdVisibilityDoesNotAffectSilentStatsRequests() {
+        String kdLine = "14:04:31 - K/D: 1.48";
+        assertTrue(StatsLineClassifier.shouldSuppressStatsLine(kdLine, true, true));
+        assertTrue(StatsLineClassifier.shouldSuppressStatsLine(kdLine, true, false));
+        assertFalse(StatsLineClassifier.shouldSuppressStatsLine(kdLine, false, true));
+        assertTrue(StatsLineClassifier.shouldSuppressStatsLine(kdLine, false, false));
+        assertFalse(StatsLineClassifier.shouldSuppressStatsLine("14:04:31 - Geld: 500$", false, false));
+    }
+
+    @Test
     void statsClassifierHidesNewPlaytimeLinesDuringSilentJoinAndAfkRefreshes() {
         long now = 10_000L;
         assertTrue(StatsLineClassifier.shouldForceHideLine(

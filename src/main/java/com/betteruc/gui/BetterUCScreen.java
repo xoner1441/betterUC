@@ -371,6 +371,9 @@ public class BetterUCScreen extends Screen {
                 y = addSectionHeader(x, y, controlW, "Automatik", 0xFF4ADE80);
                 y = addToggle(x, y, controlW, "Auto-Stats Join", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled,
                         () -> BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled = !BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
+                y = addSectionHeader(x, y, controlW, "Manuelles /stats", 0xFFA78BFA);
+                y = addToggle(x, y, controlW, "K/D anzeigen", BetterUCConfig.INSTANCE.manualStatsKdVisible,
+                        () -> BetterUCConfig.INSTANCE.manualStatsKdVisible = !BetterUCConfig.INSTANCE.manualStatsKdVisible);
                 y = addSectionHeader(x, y, controlW, "Aktionen", 0xFF38BDF8);
                 y = addButton(x, y, controlW, "Stats neu laden", b -> SyncRefreshActions.requestStatsRefresh(minecraft, true));
             }
@@ -948,6 +951,8 @@ public class BetterUCScreen extends Screen {
             case "Masken Timer" -> "Zeigt die verbleibende Maskenzeit und warnt kurz vor dem Ablauf.";
             case "Produktion Timer" -> "Zeigt die Produktionszeit und startet danach die gespeicherte Navigation.";
             case "Auto-Stats Join" -> "Ruft beim Beitritt und nach AFK automatisch und unsichtbar /stats ab.";
+            case "K/D anzeigen" ->
+                    "Zeigt die K/D-Zeile bei einem manuell ausgeführten /stats. Automatische Abfragen bleiben immer unsichtbar.";
             case "Stats neu laden" -> "Fordert deine aktuellen Statistiken erneut vom Server an.";
             case "Lieferant /adropdrink" -> "Automatisiert die Getränkeabgabe des Lieferanten-Jobs.";
             case "Fischer" -> "Automatisiert Fischschwarm-Suche, Fangen und Abgabe.";
