@@ -8,6 +8,7 @@ import com.betteruc.client.ClientCompat;
 import com.betteruc.client.CloudSettingsClient;
 import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.ChatCustomizationFormatter;
+import com.betteruc.client.HandToggleController;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.RemoteFeatureFlagsClient;
 import com.betteruc.client.SyncRefreshActions;
@@ -365,6 +366,23 @@ public class BetterUCScreen extends Screen {
                                 BetterUCConfig.INSTANCE.zoomAnimationDurationMs, 50, 600,
                                 value -> BetterUCConfig.INSTANCE.zoomAnimationDurationMs = value);
                     }
+                }
+            }
+            case HAND_TOGGLE -> {
+                y = addSectionHeader(x, y, controlW, "Funktion", 0xFFA78BFA);
+                y = addToggle(x, y, controlW, "Hand-Toggle", BetterUCConfig.INSTANCE.handToggleEnabled,
+                        () -> BetterUCConfig.INSTANCE.handToggleEnabled = !BetterUCConfig.INSTANCE.handToggleEnabled);
+                y = addInfo(x, y, controlW, "Hotkey", "Minecraft-Steuerung > betterUC > Haupthand wechseln");
+                y = addInfo(x, y, controlW, "Aktuelle Hand", HandToggleController.currentHandLabel(minecraft));
+
+                if (BetterUCConfig.INSTANCE.handToggleEnabled) {
+                    y = addSectionHeader(x, y, controlW, "Verhalten", 0xFF38BDF8);
+                    y = addToggle(x, y, controlW, "Statusmeldung", BetterUCConfig.INSTANCE.handToggleNotificationEnabled,
+                            () -> BetterUCConfig.INSTANCE.handToggleNotificationEnabled =
+                                    !BetterUCConfig.INSTANCE.handToggleNotificationEnabled);
+                    y = addToggle(x, y, controlW, "Letzte Hand speichern", BetterUCConfig.INSTANCE.handToggleRememberLastHand,
+                            () -> BetterUCConfig.INSTANCE.handToggleRememberLastHand =
+                                    !BetterUCConfig.INSTANCE.handToggleRememberLastHand);
                 }
             }
             case AUTO_STATS -> {
@@ -950,6 +968,10 @@ public class BetterUCScreen extends Screen {
             case "Dealer Timer" -> "Zeigt nach einem Drogenverkauf den 15-Sekunden-Cooldown.";
             case "Masken Timer" -> "Zeigt die verbleibende Maskenzeit und warnt kurz vor dem Ablauf.";
             case "Produktion Timer" -> "Zeigt die Produktionszeit und startet danach die gespeicherte Navigation.";
+            case "Hand-Toggle" -> "Wechselt deine Minecraft-Haupthand per frei belegbarem Hotkey zwischen links und rechts.";
+            case "Statusmeldung" -> "Zeigt nach dem Wechsel kurz LINKS oder RECHTS über der Hotbar an.";
+            case "Letzte Hand speichern" ->
+                    "Speichert die gewählte Haupthand dauerhaft. Ist die Option aus, gilt der Wechsel nur bis zum Verlassen des Servers.";
             case "Auto-Stats Join" -> "Ruft beim Beitritt und nach AFK automatisch und unsichtbar /stats ab.";
             case "K/D anzeigen" ->
                     "Zeigt die K/D-Zeile bei einem manuell ausgeführten /stats. Automatische Abfragen bleiben immer unsichtbar.";
@@ -1842,6 +1864,14 @@ public class BetterUCScreen extends Screen {
                     ZoomController.configuredFactorLabel(),
                     BetterUCConfig.INSTANCE.zoomEnabled
             );
+            case HAND_TOGGLE -> drawMiniInfo(
+                    context,
+                    previewX,
+                    previewY,
+                    "Haupthand",
+                    HandToggleController.currentHandLabel(minecraft),
+                    BetterUCConfig.INSTANCE.handToggleEnabled
+            );
             case AUTO_STATS -> drawMiniInfo(context, previewX, previewY, "Auto-Stats", "Join /stats", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
             case AUTOMATIONS -> {
                 int enabled = AutomationController.localEnabledCount();
@@ -2308,6 +2338,7 @@ public class BetterUCScreen extends Screen {
             case PRODUCTION_TIMER -> BetterUCConfig.INSTANCE.showProductionTimerHud;
             case AUTO_STATS -> BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled;
             case ZOOM -> BetterUCConfig.INSTANCE.zoomEnabled;
+            case HAND_TOGGLE -> BetterUCConfig.INSTANCE.handToggleEnabled;
             case CLOUD_SYNC -> BetterUCConfig.INSTANCE.cloudSettingsEnabled;
             case SCREENSHOTS -> BetterUCConfig.INSTANCE.screenshotActionsEnabled;
             case PING -> BetterUCConfig.INSTANCE.pingRelayEnabled;
@@ -2897,6 +2928,7 @@ public class BetterUCScreen extends Screen {
         PLANT_TIMER(Category.HUD, "Plant Timer", "Plantage-Timer", 0xFF6CF27D, true),
 
         ZOOM(Category.GAMEPLAY, "Zoom", "Weicher, frei einstellbarer Kamera-Zoom", 0xFF60A5FA, true),
+        HAND_TOGGLE(Category.GAMEPLAY, "Hand-Toggle", "Haupthand per Hotkey wechseln", 0xFFA78BFA, true),
         AUTO_STATS(Category.GAMEPLAY, "Auto Stats", "Automatisches /stats", 0xFF34D399, true),
         AUTOMATIONS(Category.GAMEPLAY, "Automationen", "Job-Helfer einzeln steuern", 0xFFFBBF24, false),
         CHAT(Category.GAMEPLAY, "Chat", "Zeitstempel & Customization", 0xFF38BDF8, false),

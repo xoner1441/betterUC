@@ -25,6 +25,7 @@ import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.CloudSettingsClient;
 import com.betteruc.client.CommandShortcutClient;
 import com.betteruc.client.DutyRejoinClient;
+import com.betteruc.client.HandToggleController;
 import com.betteruc.client.TrashFilterClient;
 import com.betteruc.client.TrustedChatCommands;
 import com.betteruc.client.BetterUCFontManager;
@@ -136,6 +137,12 @@ public class BetterUCClient implements ClientModInitializer {
             GLFW.GLFW_KEY_C,
             BETTERUC_KEY_CATEGORY
     );
+    private static final KeyMapping HAND_TOGGLE_KEY = new KeyMapping(
+            "key.betteruc.hand_toggle",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_UNKNOWN,
+            BETTERUC_KEY_CATEGORY
+    );
     private int statsOnJoinDelay = -1;
     private final Map<Integer, Boolean> hotkeyPressedState = new HashMap<>();
     private final Set<Integer> activeHotkeyKeys = new HashSet<>();
@@ -216,6 +223,7 @@ public class BetterUCClient implements ClientModInitializer {
         KeyMappingHelper.registerKeyMapping(PING_KEY);
         KeyMappingHelper.registerKeyMapping(REINF_ACCEPT_KEY);
         KeyMappingHelper.registerKeyMapping(ZOOM_KEY);
+        KeyMappingHelper.registerKeyMapping(HAND_TOGGLE_KEY);
     }
 
     private void registerMessageEvents() {
@@ -1079,6 +1087,7 @@ public class BetterUCClient implements ClientModInitializer {
             ReinforcementAcceptClient.tick(client);
             DutyRejoinClient.tick(client);
             ZoomController.tick(client, ZOOM_KEY);
+            HandToggleController.tick(client, HAND_TOGGLE_KEY);
             handleConfiguredHotkeys(client);
             handlePingHotkey(client);
             handleScreenHotkeys(client);
@@ -1301,6 +1310,7 @@ public class BetterUCClient implements ClientModInitializer {
         resetPingPressState();
         MovementController.reset(client);
         ZoomController.reset();
+        HandToggleController.reset(client);
         TrustedChatCommands.clear();
         PaydayHud.clear();
         AmmoHud.clear();

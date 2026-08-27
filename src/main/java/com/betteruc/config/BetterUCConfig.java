@@ -88,6 +88,7 @@ public class BetterUCConfig {
             "richTaxAlertSoundEnabled",
             "zoomEnabled", "zoomToggleMode", "zoomSmoothEnabled", "zoomScrollAdjustEnabled",
             "zoomRememberLevel", "zoomSensitivityScalingEnabled", "zoomFactor", "zoomAnimationDurationMs",
+            "handToggleEnabled", "handToggleNotificationEnabled", "handToggleRememberLastHand",
             "chatTimestampsEnabled", "chatCustomizationEnabled", "chatActionTextStyle", "chatHeadlineSeparatorStyle",
             "chatCustomizationGradientEnabled", "chatLinksClickableEnabled", "chatLinkHighlightEnabled",
             "chatCommandConfirmationEnabled",
@@ -517,6 +518,9 @@ public class BetterUCConfig {
     public boolean zoomSensitivityScalingEnabled = true;
     public double zoomFactor = 4.0D;
     public int zoomAnimationDurationMs = 180;
+    public boolean handToggleEnabled = true;
+    public boolean handToggleNotificationEnabled = true;
+    public boolean handToggleRememberLastHand = true;
     public boolean autoStatsOnJoinEnabled = true;
     public boolean manualStatsKdVisible = true;
     public boolean autoFactionBankOnBalanceEnabled = false;
@@ -1729,6 +1733,9 @@ public class BetterUCConfig {
             boolean hasRichTaxAlertSetting = rawJson.contains("\"richTaxAlertEnabled\"");
             boolean hasRichTaxAlertSoundSetting = rawJson.contains("\"richTaxAlertSoundEnabled\"");
             boolean hasManualStatsKdVisibleSetting = rawConfig.has("manualStatsKdVisible");
+            boolean hasHandToggleEnabledSetting = rawConfig.has("handToggleEnabled");
+            boolean hasHandToggleNotificationSetting = rawConfig.has("handToggleNotificationEnabled");
+            boolean hasHandToggleRememberSetting = rawConfig.has("handToggleRememberLastHand");
             boolean hasDateTimeSeparateSetting = rawConfig.has("dateTimeHudSeparate");
             boolean legacyDateTimeTwoLines = rawConfig.has("dateTimeHudTwoLines")
                     && rawConfig.get("dateTimeHudTwoLines").getAsBoolean();
@@ -1753,6 +1760,15 @@ public class BetterUCConfig {
             }
             if (!hasManualStatsKdVisibleSetting) {
                 INSTANCE.manualStatsKdVisible = true;
+            }
+            if (!hasHandToggleEnabledSetting) {
+                INSTANCE.handToggleEnabled = true;
+            }
+            if (!hasHandToggleNotificationSetting) {
+                INSTANCE.handToggleNotificationEnabled = true;
+            }
+            if (!hasHandToggleRememberSetting) {
+                INSTANCE.handToggleRememberLastHand = true;
             }
             if (!hasDateTimeSeparateSetting && legacyDateTimeTwoLines) {
                 INSTANCE.dateTimeHudSeparate = true;
