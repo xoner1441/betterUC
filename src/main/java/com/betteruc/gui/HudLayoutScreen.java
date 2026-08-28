@@ -27,6 +27,7 @@ public class HudLayoutScreen extends Screen {
     private static final int TEXT_MUTED = 0xFF94A3B8;
     private static final int HANDLE_SIZE = 7;
     private static final int HANDLE_HIT_RADIUS = 5;
+    private static final int DISABLE_BUTTON_SIZE = 12;
     private static final int SNAP_DISTANCE = 8;
     private static final int SNAP_GAP = 2;
     private static final int TOOLBAR_HEIGHT = 48;
@@ -53,7 +54,7 @@ public class HudLayoutScreen extends Screen {
     private Button resetAllButton;
 
     public HudLayoutScreen(Screen parent) {
-        super(Component.literal("HUD Vorschau"));
+        super(Component.literal("HUD-Editor"));
         this.parent = parent;
     }
 
@@ -84,7 +85,7 @@ public class HudLayoutScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
-        context.text(font, Component.literal("HUD Vorschau"), 12, 12, TEXT_PRIMARY);
+        context.text(font, Component.literal("HUD-Editor"), 12, 12, TEXT_PRIMARY);
         context.text(font, Component.literal("Aktive HUDs"), 12, 24, TEXT_MUTED);
 
         List<HudModule> modules = activeModules();
@@ -95,10 +96,14 @@ public class HudLayoutScreen extends Screen {
         for (HudModule module : modules) {
             Bounds bounds = boundsFor(module);
             boolean handleHovered = module == selectedModule && resizeHandleContains(bounds, mouseX, mouseY);
-            boolean hovered = bounds.contains(mouseX, mouseY) || handleHovered;
+            boolean disableHovered = module == selectedModule && disableButtonContains(bounds, mouseX, mouseY);
+            boolean hovered = bounds.contains(mouseX, mouseY) || handleHovered || disableHovered;
             boolean selected = module == selectedModule || module == draggingModule || module == resizingModule;
             drawDragBounds(context, module, bounds, hovered || selected, handleHovered);
             renderHudModule(context, module, bounds.x, bounds.y);
+            if (module == selectedModule) {
+                drawDisableButton(context, bounds, disableHovered);
+            }
         }
 
         drawSnapGuides(context);
@@ -114,6 +119,13 @@ public class HudLayoutScreen extends Screen {
 
         if (selectedModule != null) {
             Bounds selectedBounds = boundsFor(selectedModule);
+            if (disableButtonContains(selectedBounds, event.x(), event.y())) {
+                setHudVisible(selectedModule, false);
+                selectedModule = null;
+                BetterUCConfig.save();
+                refreshToolbarButtons();
+                return true;
+            }
             if (resizeHandleContains(selectedBounds, event.x(), event.y())) {
                 resizingModule = selectedModule;
                 resizeStartBounds = selectedBounds;
@@ -268,13 +280,40 @@ public class HudLayoutScreen extends Screen {
             case BANK -> BetterUCConfig.INSTANCE.showBankHud;
             case CASH -> BetterUCConfig.INSTANCE.showCashHud;
             case POTION -> BetterUCConfig.INSTANCE.showPotionEffectsHud;
-            case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintEnabled;
+            case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintEnabled && BetterUCConfig.INSTANCE.showToggleSprintHud;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.showPlantTimerHud;
             case DEALER_TIMER -> BetterUCConfig.INSTANCE.showDealerTimerHud;
             case MASK_TIMER -> BetterUCConfig.INSTANCE.showMaskTimerHud;
             case PRODUCTION_TIMER -> BetterUCConfig.INSTANCE.showProductionTimerHud;
-            case HACK_TIMER -> true;
+            case HACK_TIMER -> BetterUCConfig.INSTANCE.showHackTimerHud;
         };
+    }
+
+    private void setHudVisible(HudModule module, boolean visible) {
+        switch (module) {
+            case HEALTH -> BetterUCConfig.INSTANCE.showHealthHud = visible;
+            case FPS -> BetterUCConfig.INSTANCE.showFpsHud = visible;
+            case DATE_TIME -> {
+                if (BetterUCConfig.INSTANCE.dateTimeHudSeparate) {
+                    BetterUCConfig.INSTANCE.dateTimeHudShowDate = visible;
+                } else {
+                    BetterUCConfig.INSTANCE.showDateTimeHud = visible;
+                }
+            }
+            case DATE_TIME_CLOCK -> BetterUCConfig.INSTANCE.dateTimeHudShowTime = visible;
+            case PAYDAY -> BetterUCConfig.INSTANCE.showPaydayHud = visible;
+            case AMMO -> BetterUCConfig.INSTANCE.showAmmoHud = visible;
+            case ARMOR -> BetterUCConfig.INSTANCE.showArmorHud = visible;
+            case BANK -> BetterUCConfig.INSTANCE.showBankHud = visible;
+            case CASH -> BetterUCConfig.INSTANCE.showCashHud = visible;
+            case POTION -> BetterUCConfig.INSTANCE.showPotionEffectsHud = visible;
+            case SPRINT -> BetterUCConfig.INSTANCE.showToggleSprintHud = visible;
+            case HACK_TIMER -> BetterUCConfig.INSTANCE.showHackTimerHud = visible;
+            case PLANT_TIMER -> BetterUCConfig.INSTANCE.showPlantTimerHud = visible;
+            case DEALER_TIMER -> BetterUCConfig.INSTANCE.showDealerTimerHud = visible;
+            case MASK_TIMER -> BetterUCConfig.INSTANCE.showMaskTimerHud = visible;
+            case PRODUCTION_TIMER -> BetterUCConfig.INSTANCE.showProductionTimerHud = visible;
+        }
     }
 
     private Bounds boundsFor(HudModule module) {
@@ -1073,6 +1112,37 @@ public class HudLayoutScreen extends Screen {
 
     private void drawResizeHandle(GuiGraphicsExtractor context, Bounds bounds, int color, boolean hovered) {
         drawHandle(context, resizeHandleX(bounds), resizeHandleY(bounds), color, hovered);
+    }
+
+    private void drawDisableButton(GuiGraphicsExtractor context, Bounds bounds, boolean hovered) {
+        int x = disableButtonX(bounds);
+        int y = disableButtonY(bounds);
+        int fill = hovered ? 0xFFE11D48 : 0xFF9F1239;
+        context.fill(x, y, x + DISABLE_BUTTON_SIZE, y + DISABLE_BUTTON_SIZE, fill);
+        drawBorder(context, x, y, DISABLE_BUTTON_SIZE, DISABLE_BUTTON_SIZE, 0xFFFFE4E6);
+        String icon = "×";
+        context.text(
+                font,
+                Component.literal(icon),
+                x + (DISABLE_BUTTON_SIZE - font.width(icon)) / 2,
+                y + 2,
+                0xFFFFFFFF
+        );
+    }
+
+    private boolean disableButtonContains(Bounds bounds, double mouseX, double mouseY) {
+        int x = disableButtonX(bounds);
+        int y = disableButtonY(bounds);
+        return mouseX >= x && mouseX <= x + DISABLE_BUTTON_SIZE
+                && mouseY >= y && mouseY <= y + DISABLE_BUTTON_SIZE;
+    }
+
+    private int disableButtonX(Bounds bounds) {
+        return clamp(bounds.right() - DISABLE_BUTTON_SIZE + 3, 0, Math.max(0, width - DISABLE_BUTTON_SIZE));
+    }
+
+    private int disableButtonY(Bounds bounds) {
+        return clamp(bounds.y - 3, 0, Math.max(0, height - DISABLE_BUTTON_SIZE));
     }
 
     private void drawHandle(GuiGraphicsExtractor context, int centerX, int centerY, int color, boolean hovered) {

@@ -119,12 +119,12 @@ public class BetterUCScreen extends Screen {
         controlTooltips.clear();
         detailContentHeight = 0;
         addDetailControls();
-        Button hudPreviewButton = Button.builder(Component.literal("HUD Vorschau"), b -> openScreen(new HudLayoutScreen(this)))
+        Button hudPreviewButton = Button.builder(Component.literal("HUD-Editor"), b -> openScreen(new HudLayoutScreen(this)))
                 .bounds(mainX() + 12, mainY() + mainH() - 28, 118, BUTTON_H)
                 .build();
         addRenderableWidget(hudPreviewButton);
         registerTooltip(hudPreviewButton,
-                "Öffnet den HUD-Editor. Dort kannst du aktive HUDs verschieben, skalieren und einrasten lassen.");
+                "Öffnet den HUD-Editor. Dort kannst du aktive HUDs verschieben, skalieren, einrasten und ausblenden.");
 
         Button saveButton = Button.builder(Component.literal("Speichern & Schließen"), b -> {
             saveConfig();
@@ -293,10 +293,17 @@ public class BetterUCScreen extends Screen {
                 y = addSectionHeader(x, y, controlW, "Anzeige", 0xFF4ADE80);
                 y = addToggle(x, y, controlW, "ToggleSprint", BetterUCConfig.INSTANCE.toggleSprintEnabled,
                         () -> BetterUCConfig.INSTANCE.toggleSprintEnabled = !BetterUCConfig.INSTANCE.toggleSprintEnabled);
+                y = addToggle(x, y, controlW, "Sprint HUD", BetterUCConfig.INSTANCE.showToggleSprintHud,
+                        () -> BetterUCConfig.INSTANCE.showToggleSprintHud = !BetterUCConfig.INSTANCE.showToggleSprintHud);
                 y = addColorButton(x, y, controlW, "Sprint Farbe", BetterUCConfig.INSTANCE.toggleSprintHudColor,
                         color -> BetterUCConfig.INSTANCE.toggleSprintHudColor = color);
             }
             case HACK_TIMER, PLANT_TIMER, DEALER_TIMER, MASK_TIMER, PRODUCTION_TIMER -> {
+                if (selectedModule == ModuleOption.HACK_TIMER) {
+                    y = addSectionHeader(x, y, controlW, "Anzeige", 0xFF60A5FA);
+                    y = addToggle(x, y, controlW, "Hack Timer HUD", BetterUCConfig.INSTANCE.showHackTimerHud,
+                            () -> BetterUCConfig.INSTANCE.showHackTimerHud = !BetterUCConfig.INSTANCE.showHackTimerHud);
+                }
                 if (selectedModule == ModuleOption.PLANT_TIMER) {
                     y = addSectionHeader(x, y, controlW, "Anzeige", 0xFF4ADE80);
                     y = addToggle(x, y, controlW, "Plant HUD", BetterUCConfig.INSTANCE.showPlantTimerHud,

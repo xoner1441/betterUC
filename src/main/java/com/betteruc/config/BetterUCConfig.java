@@ -82,7 +82,7 @@ public class BetterUCConfig {
             "showHealthHud", "showFpsHud", "showDateTimeHud", "dateTimeHudShowDate", "dateTimeHudShowTime",
             "dateTimeHudShowSeconds", "dateTimeHudSeparate", "showPaydayHud", "showAmmoHud", "showBankHud", "showCashHud",
             "showPotionEffectsHud", "showArmorHud", "armorHudDurabilityEnabled", "showPlantTimerHud", "showDealerTimerHud", "showMaskTimerHud",
-            "showProductionTimerHud",
+            "showProductionTimerHud", "showToggleSprintHud", "showHackTimerHud",
             "toggleSprintEnabled", "autoStatsOnJoinEnabled", "manualStatsKdVisible", "autoFactionBankOnBalanceEnabled",
             "autoAtmInfoOnBalanceEnabled", "autoForceDepositEnabled", "richTaxAlertEnabled",
             "richTaxAlertSoundEnabled",
@@ -175,7 +175,7 @@ public class BetterUCConfig {
             "showHealthHud", "showHealthAbsorption", "showFpsHud", "showDateTimeHud", "dateTimeHudShowDate",
             "dateTimeHudShowTime", "dateTimeHudShowSeconds", "dateTimeHudSeparate", "showPaydayHud", "showAmmoHud",
             "showBankHud", "showCashHud", "showPotionEffectsHud", "showArmorHud", "armorHudDurabilityEnabled", "showPlantTimerHud",
-            "showDealerTimerHud", "showMaskTimerHud", "showProductionTimerHud", "toggleSprintEnabled",
+            "showDealerTimerHud", "showMaskTimerHud", "showProductionTimerHud", "showToggleSprintHud", "showHackTimerHud", "toggleSprintEnabled",
             "ammoHudMagazineBarEnabled", "ammoHudLowAmmoWarningEnabled", "ammoHudLowAmmoSoundEnabled",
             "ammoHudLowAmmoThresholdPercent", "ammoHudKr47MagazineSize"
     );
@@ -509,6 +509,8 @@ public class BetterUCConfig {
     public boolean showDealerTimerHud = true;
     public boolean showMaskTimerHud = true;
     public boolean showProductionTimerHud = true;
+    public boolean showToggleSprintHud = true;
+    public boolean showHackTimerHud = true;
     public boolean toggleSprintEnabled = false;
     public boolean zoomEnabled = false;
     public boolean zoomToggleMode = false;

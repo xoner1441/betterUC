@@ -18,7 +18,7 @@ public class ToggleSprintHud {
     private static void render(GuiGraphicsExtractor context) {
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
-        if (!BetterUCConfig.INSTANCE.toggleSprintEnabled) return;
+        if (!BetterUCConfig.INSTANCE.toggleSprintEnabled || !BetterUCConfig.INSTANCE.showToggleSprintHud) return;
 
         boolean isOn = BetterUCClient.isToggleSprintHudActive();
         int color = BetterUCConfig.INSTANCE.toggleSprintHudColor;

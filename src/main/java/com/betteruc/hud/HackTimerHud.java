@@ -36,7 +36,7 @@ public class HackTimerHud {
     }
 
     private static void render(GuiGraphicsExtractor context) {
-        if (secondsRemaining <= 0) return;
+        if (secondsRemaining <= 0 || !BetterUCConfig.INSTANCE.showHackTimerHud) return;
 
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
