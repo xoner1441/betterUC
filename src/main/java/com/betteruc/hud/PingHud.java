@@ -2,6 +2,7 @@ package com.betteruc.hud;
 
 import com.betteruc.client.ClientCompat;
 import com.betteruc.client.PingRelayClient;
+import com.betteruc.client.RemoteFeatureFlagsClient;
 import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.resources.Identifier;
@@ -35,6 +36,8 @@ public final class PingHud {
     private static void render(GuiGraphicsExtractor context) {
         Minecraft client = Minecraft.getInstance();
         if (client.player == null || client.level == null) return;
+        if (!BetterUCConfig.INSTANCE.pingRelayEnabled
+                || !RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.PING_SYSTEM)) return;
 
         renderCooldown(context, client);
         if (!BetterUCConfig.INSTANCE.showPingHud) return;

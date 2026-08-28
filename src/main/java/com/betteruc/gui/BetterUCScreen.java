@@ -704,11 +704,7 @@ public class BetterUCScreen extends Screen {
 
     private int addConnectionControls(int x, int y, int width) {
         y = addSectionHeader(x, y, width, "Relay", 0xFF38BDF8);
-        y = addToggle(x, y, width, "Relay-Verbindung", BetterUCConfig.INSTANCE.pingRelayEnabled, () -> {
-            BetterUCConfig.INSTANCE.pingRelayEnabled = !BetterUCConfig.INSTANCE.pingRelayEnabled;
-            PingRelayClient.onDisconnect();
-            PingRelayClient.tick(minecraft);
-        });
+        y = addInfo(x, y, width, "Relay-Verbindung", "Immer aktiv");
 
         y = addSectionHeader(x, y, width, "Accountstatus", 0xFF4ADE80);
         y = addInfo(x, y, width, "Status", PingRelayClient.statusLabel());
@@ -746,7 +742,6 @@ public class BetterUCScreen extends Screen {
         });
         return addButton(x, y, width, "Neu verbinden", b -> {
             flushTextFields();
-            BetterUCConfig.INSTANCE.pingRelayEnabled = true;
             saveConfig();
             PingRelayClient.onDisconnect();
             PingRelayClient.tick(minecraft);
@@ -1029,7 +1024,7 @@ public class BetterUCScreen extends Screen {
             case "Ping Anzeige" -> "Legt fest, ob empfangene Pings in der Spielwelt angezeigt werden.";
             case "Ping Ton" -> "Spielt beim Empfang eines sichtbaren Pings einen Ton ab.";
             case "Ping testen" -> "Setzt einen normalen Test-Ping an deiner angesehenen Position.";
-            case "Relay-Verbindung" -> "Aktiviert oder deaktiviert die Verbindung zum betterUC-Relay.";
+            case "Relay-Verbindung" -> "Die betterUC-Relay-Verbindung ist für abhängige Funktionen dauerhaft aktiv.";
             case "Hologramme" -> "Blendet betterUC-Rollen über den Köpfen anderer Mod-Nutzer ein oder aus.";
             case "Anmeldung erneuern" -> "Bestätigt dein aktives Minecraft-Konto erneut und erstellt eine neue betterUC-Sitzung.";
             case "Stats neu senden" -> "Überträgt die zuletzt erkannten Spielerdaten erneut an dein Userpanel.";

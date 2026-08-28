@@ -150,7 +150,6 @@ public class BetterUCClient implements ClientModInitializer {
     private long pingKeyDownAtMs = 0L;
     private boolean pingWheelOpenedForPress = false;
     private boolean welcomeChangelogChecked = false;
-    private boolean remotePingEnabled = true;
     private boolean remoteCloudEnabled = true;
     private boolean remoteDropDrinkEnabled = true;
     private boolean remoteFisherEnabled = true;
@@ -1059,9 +1058,7 @@ public class BetterUCClient implements ClientModInitializer {
             RemoteFeatureFlagsClient.tick(client);
             BetterUCAuthClient.tick(client);
             applyRemoteFeatureState(client);
-            if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.PING_SYSTEM)) {
-                PingRelayClient.tick(client);
-            }
+            PingRelayClient.tick(client);
             if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.CLOUD_SETTINGS)) {
                 CloudSettingsClient.tick(client);
             }
@@ -1095,13 +1092,6 @@ public class BetterUCClient implements ClientModInitializer {
     }
 
     private void applyRemoteFeatureState(Minecraft client) {
-        boolean pingEnabled = RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.PING_SYSTEM);
-        if (pingEnabled != remotePingEnabled) {
-            if (pingEnabled) PingRelayClient.onJoin(client);
-            else PingRelayClient.onDisconnect();
-            remotePingEnabled = pingEnabled;
-        }
-
         boolean cloudEnabled = RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.CLOUD_SETTINGS);
         if (cloudEnabled != remoteCloudEnabled) {
             if (cloudEnabled) CloudSettingsClient.onJoin(client);
@@ -1139,7 +1129,6 @@ public class BetterUCClient implements ClientModInitializer {
     }
 
     private void resetRemoteFeatureStateTracking() {
-        remotePingEnabled = true;
         remoteCloudEnabled = true;
         remoteDropDrinkEnabled = true;
         remoteFisherEnabled = true;
@@ -1210,6 +1199,14 @@ public class BetterUCClient implements ClientModInitializer {
         boolean queuedPress = false;
         while (PING_KEY.consumeClick()) {
             queuedPress = true;
+        }
+
+        if (!BetterUCConfig.INSTANCE.pingRelayEnabled) {
+            if (queuedPress && client.player != null) {
+                client.player.sendSystemMessage(Component.literal("[betterUC] Das Ping-System ist ausgeschaltet."));
+            }
+            resetPingPressState();
+            return;
         }
 
         if (!RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.PING_SYSTEM)) {

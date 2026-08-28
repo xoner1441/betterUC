@@ -74,20 +74,8 @@ public final class PingRelayClient {
     public static void tick(Minecraft client) {
         cleanupExpired();
 
-        if (!RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.PING_SYSTEM)) {
-            disconnect();
-            status = "Serverseitig deaktiviert";
-            return;
-        }
-
         if (client == null || client.player == null || client.getConnection() == null) {
             disconnect();
-            return;
-        }
-
-        if (!BetterUCConfig.INSTANCE.pingRelayEnabled) {
-            disconnect();
-            status = "Ping-System aus";
             return;
         }
 
@@ -139,6 +127,10 @@ public final class PingRelayClient {
     public static boolean sendPingAtCrosshair(Minecraft client, PingType pingType) {
         PingType safeType = pingType == null ? PingType.NORMAL : pingType;
         if (client == null || client.player == null || client.level == null) return false;
+        if (!BetterUCConfig.INSTANCE.pingRelayEnabled) {
+            sendLocalMessage(client, "Das Ping-System ist ausgeschaltet.");
+            return false;
+        }
         if (!RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.PING_SYSTEM)) {
             RemoteFeatureFlagsClient.sendDisabledMessage(client, "Das Ping-System");
             return false;
@@ -706,6 +698,10 @@ public final class PingRelayClient {
             }
 
             if (!"ping".equals(type)) return;
+            if (!BetterUCConfig.INSTANCE.pingRelayEnabled
+                    || !RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.PING_SYSTEM)) {
+                return;
+            }
 
             PingMarker marker = new PingMarker(
                     stringValue(json, "id", ""),
