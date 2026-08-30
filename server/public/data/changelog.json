@@ -7,19 +7,104 @@
     "pages": [
       {
         "eyebrow": "NÄCHSTE VERSION",
-        "title": "Neue Ideen werden gesammelt",
+        "title": "Weitere Verbesserungen folgen",
         "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
         "lines": [
-          "Version 1.4.2 verbindet betterUC automatisch, erweitert die Nutzerstatistik und verbessert Reinforcement-Annahme, PayDay-Warnungen sowie den Auto-Updater."
+          "Version 1.4.3 beschleunigt erkannte Waffen, schützt das Ammo-HUD vor fremden Actionbar-Fortschritten und erweitert HUD-Editor, Bedienung sowie Relay-Stabilität."
         ]
       }
     ]
   },
   "releases": [
     {
+      "version": "1.4.3",
+      "date": "30.08.2026",
+      "current": true,
+      "pages": [
+        {
+          "eyebrow": "WAFFEN & AMMO-HUD",
+          "title": "Serverwaffen schneller und eindeutiger erkennen",
+          "description": "Eine neue, rein visuelle Ziehanimation und eine gemeinsame Namensprüfung sorgen für ein schnelleres Waffenhandling ohne Einfluss auf Servermechaniken.",
+          "lines": [
+            "Die Waffen-Animation beschleunigt auf Wunsch das Einblenden erkannter Serverwaffen in den Modi ,Schnell‘ oder ,Sofort‘.",
+            "Der zusätzliche Minecraft-Werkzeug-Swap-Cooldown wird ausschließlich für die visuelle Darstellung unterstützter Waffen entkoppelt; Angriffsstärke, Schussrate und Server-Cooldowns bleiben unverändert.",
+            "Animation und Ammo-HUD akzeptieren ausschließlich P69, Scatter3, KR47, TS19, AX12, Extenso18 und Viper9.",
+            "Battlepass-, Quest- und andere Actionbar-Fortschritte werden nicht mehr irrtümlich als Munition übernommen."
+          ]
+        },
+        {
+          "eyebrow": "HUD-EDITOR",
+          "title": "HUDs direkt anordnen und ausblenden",
+          "description": "Die bisherige HUD-Vorschau wird zum vollständigen Editor und bündelt Positionierung, Skalierung sowie Sichtbarkeit an einem Ort.",
+          "lines": [
+            "Der Einstieg und die Editorüberschrift heißen nun einheitlich ,HUD-Editor‘.",
+            "Ein ausgewähltes HUD kann über den neuen Schalter oben rechts am Rahmen direkt ausgeblendet werden.",
+            "Sprint- und Hack-Timer-Anzeige besitzen eigene Sichtbarkeitseinstellungen, ohne ToggleSprint oder einen laufenden Hack-Timer abzuschalten.",
+            "Positionen, Skalierungen und Sichtbarkeit bleiben in HUD-Profilen und Cloud-Einstellungen erhalten."
+          ]
+        },
+        {
+          "eyebrow": "BEDIENUNG & STATISTIKEN",
+          "title": "Haupthand und K/D selbst bestimmen",
+          "description": "Neue Optionen geben Spielern mehr Kontrolle über ihre bevorzugte Ansicht und die Ausgabe manueller Statistikabfragen.",
+          "lines": [
+            "Die Haupthand lässt sich über einen frei belegbaren Hotkey direkt zwischen links und rechts wechseln.",
+            "Statusmeldung und dauerhaftes Speichern der zuletzt gewählten Hand können separat eingestellt werden.",
+            "Die K/D-Zeile kann für ein manuell ausgeführtes /stats gezielt ein- oder ausgeblendet werden.",
+            "Automatische /stats-Abfragen beim Join und nach AFK bleiben unabhängig davon vollständig unterdrückt."
+          ]
+        },
+        {
+          "eyebrow": "RELAY & CLOUD-SYNC",
+          "title": "Abhängige Online-Funktionen bleiben verbunden",
+          "description": "Die zentrale Relay-Sitzung arbeitet unabhängig von optionalen Pings und ordnet Cloud-Daten zuverlässiger dem richtigen Minecraft-Konto zu.",
+          "lines": [
+            "Die Relay-Verbindung ist dauerhaft aktiv und kann nicht mehr versehentlich über das Ping-System getrennt werden.",
+            "Das private Ping-System bleibt weiterhin separat ein- und ausschaltbar.",
+            "Müllmann-Synchronisierung, Präsenz, Rollen, Updates und weitere Relay-Funktionen bleiben auch bei deaktivierten Pings verfügbar.",
+            "Die Cloud-Sync-Kontozuordnung wurde für automatisch authentifizierte und bereits bestehende Accounts korrigiert."
+          ]
+        }
+      ],
+      "summary": [
+        {
+          "title": "Schnellere Waffen",
+          "description": "Sieben Serverwaffen erhalten eine konfigurierbare, rein visuell beschleunigte Ziehanimation.",
+          "color": "amber"
+        },
+        {
+          "title": "Präzises Ammo-HUD",
+          "description": "Nur erkannte Waffen liefern Munition; Battlepass- und Questfortschritte bleiben draußen.",
+          "color": "green"
+        },
+        {
+          "title": "Mehr HUD-Kontrolle",
+          "description": "Der HUD-Editor kann ausgewählte Anzeigen nun direkt positionieren, skalieren und ausblenden.",
+          "color": "cyan"
+        },
+        {
+          "title": "Bedienung & Verbindung",
+          "description": "Hand-Toggle, manuelle K/D-Ausgabe und ein dauerhaft aktives Relay verbessern den Alltag.",
+          "color": "purple"
+        }
+      ],
+      "changes": [
+        "Ein neues Modul beschleunigt die visuelle Ziehanimation unterstützter Serverwaffen.",
+        "Die Modi ,Schnell‘ und ,Sofort‘ beeinflussen ausschließlich die Darstellung und keine serverseitigen Kampfwerte.",
+        "Waffenanimation und Ammo-HUD verwenden gemeinsam die feste Liste P69, Scatter3, KR47, TS19, AX12, Extenso18 und Viper9.",
+        "Battlepass-, Quest- und sonstige Actionbar-Fortschritte werden vom Ammo-HUD ignoriert.",
+        "Die HUD-Vorschau wurde in HUD-Editor umbenannt und um direktes Ausblenden ausgewählter HUDs erweitert.",
+        "Sprint- und Hack-Timer-HUD lassen sich getrennt von ihrer eigentlichen Funktion ausblenden.",
+        "Ein frei belegbarer Hotkey wechselt die Minecraft-Haupthand zwischen links und rechts.",
+        "Die K/D-Zeile manueller /stats-Ausgaben ist separat togglebar, während automatische Abfragen unsichtbar bleiben.",
+        "Die Relay-Verbindung bleibt unabhängig vom optionalen Ping-System dauerhaft aktiv.",
+        "Relay-abhängige Funktionen wie die Müllmann-Synchronisierung bleiben bei deaktivierten Pings verfügbar.",
+        "Die Cloud-Sync-Kontozuordnung bestehender und automatisch authentifizierter Accounts wurde korrigiert."
+      ]
+    },
+    {
       "version": "1.4.2",
       "date": "24.08.2026",
-      "current": true,
       "pages": [
         {
           "eyebrow": "VERBINDUNG & IDENTITÄT",
