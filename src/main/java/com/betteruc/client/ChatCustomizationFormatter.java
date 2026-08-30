@@ -77,11 +77,11 @@ public final class ChatCustomizationFormatter {
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern PERSONAL_PLANTAGE_BURNED_PATTERN = Pattern.compile(
-            "^\\s*(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:[^\\p{L}\\p{N}_\\[]+\\s*)?Du\\s+hast\\s+erfolgreich\\s+eine\\s+Pulver\\s*-?\\s*Plant(?:age)?\\s+verbrannt[.!]?\\s*$",
+            "^\\s*(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:[^\\p{L}\\p{N}_\\[]+\\s*)?Du\\s+hast\\s+erfolgreich\\s+eine\\s+(Pulver|Kr(?:ä|ae|a)uter)\\s*-?\\s*Plant(?:age)?\\s+verbrannt[.!]?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern HQ_PLANTAGE_BURNED_PATTERN = Pattern.compile(
-            "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*Agent\\s+((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)\\s+hat\\s+erfolgreich\\s+eine\\s+Pulver\\s*-?\\s*Plant(?:age)?\\s+verbrannt,?\\s*over\\.?\\s*$",
+            "^\\s*(?:\\[betterUC\\s+Second\\s+Chat\\]\\s*)?(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?HQ:\\s*Agent\\s+((?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]+)\\s+hat\\s+erfolgreich\\s+eine\\s+(Pulver|Kr(?:ä|ae|a)uter)\\s*-?\\s*Plant(?:age)?\\s+verbrannt,?\\s*over\\.?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern EMERGENCY_INCOMING_BLOCK_PATTERN = Pattern.compile(
@@ -305,9 +305,10 @@ public final class ChatCustomizationFormatter {
 
         Matcher hqPlantageBurned = HQ_PLANTAGE_BURNED_PATTERN.matcher(clean);
         if (hqPlantageBurned.matches()) {
+            String plantageType = plantageType(hqPlantageBurned.group(2));
             return Result.replaceHq(List.of(
                     plantageHeadline(playerName(hqPlantageBurned.group(1)), headlineStyle),
-                    plantageDetail("Pulver-Plantage erfolgreich zerstört", headlineStyle)
+                    plantageDetail(plantageType + "-Plantage erfolgreich zerstört", headlineStyle)
             ));
         }
 
@@ -531,6 +532,13 @@ public final class ChatCustomizationFormatter {
     private static Component plantageDetail(String value, HeadlineStyle headlineStyle) {
         return Component.literal("\u00BB ").withStyle(ChatFormatting.GRAY)
                 .append(plantageDetailText(value, headlineStyle));
+    }
+
+    private static String plantageType(String value) {
+        String normalized = value == null ? "" : value.toLowerCase(Locale.ROOT).replace("ä", "ae");
+        return normalized.startsWith("kraeuter") || normalized.startsWith("krauter")
+                ? "Kräuter"
+                : "Pulver";
     }
 
     private static List<Component> emergencyIncomingMessages(
