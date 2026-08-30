@@ -14,6 +14,7 @@ import com.betteruc.client.RemoteFeatureFlagsClient;
 import com.betteruc.client.SyncRefreshActions;
 import com.betteruc.client.UserStatsClient;
 import com.betteruc.client.VersionChecker;
+import com.betteruc.client.WeaponEquipAnimationController;
 import com.betteruc.client.ZoomController;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.BankBalanceHud;
@@ -390,6 +391,23 @@ public class BetterUCScreen extends Screen {
                     y = addToggle(x, y, controlW, "Letzte Hand speichern", BetterUCConfig.INSTANCE.handToggleRememberLastHand,
                             () -> BetterUCConfig.INSTANCE.handToggleRememberLastHand =
                                     !BetterUCConfig.INSTANCE.handToggleRememberLastHand);
+                }
+            }
+            case WEAPON_ANIMATION -> {
+                y = addSectionHeader(x, y, controlW, "Funktion", 0xFFFFAA33);
+                y = addToggle(x, y, controlW, "Waffen-Animation",
+                        BetterUCConfig.INSTANCE.weaponEquipAnimationEnabled,
+                        () -> BetterUCConfig.INSTANCE.weaponEquipAnimationEnabled =
+                                !BetterUCConfig.INSTANCE.weaponEquipAnimationEnabled);
+                y = addInfo(x, y, controlW, "Betroffene Items", "Nur erkannte Waffen");
+                if (BetterUCConfig.INSTANCE.weaponEquipAnimationEnabled) {
+                    y = addSectionHeader(x, y, controlW, "Geschwindigkeit", 0xFFA78BFA);
+                    y = addButton(x, y, controlW,
+                            "Tempo: " + WeaponEquipAnimationController.modeLabel(), b -> {
+                                WeaponEquipAnimationController.cycleMode();
+                                saveConfig();
+                                refreshWidgets();
+                            });
                 }
             }
             case AUTO_STATS -> {
@@ -934,6 +952,9 @@ public class BetterUCScreen extends Screen {
         if (lower.startsWith("profil:")) {
             return "Öffnet die Profilauswahl und aktiviert das gewählte HUD-Layout.";
         }
+        if (lower.startsWith("tempo:")) {
+            return "Wechselt die Geschwindigkeit der visuellen Waffen-Einblendanimation.";
+        }
         if (lower.startsWith("[aktiv] ")) {
             return "Dieses HUD-Profil ist derzeit aktiv.";
         }
@@ -974,6 +995,10 @@ public class BetterUCScreen extends Screen {
             case "Statusmeldung" -> "Zeigt nach dem Wechsel kurz LINKS oder RECHTS über der Hotbar an.";
             case "Letzte Hand speichern" ->
                     "Speichert die gewählte Haupthand dauerhaft. Ist die Option aus, gilt der Wechsel nur bis zum Verlassen des Servers.";
+            case "Waffen-Animation" ->
+                    "Beschleunigt ausschließlich die visuelle Einblendanimation von Goldäxten in der Hand.";
+            case "Betroffene Items" ->
+                    "Gilt ausschließlich für P69, Scatter3, KR47, TS19, AX12, Extenso18 und Viper9.";
             case "Auto-Stats Join" -> "Ruft beim Beitritt und nach AFK automatisch und unsichtbar /stats ab.";
             case "K/D anzeigen" ->
                     "Zeigt die K/D-Zeile bei einem manuell ausgeführten /stats. Automatische Abfragen bleiben immer unsichtbar.";
@@ -1874,6 +1899,16 @@ public class BetterUCScreen extends Screen {
                     HandToggleController.currentHandLabel(minecraft),
                     BetterUCConfig.INSTANCE.handToggleEnabled
             );
+            case WEAPON_ANIMATION -> drawMiniInfo(
+                    context,
+                    previewX,
+                    previewY,
+                    "Waffen-Animation",
+                    BetterUCConfig.INSTANCE.weaponEquipAnimationEnabled
+                            ? WeaponEquipAnimationController.modeLabel()
+                            : "Normal",
+                    BetterUCConfig.INSTANCE.weaponEquipAnimationEnabled
+            );
             case AUTO_STATS -> drawMiniInfo(context, previewX, previewY, "Auto-Stats", "Join /stats", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
             case AUTOMATIONS -> {
                 int enabled = AutomationController.localEnabledCount();
@@ -2341,6 +2376,7 @@ public class BetterUCScreen extends Screen {
             case AUTO_STATS -> BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled;
             case ZOOM -> BetterUCConfig.INSTANCE.zoomEnabled;
             case HAND_TOGGLE -> BetterUCConfig.INSTANCE.handToggleEnabled;
+            case WEAPON_ANIMATION -> BetterUCConfig.INSTANCE.weaponEquipAnimationEnabled;
             case CLOUD_SYNC -> BetterUCConfig.INSTANCE.cloudSettingsEnabled;
             case SCREENSHOTS -> BetterUCConfig.INSTANCE.screenshotActionsEnabled;
             case PING -> BetterUCConfig.INSTANCE.pingRelayEnabled;
@@ -2931,6 +2967,7 @@ public class BetterUCScreen extends Screen {
 
         ZOOM(Category.GAMEPLAY, "Zoom", "Weicher, frei einstellbarer Kamera-Zoom", 0xFF60A5FA, true),
         HAND_TOGGLE(Category.GAMEPLAY, "Hand-Toggle", "Haupthand per Hotkey wechseln", 0xFFA78BFA, true),
+        WEAPON_ANIMATION(Category.GAMEPLAY, "Waffen-Animation", "Schnelleres Ziehen erkannter Waffen", 0xFFFFAA33, true),
         AUTO_STATS(Category.GAMEPLAY, "Auto Stats", "Automatisches /stats", 0xFF34D399, true),
         AUTOMATIONS(Category.GAMEPLAY, "Automationen", "Job-Helfer einzeln steuern", 0xFFFBBF24, false),
         CHAT(Category.GAMEPLAY, "Chat", "Zeitstempel & Customization", 0xFF38BDF8, false),

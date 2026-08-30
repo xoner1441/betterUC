@@ -89,6 +89,7 @@ public class BetterUCConfig {
             "zoomEnabled", "zoomToggleMode", "zoomSmoothEnabled", "zoomScrollAdjustEnabled",
             "zoomRememberLevel", "zoomSensitivityScalingEnabled", "zoomFactor", "zoomAnimationDurationMs",
             "handToggleEnabled", "handToggleNotificationEnabled", "handToggleRememberLastHand",
+            "weaponEquipAnimationEnabled", "weaponEquipAnimationMode",
             "chatTimestampsEnabled", "chatCustomizationEnabled", "chatActionTextStyle", "chatHeadlineSeparatorStyle",
             "chatCustomizationGradientEnabled", "chatLinksClickableEnabled", "chatLinkHighlightEnabled",
             "chatCommandConfirmationEnabled",
@@ -523,6 +524,8 @@ public class BetterUCConfig {
     public boolean handToggleEnabled = true;
     public boolean handToggleNotificationEnabled = true;
     public boolean handToggleRememberLastHand = true;
+    public boolean weaponEquipAnimationEnabled = true;
+    public String weaponEquipAnimationMode = "fast";
     public boolean autoStatsOnJoinEnabled = true;
     public boolean manualStatsKdVisible = true;
     public boolean autoFactionBankOnBalanceEnabled = false;
@@ -950,6 +953,13 @@ public class BetterUCConfig {
         }
         INSTANCE.zoomFactor = Math.max(1.5D, Math.min(20.0D, INSTANCE.zoomFactor));
         INSTANCE.zoomAnimationDurationMs = Math.max(50, Math.min(600, INSTANCE.zoomAnimationDurationMs));
+    }
+
+    private static void sanitizeWeaponEquipAnimation() {
+        String mode = INSTANCE.weaponEquipAnimationMode == null
+                ? "fast"
+                : INSTANCE.weaponEquipAnimationMode.trim().toLowerCase(Locale.ROOT);
+        INSTANCE.weaponEquipAnimationMode = "instant".equals(mode) ? "instant" : "fast";
     }
 
     private static void sanitizeReinfColors() {
@@ -1713,6 +1723,7 @@ public class BetterUCConfig {
         sanitizeChatCustomizationStyles();
         sanitizeSecondChat();
         sanitizeZoomSettings();
+        sanitizeWeaponEquipAnimation();
         sanitizePingRelay();
         sanitizeDiscordInvite();
         sanitizeTrackedFactions();
@@ -1829,6 +1840,7 @@ public class BetterUCConfig {
             sanitizeHudPrefixes();
             sanitizeAmmoHud();
             sanitizeZoomSettings();
+            sanitizeWeaponEquipAnimation();
             sanitizePingRelay();
             sanitizeDiscordInvite();
             if (INSTANCE.blReasons == null || INSTANCE.blReasons.isEmpty()) {
@@ -1922,6 +1934,7 @@ public class BetterUCConfig {
         sanitizeSecondChat();
         sanitizeAmmoHud();
         sanitizeZoomSettings();
+        sanitizeWeaponEquipAnimation();
         sanitizePingRelay();
         sanitizeDiscordInvite();
         sanitizeTrackedFactions();

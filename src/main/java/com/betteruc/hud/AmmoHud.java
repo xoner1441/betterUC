@@ -2,6 +2,7 @@ package com.betteruc.hud;
 
 import com.betteruc.BetterUCMod;
 import com.betteruc.client.ClientCompat;
+import com.betteruc.client.WeaponNameMatcher;
 import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.resources.Identifier;
@@ -13,12 +14,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 
-import java.text.Normalizer;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,9 +43,6 @@ public class AmmoHud {
     private static String activeWeaponFingerprint = "";
     private static WeaponProfile activeWeaponProfile = WeaponProfile.UNKNOWN;
     private static boolean lowAmmoActive = false;
-    private static final Set<String> learnedWeaponFingerprints = new HashSet<>();
-    private static final Map<String, WeaponProfile> learnedWeaponProfiles = new HashMap<>();
-    private static final Map<String, String> learnedWeaponNames = new HashMap<>();
     private static long lastFailureLogMs = 0L;
 
     public static void register() {
@@ -103,17 +96,12 @@ public class AmmoHud {
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         ItemStack heldItem = client.player.getMainHandItem();
+        WeaponProfile profile = WeaponProfile.fromItemName(itemDisplayName(heldItem));
+        if (profile == WeaponProfile.UNKNOWN) return;
+
         String heldFingerprint = itemFingerprint(heldItem);
         if (heldFingerprint.isBlank()) return;
 
-        String overlayWeaponName = sanitizeWeaponDisplayName(extractWeaponName(raw));
-        WeaponProfile profile = WeaponProfile.fromItemName(itemDisplayName(heldItem));
-        if (profile == WeaponProfile.UNKNOWN) {
-            profile = WeaponProfile.fromItemName(overlayWeaponName);
-        }
-        if (profile == WeaponProfile.UNKNOWN) {
-            profile = learnedWeaponProfiles.getOrDefault(heldFingerprint, WeaponProfile.UNKNOWN);
-        }
         boolean reloadConfirmed = reloadAwaitingConfirmation;
         learnKr47Magazine(profile, parsedClip, reloadConfirmed);
         int magazineSize = magazineSize(profile);
@@ -123,14 +111,7 @@ public class AmmoHud {
 
         clipAmmo = parsedClip;
         reserveAmmo = parsedReserve;
-        weaponName = resolveWeaponName(overlayWeaponName, profile, heldItem, heldFingerprint);
-        if (profile != WeaponProfile.UNKNOWN) {
-            learnedWeaponProfiles.put(heldFingerprint, profile);
-        }
-        if (!weaponName.isBlank() && !"Waffe".equals(weaponName)) {
-            learnedWeaponNames.put(heldFingerprint, weaponName);
-        }
-        learnedWeaponFingerprints.add(heldFingerprint);
+        weaponName = profile.displayName;
         activeWeaponFingerprint = heldFingerprint;
         activeWeaponProfile = profile;
         lastHeldItemFingerprint = heldFingerprint;
@@ -194,9 +175,6 @@ public class AmmoHud {
         activeWeaponFingerprint = "";
         activeWeaponProfile = WeaponProfile.UNKNOWN;
         lowAmmoActive = false;
-        learnedWeaponFingerprints.clear();
-        learnedWeaponProfiles.clear();
-        learnedWeaponNames.clear();
     }
 
     private static void renderSafely(GuiGraphicsExtractor context) {
@@ -218,7 +196,7 @@ public class AmmoHud {
         String heldFingerprint = itemFingerprint(client.player.getMainHandItem());
         if (heldFingerprint.isBlank()
                 || !heldFingerprint.equals(activeWeaponFingerprint)
-                || !learnedWeaponFingerprints.contains(heldFingerprint)) return;
+                || !WeaponNameMatcher.isSupportedWeapon(client.player.getMainHandItem())) return;
 
         int x = BetterUCConfig.INSTANCE.ammoHudX;
         int y = BetterUCConfig.INSTANCE.ammoHudY;
@@ -277,22 +255,6 @@ public class AmmoHud {
         });
     }
 
-    private static String extractWeaponName(String raw) {
-        String fallback = "";
-        String[] lines = raw.split("\\R");
-        for (String line : lines) {
-            String trimmed = line == null ? "" : line.trim();
-            if (trimmed.isEmpty()) continue;
-
-            if (AMMO_PATTERN.matcher(trimmed).find()) continue;
-            if (trimmed.matches("[0-9\\s/:]+")) continue;
-
-            fallback = trimmed;
-            break;
-        }
-        return fallback;
-    }
-
     private static boolean isProgressOverlay(String raw) {
         String normalized = raw.toLowerCase(Locale.ROOT);
         return normalized.contains("battle pass")
@@ -312,96 +274,12 @@ public class AmmoHud {
         lastUpdateMs = reloadRequestedAtMs;
     }
 
-    private static String normalizeWeaponName(String raw) {
-        if (raw == null || raw.isBlank()) return "";
-
-        String normalized = Normalizer.normalize(raw, Normalizer.Form.NFKD)
-                .toLowerCase(Locale.ROOT)
-                .replaceAll("\\p{M}+", "");
-        StringBuilder ascii = new StringBuilder(normalized.length());
-        for (int i = 0; i < normalized.length(); i++) {
-            ascii.append(toAsciiWeaponCharacter(normalized.charAt(i)));
-        }
-        return ascii.toString().replaceAll("[^a-z0-9]+", "");
-    }
-
-    private static char toAsciiWeaponCharacter(char value) {
-        return switch (value) {
-            case 'ᴀ' -> 'a';
-            case 'ʙ' -> 'b';
-            case 'ᴄ' -> 'c';
-            case 'ᴅ' -> 'd';
-            case 'ᴇ' -> 'e';
-            case 'ꜰ' -> 'f';
-            case 'ɢ' -> 'g';
-            case 'ʜ' -> 'h';
-            case 'ɪ' -> 'i';
-            case 'ᴊ' -> 'j';
-            case 'ᴋ' -> 'k';
-            case 'ʟ' -> 'l';
-            case 'ᴍ' -> 'm';
-            case 'ɴ' -> 'n';
-            case 'ᴏ' -> 'o';
-            case 'ᴘ' -> 'p';
-            case 'ʀ' -> 'r';
-            case 'ꜱ' -> 's';
-            case 'ᴛ' -> 't';
-            case 'ᴜ' -> 'u';
-            case 'ᴠ' -> 'v';
-            case 'ᴡ' -> 'w';
-            case 'ʏ' -> 'y';
-            case 'ᴢ' -> 'z';
-            default -> value;
-        };
-    }
-
-    private static String resolveWeaponName(
-            String overlayWeaponName,
-            WeaponProfile profile,
-            ItemStack heldItem,
-            String heldFingerprint
-    ) {
-        if (!overlayWeaponName.isBlank()) return overlayWeaponName;
-        if (profile != WeaponProfile.UNKNOWN) return profile.displayName;
-
-        String learnedName = learnedWeaponNames.getOrDefault(heldFingerprint, "");
-        if (!learnedName.isBlank()) return learnedName;
-
-        String heldName = sanitizeWeaponDisplayName(itemDisplayName(heldItem));
-        return isUsefulWeaponDisplayName(heldName) ? heldName : "Waffe";
-    }
-
-    private static String sanitizeWeaponDisplayName(String raw) {
-        if (raw == null) return "";
-        return raw.replaceAll("§[0-9A-FK-ORa-fk-or]", "")
-                .replaceAll("\\s+", " ")
-                .trim();
-    }
-
-    private static boolean isUsefulWeaponDisplayName(String value) {
-        String normalized = normalizeWeaponName(value);
-        if (normalized.isBlank()) return false;
-
-        return !normalized.equals("air")
-                && !normalized.equals("stick")
-                && !normalized.equals("stock")
-                && !normalized.equals("bow")
-                && !normalized.equals("bogen")
-                && !normalized.equals("crossbow")
-                && !normalized.equals("armbrust")
-                && !normalized.equals("fishingrod")
-                && !normalized.equals("angel")
-                && !normalized.equals("carrotonastick")
-                && !normalized.equals("karottenrute")
-                && !normalized.equals("warpedfungusonastick");
-    }
-
     private static String itemFingerprint(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return "";
 
         Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (id == null) return "";
-        return id + "|" + normalizeWeaponName(itemDisplayName(stack));
+        return id + "|" + WeaponNameMatcher.normalize(itemDisplayName(stack));
     }
 
     private static String itemDisplayName(ItemStack stack) {
@@ -529,7 +407,6 @@ public class AmmoHud {
         EXTENSO18("Extenso18", 5, "extenso18"),
         VIPER9("Viper9", 5, "viper9"),
         KR47("KR47", 0, "kr47"),
-        AUG("AUG", 30, "aug"),
         AX12("AX12", 25, "ax12"),
         UNKNOWN("", 0, "");
 
@@ -544,9 +421,9 @@ public class AmmoHud {
         }
 
         private static WeaponProfile fromItemName(String itemName) {
-            String normalized = normalizeWeaponName(itemName);
+            String normalized = WeaponNameMatcher.normalize(itemName);
             for (WeaponProfile profile : values()) {
-                if (profile != UNKNOWN && normalized.contains(profile.nameKey)) {
+                if (profile != UNKNOWN && normalized.equals(profile.nameKey)) {
                     return profile;
                 }
             }
