@@ -16,44 +16,46 @@ public class CashHud {
     private static final long RAW_DELTA_DEDUP_WINDOW_MS = 150L;
     private static final Pattern TEXT_FORMATTING_PATTERN = Pattern.compile("\\u00A7.");
     private static final Pattern CHAT_TIMESTAMP_PATTERN = Pattern.compile("^\\s*\\d{1,2}:\\d{2}:\\d{2}\\s+");
+    private static final String PLAYER_TOKEN = "(?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]{2,16}";
+    private static final String OPTIONAL_SERVER_TAG = "(?:\\[[^\\]\\r\\n]{1,32}\\]\\s*)?";
     private static final Pattern CASH_STATS_PATTERN = Pattern.compile(
-            "^\\s*[-\\u2010-\\u2015\\u2212]?\\s*Geld\\s*:?\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$",
+            "^\\s*[-\\u2010-\\u2015\\u2212]?\\s*Geld\\s*:?\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$\\s*[.!]?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern CASH_BALANCE_PATTERN = Pattern.compile(
-            "(?i)(?:neuer\\s+bargeldbestand|bargeldbestand)\\s*:?\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$"
+            "(?i)^" + OPTIONAL_SERVER_TAG + "(?:neuer\\s+bargeldbestand|bargeldbestand)\\s*:?\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$\\s*[.!]?\\s*$"
     );
     private static final Pattern CASH_PAYOUT_PATTERN = Pattern.compile(
-            "(?i)auszahlung\\s*:?\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$"
+            "(?i)^" + OPTIONAL_SERVER_TAG + "auszahlung\\s*:?\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$\\s*[.!]?\\s*$"
     );
     private static final Pattern CASH_DEPOSIT_PATTERN = Pattern.compile(
-            "(?i)eingezahlt\\s*:?\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$"
+            "(?i)^" + OPTIONAL_SERVER_TAG + "eingezahlt\\s*:?\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$\\s*[.!]?\\s*$"
     );
     private static final Pattern FACTION_BANK_DEPOSIT_PATTERN = Pattern.compile(
-            "(?i)\\[\\s*F-?Bank\\s*]\\s+(.+?)\\s+hat\\s+([0-9][0-9\\.]*)\\s*\\$\\s+(?:auf|in)\\s+die\\s+Fraktionsbank\\s+eingezahlt\\b"
+            "(?i)^\\[\\s*F-?Bank\\s*]\\s+(.+?)\\s+hat\\s+([0-9][0-9\\.]*)\\s*\\$\\s+(?:auf|in)\\s+die\\s+Fraktionsbank\\s+eingezahlt\\s*[.!]?\\s*$"
     );
     private static final Pattern FACTION_BANK_WITHDRAW_PATTERN = Pattern.compile(
-            "(?i)\\[\\s*F-?Bank\\s*]\\s+(.+?)\\s+hat\\s+([0-9][0-9\\.]*)\\s*\\$\\s+aus\\s+der\\s+Fraktionsbank\\s+genommen\\b"
+            "(?i)^\\[\\s*F-?Bank\\s*]\\s+(.+?)\\s+hat\\s+([0-9][0-9\\.]*)\\s*\\$\\s+aus\\s+der\\s+Fraktionsbank\\s+genommen\\s*[.!]?\\s*$"
     );
     private static final Pattern PLAYER_MONEY_SENT_PATTERN = Pattern.compile(
-            "(?i)\\bdu\\s+hast\\s+(.+?)\\s+([0-9][0-9\\.]*)\\s*\\$\\s+gegeben\\s*!?"
+            "(?i)^du\\s+hast\\s+(" + PLAYER_TOKEN + ")\\s+([0-9][0-9\\.]*)\\s*\\$\\s+gegeben\\s*[.!]?\\s*$"
     );
     private static final Pattern PLAYER_MONEY_RECEIVED_PATTERN = Pattern.compile(
-            "(?i)\\b(.+?)\\s+hat\\s+dir\\s+([0-9][0-9\\.]*)\\s*\\$\\s+gegeben\\s*!?"
+            "(?i)^(" + PLAYER_TOKEN + ")\\s+hat\\s+dir\\s+([0-9][0-9\\.]*)\\s*\\$\\s+gegeben\\s*[.!]?\\s*$"
     );
     private static final Pattern PLAYER_ITEM_SALE_PATTERN = Pattern.compile(
-            "(?iu)\\bdu\\s+hast\\s+.+?\\s+f(?:ü|ue)r\\s+([0-9][0-9\\.]*)\\s*\\$\\s+verkauft\\b"
+            "(?iu)^" + OPTIONAL_SERVER_TAG + "du\\s+hast\\s+.+?\\s+f(?:ü|ue)r\\s+([0-9][0-9\\.]*)\\s*\\$\\s+verkauft\\s*[.!]?\\s*$"
     );
     private static final Pattern FANG_COMBO_PATTERN = Pattern.compile(
-            "(?iu)\\bx\\s*[0-9]+\\s+fang-?combo!?\\s*\\+\\s*([0-9][0-9\\.]*)\\s*\\$"
+            "(?iu)^(?:combo!\\s*)?x\\s*[0-9]+\\s+fang-?combo!?\\s*\\+\\s*([0-9][0-9\\.]*)\\s*\\$\\s*[.!]?\\s*$"
     );
     private static final Pattern CASINO_PURCHASE_PATTERN = Pattern.compile(
-            "(?iu)(?:casino|ᴄᴀsɪɴᴏ).*?gekauft\\s*:\\s*[0-9][0-9\\.]*\\s*jetons\\s*"
-                    + "\\(\\s*-\\s*([0-9][0-9\\.]*)\\s*\\$"
+            "(?iu)^(?:casino|ᴄᴀsɪɴᴏ)\\s*[•·|:>\\-]*\\s*gekauft\\s*:\\s*[0-9][0-9\\.]*\\s*jetons\\s*"
+                    + "\\(\\s*-\\s*([0-9][0-9\\.]*)\\s*\\$(?:\\s*,[^)]*)?\\)\\s*[.!]?\\s*$"
     );
     private static final Pattern CASINO_SALE_PATTERN = Pattern.compile(
-            "(?iu)(?:casino|ᴄᴀsɪɴᴏ).*?verkauft\\s*:\\s*[0-9][0-9\\.]*\\s*jetons\\s*"
-                    + "\\(\\s*\\+\\s*([0-9][0-9\\.]*)\\s*\\$"
+            "(?iu)^(?:casino|ᴄᴀsɪɴᴏ)\\s*[•·|:>\\-]*\\s*verkauft\\s*:\\s*[0-9][0-9\\.]*\\s*jetons\\s*"
+                    + "\\(\\s*\\+\\s*([0-9][0-9\\.]*)\\s*\\$(?:\\s*,[^)]*)?\\)\\s*[.!]?\\s*$"
     );
     private static final Pattern CASH_SIGNED_DELTA_PATTERN = Pattern.compile(
             "^\\s*([+-])\\s*([0-9][0-9\\.]*)\\s*\\$\\s*$"
@@ -154,16 +156,13 @@ public class CashHud {
             return;
         }
 
-        Matcher cashBalanceMatcher = CASH_BALANCE_PATTERN.matcher(raw);
-        if (cashBalanceMatcher.find() && !isPreviousCashBalanceLine(raw)) {
-            Integer parsed = parseMoneyValue(cashBalanceMatcher.group(1));
-            if (parsed != null) {
-                if (currentCash >= 0 && currentCash != parsed) {
-                    int amount = Math.abs(parsed - currentCash);
-                    recordSemanticDelta(parsed > currentCash ? '+' : '-', amount, DeltaSource.ABSOLUTE_BALANCE);
-                }
-                setCashAndPersist(Math.max(0, parsed));
+        Integer absoluteCash = parseCashBalanceMessage(raw);
+        if (absoluteCash != null) {
+            if (currentCash >= 0 && currentCash != absoluteCash) {
+                int amount = Math.abs(absoluteCash - currentCash);
+                recordSemanticDelta(absoluteCash > currentCash ? '+' : '-', amount, DeltaSource.ABSOLUTE_BALANCE);
             }
+            setCashAndPersist(Math.max(0, absoluteCash));
             return;
         }
 
@@ -202,17 +201,6 @@ public class CashHud {
             return;
         }
 
-        Matcher matcher = CASH_STATS_PATTERN.matcher(raw);
-        if (!matcher.find()) return;
-
-        Integer parsed = parseMoneyValue(matcher.group(1));
-        if (parsed != null) {
-            if (currentCash >= 0 && currentCash != parsed) {
-                int amount = Math.abs(parsed - currentCash);
-                recordSemanticDelta(parsed > currentCash ? '+' : '-', amount, DeltaSource.ABSOLUTE_BALANCE);
-            }
-            setCashAndPersist(Math.max(0, parsed));
-        }
     }
 
     private static boolean isCurrentPlayer(String name) {
@@ -307,13 +295,13 @@ public class CashHud {
         String cleaned = stripChatPrefix(stripFormatting(raw));
 
         Matcher purchaseMatcher = CASINO_PURCHASE_PATTERN.matcher(cleaned);
-        if (purchaseMatcher.find()) {
+        if (purchaseMatcher.matches()) {
             Integer amount = parseMoneyValue(purchaseMatcher.group(1));
             return amount == null || amount <= 0 ? null : new CasinoCashDelta('-', amount);
         }
 
         Matcher saleMatcher = CASINO_SALE_PATTERN.matcher(cleaned);
-        if (saleMatcher.find()) {
+        if (saleMatcher.matches()) {
             Integer amount = parseMoneyValue(saleMatcher.group(1));
             return amount == null || amount <= 0 ? null : new CasinoCashDelta('+', amount);
         }
@@ -324,7 +312,7 @@ public class CashHud {
         if (raw == null || raw.isBlank()) return null;
         String cleaned = stripChatPrefix(stripFormatting(raw));
         Matcher matcher = PLAYER_ITEM_SALE_PATTERN.matcher(cleaned);
-        if (!matcher.find()) return null;
+        if (!matcher.matches()) return null;
 
         Integer amount = parseMoneyValue(matcher.group(1));
         return amount == null || amount <= 0 ? null : amount;
@@ -334,7 +322,7 @@ public class CashHud {
         if (raw == null || raw.isBlank()) return null;
         String cleaned = stripChatPrefix(stripFormatting(raw));
         Matcher matcher = FANG_COMBO_PATTERN.matcher(cleaned);
-        if (!matcher.find()) return null;
+        if (!matcher.matches()) return null;
 
         Integer amount = parseMoneyValue(matcher.group(1));
         return amount == null || amount <= 0 ? null : amount;
@@ -344,6 +332,18 @@ public class CashHud {
         if (raw == null || raw.isBlank()) return false;
         String cleaned = stripChatPrefix(stripFormatting(raw));
         return CEMETERY_ENTRY_PATTERN.matcher(cleaned).matches();
+    }
+
+    static Integer parseCashBalanceMessage(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String cleaned = stripChatPrefix(stripFormatting(raw));
+        Matcher balanceMatcher = CASH_BALANCE_PATTERN.matcher(cleaned);
+        if (balanceMatcher.matches()) {
+            return parseMoneyValue(balanceMatcher.group(1));
+        }
+        Matcher statsMatcher = CASH_STATS_PATTERN.matcher(cleaned);
+        if (!statsMatcher.matches()) return null;
+        return parseMoneyValue(statsMatcher.group(1));
     }
 
     record CasinoCashDelta(char sign, int amount) {
@@ -438,12 +438,6 @@ public class CashHud {
         return raw.toLowerCase(Locale.ROOT)
                 .replaceAll("\\s+", " ")
                 .trim();
-    }
-
-    private static boolean isPreviousCashBalanceLine(String raw) {
-        String normalized = normalizeRawKey(raw);
-        return normalized.contains("vorheriger bargeldbestand")
-                || normalized.contains("alter bargeldbestand");
     }
 
     private static DecimalFormat createMoneyFormat() {

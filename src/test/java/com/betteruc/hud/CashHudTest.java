@@ -5,9 +5,26 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CashHudTest {
+
+    @Test
+    void cashBalanceAcceptsOnlyCompleteServerMessage() {
+        assertEquals(123_564, CashHud.parseCashBalanceMessage(
+                "21:10:04 Neuer Bargeldbestand: +123.564$"
+        ));
+        assertEquals(42_500, CashHud.parseCashBalanceMessage(
+                "21:10:04 - Geld: 42.500$"
+        ));
+        assertNull(CashHud.parseCashBalanceMessage(
+                "21:10:04 FBI pixel412: Neuer Bargeldbestand: +123.564$"
+        ));
+        assertNull(CashHud.parseCashBalanceMessage(
+                "21:10:04 FBI pixel412: - Geld: 999.999$"
+        ));
+    }
 
     @Test
     void casinoPurchaseUsesNegativeCashAmountInsteadOfTokenCount() {
@@ -49,6 +66,13 @@ class CashHudTest {
 
         assertNotNull(amount);
         assertEquals(1_200, amount);
+    }
+
+    @Test
+    void playerChatCannotImitateItemSale() {
+        assertNull(CashHud.parsePlayerItemSaleAmount(
+                "08:08:49 FBI pixel412: Du hast 2x Holz für 999.999$ verkauft."
+        ));
     }
 
     @Test

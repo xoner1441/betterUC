@@ -24,39 +24,40 @@ public class BankBalanceHud {
     private static final long DAILY_REWARD_MONEY_WINDOW_MS = 5000L;
     private static final Pattern TEXT_FORMATTING_PATTERN = Pattern.compile("\\u00A7.");
     private static final Pattern CHAT_TIMESTAMP_PATTERN = Pattern.compile("^\\s*\\d{1,2}:\\d{2}:\\d{2}\\s+");
+    private static final String PLAYER_TOKEN = "(?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]{2,16}";
     private static final Pattern BANK_BALANCE_PATTERN = Pattern.compile(
-            "(?i)(?:ihr\\s+bankguthaben\\s+betr(?:a|ae|\\u00E4)gt\\s*:?|neuer\\s+(?:bank\\s*)?kontostand\\s*:?|neuer\\s+betrag\\s*:?)\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$"
+            "(?i)^(?:ihr\\s+bankguthaben\\s+betr(?:a|ae|\\u00E4)gt\\s*:?|neuer\\s+(?:bank\\s*)?kontostand\\s*:?|neuer\\s+betrag\\s*:?)\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$\\s*[.!]?\\s*$"
     );
     private static final Pattern PERSONAL_BANK_BALANCE_PATTERN = Pattern.compile(
-            "(?i)ihr\\s+bankguthaben\\s+betr(?:a|ae|\\u00E4)gt\\s*:?\\s*[+-]?[0-9][0-9\\.]*\\s*\\$"
+            "(?i)^ihr\\s+bankguthaben\\s+betr(?:a|ae|\\u00E4)gt\\s*:?\\s*[+-]?[0-9][0-9\\.]*\\s*\\$\\s*[.!]?\\s*$"
     );
     private static final Pattern PREVIOUS_BALANCE_PATTERN = Pattern.compile(
-            "(?i)(?:vorheriger\\s+kontostand\\s*:?|alter\\s+betrag\\s*:?)\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$"
+            "(?i)^(?:vorheriger\\s+kontostand\\s*:?|alter\\s+betrag\\s*:?)\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$\\s*[.!]?\\s*$"
     );
     private static final Pattern BANK_TRANSFER_SENT_PATTERN = Pattern.compile(
-            "(?i)\\bdu\\s+hast\\s+(.+?)\\s+([0-9][0-9\\.]*)\\s*\\$\\s+(?:\\u00FCberwiesen|ueberwiesen)\\s*!?"
+            "(?i)^du\\s+hast\\s+(" + PLAYER_TOKEN + ")\\s+([0-9][0-9\\.]*)\\s*\\$\\s+(?:\\u00FCberwiesen|ueberwiesen)\\s*[.!]?\\s*$"
     );
     private static final Pattern BANK_TRANSFER_RECEIVED_PATTERN = Pattern.compile(
-            "(?i)\\b(.+?)\\s+hat\\s+dir\\s+([0-9][0-9\\.]*)\\s*\\$\\s+(?:\\u00FCberwiesen|ueberwiesen)\\s*!?"
+            "(?i)^(" + PLAYER_TOKEN + ")\\s+hat\\s+dir\\s+([0-9][0-9\\.]*)\\s*\\$\\s+(?:\\u00FCberwiesen|ueberwiesen)\\s*[.!]?\\s*$"
     );
     private static final Pattern BATTLE_PASS_REWARD_PATTERN = Pattern.compile(
-            "(?i)\\[battle\\s+pass]\\s*\\+\\s*([0-9][0-9\\.]*)\\s*\\$\\s+erhalten\\s*\\.?"
+            "(?i)^\\[battle\\s+pass]\\s*\\+\\s*([0-9][0-9\\.]*)\\s*\\$\\s+erhalten\\s*[.!]?\\s*$"
     );
     private static final Pattern DAILY_REWARD_HEADER_PATTERN = Pattern.compile(
-            "(?iu)(?:daily\\s+reward|ᴅᴀɪʟʏ\\s+ʀᴇᴡᴀʀᴅ).*?tag\\s+\\d+\\s+abgeholt\\s*!?"
+            "(?iu)^(?:daily\\s+reward|ᴅᴀɪʟʏ\\s+ʀᴇᴡᴀʀᴅ).*?tag\\s+\\d+\\s+abgeholt\\s*!?(?:\\s*\\([^)]*\\))?\\s*$"
     );
     private static final Pattern DAILY_REWARD_MONEY_PATTERN = Pattern.compile(
             "^\\s*\\+?\\s*([0-9][0-9\\.]*)\\s*\\$\\s*$"
     );
     private static final Pattern FULL_ATM_PATTERN = Pattern.compile(
-            "(?iu)\\bdieser\\s+bankautomat\\s+ist\\s+voll\\s*\\.?\\s*"
-                    + "(?:\\[\\s*trotzdem\\s+einzahlen\\s*])?"
+            "(?iu)^dieser\\s+bankautomat\\s+ist\\s+voll\\s*\\.?\\s*"
+                    + "(?:\\[\\s*trotzdem\\s+einzahlen\\s*])?\\s*$"
     );
     private static final Pattern PARTIAL_ATM_CAPACITY_PATTERN = Pattern.compile(
-            "(?iu)\\bdu\\s+versuchst\\s+[0-9][0-9\\.]*\\s*\\$\\s+einzuzahlen\\s*,?\\s*"
+            "(?iu)^du\\s+versuchst\\s+[0-9][0-9\\.]*\\s*\\$\\s+einzuzahlen\\s*,?\\s*"
                     + "der\\s+bankautomat\\s+hat\\s+aber\\s+nur\\s+platz\\s+f(?:\\u00FC|ue)r\\s+"
                     + "[0-9][0-9\\.]*\\s*\\$\\s*\\.?\\s*fortfahren\\s*\\?\\s*"
-                    + "(?:\\[\\s*best(?:\\u00E4|ae)tigen\\s*])?"
+                    + "(?:\\[\\s*best(?:\\u00E4|ae)tigen\\s*])?\\s*$"
     );
 
     private static int currentBankBalance = -1;
@@ -136,19 +137,16 @@ public class BankBalanceHud {
             return;
         }
 
-        Matcher balanceMatcher = BANK_BALANCE_PATTERN.matcher(raw);
-        if (balanceMatcher.find()) {
-            Integer parsed = parseMoneyValue(balanceMatcher.group(1));
-            if (parsed != null) {
-                setBalanceAndPersist(Math.max(0, parsed));
-                requestBankFollowupsAfterPersonalBalance(raw);
-            }
+        Integer absoluteBalance = parseBankBalanceMessage(raw);
+        if (absoluteBalance != null) {
+            setBalanceAndPersist(Math.max(0, absoluteBalance));
+            requestBankFollowupsAfterPersonalBalance(raw);
             return;
         }
 
         if (currentBankBalance >= 0) return;
         Matcher previousMatcher = PREVIOUS_BALANCE_PATTERN.matcher(raw);
-        if (previousMatcher.find()) {
+        if (previousMatcher.matches()) {
             Integer parsed = parseMoneyValue(previousMatcher.group(1));
             if (parsed != null) {
                 setBalanceAndPersist(Math.max(0, parsed));
@@ -269,7 +267,15 @@ public class BankBalanceHud {
     static boolean matchesDailyRewardHeader(String raw) {
         if (raw == null || raw.isBlank()) return false;
         String cleaned = stripChatPrefix(stripFormatting(raw));
-        return DAILY_REWARD_HEADER_PATTERN.matcher(cleaned).find();
+        return DAILY_REWARD_HEADER_PATTERN.matcher(cleaned).matches();
+    }
+
+    static Integer parseBankBalanceMessage(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String cleaned = stripChatPrefix(stripFormatting(raw));
+        Matcher matcher = BANK_BALANCE_PATTERN.matcher(cleaned);
+        if (!matcher.matches()) return null;
+        return parseMoneyValue(matcher.group(1));
     }
 
     static Integer parseDailyRewardMoney(String raw) {
@@ -284,8 +290,8 @@ public class BankBalanceHud {
     static boolean matchesFullAtmMessage(String raw) {
         if (raw == null || raw.isBlank()) return false;
         String cleaned = stripChatPrefix(stripFormatting(raw));
-        return FULL_ATM_PATTERN.matcher(cleaned).find()
-                || PARTIAL_ATM_CAPACITY_PATTERN.matcher(cleaned).find();
+        return FULL_ATM_PATTERN.matcher(cleaned).matches()
+                || PARTIAL_ATM_CAPACITY_PATTERN.matcher(cleaned).matches();
     }
 
     private static void subtractBalanceAndPersist(int amount, String rawKey) {
@@ -319,7 +325,7 @@ public class BankBalanceHud {
         boolean requestFactionBank = BetterUCConfig.INSTANCE.autoFactionBankOnBalanceEnabled;
         boolean requestAtmInfo = BetterUCConfig.INSTANCE.autoAtmInfoOnBalanceEnabled;
         if (!requestFactionBank && !requestAtmInfo) return;
-        if (!PERSONAL_BANK_BALANCE_PATTERN.matcher(raw).find()) return;
+        if (!PERSONAL_BANK_BALANCE_PATTERN.matcher(raw).matches()) return;
 
         long now = System.currentTimeMillis();
         if (now - lastAutoBankFollowupMs < AUTO_BANK_COMMAND_DEDUP_WINDOW_MS) return;

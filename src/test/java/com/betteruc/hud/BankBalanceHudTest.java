@@ -10,12 +10,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BankBalanceHudTest {
 
     @Test
+    void bankBalanceAcceptsOnlyCompleteServerMessage() {
+        assertEquals(123_564, BankBalanceHud.parseBankBalanceMessage(
+                "21:10:04 Ihr Bankguthaben beträgt: +123.564$"
+        ));
+        assertNull(BankBalanceHud.parseBankBalanceMessage(
+                "21:10:04 FBI pixel412: 21:08:58 Ihr Bankguthaben beträgt: +123.564$"
+        ));
+        assertNull(BankBalanceHud.parseBankBalanceMessage(
+                "21:10:04 [FBI] pixel412: Ihr Bankguthaben beträgt: +123.564$"
+        ));
+    }
+
+    @Test
     void dailyRewardHeaderSupportsSmallCapsServerMessage() {
         assertTrue(BankBalanceHud.matchesDailyRewardHeader(
                 "12:34:56 » ᴅᴀɪʟʏ ʀᴇᴡᴀʀᴅ • Tag 6 abgeholt! (Staffel 1)"
         ));
         assertFalse(BankBalanceHud.matchesDailyRewardHeader(
                 "12:34:56 » Eine normale Belohnung wurde abgeholt!"
+        ));
+        assertFalse(BankBalanceHud.matchesDailyRewardHeader(
+                "12:34:56 FBI pixel412: ᴅᴀɪʟʏ ʀᴇᴡᴀʀᴅ • Tag 6 abgeholt! (Staffel 1)"
         ));
     }
 
