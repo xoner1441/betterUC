@@ -257,6 +257,24 @@ class ChatCustomizationStyleTest {
     }
 
     @Test
+    void formatsPersonalBluetenharzPlantageBurnAsCompactSuccessMessage() {
+        ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
+                "[System] [CHAT] 16:20:16 Du hast erfolgreich eine Blütenharz Plant verbrannt.",
+                true,
+                false,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
+        );
+
+        assertNotNull(result);
+        assertFalse(result.hq());
+        assertEquals(1, result.replacementMessages().size());
+        assertEquals("ᴘʟᴀɴᴛᴀɢᴇ ᴠᴇʀʙʀᴀɴɴᴛ // Erfolgreich",
+                result.replacementMessages().get(0).getString());
+    }
+
+    @Test
     void formatsHqPlantageBurnWithAgentAndFireDetailProfile() {
         ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
                 "[betterUC Second Chat] HQ: Agent lara412 hat erfolgreich eine Pulver Plantage verbrannt, over.",
@@ -300,6 +318,26 @@ class ChatCustomizationStyleTest {
         assertEquals("ᴘʟᴀɴᴛᴀɢᴇ ᴠᴇʀʙʀᴀɴɴᴛ // lara412",
                 result.replacementMessages().get(0).getString());
         assertEquals("» Kräuter-Plantage erfolgreich zerstört",
+                result.replacementMessages().get(1).getString());
+    }
+
+    @Test
+    void formatsHqBluetenharzPlantageBurnFromOfficerWithMatchingDetail() {
+        ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
+                "16:20:16 HQ: Officer 36Flo hat erfolgreich eine Blütenharz Plantage verbrannt, over.",
+                true,
+                false,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
+        );
+
+        assertNotNull(result);
+        assertTrue(result.hq());
+        assertEquals(2, result.replacementMessages().size());
+        assertEquals("ᴘʟᴀɴᴛᴀɢᴇ ᴠᴇʀʙʀᴀɴɴᴛ // 36Flo",
+                result.replacementMessages().get(0).getString());
+        assertEquals("» Blütenharz-Plantage erfolgreich zerstört",
                 result.replacementMessages().get(1).getString());
     }
 

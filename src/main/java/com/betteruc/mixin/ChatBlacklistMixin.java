@@ -215,7 +215,7 @@ public class ChatBlacklistMixin {
 
         if (handleHackTimer(raw)) return;
         handlePaydayReset(raw);
-        updateMoney(raw);
+        updateMoney(raw, origin);
 
         boolean wpsHqCustomizationEnabled = BetterUCConfig.INSTANCE.chatCustomizationEnabled
                 && RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.CHAT_CUSTOMIZATION);
@@ -326,7 +326,9 @@ public class ChatBlacklistMixin {
         });
     }
 
-    private void updateMoney(String raw) {
+    private void updateMoney(String raw, ChatMessageOrigin origin) {
+        if (origin == ChatMessageOrigin.PLAYER) return;
+
         BankBalanceHud.updateFromChatLine(raw);
         CashHud.updateFromStatsLine(raw);
         updateCurrentFaction(raw);
