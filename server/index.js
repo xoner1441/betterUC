@@ -69,7 +69,8 @@ const policeRoster = createPoliceRosterService({
 const swatRoster = createSwatRosterStore({
   file: SWAT_ROSTER_FILE,
   renderer: policeRoster,
-  slotLimit: process.env.TEAMSPEAK_SWAT_SLOT_LIMIT
+  slotLimit: process.env.TEAMSPEAK_SWAT_SLOT_LIMIT,
+  supervisorOverrides: process.env.SWAT_ROSTER_SUPERVISOR_OVERRIDES
 });
 const SWAT_ROSTER_OWNER_NAME = String(process.env.SWAT_ROSTER_OWNER_NAME || "FABI1441").trim();
 const RELEASE_CACHE_TTL_MS = Number(process.env.RELEASE_CACHE_TTL_MS || 5 * 60 * 1000);

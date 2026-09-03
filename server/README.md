@@ -103,10 +103,11 @@ Node service for the betterUC website, automatic Minecraft authentication and We
 - `TEAMSPEAK_SWAT_SECTION_START=EINHEITSLISTE` start marker in the SWAT channel description
 - `TEAMSPEAK_SWAT_SECTION_END=` optional end marker; empty replaces the old SWAT roster through the end while preserving closing BBCode
 - `SWAT_ROSTER_OWNER_NAME=FABI1441` only Mojang-authenticated mod account allowed to upload `/sfinfoall SWAT`
+- `SWAT_ROSTER_SUPERVISOR_OVERRIDES=mteii` comma-separated SWAT examiners missing the server-side `[S]` marker
 - `TEAMSPEAK_QUERY_TIMEOUT_MS=10000`
 - `PUBLIC_BASE_URL=https://betteruc.de` public origin used by the clickable TeamSpeak image
 
-The mod silently runs `/sfinfoall SWAT` after joining only for `SWAT_ROSTER_OWNER_NAME`, suppresses the command output, and uploads the parsed `[L]`/`[S]` roles through the authenticated mod session. By default the SWAT sync replaces everything after the `EINHEITSLISTE` heading, while preserving trailing closing BBCode tags.
+The mod silently runs `/sfinfoall SWAT` after joining only for `SWAT_ROSTER_OWNER_NAME`, suppresses the command output, and uploads the parsed `[L]`/`[S]` roles through the authenticated mod session. `SWAT_ROSTER_SUPERVISOR_OVERRIDES` keeps known examiners classified correctly when the command omits `[S]`. By default the SWAT sync replaces everything after the `EINHEITSLISTE` heading, while preserving trailing closing BBCode tags.
 - `POLICE_ROSTER_HEAD_BASE_URL=https://mc-heads.net/head` Minecraft head image provider; images are cached by betterUC
 
 Access codes are only shown once. The server stores SHA-256 hashes with a secret pepper.

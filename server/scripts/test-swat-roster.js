@@ -17,6 +17,17 @@ test("normalizes SWAT roles independently from faction ranks", () => {
   assert.deepEqual(members.map(member => member.role), ["leader", "supervisor", "member"]);
 });
 
+test("keeps configured SWAT examiners when the server omits the supervisor marker", () => {
+  const members = normalizeMembers([
+    { username: "36Flo", factionRank: 6, role: "leader" },
+    { username: "FABI1441", factionRank: 4, role: "supervisor" },
+    { username: "mteii", factionRank: 4, role: "member" }
+  ], { supervisorOverrides: "mteii" });
+
+  assert.equal(members.find(member => member.username === "mteii").role, "supervisor");
+  assert.equal(members.find(member => member.username === "36Flo").role, "leader");
+});
+
 test("persists and groups an uploaded SWAT roster", async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "betteruc-swat-"));
   const file = path.join(directory, "swat-roster.json");
@@ -29,7 +40,7 @@ test("persists and groups an uploaded SWAT roster", async () => {
     }
   };
   try {
-    const store = createSwatRosterStore({ file, renderer, slotLimit: 13 });
+    const store = createSwatRosterStore({ file, renderer, slotLimit: 13, supervisorOverrides: "mteii" });
     await store.load();
     const roster = await store.update({
       slotLimit: 13,
@@ -43,15 +54,16 @@ test("persists and groups an uploaded SWAT roster", async () => {
     assert.equal(roster.count, 3);
     assert.equal(roster.slotLimit, 13);
     assert.deepEqual(roster.groups.map(group => group.label), ["Leitung", "SWAT-Prüfer", "Member"]);
-    assert.deepEqual(roster.groups.map(group => group.members.length), [1, 1, 3]);
+    assert.deepEqual(roster.groups.map(group => group.members.length), [1, 2, 3]);
     assert.equal(roster.updatedBy, "FABI1441");
     assert.match(roster.hash, /^[a-f0-9]{12}$/);
     assert.equal((await store.getImage()).buffer.toString(), "png");
     assert.equal(renderedTitle, "S.W.A.T.");
 
-    const reloaded = createSwatRosterStore({ file, renderer, slotLimit: 13 });
+    const reloaded = createSwatRosterStore({ file, renderer, slotLimit: 13, supervisorOverrides: "mteii" });
     await reloaded.load();
     assert.deepEqual(reloaded.getRoster().members.map(member => member.username), ["36Flo", "FABI1441", "mteii"]);
+    assert.equal(reloaded.getRoster().members.find(member => member.username === "mteii").role, "supervisor");
   } finally {
     await fs.rm(directory, { recursive: true, force: true });
   }

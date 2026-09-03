@@ -6,6 +6,7 @@ const path = require("path");
 
 const fsp = fs.promises;
 const VALID_ROLES = new Set(["leader", "supervisor", "member"]);
+const DEFAULT_SUPERVISOR_OVERRIDES = "mteii";
 const DEFAULT_SWAT_MEMBERS = Object.freeze([
   { username: "36Flo", factionRank: 6, role: "leader" },
   { username: "DuckOderSo", factionRank: 5, role: "member" },
@@ -42,12 +43,27 @@ function rolePriority(role) {
   return 0;
 }
 
-function normalizeMembers(entries) {
+function parseUsernameSet(value) {
+  const entries = value instanceof Set
+    ? [...value]
+    : Array.isArray(value)
+      ? value
+      : String(value || "").split(",");
+  return new Set(entries
+    .map(entry => String(entry || "").trim().toLowerCase())
+    .filter(Boolean));
+}
+
+function normalizeMembers(entries, options = {}) {
+  const supervisorOverrides = parseUsernameSet(options.supervisorOverrides);
   const byName = new Map();
   for (const entry of Array.isArray(entries) ? entries : []) {
-    const member = normalizeMember(entry);
+    let member = normalizeMember(entry);
     if (!member) continue;
     const key = member.username.toLowerCase();
+    if (member.role !== "leader" && supervisorOverrides.has(key)) {
+      member = { ...member, role: "supervisor" };
+    }
     const previous = byName.get(key);
     if (!previous || rolePriority(member.role) > rolePriority(previous.role)) byName.set(key, member);
   }
@@ -107,7 +123,12 @@ function createSwatRosterStore(options = {}) {
   const file = options.file;
   const defaultSlotLimit = positiveInteger(options.slotLimit, 13);
   const renderer = options.renderer;
-  const defaultMembers = normalizeMembers(options.defaultMembers || DEFAULT_SWAT_MEMBERS);
+  const supervisorOverrides = parseUsernameSet(
+    options.supervisorOverrides === undefined
+      ? DEFAULT_SUPERVISOR_OVERRIDES
+      : options.supervisorOverrides
+  );
+  const defaultMembers = normalizeMembers(options.defaultMembers || DEFAULT_SWAT_MEMBERS, { supervisorOverrides });
   let state = {
     version: 1,
     slotLimit: defaultSlotLimit,
@@ -121,7 +142,7 @@ function createSwatRosterStore(options = {}) {
   async function load() {
     try {
       const parsed = JSON.parse(await fsp.readFile(file, "utf8"));
-      const parsedMembers = normalizeMembers(parsed.members);
+      const parsedMembers = normalizeMembers(parsed.members, { supervisorOverrides });
       const members = parsedMembers.length > 0 ? parsedMembers : defaultMembers;
       const slotLimit = positiveInteger(parsed.slotLimit, defaultSlotLimit);
       state = {
@@ -146,7 +167,7 @@ function createSwatRosterStore(options = {}) {
   }
 
   async function update(payload, updatedBy) {
-    const members = normalizeMembers(payload?.members);
+    const members = normalizeMembers(payload?.members, { supervisorOverrides });
     if (members.length === 0) throw new Error("Die SWAT-Liste enthält keine gültigen Mitglieder.");
     const slotLimit = positiveInteger(payload?.slotLimit, defaultSlotLimit);
     state = {
@@ -184,6 +205,7 @@ function createSwatRosterStore(options = {}) {
 }
 
 module.exports = {
+  DEFAULT_SUPERVISOR_OVERRIDES,
   DEFAULT_SWAT_MEMBERS,
   createSwatRosterStore,
   normalizeMembers,
