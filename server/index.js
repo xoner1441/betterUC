@@ -63,7 +63,7 @@ const policeRoster = createPoliceRosterService({
   rosterCacheMs: process.env.POLICE_ROSTER_CACHE_MS,
   headCacheMs: process.env.POLICE_ROSTER_HEAD_CACHE_MS,
   timeoutMs: process.env.POLICE_ROSTER_TIMEOUT_MS,
-  slotLimit: process.env.TEAMSPEAK_FACTION_SLOT_LIMIT,
+  slotLimit: process.env.POLICE_FACTION_SLOT_LIMIT,
   unitOverrides: process.env.TEAMSPEAK_FACTION_UNIT_OVERRIDES
 });
 const swatRoster = createSwatRosterStore({

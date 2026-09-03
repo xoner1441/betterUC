@@ -220,7 +220,7 @@ function createPoliceRosterService(options = {}) {
   const fetchImpl = options.fetchImpl || globalThis.fetch;
   const apiUrl = String(options.apiUrl || DEFAULT_API_URL);
   const headBaseUrl = String(options.headBaseUrl || DEFAULT_HEAD_BASE_URL).replace(/\/+$/, "");
-  const slotLimit = positiveInteger(options.slotLimit, 42);
+  const slotLimit = positiveInteger(options.slotLimit, 44);
   const rosterCacheMs = positiveInteger(options.rosterCacheMs, DEFAULT_ROSTER_CACHE_MS, 1000);
   const headCacheMs = positiveInteger(options.headCacheMs, DEFAULT_HEAD_CACHE_MS, 1000);
   const unitOverrides = options.unitOverrides instanceof Map
@@ -279,7 +279,7 @@ function createPoliceRosterService(options = {}) {
         groups: groupMembers(members),
         count: members.length,
         slotLimit,
-        hash: rosterVersion(members),
+        hash: rosterVersion(members, slotLimit),
         source: apiUrl,
         generatedAt: new Date().toISOString()
       };

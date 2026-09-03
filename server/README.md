@@ -87,7 +87,7 @@ Node service for the betterUC website, automatic Minecraft authentication and We
 - `TEAMSPEAK_FACTION_SLUG=police` selects the police faction
 - `TEAMSPEAK_FACTION_SYNC_MS=600000` refresh interval, with a minimum of one minute
 - `TEAMSPEAK_FACTION_RENDER_MODE=image` embeds the generated betterUC roster image instead of raw member text
-- `TEAMSPEAK_FACTION_SLOT_LIMIT=42` police faction slot limit shown below the roster
+- `POLICE_FACTION_SLOT_LIMIT=44` in-game police faction slot limit shown in the roster
 - `TEAMSPEAK_FACTION_SECTION_START=PERSONALAKTE` start heading of the managed description section
 - `TEAMSPEAK_FACTION_SECTION_END=STRAFZAHLUNGEN` end heading after the managed description section
 - `TEAMSPEAK_FACTION_UNIT_OVERRIDES=FABI1441:SWAT,mteii:SWAT` optional units missing from the public API

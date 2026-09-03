@@ -7,7 +7,7 @@ const DEFAULT_API_BASE_URL = "https://api.unicacity.eu/api/factions";
 const DEFAULT_SYNC_INTERVAL_MS = 10 * 60 * 1000;
 const DEFAULT_QUERY_TIMEOUT_MS = 10 * 1000;
 const MIN_SYNC_INTERVAL_MS = 60 * 1000;
-const TEAM_SPEAK_ROSTER_RENDER_REVISION = "ts3-6";
+const TEAM_SPEAK_ROSTER_RENDER_REVISION = "ts3-7";
 const TEAM_SPEAK_SWAT_RENDER_REVISION = "ts3-swat-2";
 
 function envBoolean(value, fallback = false) {
@@ -115,7 +115,7 @@ function formatPersonnelSection(members, options = {}) {
   const overrides = options.unitOverrides instanceof Map
     ? options.unitOverrides
     : parseUnitOverrides(options.unitOverrides);
-  const slotLimit = positiveInteger(options.slotLimit, 42);
+  const slotLimit = positiveInteger(options.slotLimit, 44);
   const leaders = members.filter(member => member.isLeader || member.rankNumber >= 5);
   const council = members.filter(member => !leaders.includes(member) && member.rankNumber === 4);
   const regular = members.filter(member => !leaders.includes(member) && !council.includes(member));
@@ -151,16 +151,18 @@ function formatPersonnelSection(members, options = {}) {
   return lines.join("\n");
 }
 
-function rosterVersion(members) {
-  const value = members
+function rosterVersion(members, slotLimit = "") {
+  const versionPrefix = String(slotLimit).trim() ? `${slotLimit}|` : "";
+  const value = `${versionPrefix}${members
     .map(member => `${member.username}:${member.uuid}:${member.rankNumber}:${member.rankName}:${member.isLeader ? 1 : 0}`)
-    .join("|");
+    .join("|")}`;
   return crypto.createHash("sha256").update(value).digest("hex").slice(0, 12);
 }
 
 function formatPersonnelImageEmbed(members, options = {}) {
   const baseUrl = String(options.publicBaseUrl || "https://betteruc.de").replace(/\/+$/, "");
-  const version = `${TEAM_SPEAK_ROSTER_RENDER_REVISION}-${rosterVersion(members)}`;
+  const slotLimit = positiveInteger(options.slotLimit, 44);
+  const version = `${TEAM_SPEAK_ROSTER_RENDER_REVISION}-${slotLimit}-${rosterVersion(members, slotLimit)}`;
   return `[url=${baseUrl}/polizei/mitglieder][img]${baseUrl}/api/teamspeak/police-roster.png?v=${version}[/img][/url]`;
 }
 
@@ -364,7 +366,7 @@ async function synchronizeFactionChannel(config, members, options = {}) {
 
     const imageFormatter = options.formatImageEmbed || formatPersonnelImageEmbed;
     const personnelSection = config.renderMode === "image"
-      ? imageFormatter(members, { publicBaseUrl: config.publicBaseUrl })
+      ? imageFormatter(members, { publicBaseUrl: config.publicBaseUrl, slotLimit: config.slotLimit })
       : formatPersonnelSection(members, {
         slotLimit: config.slotLimit,
         unitOverrides: config.unitOverrides
@@ -396,7 +398,7 @@ function readConfig(env) {
     enabled: envBoolean(env.TEAMSPEAK_FACTION_SYNC_ENABLED, false),
     slug,
     apiUrl: `${apiBaseUrl}/${encodeURIComponent(slug)}/members`,
-    slotLimit: positiveInteger(env.TEAMSPEAK_FACTION_SLOT_LIMIT, 42),
+    slotLimit: positiveInteger(env.POLICE_FACTION_SLOT_LIMIT, 44),
     unitOverrides: parseUnitOverrides(env.TEAMSPEAK_FACTION_UNIT_OVERRIDES),
     renderMode: String(env.TEAMSPEAK_FACTION_RENDER_MODE || "image").trim().toLowerCase(),
     publicBaseUrl: String(env.PUBLIC_BASE_URL || "https://betteruc.de").replace(/\/+$/, ""),

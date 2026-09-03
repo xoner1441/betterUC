@@ -65,7 +65,7 @@ test("loads members, caches heads and renders the TeamSpeak PNG", async () => {
     apiUrl: "https://example.test/members",
     headBaseUrl: "https://heads.example.test/head",
     unitOverrides: "FABI1441:SWAT",
-    slotLimit: 42
+    slotLimit: 44
   });
 
   const roster = await service.getRoster();
@@ -74,6 +74,7 @@ test("loads members, caches heads and renders the TeamSpeak PNG", async () => {
   const metadata = await sharp(image.buffer).metadata();
 
   assert.equal(roster.count, 3);
+  assert.equal(roster.slotLimit, 44);
   assert.equal(roster.members.find(member => member.username === "FABI1441").unit, "SWAT");
   assert.match(roster.hash, /^[a-f0-9]{12}$/);
   assert.equal(metadata.format, "png");
@@ -85,8 +86,8 @@ test("loads members, caches heads and renders the TeamSpeak PNG", async () => {
   assert.equal(headRequests, MEMBERS.length);
 });
 
-test("keeps a full 42-member roster below TeamSpeak's image height limit", async () => {
-  const ranks = [5, 4, 3, 2, 1, ...Array(37).fill(0)];
+test("keeps a full 44-member roster below TeamSpeak's image height limit", async () => {
+  const ranks = [5, 4, 3, 2, 1, ...Array(39).fill(0)];
   const members = ranks.map((rankNumber, index) => ({
     username: `Member${index + 1}`,
     uuid: "",
@@ -94,12 +95,12 @@ test("keeps a full 42-member roster below TeamSpeak's image height limit", async
     rankName: rankNumber === 5 ? "Chief" : rankNumber === 4 ? "Commander" : `Rank ${rankNumber}`,
     isLeader: rankNumber === 5
   }));
-  const service = createPoliceRosterService({ slotLimit: 42 });
+  const service = createPoliceRosterService({ slotLimit: 44 });
   const buffer = await service.renderImage({
     members,
     groups: groupMembers(members),
     count: members.length,
-    slotLimit: 42
+    slotLimit: 44
   });
   const metadata = await sharp(buffer).metadata();
 

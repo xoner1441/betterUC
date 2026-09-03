@@ -25,11 +25,11 @@ const SAMPLE_MEMBERS = [
 test("normalizes, sorts and formats the official police roster", () => {
   const members = normalizeMembers(SAMPLE_MEMBERS);
   assert.deepEqual(members.map(member => member.username), ["36Flo", "FABI1441", "mteii"]);
-  const personnel = formatPersonnelSection(members, { slotLimit: 42 });
+  const personnel = formatPersonnelSection(members, { slotLimit: 44 });
   assert.match(personnel, /Leader/);
   assert.match(personnel, /Polizeirat/);
   assert.match(personnel, /\[UCPD\] \| 4 \| FABI1441/);
-  assert.match(personnel, /Slots: 3\/42/);
+  assert.match(personnel, /Slots: 3\/44/);
 });
 
 test("creates a cache-busted, clickable TeamSpeak roster image", () => {
@@ -39,7 +39,7 @@ test("creates a cache-busted, clickable TeamSpeak roster image", () => {
   ]);
   const embed = formatPersonnelImageEmbed(members, { publicBaseUrl: "https://betteruc.de/" });
   assert.match(embed, /^\[url=https:\/\/betteruc\.de\/polizei\/mitglieder\]/);
-  assert.match(embed, /\[img\]https:\/\/betteruc\.de\/api\/teamspeak\/police-roster\.png\?v=ts3-6-[a-f0-9]{12}\[\/img\]/);
+  assert.match(embed, /\[img\]https:\/\/betteruc\.de\/api\/teamspeak\/police-roster\.png\?v=ts3-7-44-[a-f0-9]{12}\[\/img\]/);
   assert.match(embed, /\[\/url\]$/);
   assert.equal(members.find(member => member.username === "FABI1441").uuid.length, 32);
 });
@@ -72,6 +72,7 @@ test("reads an independent SWAT TeamSpeak channel configuration", () => {
 test("uses the production police and SWAT channel defaults", () => {
   const config = readConfig({});
   assert.equal(config.channelId, 109);
+  assert.equal(config.slotLimit, 44);
   assert.equal(config.swatChannelId, 108);
   assert.equal(config.swatSectionStartLabel, "EINHEITSLISTE");
   assert.equal(config.swatSectionEndLabel, "");
@@ -98,14 +99,14 @@ test("replaces only the personnel section in the existing description", () => {
   ].join("\n");
   const members = normalizeMembers(SAMPLE_MEMBERS);
   const personnel = formatPersonnelSection(members, {
-    slotLimit: 42,
+    slotLimit: 44,
     unitOverrides: "FABI1441:SWAT"
   });
   const result = replacePersonnelSection(current, personnel);
 
   assert.match(result, /\[img\]https:\/\/example\.test\/header\.png\[\/img\]/);
   assert.match(result, /\[SWAT\] \| 4 \| FABI1441/);
-  assert.match(result, /Slots: 3\/42/);
+  assert.match(result, /Slots: 3\/44/);
   assert.doesNotMatch(result, /AlterName/);
   assert.match(result, /\[size=18\]STRAFZAHLUNGEN\[\/size\]\nIngame -\nFehlverhalten 2\.000\$/);
 });
@@ -229,7 +230,7 @@ test("reads the live channel template and avoids unchanged writes", async () => 
     virtualServerId: 0,
     virtualServerPort: 9987,
     channelId: 109,
-    slotLimit: 42,
+    slotLimit: 44,
     unitOverrides: new Map([["fabi1441", "SWAT"]]),
     sectionStartLabel: "PERSONALAKTE",
     sectionEndLabel: "STRAFZAHLUNGEN"
