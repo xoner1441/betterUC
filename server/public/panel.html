@@ -86,10 +86,17 @@
           </section>
           <section class="panel-gallery-block">
             <div class="panel-history-title">
-              <span>Screenshot-Galerie</span>
+              <span>Mediengalerie</span>
               <small id="panelGalleryCount">wird geladen</small>
             </div>
-            <p class="panel-gallery-hint">Hier siehst du nur deine eigenen Uploads. Screenshots bleiben sieben Tage verfügbar.</p>
+            <p class="panel-gallery-hint">Nur deine hochgeladenen Screenshots und Clips. Jeder mit einem geteilten Link kann das einzelne Medium ansehen. Lokale Dateien bleiben auf deinem Rechner.</p>
+            <p id="clipUploadAvailability" class="quiet" hidden>Clip-Uploads sind auf dem Server noch nicht aktiviert. Screenshots bleiben verfügbar.</p>
+            <div class="media-filters" role="group" aria-label="Medien filtern">
+              <button class="button secondary" type="button" data-media-filter="all" aria-pressed="true">Alle</button>
+              <button class="button secondary" type="button" data-media-filter="screenshot" aria-pressed="false">Screenshots</button>
+              <button class="button secondary" type="button" data-media-filter="clip" aria-pressed="false">Clips</button>
+              <button class="button secondary" type="button" id="mediaRefresh">Aktualisieren</button>
+            </div>
             <div id="panelGallery" class="panel-gallery-grid" aria-live="polite"></div>
           </section>
         </div>

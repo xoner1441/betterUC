@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const fsp = require("fs").promises;
 const path = require("path");
 const { Pool } = require("pg");
+const { createClipRepository } = require("./clipRepository");
 
 const ROLE_VALUES = new Set(["user", "vip", "partner", "helper", "admin"]);
 const STATUS_VALUES = new Set(["active", "revoked"]);
@@ -108,6 +109,7 @@ function createDatabase(options = {}) {
     };
     return {
       enabled: false,
+      clips: null,
       required,
       async initialize() {},
       async loadAccounts() { return []; },
@@ -1280,6 +1282,7 @@ function createDatabase(options = {}) {
 
   return {
     enabled: true,
+    clips: createClipRepository(pool),
     required,
     initialize,
     loadAccounts,

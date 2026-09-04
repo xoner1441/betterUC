@@ -5,5 +5,6 @@
   "key.betteruc.ping": "Place Ping",
   "key.betteruc.reinf_accept": "Accept reinforcement",
   "key.betteruc.zoom": "Zoom",
-  "key.betteruc.hand_toggle": "Toggle main hand"
+  "key.betteruc.hand_toggle": "Toggle main hand",
+  "key.betteruc.clip_save": "Save clip (last seconds)"
 }

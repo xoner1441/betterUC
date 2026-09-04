@@ -114,13 +114,18 @@ public final class ChatCustomizationFormatter {
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern SUPPORT_REQUEST_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(.+?)!\\s+(.+?)\\s+([^\\s]+)\\s+ben\\u00F6tigt\\s+Unterst\\u00FCtzung\\s+in\\s+der\\s+N\\u00E4he\\s+von\\s+(.+?)!\\s*\\((\\d+)\\s*Meter\\s+entfernt\\)\\s*$",
+            "^\\s*(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(.+?)!\\s+(.+?)\\s+([^\\s]+)\\s+ben\\u00F6tigt\\s+Unterst\\u00FCtzung\\s+in\\s+der\\s+N\\u00E4he\\s+von\\s+(.+?)!\\s*\\((\\d+)\\s*Meter\\s+entfernt\\)\\s*(?:\\(([^()]+)\\))?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern SUPPORT_RESPONSE_PATTERN = Pattern.compile(
             "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(.+?)\\s+([^\\s]+)\\s+kommt\\s+zum\\s+Verst\\u00E4rkungsruf\\s+von\\s+([^\\s]+)!\\s*\\((\\d+)\\s*Meter\\s+entfernt\\)\\s*$",
             Pattern.CASE_INSENSITIVE
     );
+    private static final Pattern DRUG_AMOUNT_ENTRY_PATTERN = Pattern.compile(
+            "^\\s*([0-9][0-9.]*)\\s*([A-Za-z]*)\\s+(Medizinische\\s+Kr(?:ä|ae|a)uter|Bl(?:ü|ue|u)tenharz|Wundert(?:ü|ue|u)te|Kristalle|Kr(?:ä|ae|a)uter|Pulver)\\s*$",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final int DRUG_AMOUNT_LINE_MAX_CHARS = 46;
 
     private static Pending pending;
     private static PendingTicket pendingTicket;
@@ -145,7 +150,8 @@ public final class ChatCustomizationFormatter {
                 config.chatActionTextStyle,
                 config.chatHeadlineSeparatorStyle,
                 config.chatCustomizationGradientEnabled,
-                GradientPalette.configured(config)
+                GradientPalette.configured(config),
+                ReinforcementStyle.configured(config)
         );
         return result == null ? null : result.withInteractionFrom(original);
     }
@@ -192,6 +198,20 @@ public final class ChatCustomizationFormatter {
             boolean gradientEnabled,
             GradientPalette palette
     ) {
+        return transform(raw, wpsHqEnabled, reinfEnabled, actionTextStyle, separatorStyle,
+                gradientEnabled, palette, ReinforcementStyle.defaults());
+    }
+
+    private static Result transform(
+            String raw,
+            boolean wpsHqEnabled,
+            boolean reinfEnabled,
+            String actionTextStyle,
+            String separatorStyle,
+            boolean gradientEnabled,
+            GradientPalette palette,
+            ReinforcementStyle reinforcementStyle
+    ) {
         HeadlineStyle headlineStyle = new HeadlineStyle(
                 actionTextStyle,
                 separatorStyle,
@@ -233,10 +253,19 @@ public final class ChatCustomizationFormatter {
             String player = supportRequest.group(3);
             String location = supportRequest.group(4);
             String meters = supportRequest.group(5);
-            return Result.replaceReinforcement(List.of(
-                    supportHeadline(action, player),
-                    supportDetail(isKnownFaction(source) ? source : "", location, meters + "m")
-            ));
+            boolean drugReinforcement = key(action).equals("drogenabnahme");
+            List<Component> messages = new ArrayList<>();
+            messages.add(drugReinforcement
+                    ? supportDrugHeadline(player, reinforcementStyle)
+                    : supportHeadline(action, player, reinforcementStyle));
+            messages.add(drugReinforcement
+                    ? supportDrugLocationDetail(location, meters, reinforcementStyle)
+                    : supportDetail(isKnownFaction(source) ? source : "", location, meters + "m",
+                            reinforcementStyle));
+            if (drugReinforcement) {
+                messages.addAll(supportDrugAmountDetails(supportRequest.group(6), reinforcementStyle));
+            }
+            return Result.replaceReinforcement(messages);
         }
 
         Matcher supportResponse = SUPPORT_RESPONSE_PATTERN.matcher(clean);
@@ -246,8 +275,9 @@ public final class ChatCustomizationFormatter {
             String target = supportResponse.group(3);
             String meters = supportResponse.group(4);
             return Result.replaceReinforcement(List.of(
-                    supportHeadline("UNTERWEGS", actor),
-                    supportDetail(isKnownFaction(source) ? source : "", "zu " + target, meters + "m")
+                    supportHeadline("UNTERWEGS", actor, reinforcementStyle),
+                    supportDetail(isKnownFaction(source) ? source : "", "zu " + target, meters + "m",
+                            reinforcementStyle)
             ));
         }
         }
@@ -746,32 +776,132 @@ public final class ChatCustomizationFormatter {
                 .append(headlineStyle.gradientEnabled() ? payTargetName(target, headlineStyle) : payName(target));
     }
 
-    private static Component supportHeadline(String action, String target) {
+    private static Component supportHeadline(String action, String target, ReinforcementStyle reinforcementStyle) {
         return supportText(action == null ? "" : action.trim().toLowerCase(Locale.ROOT),
-                BetterUCConfig.INSTANCE.reinfLabelColor)
+                reinforcementStyle.labelColor(), reinforcementStyle)
                 .append(separator(" \u25C6 "))
-                .append(supportName(target));
+                .append(supportName(target, reinforcementStyle));
     }
 
-    private static Component supportDetail(String source, String location, String suffix) {
+    private static Component supportDrugHeadline(String target, ReinforcementStyle reinforcementStyle) {
+        return supportText(SmallCapsText.convert("drogenabnahme"), reinforcementStyle.labelColor(), reinforcementStyle)
+                .append(separator(" ✦ "))
+                .append(supportName(target, reinforcementStyle));
+    }
+
+    private static Component supportDrugLocationDetail(
+            String location,
+            String meters,
+            ReinforcementStyle reinforcementStyle
+    ) {
+        return Component.literal("\u00BB ").withStyle(ChatFormatting.GRAY)
+                .append(supportText(location == null ? "" : location.trim(),
+                        reinforcementStyle.textColor(), reinforcementStyle))
+                .append(separator(" ✦ "))
+                .append(supportText((meters == null ? "" : meters.trim()) + " m entfernt",
+                        reinforcementStyle.distanceColor(), reinforcementStyle));
+    }
+
+    private static Component supportDetail(
+            String source,
+            String location,
+            String suffix,
+            ReinforcementStyle reinforcementStyle
+    ) {
         MutableComponent text = Component.literal("\u00BB ").withStyle(ChatFormatting.GRAY);
         boolean hasSource = source != null && !source.isBlank();
         if (hasSource) {
-            text.append(supportText(source.trim(), BetterUCConfig.INSTANCE.reinfTextColor))
+            text.append(supportText(source.trim(), reinforcementStyle.textColor(), reinforcementStyle))
                     .append(separator(" | "));
         }
-        text.append(supportText(location == null ? "" : location.trim(), BetterUCConfig.INSTANCE.reinfTextColor));
+        text.append(supportText(location == null ? "" : location.trim(),
+                reinforcementStyle.textColor(), reinforcementStyle));
         if (suffix != null && !suffix.isBlank()) {
             text.append(separator(" | "))
-                    .append(supportText(suffix.trim(), BetterUCConfig.INSTANCE.reinfDistanceColor));
+                    .append(supportText(suffix.trim(), reinforcementStyle.distanceColor(), reinforcementStyle));
         }
         return text;
     }
 
+    private static List<Component> supportDrugAmountDetails(
+            String rawAmounts,
+            ReinforcementStyle reinforcementStyle
+    ) {
+        List<DrugAmount> amounts = parseDrugAmounts(rawAmounts);
+        if (amounts.isEmpty()) return List.of();
+
+        List<Component> lines = new ArrayList<>();
+        List<DrugAmount> currentLine = new ArrayList<>();
+        int currentLength = 0;
+        for (DrugAmount amount : amounts) {
+            int separatorLength = currentLine.isEmpty() ? 0 : 3;
+            int nextLength = currentLength + separatorLength + amount.display().length();
+            if (!currentLine.isEmpty() && nextLength > DRUG_AMOUNT_LINE_MAX_CHARS) {
+                lines.add(supportDrugAmountDetail(currentLine, reinforcementStyle));
+                currentLine = new ArrayList<>();
+                currentLength = 0;
+                separatorLength = 0;
+            }
+            currentLine.add(amount);
+            currentLength += separatorLength + amount.display().length();
+        }
+        if (!currentLine.isEmpty()) {
+            lines.add(supportDrugAmountDetail(currentLine, reinforcementStyle));
+        }
+        return List.copyOf(lines);
+    }
+
+    private static Component supportDrugAmountDetail(
+            List<DrugAmount> amounts,
+            ReinforcementStyle reinforcementStyle
+    ) {
+        MutableComponent text = Component.literal("\u00BB ").withStyle(ChatFormatting.GRAY);
+        for (int index = 0; index < amounts.size(); index++) {
+            if (index > 0) {
+                text.append(separator(" • "));
+            }
+            DrugAmount amount = amounts.get(index);
+            text.append(supportText(amount.amount(), reinforcementStyle.distanceColor(), reinforcementStyle))
+                    .append(Component.literal(" "))
+                    .append(supportText(amount.name(), reinforcementStyle.textColor(), reinforcementStyle));
+        }
+        return text;
+    }
+
+    private static List<DrugAmount> parseDrugAmounts(String rawAmounts) {
+        if (rawAmounts == null || rawAmounts.isBlank()) return List.of();
+        List<DrugAmount> amounts = new ArrayList<>();
+        for (String entry : rawAmounts.split("\\s*,\\s*")) {
+            Matcher matcher = DRUG_AMOUNT_ENTRY_PATTERN.matcher(entry);
+            if (!matcher.matches()) continue;
+            String quantity = matcher.group(1) + matcher.group(2).toLowerCase(Locale.ROOT);
+            amounts.add(new DrugAmount(quantity, canonicalDrugName(matcher.group(3))));
+        }
+        return List.copyOf(amounts);
+    }
+
+    private static String canonicalDrugName(String rawName) {
+        String normalized = rawName == null
+                ? ""
+                : rawName.trim().toLowerCase(Locale.ROOT)
+                        .replace("ä", "ae")
+                        .replace("ü", "ue");
+        return switch (normalized) {
+            case "pulver" -> "Pulver";
+            case "kraeuter", "krauter" -> "Kräuter";
+            case "kristalle" -> "Kristalle";
+            case "wundertuete", "wundertute" -> "Wundertüte";
+            case "bluetenharz", "blutenharz" -> "Blütenharz";
+            case "medizinische kraeuter", "medizinische krauter" -> "Medizinische Kräuter";
+            default -> rawName == null ? "" : rawName.trim();
+        };
+    }
+
     public static List<Component> reinforcementPreview() {
+        ReinforcementStyle reinforcementStyle = ReinforcementStyle.configured(BetterUCConfig.INSTANCE);
         return List.of(
-                supportHeadline("REINF", "FABI1441"),
-                supportDetail("FBI", "Bank", "120m")
+                supportHeadline("REINF", "FABI1441", reinforcementStyle),
+                supportDetail("FBI", "Bank", "120m", reinforcementStyle)
         );
     }
 
@@ -1033,13 +1163,17 @@ public final class ChatCustomizationFormatter {
         return (red << 16) | (green << 8) | blue;
     }
 
-    private static MutableComponent supportName(String value) {
-        return supportText(value == null ? "" : value.trim(), BetterUCConfig.INSTANCE.reinfTextColor);
+    private static MutableComponent supportName(String value, ReinforcementStyle reinforcementStyle) {
+        return supportText(value == null ? "" : value.trim(), reinforcementStyle.textColor(), reinforcementStyle);
     }
 
-    private static MutableComponent supportText(String value, int configuredColor) {
-        int color = BetterUCConfig.INSTANCE.reinfUniformColorEnabled
-                ? BetterUCConfig.INSTANCE.reinfUniformColor
+    private static MutableComponent supportText(
+            String value,
+            int configuredColor,
+            ReinforcementStyle reinforcementStyle
+    ) {
+        int color = reinforcementStyle.uniformColorEnabled()
+                ? reinforcementStyle.uniformColor()
                 : configuredColor;
         return Component.literal(value == null ? "" : value)
                 .setStyle(Style.EMPTY.withColor(color & 0xFFFFFF));
@@ -1112,6 +1246,40 @@ public final class ChatCustomizationFormatter {
     }
 
     private record PendingTicket(String actor, String target, String amount, long createdAtMs) {
+    }
+
+    private record DrugAmount(String amount, String name) {
+        private String display() {
+            return amount + " " + name;
+        }
+    }
+
+    private record ReinforcementStyle(
+            int labelColor,
+            int textColor,
+            int distanceColor,
+            int uniformColor,
+            boolean uniformColorEnabled
+    ) {
+        private static ReinforcementStyle defaults() {
+            return new ReinforcementStyle(
+                    BetterUCConfig.DEFAULT_REINF_LABEL_COLOR,
+                    BetterUCConfig.DEFAULT_REINF_TEXT_COLOR,
+                    BetterUCConfig.DEFAULT_REINF_DISTANCE_COLOR,
+                    BetterUCConfig.DEFAULT_REINF_UNIFORM_COLOR,
+                    false
+            );
+        }
+
+        private static ReinforcementStyle configured(BetterUCConfig config) {
+            return new ReinforcementStyle(
+                    config.reinfLabelColor,
+                    config.reinfTextColor,
+                    config.reinfDistanceColor,
+                    config.reinfUniformColor,
+                    config.reinfUniformColorEnabled
+            );
+        }
     }
 
     record GradientPalette(

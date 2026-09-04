@@ -12,6 +12,8 @@ const { promisify } = require("util");
 const { WebSocketServer } = require("ws");
 const { startDiscordBot } = require("./discordBot");
 const { createDatabase } = require("./database");
+const { createClipStorage } = require("./clipStorage");
+const { createClipRoutes } = require("./clipRoutes");
 const { selectPreferredAccount } = require("./accountResolution");
 const { createPoliceRosterService } = require("./policeRoster");
 const { createSwatRosterStore } = require("./swatRoster");
@@ -136,6 +138,9 @@ let discordBot = {
 };
 let teamSpeakFactionSync = { stop() {} };
 const database = createDatabase();
+const clipRoutes = createClipRoutes({ database, storage: createClipStorage(), authenticate, requireUserSession,
+  json, readJsonBody, isRateLimited, screenshotGalleryItem, publicBaseUrl: PUBLIC_BASE_URL.replace(/\/$/, '') });
+let clipCleanupTimer;
 
 function nowIso() {
   return new Date().toISOString();
@@ -1732,7 +1737,7 @@ async function handleSharedScreenshot(req, res, id) {
     res.writeHead(200, {
       "content-type": "image/png",
       "content-length": stat.size,
-      "content-disposition": `inline; filename="${cleanScreenshotName(upload.originalName)}"`,
+      "content-disposition": `${new URL(req.url, 'http://localhost').searchParams.get('download') === '1' ? 'attachment' : 'inline'}; filename="${cleanScreenshotName(upload.originalName)}"`,
       "cache-control": `public, max-age=${maxAge}, immutable`,
       "x-content-type-options": "nosniff"
     });
@@ -3087,6 +3092,14 @@ async function serveStatic(req, res, url) {
 
 async function handleHttp(req, res) {
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+  if (await clipRoutes.handle(req, res, url)) return;
+  if (req.method === 'GET' && /^\/c\/[a-zA-Z0-9_-]{32}$/.test(url.pathname)) {
+    const body = await fsp.readFile(path.join(PUBLIC_DIR, 'clip.html'));
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store',
+      'referrer-policy': 'no-referrer', 'x-robots-tag': 'noindex, nofollow', 'x-content-type-options': 'nosniff',
+      'content-security-policy': "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://*.r2.cloudflarestorage.com; media-src 'self' https://*.r2.cloudflarestorage.com; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'" });
+    res.end(body); return;
+  }
 
   if (req.method === "GET" && url.pathname === "/health") {
     json(res, 200, {
@@ -3416,6 +3429,9 @@ async function main() {
   await loadWasteDropAreas();
   await fsp.mkdir(SCREENSHOT_DIR, { recursive: true });
   await cleanupExpiredScreenshots();
+  await clipRoutes.cleanup().catch(() => console.warn('Clip cleanup temporarily unavailable'));
+  clipCleanupTimer = setInterval(() => { clipRoutes.cleanup().catch(() => console.warn('Clip cleanup will retry')); }, 60000);
+  clipCleanupTimer.unref?.();
   screenshotCleanupTimer = setInterval(() => {
     cleanupExpiredScreenshots().catch(error => {
       console.warn("Could not clean expired screenshots", error.message);
@@ -3518,6 +3534,7 @@ async function main() {
     clearInterval(backupTimer);
     clearInterval(updateWatchTimer);
     clearInterval(screenshotCleanupTimer);
+    clearInterval(clipCleanupTimer);
     try {
       await saveStore();
     } catch (error) {

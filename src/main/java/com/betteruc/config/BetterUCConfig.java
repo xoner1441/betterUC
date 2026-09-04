@@ -678,6 +678,19 @@ public class BetterUCConfig {
     public boolean autoUpdateEnabled = true;
     public boolean screenshotActionsEnabled = true;
     public boolean screenshotAutoCopyEnabled = false;
+    // Local opt-in only: deliberately excluded from cloud settings.
+    public boolean clipsEnabled = false;
+    public boolean clipsGameAudioEnabled = false;
+    public String clipAudioMode = ""; // Legacy game-only setting is migrated lazily.
+    public boolean clipsMicrophoneEnabled = false;
+    public String clipOutputDevice = "";
+    public String clipInputDevice = "";
+    public int clipOutputVolume = 100;
+    public int clipMicrophoneVolume = 100;
+    public int clipBufferSeconds = 30;
+    public int clipResolutionHeight = 1080;
+    public int clipFramesPerSecond = 60;
+    public String clipStorageParent = "";
     public boolean cloudSettingsEnabled = true;
     public boolean trashFilterEnabled = false;
     public boolean trashFilterCloseLockEnabled = false;

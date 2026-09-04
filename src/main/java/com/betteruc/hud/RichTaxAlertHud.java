@@ -122,6 +122,12 @@ public final class RichTaxAlertHud {
         }
     }
 
+    /** Reserve this card's space while it is visible, including its slide-out animation. */
+    public static int toastStackOffset() {
+        return BetterUCConfig.INSTANCE.richTaxAlertEnabled && shownBalance >= 0
+                && System.currentTimeMillis() < visibleUntilMs ? PANEL_HEIGHT + 6 : 0;
+    }
+
     private static void render(GuiGraphicsExtractor context) {
         long now = System.currentTimeMillis();
         if (!BetterUCConfig.INSTANCE.richTaxAlertEnabled) return;

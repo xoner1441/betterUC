@@ -17,6 +17,14 @@ const panelAccountMeta = document.querySelector("#panelAccountMeta");
 const panelHistory = document.querySelector("#panelHistory");
 const panelGallery = document.querySelector("#panelGallery");
 const panelGalleryCount = document.querySelector("#panelGalleryCount");
+let panelMediaEntries = [];
+let panelMediaFilter = 'all';
+document.querySelectorAll('[data-media-filter]').forEach(button => button.addEventListener('click', () => {
+  panelMediaFilter = button.dataset.mediaFilter;
+  document.querySelectorAll('[data-media-filter]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  renderScreenshotGallery(panelMediaEntries);
+}));
+document.querySelector('#mediaRefresh')?.addEventListener('click', () => void loadPanelScreenshots());
 const panelUpdated = document.querySelector("#panelUpdated");
 const panelRefresh = document.querySelector("#panelRefresh");
 const panelAdmin = document.querySelector("#panelAdmin");
@@ -617,12 +625,13 @@ function showSiteConfirm({
 
 function renderScreenshotGallery(screenshots) {
   if (!panelGallery) return;
-  const entries = Array.isArray(screenshots) ? screenshots : [];
+  panelMediaEntries = Array.isArray(screenshots) ? screenshots : [];
+  const entries = panelMediaEntries.filter(entry => panelMediaFilter === 'all' || entry.kind === panelMediaFilter);
   if (panelGalleryCount) {
-    panelGalleryCount.textContent = entries.length === 1 ? "1 Screenshot" : `${entries.length} Screenshots`;
+    panelGalleryCount.textContent = `${entries.length} von ${panelMediaEntries.length} Medien`;
   }
   if (entries.length === 0) {
-    panelGallery.innerHTML = `<p class="panel-gallery-empty">Noch keine aktiven Screenshot-Uploads vorhanden.</p>`;
+    panelGallery.innerHTML = `<p class="panel-gallery-empty">${panelMediaFilter === 'clip' ? 'Noch keine Clips hochgeladen. Nutze „Hochladen“ nach dem Speichern in der Mod.' : 'Keine aktiven Uploads in dieser Ansicht.'}</p>`;
     return;
   }
 
@@ -630,19 +639,24 @@ function renderScreenshotGallery(screenshots) {
     const relativeUrl = String(entry.url || `/s/${entry.id || ""}`);
     const absoluteUrl = new URL(relativeUrl, window.location.origin).href;
     const name = entry.originalName || "Minecraft-Screenshot";
+    const clip = entry.kind === 'clip';
+    const seconds = Math.max(0, Math.round(Number(entry.durationSeconds) || 0));
+    const duration = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
     return `
       <article class="panel-screenshot-card">
         <a class="panel-screenshot-preview" href="${escapeHtml(absoluteUrl)}" target="_blank" rel="noreferrer">
-          <img src="${escapeHtml(relativeUrl)}" alt="${escapeHtml(name)}" loading="lazy">
+          <img src="${escapeHtml(entry.previewUrl || relativeUrl)}" alt="${escapeHtml(name)}" loading="lazy">
+          ${clip ? `<span class="media-play" aria-hidden="true">▶</span><span class="media-duration">${duration}</span>` : ''}
         </a>
         <div class="panel-screenshot-body">
           <strong title="${escapeHtml(name)}">${escapeHtml(name)}</strong>
-          <span>${escapeHtml(formatBytes(entry.byteSize))} · ${escapeHtml(plainDateLabel(entry.createdAt))}</span>
+          <span>${clip ? 'Clip · ' : 'Screenshot · '}${escapeHtml(formatBytes(entry.byteSize))} · ${escapeHtml(plainDateLabel(entry.createdAt))}</span>
           <small>Verfügbar bis ${escapeHtml(plainDateLabel(entry.expiresAt))}</small>
           <div class="panel-screenshot-actions">
-            <a class="button secondary" href="${escapeHtml(absoluteUrl)}" target="_blank" rel="noreferrer">Öffnen</a>
+            <a class="button secondary" href="${escapeHtml(absoluteUrl)}" target="_blank" rel="noreferrer">${clip ? 'Ansehen' : 'Öffnen'}</a>
+            <a class="button secondary" href="${escapeHtml(entry.downloadUrl || relativeUrl)}" download>Herunterladen</a>
             <button class="button secondary" type="button" data-gallery-action="copy" data-url="${escapeHtml(absoluteUrl)}">Link kopieren</button>
-            <button class="button danger" type="button" data-gallery-action="delete" data-id="${escapeHtml(entry.id || "")}" data-name="${escapeHtml(name)}">Löschen</button>
+            <button class="button danger" type="button" data-gallery-action="delete" data-kind="${clip ? 'clip' : 'screenshot'}" data-id="${escapeHtml(entry.id || "")}" data-name="${escapeHtml(name)}">Löschen</button>
           </div>
         </div>
       </article>
@@ -655,7 +669,7 @@ function renderScreenshotGallery(screenshots) {
       try {
         await copyText(button.dataset.url || "");
         button.textContent = "Kopiert";
-        showSiteNotice("Screenshot-Link wurde kopiert.");
+        showSiteNotice("Medienlink wurde kopiert.");
       } catch (error) {
         button.textContent = "Fehler";
         button.title = error.message;
@@ -670,29 +684,30 @@ function renderScreenshotGallery(screenshots) {
 
   panelGallery.querySelectorAll('[data-gallery-action="delete"]').forEach(button => {
     button.addEventListener("click", async () => {
+      const type = button.dataset.kind === 'clip' ? 'Clip' : 'Screenshot';
       const confirmed = await showSiteConfirm({
-        title: "Screenshot löschen",
+        title: `${type} löschen`,
         message: `Soll „${button.dataset.name || "Minecraft-Screenshot"}“ endgültig gelöscht werden?`,
-        detail: "Der Screenshot und sein öffentlicher Link sind danach nicht mehr verfügbar.",
+        detail: `Der ${type} wird aus der Galerie entfernt und der Freigabelink gesperrt. Die lokale Originaldatei bleibt erhalten.`,
         confirmLabel: "Endgültig löschen"
       });
       if (!confirmed) return;
       button.disabled = true;
       try {
         const sessionToken = localStorage.getItem(PANEL_SESSION_KEY);
-        const response = await fetch(`/api/user/screenshots/${encodeURIComponent(button.dataset.id || "")}`, {
+        const response = await fetch(`/api/user/${type === 'Clip' ? 'clips' : 'screenshots'}/${encodeURIComponent(button.dataset.id || "")}`, {
           method: "DELETE",
           headers: { "x-betteruc-session": sessionToken || "" }
         });
         const data = await response.json();
-        if (!response.ok || !data.ok) throw new Error(data.error || "Screenshot konnte nicht gelöscht werden.");
+        if (!response.ok || !data.ok) throw new Error(data.error || `${type} konnte nicht gelöscht werden.`);
         await loadPanelScreenshots();
-        showSiteNotice("Screenshot wurde gelöscht.");
+        showSiteNotice(`${type} wurde gelöscht.`);
       } catch (error) {
         button.disabled = false;
         button.textContent = "Fehler";
         button.title = error.message;
-        showSiteNotice(error.message || "Screenshot konnte nicht gelöscht werden.", "error");
+        showSiteNotice(error.message || "Medium konnte nicht gelöscht werden.", "error");
       }
     });
   });
@@ -710,14 +725,18 @@ async function loadPanelScreenshots() {
   panelGallery.innerHTML = `<p class="panel-gallery-empty">Galerie wird geladen ...</p>`;
   if (panelGalleryCount) panelGalleryCount.textContent = "wird geladen";
   try {
-    const response = await fetch("/api/user/screenshots", {
+    const response = await fetch("/api/user/media", {
       cache: "no-store",
       headers: { "x-betteruc-session": sessionToken }
     });
     const data = await response.json();
     if (!response.ok || !data.ok) throw new Error(data.error || "Galerie konnte nicht geladen werden.");
-    renderScreenshotGallery(data.screenshots);
+    if (localStorage.getItem(PANEL_SESSION_KEY) !== sessionToken) return;
+    const availability = document.querySelector('#clipUploadAvailability');
+    if (availability) availability.hidden = data.clipUploadsEnabled !== false;
+    renderScreenshotGallery(data.media);
   } catch (error) {
+    if (localStorage.getItem(PANEL_SESSION_KEY) !== sessionToken) return;
     panelGallery.innerHTML = `<p class="panel-gallery-empty">${escapeHtml(error.message)}</p>`;
     if (panelGalleryCount) panelGalleryCount.textContent = "nicht erreichbar";
   }
@@ -770,6 +789,7 @@ function renderPanel(user) {
 }
 
 function showPanelLogin(messageText = "") {
+  panelMediaEntries = [];
   if (!panelLoginForm || !panelDashboard) return;
   panelLoginForm.hidden = false;
   panelDashboard.hidden = true;

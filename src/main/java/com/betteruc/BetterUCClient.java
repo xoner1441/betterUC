@@ -35,6 +35,7 @@ import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.RemoteFeatureFlagsClient;
 import com.betteruc.client.ReinforcementAcceptClient;
 import com.betteruc.client.ScreenshotActionsClient;
+import com.betteruc.client.clips.ClipCaptureClient;
 import com.betteruc.client.SecondChatManager;
 import com.betteruc.client.ServerCommandUtil;
 import com.betteruc.client.SwatRosterClient;
@@ -207,6 +208,7 @@ public class BetterUCClient implements ClientModInitializer {
         CloudSettingsClient.initialize();
         BetterUCFontManager.initialize();
         ScreenshotActionsClient.initialize();
+        ClipCaptureClient.initialize(BETTERUC_KEY_CATEGORY);
         AutoGaertnerClient.initialize();
         registerKeyMappings();
         registerHudElements();
@@ -325,6 +327,7 @@ public class BetterUCClient implements ClientModInitializer {
             registerBroadcastCommand(dispatcher);
             registerBetterUcOnlineCommand(dispatcher);
             ScreenshotActionsClient.registerCommands(dispatcher);
+            ClipCaptureClient.registerCommands(dispatcher);
         });
     }
 

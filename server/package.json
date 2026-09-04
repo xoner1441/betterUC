@@ -8,6 +8,7 @@
     "node": ">=20.9.0"
   },
   "scripts": {
+    "test:clips": "node --test scripts/test-clips.js",
     "start": "node index.js",
     "db:check": "node scripts/check-database.js",
     "db:import-json": "node scripts/import-json.js",
@@ -18,10 +19,15 @@
     "test:account-resolution": "node --test scripts/test-account-resolution.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1126.0",
+    "@aws-sdk/s3-request-presigner": "3.1126.0",
     "dejavu-fonts-ttf": "^2.37.3",
     "discord.js": "^14.27.0",
     "pg": "^8.16.3",
     "sharp": "^0.35.3",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8"
   }
 }

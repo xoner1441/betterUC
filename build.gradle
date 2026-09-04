@@ -39,6 +39,9 @@ sourceSets {
     }
 }
 
+apply from: 'gradle/clip-natives.gradle'
+def clipNativesJar = tasks.named('clipNativesJar')
+
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
@@ -57,6 +60,16 @@ dependencies {
     }
     testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+
+    // Clip prototype: in-process FFmpeg, no executables or runtime downloads.
+    // Deliberately do not depend on javacv-platform (which includes unrelated libraries/platforms).
+    ["org.bytedeco:javacpp:1.5.13", "org.bytedeco:javacpp:1.5.13:windows-x86_64",
+     "org.bytedeco:ffmpeg:8.0.1-1.5.13"].each { coordinate ->
+        implementation(coordinate) { transitive = false }
+        include(coordinate) { transitive = false }
+    }
+    clipNative('org.bytedeco:ffmpeg:8.0.1-1.5.13:windows-x86_64') { transitive = false }
+    implementation files(clipNativesJar)
 }
 
 processResources {
@@ -95,7 +108,10 @@ java {
 }
 
 jar {
+    from(clipNativesJar) { into "META-INF/jars" }
     from("LICENSE") { rename { "${it}_${project.base.archivesName.get()}" } }
+    from("CLIPS-THIRD-PARTY.md")
+    from("third-party/clips") { into "META-INF/licenses/clips" }
     def classifier = project.findProperty("modArchiveClassifier") ?: ""
     if (!classifier.toString().isBlank()) {
         archiveClassifier = classifier.toString()
@@ -104,6 +120,8 @@ jar {
 
 test {
     useJUnitPlatform()
+    systemProperty 'betteruc.clipHardwareTest', project.hasProperty('clipHardwareTest').toString()
+    systemProperty 'betteruc.clipAudioHardwareTest', project.hasProperty('clipAudioHardwareTest').toString()
 }
 
 def replaceLegacyMethodCalls = { String input, String methodName, String replacementName, String extraArgument ->

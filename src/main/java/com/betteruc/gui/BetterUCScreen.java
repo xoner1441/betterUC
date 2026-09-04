@@ -16,6 +16,10 @@ import com.betteruc.client.UserStatsClient;
 import com.betteruc.client.VersionChecker;
 import com.betteruc.client.WeaponEquipAnimationController;
 import com.betteruc.client.ZoomController;
+import com.betteruc.client.clips.ClipCaptureClient;
+import com.betteruc.client.clips.ClipSettings;
+import com.betteruc.client.clips.ClipAudioOptions;
+import net.minecraft.client.gui.screens.ConfirmScreen;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.BankBalanceHud;
 import com.betteruc.hud.ArmorHud;
@@ -81,6 +85,7 @@ public class BetterUCScreen extends Screen {
     private int updatesScrollOffset = 0;
     private int updatesContentHeight = 0;
     private String hudProfileNameDraft;
+    private String clipDurationDraft;
     private boolean hudProfileDropdownOpen = false;
     private boolean hudProfileDeleteConfirmation = false;
     private Button bugReportButton;
@@ -573,6 +578,50 @@ public class BetterUCScreen extends Screen {
                 y = addTimestampField(x, y, controlW);
             }
             case CONNECTION -> y = addConnectionControls(x, y, controlW);
+            case CLIPS -> {
+                y = addSectionHeader(x, y, controlW, "Lokale Clip-Beta", 0xFFFB7185);
+                y = addToggle(x, y, controlW, "Clip-Aufnahme", BetterUCConfig.INSTANCE.clipsEnabled,
+                        () -> ClipCaptureClient.setEnabled(!BetterUCConfig.INSTANCE.clipsEnabled));
+                y = addClipDurationControls(x, y, controlW);
+                y = addSectionHeader(x, y, controlW, "Aufnahmequalität", 0xFF38BDF8);
+                y = addButton(x, y, controlW, "Auflösung: max. "
+                        + ClipSettings.normalizeResolutionHeight(BetterUCConfig.INSTANCE.clipResolutionHeight) + "p", b -> {
+                    ClipCaptureClient.cycleResolution();
+                    saveConfig();
+                    refreshWidgets();
+                });
+                y = addButton(x, y, controlW, "Bildrate: Ziel "
+                        + ClipSettings.normalizeFps(BetterUCConfig.INSTANCE.clipFramesPerSecond) + " FPS", b -> {
+                    ClipCaptureClient.cycleFrameRate();
+                    saveConfig();
+                    refreshWidgets();
+                });
+                y = addInfo(x, y, controlW, "Video", "H.264 / Ziel "
+                        + ClipSettings.bitrateForPreset(BetterUCConfig.INSTANCE.clipResolutionHeight,
+                        BetterUCConfig.INSTANCE.clipFramesPerSecond) / 1_000_000 + " Mbit/s");
+                y = addInfo(x, y, controlW, "Bildformat", "Seitenverhältnis bleibt; kein Hochskalieren");
+                y = addInfo(x, y, controlW, "Qualitätswechsel", "Startet den Replay-Puffer neu");
+                y = addClipAudioControls(x, y, controlW);
+                y = addInfo(x, y, controlW, "Aufnahme", "Spiel inkl. Chat; kein Desktop");
+                y = addInfo(x, y, controlW, "Privat", "Lokal; Upload nur nach Bestätigung");
+                y = addInfo(x, y, controlW, "Hardware", "Windows x64 / NVIDIA / AMD / Intel");
+                y = addSectionHeader(x, y, controlW, "Speicherort", 0xFF38BDF8);
+                y = addInfo(x, y, controlW, "Ziel", ClipCaptureClient.storageLocationLabel());
+                Runnable refreshStorage = () -> {
+                    if (ClientCompat.currentScreen(minecraft) == this) refreshWidgets();
+                };
+                y = addButton(x, y, controlW, "Speicherort wählen …", b -> ClipCaptureClient.chooseStorageParent(refreshStorage));
+                y = addButton(x, y, controlW, "Standardspeicherort verwenden", b -> ClipCaptureClient.resetStorageParent(refreshStorage));
+                y = addInfo(x, y, controlW, "Eigener Ort", "Erstellt buclips im gewählten Ordner");
+                y = addInfo(x, y, controlW, "Bestehende Clips", "Bleiben am bisherigen Speicherort");
+                y = addSectionHeader(x, y, controlW, "Speichern & Testen", 0xFF38BDF8);
+                y = addInfo(x, y, controlW, "Hinweise", "Kurze Popups rechts / kein Dauersymbol");
+                y = addInfo(x, y, controlW, "Hotkey", "Steuerung > betterUC > Clip speichern");
+                y = addButton(x, y, controlW, "Letzte Sekunden speichern", b -> ClipCaptureClient.saveClip());
+                y = addButton(x, y, controlW, "Clip-Ordner öffnen", b -> ClipCaptureClient.openFolder());
+                y = addButton(x, y, controlW, "Letzten Clip hochladen …", b -> com.betteruc.client.clips.ClipUploadClient.open(this,null));
+                y = addButton(x, y, controlW, "Encoder / FPS / Fehler im Chat anzeigen", b -> ClipCaptureClient.showDetails());
+            }
             case SCREENSHOTS -> {
                 y = addSectionHeader(x, y, controlW, "Screenshot-Aktionen", 0xFF38BDF8);
                 y = addToggle(x, y, controlW, "Aktionen nach F2", BetterUCConfig.INSTANCE.screenshotActionsEnabled,
@@ -718,6 +767,79 @@ public class BetterUCScreen extends Screen {
 
         y = addSectionHeader(x, y, width, "Test", 0xFF94A3B8);
         return addButton(x, y, width, "Ping testen", b -> PingRelayClient.sendPingAtCrosshair(minecraft, PingRelayClient.PingType.NORMAL));
+    }
+
+    private int addClipAudioControls(int x, int y, int width) {
+        var options = ClipAudioOptions.fromConfig(BetterUCConfig.INSTANCE);
+        y = addSectionHeader(x, y, width, "Tonquellen & Datenschutz", 0xFFFB7185);
+        y = addButton(x, y, width, "Tonquelle: " + options.mode().label(), b -> {
+            var next = options.mode().next();
+            Runnable apply = () -> ClipCaptureClient.setAudioMode(next);
+            if (next == ClipAudioOptions.Mode.SYSTEM) confirmClipAudio("Gesamten Ausgabeton aufnehmen?",
+                    "Erfasst alle hörbaren Anwendungen auf dem gewählten Ausgabegerät, auch TeamSpeak, Discord, Browser und Benachrichtigungen. "
+                            + "Nur lokal während der Clip-Aufnahme. Informiere Gesprächspartner und hole ihr Einverständnis ein.", apply);
+            else { apply.run(); saveConfig(); refreshWidgets(); }
+        });
+        y = addButton(x, y, width, "Mikrofon aufnehmen: " + (options.microphone() ? "AN" : "AUS"), b -> {
+            if (options.microphone()) {
+                ClipCaptureClient.setMicrophoneEnabled(false);
+                saveConfig(); refreshWidgets();
+            } else confirmClipAudio("Mikrofon für Clips einschalten?",
+                    "Nimmt deine Stimme und Umgebungsgeräusche während der Clip-Aufnahme auf. "
+                            + "TeamSpeak-/Discord-Mute und Push-to-Talk werden NICHT übernommen. "
+                            + "Ausschalten ist hier jederzeit möglich. Uploads nur nach separater Bestätigung.",
+                    () -> ClipCaptureClient.setMicrophoneEnabled(true));
+        });
+        y = addInfo(x, y, width, "Mikrofon", "Unabhängig von TS-Mute / Push-to-Talk!");
+        if (options.mode() == ClipAudioOptions.Mode.SYSTEM || options.microphone()) {
+            Runnable refreshed = () -> { if (ClientCompat.currentScreen(minecraft) == this) refreshWidgets(); };
+            y = addButton(x, y, width, "Audiogeräte laden / aktualisieren", b -> ClipCaptureClient.reloadAudioDevices(refreshed));
+            y = addInfo(x, y, width, "Geräte", ClipCaptureClient.audioDeviceStatus());
+            if (options.mode() == ClipAudioOptions.Mode.SYSTEM) {
+                y = addClipAudioDeviceButton(x, y, width, false);
+                y = addInfo(x, y, width, "Ausgabeton", "Spiel + TeamSpeak auf demselben Gerät");
+            }
+            if (options.microphone()) y = addClipAudioDeviceButton(x, y, width, true);
+            y = addInfo(x, y, width, "Gerätewechsel", "Auswahl / Neuverbinden: Puffer neu starten");
+            y = addButton(x, y, width, "Tonaufnahme / Puffer neu starten", b -> {
+                ClipCaptureClient.setAudioMode(options.mode());
+                saveConfig(); refreshWidgets();
+            });
+        }
+        if (options.mode() != ClipAudioOptions.Mode.OFF) y = addRangeIntSlider(x, y, width,
+                "Spiel-/Ausgabeton %", options.outputVolume(), 0, 100, value -> BetterUCConfig.INSTANCE.clipOutputVolume = value);
+        if (options.microphone()) y = addRangeIntSlider(x, y, width,
+                "Mikrofon %", options.microphoneVolume(), 0, 100, value -> BetterUCConfig.INSTANCE.clipMicrophoneVolume = value);
+        y = addInfo(x, y, width, "Lautstärke", "Gilt für den nächsten Export / eine Tonspur");
+        y = addInfo(x, y, width, "Echo vermeiden", "Headset nutzen / kein Mikrofon-Mithören");
+        y = addInfo(x, y, width, "Aufnahme pausiert", "Ohne Spielfokus / Welt; kein Hintergrundmitschnitt");
+        return y;
+    }
+
+    private int addClipAudioDeviceButton(int x, int y, int width, boolean microphone) {
+        String device = ClipCaptureClient.audioDeviceLabel(microphone);
+        String shortName = font.plainSubstrByWidth(device, Math.max(30, width - 76));
+        if (!shortName.equals(device)) shortName += "…";
+        y = addButton(x, y, width, (microphone ? "Eingabe: " : "Ausgabe: ") + shortName, b -> {
+            ClipCaptureClient.cycleAudioDevice(microphone);
+            saveConfig(); refreshWidgets();
+        });
+        y = addInfo(x, y, width, microphone ? "Mikrofon-Gerät" : "Ausgabe-Gerät", device);
+        if (!(microphone ? BetterUCConfig.INSTANCE.clipInputDevice : BetterUCConfig.INSTANCE.clipOutputDevice).isEmpty()) {
+            y = addButton(x, y, width, (microphone ? "Eingabe" : "Ausgabe") + ": Windows-Standard verwenden", b -> {
+                ClipCaptureClient.resetAudioDevice(microphone);
+                saveConfig(); refreshWidgets();
+            });
+        }
+        return y;
+    }
+
+    private void confirmClipAudio(String title, String warning, Runnable accepted) {
+        openScreen(new ConfirmScreen(confirmed -> {
+            if (confirmed) { accepted.run(); saveConfig(); }
+            openScreen(this);
+        }, Component.literal(title), Component.literal(warning),
+                Component.literal("Aufnahme erlauben"), Component.literal("Abbrechen")));
     }
 
     private int addConnectionControls(int x, int y, int width) {
@@ -1095,6 +1217,46 @@ public class BetterUCScreen extends Screen {
         widget.active = false;
         addScrollableControl(widget);
         return y + 24;
+    }
+
+    private int addClipDurationControls(int x, int y, int width) {
+        int seconds = ClipSettings.normalizeSeconds(BetterUCConfig.INSTANCE.clipBufferSeconds);
+        y = addButton(x, y, width, "Cliplänge: " + seconds + " s (Vorgabe wechseln)", b -> {
+            ClipCaptureClient.cycleDuration();
+            clipDurationDraft = String.valueOf(BetterUCConfig.INSTANCE.clipBufferSeconds);
+            saveConfig();
+            refreshWidgets();
+        });
+        y = addInfo(x, y, width, "Eigene Länge", "5–300 Sekunden");
+        EditBox field = new EditBox(font, x, y, width, BUTTON_H, Component.literal("Eigene Cliplänge in Sekunden"));
+        field.setMaxLength(6);
+        field.setHint(Component.literal("Sekunden (5–300)"));
+        Button apply = Button.builder(Component.literal("Cliplänge übernehmen"), b -> {
+            int selected = ClipSettings.parseSeconds(field.getValue());
+            if (selected < 0) return;
+            ClipCaptureClient.setDuration(selected);
+            clipDurationDraft = String.valueOf(selected);
+            saveConfig();
+            refreshWidgets();
+        }).bounds(x, y + 24, width, BUTTON_H).build();
+        field.setResponder(value -> {
+            clipDurationDraft = value;
+            boolean valid = ClipSettings.parseSeconds(value) >= 0;
+            field.setTextColor(valid ? TEXT_PRIMARY : 0xFFFF5555);
+            apply.active = valid;
+        });
+        field.setValue(clipDurationDraft == null ? String.valueOf(seconds) : clipDurationDraft);
+        apply.active = ClipSettings.parseSeconds(field.getValue()) >= 0;
+        addScrollableControl(field);
+        addScrollableControl(apply);
+        registerTooltip(field, "Ganze Sekunden von 5 bis 300. Erst Übernehmen startet den Puffer mit der neuen Länge.");
+        registerTooltip(apply, "Übernimmt die eingegebene Länge. Der bisherige Replay-Puffer wird neu gestartet.");
+        y += 48;
+        var settings = ClipSettings.forViewport(1920, 1080, seconds, BetterUCConfig.INSTANCE.clipResolutionHeight,
+                BetterUCConfig.INSTANCE.clipFramesPerSecond);
+        y = addInfo(x, y, width, "Video-Pufferlimit", settings.maxBufferBytes() / 1048576 + " MiB RAM");
+        y = addInfo(x, y, width, "RAM-Grenze", "Kann die tatsächliche Cliplänge verkürzen");
+        return addInfo(x, y, width, "Weniger RAM", "Niedrigere Aufnahmequalität wählen");
     }
 
     private int addSectionHeader(int x, int y, int width, String label, int color) {
@@ -1917,6 +2079,8 @@ public class BetterUCScreen extends Screen {
             case CHAT -> drawReinfPreview(context, previewX, previewY);
             case CONNECTION -> drawMiniInfo(context, previewX, previewY, "Verbindung", PingRelayClient.statusLabel(),
                     PingRelayClient.isConnected());
+            case CLIPS -> drawMiniInfo(context, previewX, previewY, "Clips (Beta)",
+                    ClipCaptureClient.statusLabel(), BetterUCConfig.INSTANCE.clipsEnabled);
             case SCREENSHOTS -> drawMiniInfo(context, previewX, previewY, "Screenshots",
                     BetterUCConfig.INSTANCE.screenshotActionsEnabled ? "Aktionen im Chat" : "Vanilla",
                     BetterUCConfig.INSTANCE.screenshotActionsEnabled);
@@ -2379,6 +2543,7 @@ public class BetterUCScreen extends Screen {
             case WEAPON_ANIMATION -> BetterUCConfig.INSTANCE.weaponEquipAnimationEnabled;
             case CLOUD_SYNC -> BetterUCConfig.INSTANCE.cloudSettingsEnabled;
             case SCREENSHOTS -> BetterUCConfig.INSTANCE.screenshotActionsEnabled;
+            case CLIPS -> BetterUCConfig.INSTANCE.clipsEnabled;
             case PING -> BetterUCConfig.INSTANCE.pingRelayEnabled;
             case TRASH_FILTER -> BetterUCConfig.INSTANCE.trashFilterEnabled;
             default -> true;
@@ -2972,6 +3137,7 @@ public class BetterUCScreen extends Screen {
         AUTOMATIONS(Category.GAMEPLAY, "Automationen", "Job-Helfer einzeln steuern", 0xFFFBBF24, false),
         CHAT(Category.GAMEPLAY, "Chat", "Zeitstempel & Customization", 0xFF38BDF8, false),
         SCREENSHOTS(Category.GAMEPLAY, "Screenshots", "Kopieren, teilen & verwalten", 0xFF38BDF8, true),
+        CLIPS(Category.GAMEPLAY, "Clips (Beta)", "Lokale Videos ohne Zusatzprogramm", 0xFFFB7185, true),
         CONNECTION(Category.GAMEPLAY, "Verbindung", "Account & Relay", 0xFF38BDF8, false),
         CLOUD_SYNC(Category.GAMEPLAY, "Cloud Sync", "Synchronisierte Einstellungen", 0xFF22D3EE, true),
 

@@ -10,6 +10,7 @@
     "ChatSizeMixin",
     "ChatScreenCommandShortcutMixin",
     "CameraZoomMixin",
+    "ClipCaptureMixin",
     "SecondChatScreenMixin",
     "SecondChatVisibilityMixin",
     "SecondChatClearMixin",

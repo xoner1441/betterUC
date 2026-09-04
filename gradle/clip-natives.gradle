@@ -1,0 +1,105 @@
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
+
+// JavaCPP supplies the JNI bridge; the ABI-compatible FFmpeg 8.0 runtime supplies
+// NVENC, AMF and QSV. Do not accidentally restore the Bytedeco runtime without AMF.
+configurations { clipNative }
+def clipRuntime = new Properties()
+file('third-party/clips/ffmpeg-runtime.properties').withInputStream { clipRuntime.load(it) }
+def clipArchive = layout.buildDirectory.file("clip-native-downloads/${clipRuntime.archive}")
+def sha256 = { File input ->
+    def digest = MessageDigest.getInstance('SHA-256')
+    input.withInputStream { stream ->
+        byte[] buffer = new byte[65536]
+        int count
+        while ((count = stream.read(buffer)) != -1) digest.update(buffer, 0, count)
+    }
+    digest.digest().encodeHex().toString()
+}
+def prepareClipRuntime = tasks.register('prepareClipRuntime') {
+    inputs.file('third-party/clips/ffmpeg-runtime.properties')
+    outputs.file(clipArchive)
+    // Validate cached archives as well. Never ship a changed/unverified download.
+    outputs.upToDateWhen { false }
+    doLast {
+        File archive = clipArchive.get().asFile
+        if (archive.exists()) {
+            if (sha256(archive) != clipRuntime.sha256) {
+                throw new GradleException("Clip runtime checksum mismatch: ${archive}. Remove this build download and retry.")
+            }
+            return
+        }
+        if (gradle.startParameter.offline) {
+            throw new GradleException("Pinned clip runtime is not cached: ${archive}. Run one build without --offline first.")
+        }
+        Files.createDirectories(archive.parentFile.toPath())
+        def temporary = Files.createTempFile(archive.parentFile.toPath(), 'ffmpeg-download-', '.part')
+        try {
+            def connection = new URI(clipRuntime.url).toURL().openConnection()
+            connection.connectTimeout = 30000
+            connection.readTimeout = 60000
+            connection.setRequestProperty('User-Agent', 'betterUC-build')
+            logger.lifecycle('Downloading pinned LGPL clip libraries for bundling (build time only).')
+            connection.inputStream.withCloseable { stream ->
+                Files.copy(stream, temporary, StandardCopyOption.REPLACE_EXISTING)
+            }
+            if (sha256(temporary.toFile()) != clipRuntime.sha256) {
+                throw new GradleException('Downloaded clip runtime checksum mismatch; refusing to package it.')
+            }
+            Files.move(temporary, archive.toPath())
+        } finally {
+            Files.deleteIfExists(temporary)
+        }
+    }
+}
+
+def clipNativePath = 'org/bytedeco/ffmpeg/windows-x86_64'
+def clipModules = ['avutil', 'swresample', 'avcodec', 'avformat', 'swscale']
+def clipDlls = ['avutil-60.dll', 'swresample-6.dll', 'avcodec-62.dll', 'avformat-62.dll', 'swscale-9.dll']
+tasks.register('clipNativesJar', Jar) {
+    dependsOn prepareClipRuntime
+    archiveFileName = 'betteruc-ffmpeg-8.0.1-amf1-windows-x86_64.jar'
+    destinationDirectory = layout.buildDirectory.dir('clip-libraries')
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    // Strict allowlists: no executables, CLI metadata, unnecessary filters/devices,
+    // old FFmpeg DLLs, or independently downloaded graphics-driver DLLs.
+    from({ configurations.clipNative.collect { zipTree(it) } }) {
+        include clipModules.collect { "${clipNativePath}/jni${it}.dll" }
+    }
+    from({ zipTree(clipArchive.get().asFile) }) {
+        include clipDlls.collect { "${clipRuntime.archive.replace('.zip', '')}/bin/${it}" }
+        eachFile { details -> details.path = "${clipNativePath}/${details.name}" }
+        includeEmptyDirs = false
+    }
+    from({ zipTree(clipArchive.get().asFile) }) {
+        include "${clipRuntime.archive.replace('.zip', '')}/LICENSE.txt"
+        eachFile { details -> details.path = 'META-INF/licenses/clips/ffmpeg-runtime-LICENSE.txt' }
+        includeEmptyDirs = false
+    }
+    from('src/clip-native')
+    from('third-party/clips') { into 'META-INF/licenses/clips' }
+}
+
+// Check the finished archive even on non-Windows build hosts, where native tests
+// cannot load Windows DLLs. The release must not silently omit a bridge/runtime.
+def verifyClipRuntimeJar = tasks.register('verifyClipRuntimeJar') {
+    dependsOn tasks.named('clipNativesJar')
+    inputs.file(tasks.named('clipNativesJar').flatMap { it.archiveFile })
+    doLast {
+        new java.util.zip.ZipFile(tasks.named('clipNativesJar').get().archiveFile.get().asFile).withCloseable { zip ->
+            def names = Collections.list(zip.entries()).collect { it.name }
+            def expected = (clipDlls + clipModules.collect { "jni${it}.dll" })
+                    .collect { "${clipNativePath}/${it}".toString() }.toSet()
+            def actual = names.findAll { it.endsWith('.dll') }.toSet()
+            if (actual != expected || names.any { it.endsWith('.exe') || it.endsWith('.lib') }) {
+                throw new GradleException("Clip native archive must contain exactly the ten allowed DLLs, no executables/import libraries: ${actual}")
+            }
+            ['fabric.mod.json', 'META-INF/licenses/clips/ffmpeg-runtime.properties',
+             'META-INF/licenses/clips/ffmpeg-runtime-LICENSE.txt', 'META-INF/licenses/clips/amd-amf-LICENSE.txt'].each { required ->
+                if (!names.contains(required)) throw new GradleException("Missing clip runtime notice/metadata: ${required}")
+            }
+        }
+    }
+}
+tasks.named('check') { dependsOn verifyClipRuntimeJar }

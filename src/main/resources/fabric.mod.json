@@ -12,6 +12,7 @@
     "client": ["com.betteruc.BetterUCClient"]
   },
   "mixins": ["betteruc.mixins.json"],
+  "jars": [{"file": "META-INF/jars/betteruc-ffmpeg-8.0.1-amf1-windows-x86_64.jar"}],
   "depends": {
     "fabricloader": "${loader_dependency}",
     "fabric-api": "*",

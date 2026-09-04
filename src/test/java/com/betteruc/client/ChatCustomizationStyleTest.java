@@ -342,6 +342,74 @@ class ChatCustomizationStyleTest {
     }
 
     @Test
+    void formatsDrugReinforcementWithServerAmounts() {
+        ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
+                "[System] [CHAT] 22:29:16 Drogenabnahme! Polizei Dlulusional benötigt Unterstützung "
+                        + "in der Nähe von Schmiede! (544 Meter entfernt) (26g Pulver, 30g Kräuter)",
+                false,
+                true,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
+        );
+
+        assertNotNull(result);
+        assertTrue(result.reinforcement());
+        assertEquals(3, result.replacementMessages().size());
+        assertEquals("ᴅʀᴏɢᴇɴᴀʙɴᴀʜᴍᴇ ✦ Dlulusional",
+                result.replacementMessages().get(0).getString());
+        assertEquals("» Schmiede ✦ 544 m entfernt",
+                result.replacementMessages().get(1).getString());
+        assertEquals("» 26g Pulver • 30g Kräuter",
+                result.replacementMessages().get(2).getString());
+    }
+
+    @Test
+    void wrapsAllSupportedDrugAmountsAcrossDetailLines() {
+        ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
+                "Drogenabnahme! Polizei Dlulusional benötigt Unterstützung in der Nähe von Schmiede! "
+                        + "(544 Meter entfernt) (26g Pulver, 30g Kräuter, 4g Kristalle, "
+                        + "2x Wundertüte, 6g Blütenharz, 8g Medizinische Kräuter)",
+                false,
+                true,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
+        );
+
+        assertNotNull(result);
+        assertTrue(result.reinforcement());
+        assertEquals(5, result.replacementMessages().size());
+        assertEquals("» 26g Pulver • 30g Kräuter • 4g Kristalle",
+                result.replacementMessages().get(2).getString());
+        assertEquals("» 2x Wundertüte • 6g Blütenharz",
+                result.replacementMessages().get(3).getString());
+        assertEquals("» 8g Medizinische Kräuter",
+                result.replacementMessages().get(4).getString());
+    }
+
+    @Test
+    void keepsLegacyDrugReinforcementWithoutAmountsCompatible() {
+        ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
+                "Drogenabnahme! Polizei Dlulusional benötigt Unterstützung "
+                        + "in der Nähe von Schmiede! (544 Meter entfernt)",
+                false,
+                true,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
+        );
+
+        assertNotNull(result);
+        assertTrue(result.reinforcement());
+        assertEquals(2, result.replacementMessages().size());
+        assertEquals("ᴅʀᴏɢᴇɴᴀʙɴᴀʜᴍᴇ ✦ Dlulusional",
+                result.replacementMessages().get(0).getString());
+        assertEquals("» Schmiede ✦ 544 m entfernt",
+                result.replacementMessages().get(1).getString());
+    }
+
+    @Test
     void formatsIncomingEmergencyCallAsOneThreeLineHqBlock() {
         ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
                 "00:02:02 HQ: Achtung! Ein Notruf von ardasaatci (221): \"hilfe eymen sagt mir er will kämpfen\".\n"

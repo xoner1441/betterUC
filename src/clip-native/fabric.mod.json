@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "betteruc_clip_natives",
+  "version": "8.0.1+btbn.20260228.amf1",
+  "name": "betterUC Clip Native Libraries (Windows x64)",
+  "description": "FFmpeg shared libraries for the optional local clip prototype. No executables.",
+  "license": ["LGPL-3.0-or-later", "Apache-2.0"],
+  "environment": "client"
+}
