@@ -48,10 +48,11 @@ public final class ClipUploadTask implements Runnable {
             JsonObject body = new JsonObject();
             body.addProperty("originalName", path.getFileName().toString()); body.addProperty("byteSize", size);
             body.addProperty("md5", prepared.md5()); body.addProperty("poster", prepared.poster());
+            body.addProperty("shortLinks", true);
             status="Upload wird angefragt …";
             var reservation=api("", "POST", body);
             id=reservation.get("id").getAsString();
-            if (!id.matches("[A-Za-z0-9_-]{32}")) { id=null; throw new IOException("Ungültige Upload-Antwort."); }
+            if (!validId(id)) { id=null; throw new IOException("Ungültige Upload-Antwort."); }
             ClipUploadFile.checkCancelled(cancelled::get);
             var upload=reservation.getAsJsonObject("upload");
             URI target=validateR2(upload.get("url").getAsString());
@@ -71,7 +72,7 @@ public final class ClipUploadTask implements Runnable {
             ClipUploadFile.checkCancelled(cancelled::get);
             status="Clip wird geprüft und freigegeben …";
             var result=api("/"+id+"/complete", "POST", new JsonObject());
-            URI share=api.resolve("/c/"+id); // Never trust a returned arbitrary URL.
+            URI share=shareUri(api,id); // Never trust a returned arbitrary URL.
             if (!result.get("id").getAsString().equals(id)) throw new IOException("Ungültige Upload-Antwort.");
             ClipUploadFile.checkCancelled(cancelled::get);
             resultUrl=share.toString(); status="Hochgeladen. Link kopieren oder Galerie öffnen."; completed=true;
@@ -116,6 +117,18 @@ public final class ClipUploadTask implements Runnable {
         if (!("https".equalsIgnoreCase(source.getScheme()) || "wss".equalsIgnoreCase(source.getScheme()))
                 || source.getHost()==null || source.getRawUserInfo()!=null) throw new IllegalArgumentException("Clip-Uploads benötigen eine HTTPS-Verbindung.");
         return URI.create("https://"+source.getRawAuthority()+"/api/clips");
+    }
+    static boolean validId(String id) {
+        return id != null && id.matches("(?:[A-Za-z0-9_-]{22}|[A-Za-z0-9_-]{32})");
+    }
+    static URI shareUri(URI api, String id) {
+        if (!validId(id)) throw new IllegalArgumentException("Ungültiger Clip-Link.");
+        String host=api.getHost();
+        if (host != null && (host.equalsIgnoreCase("betteruc.de") || host.equalsIgnoreCase("ping.betteruc.de")
+                || host.equalsIgnoreCase("www.betteruc.de")) && (api.getPort()==-1 || api.getPort()==443)) {
+            return URI.create("https://betteruc.de/c/"+id);
+        }
+        return api.resolve("/c/"+id);
     }
     static URI validateR2(String value) {
         URI target=URI.create(value);

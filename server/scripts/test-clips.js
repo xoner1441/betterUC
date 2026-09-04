@@ -6,7 +6,51 @@ const path=require('node:path');
 const {fixture,mp4,ACCOUNT,OTHER}=require('./clip-test-fixtures');
 const {inspectMp4}=require('../clipMp4');
 const {createClipStorage}=require('../clipStorage');
-const {key}=require('../clipRoutes');
+const {key,CLIP_PAGE}=require('../clipRoutes');
+
+test('clip page routes accept only the short and legacy URL-safe ID formats',()=>{
+  for(const length of [22,32]) assert.ok(CLIP_PAGE.test('/c/'+'aB_-12'.repeat(6).slice(0,length)));
+  for(const id of ['', 'x'.repeat(21), 'x'.repeat(23), 'x'.repeat(31), 'x'.repeat(33),
+    '../'+'x'.repeat(19), 'x'.repeat(22)+'/', 'x'.repeat(21)+'ä']) assert.equal(CLIP_PAGE.test('/c/'+id),false);
+});
+
+test('short IDs are opt-in; legacy upload, public playback and owner deletion remain compatible',async t=>{
+  const f=await fixture();t.after(()=>f.close());
+  f.deps.publicBaseUrl='https://ping.betteruc.de';f.resetRoutes();
+  for(const options of [{},{shortLinks:false},{shortLinks:'true'},{shortLinks:true}]) {
+    const {response,result}=await f.reserve(mp4(),options);assert.equal(response.status,201);
+    const id=result.id, length=options.shortLinks===true ? 22 : 32;
+    assert.match(id,new RegExp(`^[a-zA-Z0-9_-]{${length}}$`));
+    assert.equal(Buffer.from(id,'base64url').length,options.shortLinks===true ? 16 : 24);
+    const url='https://betteruc.de/c/'+id;
+    for(let i=0;i<2;i++) {
+      const finished=await f.request('/api/clips/'+id+'/complete','POST',{});
+      assert.equal(finished.status,200);assert.equal((await finished.json()).url,url);
+    }
+    const meta=await f.request('/api/clips/'+id,'GET',undefined,'no-auth');assert.equal(meta.status,200);
+    assert.equal((await meta.json()).url,url);
+    const gallery=await(await f.request('/api/user/media','GET',undefined,'test-owner',true)).json();
+    assert.equal(gallery.media.find(x=>x.id===id).url,url);
+    for(const action of ['play','poster','download']) assert.equal((await f.request('/api/clips/'+id+'/'+action)).status,302);
+    assert.equal((await f.request('/api/user/clips/'+id,'DELETE',undefined,'test-other',true)).status,404);
+    assert.equal((await f.request('/api/user/clips/'+id,'DELETE',undefined,'test-owner',true)).status,200);
+    assert.equal((await f.request('/api/clips/'+id)).status,404);
+  }
+});
+
+test('canonical clip URLs preserve independent hosts and do not change screenshot URLs',async t=>{
+  const f=await fixture();t.after(()=>f.close());const {result}=await f.reserve();
+  assert.equal((await f.request('/api/clips/'+result.id+'/complete','POST',{})).status,200);
+  for(const [source,expected] of [
+    ['https://www.betteruc.de/','https://betteruc.de'],['https://betteruc.de','https://betteruc.de'],
+    ['https://PING.BETTERUC.DE:443','https://betteruc.de'],['https://ping.betteruc.de:8443','https://ping.betteruc.de:8443'],
+    ['https://ping.betteruc.de.evil.test','https://ping.betteruc.de.evil.test'],['http://127.0.0.1:41873','http://127.0.0.1:41873']]) {
+    f.deps.publicBaseUrl=source;f.resetRoutes();
+    const gallery=await(await f.request('/api/user/media','GET',undefined,'test-owner',true)).json();
+    assert.equal(gallery.media.find(x=>x.kind==='clip').url,expected+'/c/'+result.id);
+    assert.equal(gallery.media.find(x=>x.kind==='screenshot').url,'/s/'+'s'.repeat(24));
+  }
+});
 
 test('MP4: bounded H.264 structure, dimensions and duration',async()=>{
   for(const settings of [{},{duration:300,width:1920,height:1080}]){const bytes=mp4(settings);const meta=await inspectMp4(async(s,e)=>bytes.subarray(s,e+1),bytes.length);assert.equal(meta.durationSeconds,settings.duration||30);}

@@ -1,12 +1,18 @@
 "use strict";
 (async () => {
   const status = document.querySelector('#clipStatus');
-  const id = location.pathname.match(/^\/c\/([a-zA-Z0-9_-]{32})$/)?.[1];
+  const id = location.pathname.match(/^\/c\/([a-zA-Z0-9_-]{22}|[a-zA-Z0-9_-]{32})$/)?.[1];
   try {
     if (!id) throw new Error('Ungültiger Clip-Link.');
     const response = await fetch(`/api/clips/${id}`, { cache:'no-store' });
     const data = await response.json();
     if (!response.ok || !data.ok) throw new Error(data.error || 'Clip ist nicht verfügbar.');
+    const shareUrl = new URL(data.url || `/c/${id}`, location.origin);
+    // Also canonicalize when talking to an older server returning a relative URL.
+    if (['betteruc.de','ping.betteruc.de','www.betteruc.de'].includes(shareUrl.hostname)
+        && (!shareUrl.port || shareUrl.port === '443')) {
+      shareUrl.protocol = 'https:'; shareUrl.hostname = 'betteruc.de'; shareUrl.port = '';
+    }
     document.querySelector('#clipTitle').textContent = data.originalName;
     document.title = `${data.originalName} · betterUC`;
     const player = document.querySelector('#clipPlayer');
@@ -19,7 +25,7 @@
     status.hidden = true;
     document.querySelector('#clipCopy').addEventListener('click', async () => {
       const notice = document.querySelector('#clipCopyStatus');
-      try { await navigator.clipboard.writeText(`${location.origin}/c/${id}`); notice.textContent='Link kopiert.'; }
+      try { await navigator.clipboard.writeText(shareUrl.href); notice.textContent='Link kopiert.'; }
       catch { notice.textContent='Bitte kopiere den Link aus der Adressleiste.'; }
     });
   } catch (error) { status.textContent=error.message; }

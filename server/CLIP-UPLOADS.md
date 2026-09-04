@@ -1,8 +1,24 @@
-# Manuelle Clip-Uploads (Beta 12)
+# Manuelle Clip-Uploads (Beta 13)
 
 Die Implementierung allein aktiviert noch keine Uploads: Bucket und Zugangsdaten müssen
 separat im Cloudflare-Konto und auf dem Server eingerichtet werden. Ohne R2-Konfiguration antworten Clip-Uploads mit
 503; bestehende Screenshots und ihre Links bleiben unverändert nutzbar.
+
+## Kürzere Freigabelinks
+
+- Geteilte Links verwenden `https://betteruc.de/c/<id>` statt der Relay-Subdomain `ping.`.
+  Das gilt für die neue Mod sowie Kopieren aus Galerie und Clip-Seite; die authentifizierte
+  Relay-Verbindung und die privaten R2-URLs ändern sich dadurch nicht.
+- Beta 13 fordert mit `shortLinks: true` eine 22 Zeichen lange Base64url-Kennung an
+  (16 kryptografisch zufällige Bytes / 128 Bit). Keine fortlaufenden oder erratbaren IDs.
+- Ältere Clients erhalten weiterhin ihre erwarteten 32 Zeichen. Neue Clients akzeptieren
+  beide Formate, sodass sie auch mit dem bisherigen Server funktionieren.
+- Bereits geteilte Links werden nicht umgeschrieben oder gelöscht. Beide ID-Längen und
+  die bisherige `ping.`-Adresse bleiben bis zum normalen Ablauf bzw. Löschen verwendbar.
+  Die Hauptdomain funktioniert auch für die bisherigen langen Kennungen.
+- Keine Datenbankmigration erforderlich. Server und Beta-13-JAR müssen aktualisiert sein,
+  damit neue Uploads auch die kürzere Kennung erhalten; ein Serverdeploy allein ändert
+  das Linkverhalten einer bereits installierten alten JAR nicht.
 
 ## Einrichten
 

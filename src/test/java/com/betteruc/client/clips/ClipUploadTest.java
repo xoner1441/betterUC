@@ -20,6 +20,26 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ClipUploadTest {
+    @Test void shortAndLegacyIdsAreBothAcceptedButMalformedIdsCannotBecomeLinks() {
+        for(int length:List.of(22,32)) assertTrue(ClipUploadTask.validId("aB_-12".repeat(6).substring(0,length)));
+        assertFalse(ClipUploadTask.validId(null));
+        for(String id:List.of("", "x".repeat(21), "x".repeat(23), "x".repeat(31), "x".repeat(33),
+                "../"+"x".repeat(19), "x".repeat(21)+"ä", "x".repeat(22)+"?token=secret", "x".repeat(22)+"/")) {
+            assertFalse(ClipUploadTask.validId(id));
+            assertThrows(IllegalArgumentException.class,()->ClipUploadTask.shareUri(ClipUploadTask.apiUri("https://betteruc.de"),id));
+        }
+    }
+    @Test void shareLinksUseWebsiteWithoutChangingAuthenticatedRelayDestination() {
+        for(String relay:List.of("wss://ping.betteruc.de/ws", "https://www.betteruc.de", "https://betteruc.de",
+                "wss://PING.BETTERUC.DE:443/ws?token=not-forwarded")) {
+            var api=ClipUploadTask.apiUri(relay);
+            for(int length:List.of(22,32)) assertEquals("https://betteruc.de/c/"+"x".repeat(length),
+                    ClipUploadTask.shareUri(api,"x".repeat(length)).toString());
+        }
+        assertEquals("https://ping.betteruc.de/api/clips",ClipUploadTask.apiUri("wss://ping.betteruc.de/ws").toString());
+        for(String origin:List.of("https://relay.example.test:8443", "https://ping.betteruc.de.evil.test", "https://ping.betteruc.de:8443"))
+            assertEquals(origin+"/c/"+"x".repeat(22),ClipUploadTask.shareUri(ClipUploadTask.apiUri(origin),"x".repeat(22)).toString());
+    }
     @Test void relayRequiresHttpsAndNeverUsesQueryCredentials() {
         assertEquals("https://betteruc.de/api/clips",ClipUploadTask.apiUri("wss://betteruc.de/relay?token=not-forwarded").toString());
         for(String url:List.of("ws://betteruc.de","http://betteruc.de","https://user:pass@betteruc.de","file:///clip.mp4"))

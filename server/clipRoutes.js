@@ -3,7 +3,10 @@ const crypto = require('crypto');
 const sharp = require('sharp');
 const { inspectMp4 } = require('./clipMp4');
 
-const ID = /^[a-zA-Z0-9_-]{32}$/;
+const ID_PATTERN = '(?:[a-zA-Z0-9_-]{22}|[a-zA-Z0-9_-]{32})';
+const CLIP_PAGE = new RegExp(`^/c/${ID_PATTERN}$`);
+const OWNED = new RegExp(`^/api/user/clips/(${ID_PATTERN})$`);
+const ACTION = new RegExp(`^/api/clips/(${ID_PATTERN})(?:/(complete|poster|download|play))?$`);
 const key = (id, kind) => kind === 'stage' ? `clips/staging/${id}.mp4`
   : kind === 'poster' ? `clips/posters/${id}.png` : `clips/ready/${id}.mp4`;
 const fail = (statusCode,message) => Object.assign(new Error(message),{statusCode});
@@ -12,14 +15,19 @@ const limit = (env,name,fallback,min,max) => {
   if (!Number.isSafeInteger(value) || value<min || value>max) throw new Error(`Invalid ${name}`);
   return value;
 };
-function mediaItem(clip) {
+function mediaItem(clip, publicBaseUrl='') {
   return { id:clip.id,kind:'clip',originalName:clip.originalName,byteSize:clip.byteSize,
     durationSeconds:clip.durationSeconds,width:clip.width,height:clip.height,createdAt:clip.createdAt,
-    expiresAt:clip.expiresAt,url:`/c/${clip.id}`,previewUrl:`/api/clips/${clip.id}/poster`,
+    expiresAt:clip.expiresAt,url:`${publicBaseUrl}/c/${clip.id}`,previewUrl:`/api/clips/${clip.id}/poster`,
     downloadUrl:`/api/clips/${clip.id}/download` };
 }
 function createClipRoutes({database,storage,authenticate,requireUserSession,json,readJsonBody,isRateLimited,
   screenshotGalleryItem,publicBaseUrl,env=process.env,now=Date.now,logger=console}) {
+  const publicUrl=new URL(publicBaseUrl);
+  // Share the website address, not the relay alias; keep independent/test deployments intact.
+  const shareBase=['betteruc.de','ping.betteruc.de','www.betteruc.de'].includes(publicUrl.hostname)
+    && (!publicUrl.port || publicUrl.port==='443') ? 'https://betteruc.de' : publicUrl.origin;
+  const sharedItem=clip=>mediaItem(clip,shareBase);
   const limits={ maxBytes:limit(env,'CLIP_MAX_BYTES',1073741824,1024,1073741824),
     dailyBytes:limit(env,'CLIP_DAILY_BYTES',3221225472,1024,107374182400),
     dailyCount:limit(env,'CLIP_DAILY_COUNT',5,1,100),
@@ -58,8 +66,8 @@ function createClipRoutes({database,storage,authenticate,requireUserSession,json
   }
   async function handle(req,res,url) {
     const path=url.pathname;
-    const owned=path.match(/^\/api\/user\/clips\/([a-zA-Z0-9_-]{32})$/);
-    const action=path.match(/^\/api\/clips\/([a-zA-Z0-9_-]{32})(?:\/(complete|poster|download|play))?$/);
+    const owned=path.match(OWNED);
+    const action=path.match(ACTION);
     if (path!=='/api/user/media' && path!=='/api/clips' && !owned && !action) return false;
     try {
       if (path==='/api/user/media' && req.method==='GET') {
@@ -67,7 +75,7 @@ function createClipRoutes({database,storage,authenticate,requireUserSession,json
         if (!database.enabled) throw fail(503,'Mediengalerie ist gerade nicht verfügbar.');
         const [screenshots,clips]=await Promise.all([database.listScreenshotUploadsForAccount(account.id,200),repo.list(account.id)]);
         const media=[...screenshots.map(s=>({...screenshotGalleryItem(s),kind:'screenshot',previewUrl:`/s/${s.id}`,downloadUrl:`/s/${s.id}?download=1`})),
-          ...clips.map(mediaItem)].sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt)).slice(0,200);
+          ...clips.map(sharedItem)].sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt)).slice(0,200);
         json(res,200,{ok:true,media,clipUploadsEnabled:Boolean(storage),limits}); return true;
       }
       if (owned && req.method==='DELETE') {
@@ -92,7 +100,9 @@ function createClipRoutes({database,storage,authenticate,requireUserSession,json
           try {
             poster=await sharp(Buffer.from(body.poster,'base64'),{limitInputPixels:640*360}).resize(480,270,{fit:'inside',withoutEnlargement:true}).png().toBuffer();
           } catch { throw fail(400,'Ungültiges Vorschaubild.'); }
-          const id=crypto.randomBytes(24).toString('base64url');
+          // 128 random bits give 22 URL-safe characters. Legacy betas require exactly 32,
+          // so use the shorter format only when the client explicitly supports it.
+          const id=crypto.randomBytes(body.shortLinks===true ? 16 : 24).toString('base64url');
           const originalName=String(body.originalName || 'betterUC-clip.mp4').replace(/[\x00-\x1f\x7f/\\]/g,'_').slice(0,120);
           const clip=await repo.reserve({id,accountId,originalName,byteSize:body.byteSize,md5:body.md5,
             uploadExpiresAt:new Date(now()+uploadSeconds*1000).toISOString(),expiresAt:new Date(now()+limits.ttlSeconds*1000).toISOString()},limits);
@@ -111,7 +121,7 @@ function createClipRoutes({database,storage,authenticate,requireUserSession,json
         if (action?.[2]==='complete' && req.method==='POST') {
           let clip=await repo.get(action[1]);
           if (!clip || clip.accountId!==accountId) throw fail(404,'Clip nicht gefunden.');
-          if (clip.state==='ready' && Date.parse(clip.expiresAt)>now()) { json(res,200,{ok:true,...mediaItem(clip),url:`${publicBaseUrl}/c/${clip.id}`}); return true; }
+          if (clip.state==='ready' && Date.parse(clip.expiresAt)>now()) { json(res,200,{ok:true,...sharedItem(clip)}); return true; }
           clip=await repo.claim(clip.id,accountId); if (!clip) throw fail(409,'Upload ist abgelaufen, wird geprüft oder wurde abgebrochen.');
           try {
             const head=await storage.head(key(clip.id,'stage'));
@@ -120,7 +130,7 @@ function createClipRoutes({database,storage,authenticate,requireUserSession,json
             await storage.copy(key(clip.id,'stage'),key(clip.id,'ready'),head.ETag);
             const ready=await repo.ready(clip.id,metadata);
             if (!ready) throw fail(409,'Upload wurde zwischenzeitlich abgebrochen.');
-            json(res,200,{ok:true,...mediaItem(ready),url:`${publicBaseUrl}/c/${clip.id}`});
+            json(res,200,{ok:true,...sharedItem(ready)});
           } catch (error) {
             await repo.fail(clip.id);
             try { await discard(clip); } catch { logger.warn('Failed clip cleanup queued',clip.id); }
@@ -131,7 +141,7 @@ function createClipRoutes({database,storage,authenticate,requireUserSession,json
       }
       if (action && req.method==='GET' && action[2]!=='complete') {
         const clip=await shared(action[1]);
-        if (!action[2]) { json(res,200,{ok:true,...mediaItem(clip)}); return true; }
+        if (!action[2]) { json(res,200,{ok:true,...sharedItem(clip)}); return true; }
         const ttl=Math.max(1,Math.min(1800,Math.floor((Date.parse(clip.expiresAt)-now())/1000)));
         const target=await storage.readUrl(key(clip.id,action[2]==='poster'?'poster':'ready'),ttl,action[2]==='download');
         res.writeHead(302,{'location':target,'cache-control':'private, no-store','referrer-policy':'no-referrer','x-robots-tag':'noindex, nofollow'}); res.end(); return true;
@@ -146,4 +156,4 @@ function createClipRoutes({database,storage,authenticate,requireUserSession,json
   }
   return {handle,cleanup,limits};
 }
-module.exports={createClipRoutes,mediaItem,key};
+module.exports={createClipRoutes,mediaItem,key,CLIP_PAGE};

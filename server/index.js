@@ -13,7 +13,7 @@ const { WebSocketServer } = require("ws");
 const { startDiscordBot } = require("./discordBot");
 const { createDatabase } = require("./database");
 const { createClipStorage } = require("./clipStorage");
-const { createClipRoutes } = require("./clipRoutes");
+const { createClipRoutes, CLIP_PAGE } = require("./clipRoutes");
 const { selectPreferredAccount } = require("./accountResolution");
 const { createPoliceRosterService } = require("./policeRoster");
 const { createSwatRosterStore } = require("./swatRoster");
@@ -3093,7 +3093,7 @@ async function serveStatic(req, res, url) {
 async function handleHttp(req, res) {
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
   if (await clipRoutes.handle(req, res, url)) return;
-  if (req.method === 'GET' && /^\/c\/[a-zA-Z0-9_-]{32}$/.test(url.pathname)) {
+  if (req.method === 'GET' && CLIP_PAGE.test(url.pathname)) {
     const body = await fsp.readFile(path.join(PUBLIC_DIR, 'clip.html'));
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store',
       'referrer-policy': 'no-referrer', 'x-robots-tag': 'noindex, nofollow', 'x-content-type-options': 'nosniff',

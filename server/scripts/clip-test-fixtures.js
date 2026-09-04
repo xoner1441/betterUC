@@ -48,7 +48,7 @@ async function fixture(env={}) {
   const base='http://127.0.0.1:'+server.address().port;
   const poster=(await sharp({create:{width:360,height:202,channels:3,background:'#203c50'}}).png().toBuffer()).toString('base64');
   async function request(route,method='GET',body,owner='test-owner',web=false){return fetch(base+route,{method,headers:{[web?'x-betteruc-session':'authorization']:web?owner:'Bearer '+owner,'content-type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),redirect:'manual'});}
-  async function reserve(bytes=mp4()){const response=await request('/api/clips','POST',{originalName:'Testclip.mp4',byteSize:bytes.length,md5:crypto.createHash('md5').update(bytes).digest('base64'),poster});const result=await response.json();if(response.status===201)objects.set(key(result.id,'stage'),{body:bytes,type:'video/mp4'});return{response,result};}
+  async function reserve(bytes=mp4(),options={shortLinks:true}){const response=await request('/api/clips','POST',{originalName:'Testclip.mp4',byteSize:bytes.length,md5:crypto.createHash('md5').update(bytes).digest('base64'),poster,...options});const result=await response.json();if(response.status===201)objects.set(key(result.id,'stage'),{body:bytes,type:'video/mp4'});return{response,result};}
   return {db,repo,objects,calls,storage,deps,base,server,request,reserve,poster,resetRoutes(){routes=createClipRoutes(deps);return routes;},get routes(){return routes;},
     async close(){server.closeAllConnections();await new Promise(r=>server.close(r));await db.close();}};
 }
