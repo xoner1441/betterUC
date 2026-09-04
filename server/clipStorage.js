@@ -8,7 +8,11 @@ function createClipStorage(env = process.env) {
   if (!/^[a-f0-9]{32}$/i.test(env.CLIP_R2_ACCOUNT_ID) || !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(env.CLIP_R2_BUCKET)) {
     throw new Error('Invalid clip R2 account or bucket configuration');
   }
-  const client = new S3Client({ region: 'auto', endpoint: `https://${env.CLIP_R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  const jurisdiction = String(env.CLIP_R2_JURISDICTION || '').trim().toLowerCase();
+  if (!['', 'eu'].includes(jurisdiction)) throw new Error('Invalid CLIP_R2_JURISDICTION; use eu or leave empty');
+  // EU buckets are only reachable through the EU endpoint. Never fall back to the global endpoint.
+  const endpoint = `https://${env.CLIP_R2_ACCOUNT_ID}${jurisdiction ? `.${jurisdiction}` : ''}.r2.cloudflarestorage.com`;
+  const client = new S3Client({ region: 'auto', endpoint,
     credentials: { accessKeyId: env.CLIP_R2_ACCESS_KEY_ID, secretAccessKey: env.CLIP_R2_SECRET_ACCESS_KEY },
     requestChecksumCalculation: 'WHEN_REQUIRED', responseChecksumValidation: 'WHEN_REQUIRED' });
   const bucket = env.CLIP_R2_BUCKET;

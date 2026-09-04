@@ -26,6 +26,24 @@ test('R2: fail closed and sign content length/type/MD5/create-only; no secret in
   for(const h of ['content-length','content-type','content-md5','if-none-match'])assert.ok(headers.includes(h),h);
   assert.equal(signed.headers['if-none-match'],'*');assert.ok(!signed.url.includes('test-secret'));
 });
+test('R2: EU upload, playback and poster URLs use only the jurisdiction endpoint',async()=>{
+  const account='a'.repeat(32);
+  const env={CLIP_R2_ACCOUNT_ID:account,CLIP_R2_BUCKET:'betteruc-test',CLIP_R2_ACCESS_KEY_ID:'test-key',CLIP_R2_SECRET_ACCESS_KEY:'test-secret'};
+  for(const jurisdiction of ['', 'eu', ' EU ']) {
+    const storage=createClipStorage({...env,CLIP_R2_JURISDICTION:jurisdiction});
+    const upload=await storage.uploadUrl('clips/staging/test.mp4',{byteSize:128,md5:'AAAAAAAAAAAAAAAAAAAAAA=='},3600);
+    const urls=[upload.url,await storage.readUrl('clips/ready/test.mp4',60),await storage.readUrl('clips/posters/test.png',60)];
+    const expected=`${account}${jurisdiction.trim() ? '.eu' : ''}.r2.cloudflarestorage.com`;
+    for(const value of urls) {
+      const url=new URL(value);
+      assert.equal(url.hostname.replace(/^betteruc-test\./,''),expected);
+      assert.equal(url.protocol,'https:');assert.ok(!value.includes('test-secret'));
+    }
+  }
+  for(const invalid of ['europe','eu.evil.test','https://example.com']) {
+    assert.throws(()=>createClipStorage({...env,CLIP_R2_JURISDICTION:invalid}),/Invalid CLIP_R2_JURISDICTION/);
+  }
+});
 test('owner upload -> validation -> combined private gallery -> unlisted play/download -> deletion',async t=>{
   const f=await fixture();t.after(()=>f.close());
   assert.equal((await f.request('/api/user/media','GET',undefined,'bad',true)).status,401);

@@ -1,7 +1,7 @@
 # Manuelle Clip-Uploads (Beta 12)
 
-Status: implementiert, aber noch nicht live eingerichtet. Es wurde kein R2-Bucket angelegt
-und kein produktiver Upload ausgelöst. Ohne R2-Konfiguration antworten Clip-Uploads mit
+Die Implementierung allein aktiviert noch keine Uploads: Bucket und Zugangsdaten müssen
+separat im Cloudflare-Konto und auf dem Server eingerichtet werden. Ohne R2-Konfiguration antworten Clip-Uploads mit
 503; bestehende Screenshots und ihre Links bleiben unverändert nutzbar.
 
 ## Einrichten
@@ -9,10 +9,17 @@ und kein produktiver Upload ausgelöst. Ohne R2-Konfiguration antworten Clip-Upl
 1. Im eigenen Cloudflare-Konto R2 aktivieren und einen **privaten** Bucket anlegen,
    beispielsweise `betteruc-clips`. Eventuelle Kosten/Billing vorher prüfen.
    Weder `r2.dev` noch eine öffentliche Custom Domain für den Bucket aktivieren.
+   Für einen EU-Bucket beim Anlegen `Specify jurisdiction > European Union (EU)` und
+   die Speicherklasse `Standard` wählen. Danach serverseitig `CLIP_R2_JURISDICTION=eu`
+   setzen: der Dienst verwendet damit ausschließlich den EU-S3-Endpunkt
+   `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com`. Für einen Automatic-Bucket bleibt
+   die Variable leer. Die Jurisdiction eines bestehenden Buckets lässt sich nicht ändern.
 2. Einen separaten R2-API-Token mit Object Read & Write ausschließlich für diesen Bucket
    erstellen. Account-ID, Bucket-Name, Access-Key-ID und Secret-Key in den vier
    `CLIP_R2_*`-Variablen der Serverumgebung hinterlegen (siehe `.env.example`).
    Keine Schlüssel in Git, Mod/JAR, Chat oder Screenshots eintragen.
+   Gemeint sind die **Access Key ID** und der **Secret Access Key**, nicht das separate
+   Feld `Token value`. Die Account-ID ist ebenfalls ein eigener Wert aus der R2-Übersicht.
 3. Server-Abhängigkeiten mit `npm ci --omit=dev` installieren. Der bestehende
    Datenbank-Migrationslauf legt über `012_clip_uploads.sql` die Metadaten an.
    Vor Deployment Datenbank wie üblich sichern; vorhandene Migrationen nicht ändern.
@@ -29,6 +36,40 @@ und kein produktiver Upload ausgelöst. Ohne R2-Konfiguration antworten Clip-Upl
    herunterladen → im angemeldeten Userpanel filtern und löschen → Link nicht verfügbar.
    Auch Abbruch, abgelaufene Sitzung, WLAN-Unterbrechung und Limitüberschreitung testen.
    Mit einem zweiten Konto prüfen, dass dessen Galerie/Löschrechte getrennt sind.
+
+### Server-Konfiguration im bestehenden Hetzner-Deployment
+
+Die Deployment-Dokumentation verwendet `/etc/betteruc-relay.env` außerhalb des per
+GitHub/rsync aktualisierten Programmverzeichnisses. Vor dem Bearbeiten am Server prüfen:
+
+```bash
+systemctl show betteruc-relay --property=EnvironmentFiles --value
+```
+
+Nur den angezeigten Dateipfad prüfen/weitergeben, niemals `systemctl show -p Environment`
+oder die gesamte Env-Datei posten: diese können andere produktive Geheimnisse enthalten.
+Wenn `/etc/betteruc-relay.env` angezeigt wird, die Datei direkt am Server in einem Editor
+öffnen, bestehende Einstellungen erhalten und die folgenden Werte ergänzen bzw. ersetzen:
+
+```dotenv
+CLIP_R2_ACCOUNT_ID=HIER_DIE_CLOUDFLARE_ACCOUNT_ID
+CLIP_R2_BUCKET=betteruc-clips
+CLIP_R2_JURISDICTION=eu
+CLIP_R2_ACCESS_KEY_ID=HIER_DIE_ACCESS_KEY_ID
+CLIP_R2_SECRET_ACCESS_KEY=HIER_DEN_SECRET_ACCESS_KEY
+```
+
+Keine doppelten Einträge erzeugen. Die Platzhalter sind keine echten Zugangsdaten.
+Datei nur für berechtigte Serveradministratoren lesbar halten (im dokumentierten
+Root/systemd-Setup `chmod 600 /etc/betteruc-relay.env`). Die Datei nicht in Git speichern.
+Der Autodeploy überträgt nur Code und legt diese Werte nicht an. Vor einem Neustart muss
+auch die Codeänderung mit EU-Unterstützung auf dem Server angekommen sein.
+Anschließend `systemctl restart betteruc-relay` ausführen; ein Neustart betrifft kurzzeitig
+auch die bestehende Relay-Verbindung und den Discord-Bot. Dafür ist keine neue Mod-JAR nötig.
+
+Mit einem EU-Bucket müssen auch Token-Bucketbeschränkung und eventuelle Cloudflare-Auswahl
+zur EU-Jurisdiction gehören. Lokale Tests signieren lediglich Dummy-Anfragen; ein echter
+Uploadtest mit den produktiven R2-Zugangsdaten bleibt nach der Einrichtung erforderlich.
 
 ## Grenzen und Datenschutz
 
@@ -71,4 +112,5 @@ PGlite testet SQL/Transaktionen, ersetzt aber keinen Last-/Mehrprozess-Test auf 
 
 Quellen: [R2 Signed URLs](https://developers.cloudflare.com/r2/api/s3/presigned-urls/),
 [S3-Kompatibilität](https://developers.cloudflare.com/r2/api/s3/api/),
+[EU-Jurisdiction](https://developers.cloudflare.com/r2/reference/data-location/),
 [Lifecycle](https://developers.cloudflare.com/r2/buckets/object-lifecycles/).
