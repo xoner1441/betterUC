@@ -37,6 +37,7 @@ public final class ClipRecorderSession implements AutoCloseable {
     private volatile String encoderName = "Encoder wird geprüft";
     private volatile double encodedFps;
     private volatile long skipped;
+    private volatile boolean backgrounded;
 
     public ClipRecorderSession(ClipSettings settings, Path outputDirectory, Consumer<String> diagnostics,
                                Consumer<ClipNotice> notification, Consumer<Path> saved,
@@ -93,6 +94,9 @@ public final class ClipRecorderSession implements AutoCloseable {
                 + (ring.memoryLimited() ? " | RAM-Grenze erreicht: Clips ggf. kürzer" : "");
     }
 
+    public void setBackgrounded(boolean value) { backgrounded = value; }
+    public boolean backgrounded() { return backgrounded; }
+
     public void skipped(long count) { skipped += count; }
 
     /** Caller transfers the buffer lease; the release callback runs even if the queue is full. */
@@ -127,14 +131,31 @@ public final class ClipRecorderSession implements AutoCloseable {
                 long encodedFrames = 0;
                 long sampleStart = System.nanoTime();
                 boolean memoryLimitReported = false;
+                boolean frameAvailable = false;
+                long lastFrameWallNanos = 0;
+                long lastVideoPts = -1;
                 while (running) {
                     Frame frame = frames.poll(50, TimeUnit.MILLISECONDS);
                     if (frame != null) {
                         try {
-                            if (running) { encoder.encode(frame.pixels(), frame.pts(), ring::add); encodedFrames++; }
+                            if (running && frame.pts() > lastVideoPts) {
+                                encoder.encode(frame.pixels(), frame.pts(), ring::add);
+                                lastVideoPts = frame.pts();
+                                lastFrameWallNanos = System.nanoTime();
+                                frameAvailable = true;
+                                encodedFrames++;
+                            } else if (running) skipped(1);
                         } finally { frame.release().run(); }
                     }
                     long now = System.nanoTime();
+                    long repeatedPts = ClipBackgroundFrameScheduler.duePts(backgrounded, frameAvailable,
+                            timelineStartNanos, lastFrameWallNanos, now, lastVideoPts, settings.fps());
+                    if (running && repeatedPts >= 0) {
+                        encoder.repeatLastFrame(repeatedPts, ring::add);
+                        lastVideoPts = repeatedPts;
+                        lastFrameWallNanos = now;
+                        encodedFrames++;
+                    }
                     if (now - sampleStart >= 1_000_000_000L) {
                         encodedFps = encodedFrames * 1_000_000_000.0 / (now - sampleStart);
                         encodedFrames = 0;
@@ -152,8 +173,9 @@ public final class ClipRecorderSession implements AutoCloseable {
             }
         } catch (Throwable error) {
             if (running) {
-                failure = error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
-                diagnostics.accept("Clip-Aufnahme gestoppt: " + failure);
+                ClipDiagnostics.SHARED.recordFailure(error);
+                failure = ClipDiagnostics.summary(error);
+                diagnostics.accept("Clip-Aufnahme gestoppt: " + ClipDiagnostics.stackTrace(error));
                 // CaptureClient reports this once when the failed session is collected on the render thread.
             }
         } finally {

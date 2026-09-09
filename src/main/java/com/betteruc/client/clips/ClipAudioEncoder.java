@@ -90,9 +90,6 @@ final class ClipAudioEncoder {
     }
     private static void check(int result, String message) throws IOException {
         if (result >= 0) return;
-        try (BytePointer text = new BytePointer(256)) {
-            av_strerror(result, text, 256);
-            throw new IOException(message + ": " + text.getString());
-        }
+        throw new IOException(message + ": " + ClipNativeErrors.describe(result));
     }
 }

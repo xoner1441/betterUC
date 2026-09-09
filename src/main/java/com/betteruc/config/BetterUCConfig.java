@@ -683,6 +683,7 @@ public class BetterUCConfig {
     public boolean clipsGameAudioEnabled = false;
     public String clipAudioMode = ""; // Legacy game-only setting is migrated lazily.
     public boolean clipsMicrophoneEnabled = false;
+    public boolean clipBackgroundRecording = false;
     public String clipOutputDevice = "";
     public String clipInputDevice = "";
     public int clipOutputVolume = 100;

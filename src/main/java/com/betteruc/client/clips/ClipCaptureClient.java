@@ -77,7 +77,10 @@ public final class ClipCaptureClient {
             ClipToastHud.tick();
             ClipUploadClient.tick();
             if (client.level == null) announceNextCapture = true;
-            if (!BetterUCConfig.INSTANCE.clipsEnabled || client.level == null || !client.isWindowActive()) stopSession();
+            boolean backgrounded = !client.isWindowActive();
+            if (session != null) session.setBackgrounded(backgrounded && BetterUCConfig.INSTANCE.clipBackgroundRecording);
+            if (!BetterUCConfig.INSTANCE.clipsEnabled || client.level == null
+                    || backgrounded && !BetterUCConfig.INSTANCE.clipBackgroundRecording) stopSession();
         });
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             stopping = true;
@@ -95,6 +98,7 @@ public final class ClipCaptureClient {
                 .executes(context -> { notifyUser(statusLabel() + " | " + details()); return 1; })
                 .then(ClientCommands.literal("save").executes(context -> { saveClip(); return 1; }))
                 .then(ClientCommands.literal("folder").executes(context -> { openFolder(); return 1; }))
+                .then(ClientCommands.literal("diagnose").executes(context -> { copyDiagnostics(); return 1; }))
                 .then(ClientCommands.literal("upload").executes(context -> {
                     ClipUploadClient.requestOpen(null); return 1;
                 }).then(ClientCommands.argument("id",com.mojang.brigadier.arguments.StringArgumentType.word()).executes(context -> {
@@ -124,6 +128,13 @@ public final class ClipCaptureClient {
     public static void setMicrophoneEnabled(boolean enabled) {
         BetterUCConfig.INSTANCE.clipsMicrophoneEnabled = enabled;
         restartForQualityChange();
+    }
+    public static void setBackgroundRecording(boolean enabled) {
+        BetterUCConfig.INSTANCE.clipBackgroundRecording = enabled;
+        if (!enabled && !Minecraft.getInstance().isWindowActive()) stopSession();
+        ClipToastHud.show(ClipNotice.info(enabled
+                ? "Clip-Puffer läuft beim Austabben weiter."
+                : "Clip-Puffer pausiert wieder ohne Spielfokus."));
     }
     public static String audioDeviceStatus() { return deviceStatus; }
     public static String audioDeviceLabel(boolean microphone) {
@@ -207,8 +218,10 @@ public final class ClipCaptureClient {
         if (!BetterUCConfig.INSTANCE.clipsEnabled) return "Aus";
         if (!failure.isEmpty()) return "Nicht verfügbar (siehe Details)";
         if (EXPORTING.get()) return "Wird gespeichert";
-        if (session == null) return "Wartet auf Spiel / Fokus";
+        if (session == null) return BetterUCConfig.INSTANCE.clipBackgroundRecording ? "Wartet auf Spiel" : "Wartet auf Spiel / Fokus";
         if (!session.ready()) return "Startet / pausiert";
+        if (session.backgrounded()) return String.format(Locale.ROOT, "Hintergrund | %.0f / %d s | %s",
+                session.seconds(), session.settings().seconds(), session.audioStatus());
         return String.format(Locale.ROOT, "%.0f / %d s | %s", session.seconds(), session.settings().seconds(), session.audioStatus());
     }
 
@@ -234,6 +247,11 @@ public final class ClipCaptureClient {
     }
 
     public static void showDetails() { notifyUser(details()); }
+    public static void copyDiagnostics() {
+        String report = ClipDiagnostics.SHARED.report(statusLabel() + " | " + details());
+        Minecraft.getInstance().keyboardHandler.setClipboard(report);
+        notifyUser("Fehlerbericht kopiert. Du kannst ihn jetzt mit Strg+V weitergeben.");
+    }
     private static Path gameDirectory() { return Minecraft.getInstance().gameDirectory.toPath().toAbsolutePath().normalize(); }
     private static Path directory() { return ClipStoragePaths.resolve(gameDirectory(), BetterUCConfig.INSTANCE.clipStorageParent); }
 
@@ -321,6 +339,7 @@ public final class ClipCaptureClient {
     public static void onRenderedFrame(RenderTarget source) {
         try { capture(source); }
         catch (Throwable error) {
+            ClipDiagnostics.SHARED.recordFailure(error);
             BetterUCMod.LOGGER.warn("Clip framebuffer capture failed", error);
             reportCaptureFailure(error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage(),
                     "Spielbild konnte nicht aufgenommen werden.");
@@ -351,10 +370,12 @@ public final class ClipCaptureClient {
             session = null;
         }
         if (stopping || !BetterUCConfig.INSTANCE.clipsEnabled || !failure.isEmpty()
-                || client.level == null || client.player == null || !client.isWindowActive()) {
+                || client.level == null || client.player == null
+                || !client.isWindowActive() && !BetterUCConfig.INSTANCE.clipBackgroundRecording) {
             stopSession();
             return;
         }
+        if (session != null) session.setBackgrounded(!client.isWindowActive());
         if (source == null || source.width < 2 || source.height < 2 || source.getColorTextureView() == null) return;
         ClipSettings settings = ClipSettings.forViewport(source.width, source.height, BetterUCConfig.INSTANCE.clipBufferSeconds,
                 BetterUCConfig.INSTANCE.clipResolutionHeight, BetterUCConfig.INSTANCE.clipFramesPerSecond);
@@ -374,12 +395,16 @@ public final class ClipCaptureClient {
             capturedLevel = client.level;
             Object token = new Object();
             captureToken = token;
-            session = new ClipRecorderSession(settings, ClipStoragePaths.resolve(gameDirectory(), ""), message -> BetterUCMod.LOGGER.info("[Clips] {}", message),
+            session = new ClipRecorderSession(settings, ClipStoragePaths.resolve(gameDirectory(), ""), message -> {
+                        ClipDiagnostics.SHARED.record(message);
+                        BetterUCMod.LOGGER.info("[Clips] {}", message);
+                    },
                     notice -> onSessionNotice(token, notice), path -> {
                         BetterUCMod.LOGGER.info("[Clips] Gespeichert: {}", path);
                         ClipUploadClient.saved(path);
                     },
                     EXPORT, EXPORTING, audioOptions);
+            session.setBackgrounded(!client.isWindowActive());
         }
         session.updateAudioLevels(audioOptions);
         if (!session.ready()) return;

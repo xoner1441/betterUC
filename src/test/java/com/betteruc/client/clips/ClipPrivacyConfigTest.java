@@ -23,6 +23,7 @@ class ClipPrivacyConfigTest {
             assertFalse(BetterUCConfig.INSTANCE.clipsEnabled);
             assertFalse(BetterUCConfig.INSTANCE.clipsGameAudioEnabled);
             assertFalse(BetterUCConfig.INSTANCE.clipsMicrophoneEnabled);
+            assertFalse(BetterUCConfig.INSTANCE.clipBackgroundRecording);
             assertEquals(ClipAudioOptions.Mode.OFF, ClipAudioOptions.fromConfig(BetterUCConfig.INSTANCE).mode());
             assertEquals(30, BetterUCConfig.INSTANCE.clipBufferSeconds);
             assertEquals(1080, BetterUCConfig.INSTANCE.clipResolutionHeight);
@@ -33,6 +34,7 @@ class ClipPrivacyConfigTest {
             remote.addProperty("clipsGameAudioEnabled", true);
             remote.addProperty("clipAudioMode", "SYSTEM");
             remote.addProperty("clipsMicrophoneEnabled", true);
+            remote.addProperty("clipBackgroundRecording", true);
             remote.addProperty("clipOutputDevice", "remote-output");
             remote.addProperty("clipInputDevice", "remote-microphone");
             remote.addProperty("clipOutputVolume", 1);
@@ -48,6 +50,7 @@ class ClipPrivacyConfigTest {
             assertEquals(100, BetterUCConfig.INSTANCE.clipOutputVolume);
             assertEquals(100, BetterUCConfig.INSTANCE.clipMicrophoneVolume);
             assertFalse(BetterUCConfig.INSTANCE.clipsEnabled);
+            assertFalse(BetterUCConfig.INSTANCE.clipBackgroundRecording);
             assertFalse(BetterUCConfig.INSTANCE.clipsGameAudioEnabled);
             assertEquals(30, BetterUCConfig.INSTANCE.clipBufferSeconds);
             assertEquals(1080, BetterUCConfig.INSTANCE.clipResolutionHeight);
@@ -74,6 +77,7 @@ class ClipPrivacyConfigTest {
             assertEquals(ClipAudioOptions.Mode.OFF, ClipAudioOptions.fromConfig(legacy).mode());
             legacy.clipAudioMode = "SYSTEM";
             legacy.clipsMicrophoneEnabled = true;
+            legacy.clipBackgroundRecording = true;
             legacy.clipOutputDevice = "headset-output";
             legacy.clipInputDevice = "my-mic";
             legacy.clipOutputVolume = 75;
@@ -91,6 +95,7 @@ class ClipPrivacyConfigTest {
             assertEquals(137, restored.clipBufferSeconds);
             assertEquals(legacy.clipStorageParent, restored.clipStorageParent);
             assertTrue(restored.clipsEnabled);
+            assertTrue(restored.clipBackgroundRecording);
             assertTrue(restored.clipsGameAudioEnabled);
             assertEquals(ClipAudioOptions.fromConfig(legacy), ClipAudioOptions.fromConfig(restored));
             assertTrue(ClipAudioOptions.fromConfig(restored).microphone());

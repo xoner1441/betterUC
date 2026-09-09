@@ -582,6 +582,18 @@ public class BetterUCScreen extends Screen {
                 y = addSectionHeader(x, y, controlW, "Lokale Clip-Beta", 0xFFFB7185);
                 y = addToggle(x, y, controlW, "Clip-Aufnahme", BetterUCConfig.INSTANCE.clipsEnabled,
                         () -> ClipCaptureClient.setEnabled(!BetterUCConfig.INSTANCE.clipsEnabled));
+                y = addButton(x, y, controlW, "Beim Austabben: "
+                        + (BetterUCConfig.INSTANCE.clipBackgroundRecording ? "AN" : "AUS"), b -> {
+                    if (BetterUCConfig.INSTANCE.clipBackgroundRecording) {
+                        ClipCaptureClient.setBackgroundRecording(false);
+                        saveConfig(); refreshWidgets();
+                    } else confirmClipAudio("Clip-Puffer im Hintergrund weiterführen?",
+                            "Nimmt beim Austabben weiter das Minecraft-Bild und alle bereits erlaubten Tonquellen auf. "
+                                    + "Beim Minimieren wird das letzte Spielbild gehalten; der Desktop wird nicht aufgenommen. "
+                                    + "Mikrofon und Gesamtausgabeton können dabei private Gespräche enthalten.",
+                            () -> ClipCaptureClient.setBackgroundRecording(true));
+                });
+                y = addInfo(x, y, controlW, "Hintergrund", "Nur Minecraft; höherer Strom-/GPU-Verbrauch");
                 y = addClipDurationControls(x, y, controlW);
                 y = addSectionHeader(x, y, controlW, "Aufnahmequalität", 0xFF38BDF8);
                 y = addButton(x, y, controlW, "Auflösung: max. "
@@ -621,6 +633,7 @@ public class BetterUCScreen extends Screen {
                 y = addButton(x, y, controlW, "Clip-Ordner öffnen", b -> ClipCaptureClient.openFolder());
                 y = addButton(x, y, controlW, "Letzten Clip hochladen …", b -> com.betteruc.client.clips.ClipUploadClient.open(this,null));
                 y = addButton(x, y, controlW, "Encoder / FPS / Fehler im Chat anzeigen", b -> ClipCaptureClient.showDetails());
+                y = addButton(x, y, controlW, "Fehlerbericht kopieren", b -> ClipCaptureClient.copyDiagnostics());
             }
             case SCREENSHOTS -> {
                 y = addSectionHeader(x, y, controlW, "Screenshot-Aktionen", 0xFF38BDF8);
@@ -812,7 +825,8 @@ public class BetterUCScreen extends Screen {
                 "Mikrofon %", options.microphoneVolume(), 0, 100, value -> BetterUCConfig.INSTANCE.clipMicrophoneVolume = value);
         y = addInfo(x, y, width, "Lautstärke", "Gilt für den nächsten Export / eine Tonspur");
         y = addInfo(x, y, width, "Echo vermeiden", "Headset nutzen / kein Mikrofon-Mithören");
-        y = addInfo(x, y, width, "Aufnahme pausiert", "Ohne Spielfokus / Welt; kein Hintergrundmitschnitt");
+        y = addInfo(x, y, width, "Ohne Spielfokus", BetterUCConfig.INSTANCE.clipBackgroundRecording
+                ? "Puffer + erlaubter Ton laufen weiter" : "Aufnahme und erlaubter Ton pausieren");
         return y;
     }
 

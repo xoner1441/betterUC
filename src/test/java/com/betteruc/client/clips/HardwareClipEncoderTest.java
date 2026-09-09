@@ -36,6 +36,23 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Explicit opt-in integration test: synthetic pixels only, never screen/audio capture. */
 @EnabledIfSystemProperty(named = "betteruc.clipHardwareTest", matches = "true")
 class HardwareClipEncoderTest {
+    @Test void backgroundRepeatKeepsTimelineAndCreatesASeekableKeyframe() throws Exception {
+        var settings = new ClipSettings(320, 180, 60, 5, 2_000_000);
+        var packets = new ArrayList<ClipPacket>();
+        try (var encoder = HardwareClipEncoder.open(settings, System.out::println)) {
+            var pixels = ByteBuffer.allocateDirect(320 * 180 * 4);
+            for (int i = 0; i < 320 * 180; i++) pixels.putInt(0x2387C9FF);
+            pixels.flip();
+            encoder.encode(pixels, 0, packets::add);
+            encoder.repeatLastFrame(60, packets::add);
+            encoder.repeatLastFrame(120, packets::add);
+            encoder.flush(packets::add);
+        }
+        assertTrue(packets.stream().anyMatch(packet -> packet.pts() == 0 && packet.keyframe()));
+        assertTrue(packets.stream().anyMatch(packet -> packet.pts() == 60 && packet.keyframe()));
+        assertTrue(packets.stream().anyMatch(packet -> packet.pts() == 120 && packet.keyframe()));
+    }
+
     @Test void storageChangesApplyToNewSavesWithoutRedirectingAnExport(@TempDir Path directory) throws Exception {
         var settings = new ClipSettings(320, 180, 60, 15, 2_000_000);
         var exports = new LinkedBlockingQueue<Runnable>();

@@ -31,7 +31,7 @@ final class ClipEncoderSelection {
                 String status = error instanceof MissingEncoderException ? "fehlt in Test-JAR"
                         : error instanceof LinkageError ? "Bibliothek nicht ladbar" : "Start fehlgeschlagen";
                 failures.add(candidate.label() + ": " + status);
-                String detail = error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
+                String detail = ClipDiagnostics.stackTrace(error);
                 diagnostics.accept(candidate.label() + " / " + candidate.codec() + ": " + detail);
             }
         }

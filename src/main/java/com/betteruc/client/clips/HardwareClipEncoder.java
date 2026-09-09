@@ -38,6 +38,7 @@ public final class HardwareClipEncoder implements AutoCloseable {
     private PointerPointer<BytePointer> source;
     private IntPointer strides;
     private AVRational timeBase;
+    private boolean frameAvailable;
 
     public record Header(ClipSettings settings, byte[] extraData) {}
 
@@ -119,16 +120,19 @@ public final class HardwareClipEncoder implements AutoCloseable {
                 av_dict_set(options, "tune", "ll", 0);
                 av_dict_set(options, "rc", "vbr", 0);
                 av_dict_set(options, "rc-lookahead", "0", 0);
+                av_dict_set(options, "forced-idr", "1", 0);
             }
             case "h264_amf" -> {
                 av_dict_set(options, "usage", "lowlatency", 0);
                 av_dict_set(options, "quality", "balanced", 0);
                 av_dict_set(options, "rc", "vbr_peak", 0);
+                av_dict_set(options, "forced_idr", "1", 0);
             }
             case "h264_qsv" -> {
                 av_dict_set(options, "preset", "veryfast", 0);
                 av_dict_set(options, "look_ahead", "0", 0);
                 av_dict_set(options, "async_depth", "1", 0);
+                av_dict_set(options, "forced_idr", "1", 0);
             }
             default -> throw new IllegalArgumentException("Nicht erlaubter Hardware-Encoder: " + name);
         }
@@ -142,9 +146,23 @@ public final class HardwareClipEncoder implements AutoCloseable {
             source.put(0, input);
             int rows = sws_scale(scaler, source, strides, 0, settings.height(), frame.data(), frame.linesize());
             if (rows != settings.height()) throw new IOException("Unvollständiges Videobild");
-            frame.pts(pts);
+            frame.pts(pts).pict_type(AV_PICTURE_TYPE_NONE);
             check(avcodec_send_frame(context, frame), "Videobild kodieren");
             drain(sink);
+            frameAvailable = true;
+        }
+    }
+
+    /** Reuses the last converted game frame; no desktop or other application is sampled. */
+    public void repeatLastFrame(long pts, Consumer<ClipPacket> sink) throws IOException {
+        if (!frameAvailable) throw new IOException("Noch kein Spielbild für die Hintergrundaufnahme");
+        check(av_frame_make_writable(frame), "Videopuffer für Hintergrundbild freigeben");
+        try {
+            frame.pts(pts).pict_type(AV_PICTURE_TYPE_I);
+            check(avcodec_send_frame(context, frame), "Hintergrundbild kodieren");
+            drain(sink);
+        } finally {
+            frame.pict_type(AV_PICTURE_TYPE_NONE);
         }
     }
 
@@ -262,10 +280,7 @@ public final class HardwareClipEncoder implements AutoCloseable {
 
     private static void check(int result, String action) throws IOException {
         if (result >= 0) return;
-        try (BytePointer message = new BytePointer(256)) {
-            av_strerror(result, message, 256);
-            throw new IOException(action + ": " + message.getString() + " (" + result + ")");
-        }
+        throw new IOException(action + ": " + ClipNativeErrors.describe(result));
     }
 
     @Override public void close() {
