@@ -3,6 +3,7 @@ package com.betteruc.gui;
 import com.betteruc.BetterUCMod;
 import com.betteruc.client.BetterUCAuthClient;
 import com.betteruc.client.BetterUCFontManager;
+import com.betteruc.client.BloodEffectClient;
 import com.betteruc.client.AutomationController;
 import com.betteruc.client.ClientCompat;
 import com.betteruc.client.CloudSettingsClient;
@@ -414,6 +415,20 @@ public class BetterUCScreen extends Screen {
                                 refreshWidgets();
                             });
                 }
+            }
+            case BLOOD_EFFECT -> {
+                y = addSectionHeader(x, y, controlW, "Trefferdarstellung", 0xFFDC2626);
+                y = addButton(x, y, controlW, "Effekt: " + BloodEffectClient.modeLabel(), b -> {
+                    BloodEffectClient.cycleMode();
+                    saveConfig();
+                    refreshWidgets();
+                });
+                y = addButton(x, y, controlW, "Effekt jetzt testen", b -> BloodEffectClient.preview());
+                y = addInfo(x, y, controlW, "Auslöser", "Schaden an einem anderen Spieler");
+                y = addInfo(x, y, controlW, "Gültigkeit", "Ausschließlich auf UnicaCity");
+                y = addInfo(x, y, controlW, "Dezent", "Kleiner Burst und wenige Tropfen");
+                y = addInfo(x, y, controlW, "Redux", "Großer Burst mit schnellen Streifen");
+                y = addInfo(x, y, controlW, "3D", "Räumlich gestaffelt und richtungsabhängig");
             }
             case AUTO_STATS -> {
                 y = addSectionHeader(x, y, controlW, "Automatik", 0xFF4ADE80);
@@ -2085,6 +2100,8 @@ public class BetterUCScreen extends Screen {
                             : "Normal",
                     BetterUCConfig.INSTANCE.weaponEquipAnimationEnabled
             );
+            case BLOOD_EFFECT -> drawMiniInfo(context, previewX, previewY, "Treffer-Effekt",
+                    BloodEffectClient.modeLabel(), BloodEffectClient.mode() != BloodEffectClient.Mode.OFF);
             case AUTO_STATS -> drawMiniInfo(context, previewX, previewY, "Auto-Stats", "Join /stats", BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled);
             case AUTOMATIONS -> {
                 int enabled = AutomationController.localEnabledCount();
@@ -2555,6 +2572,7 @@ public class BetterUCScreen extends Screen {
             case ZOOM -> BetterUCConfig.INSTANCE.zoomEnabled;
             case HAND_TOGGLE -> BetterUCConfig.INSTANCE.handToggleEnabled;
             case WEAPON_ANIMATION -> BetterUCConfig.INSTANCE.weaponEquipAnimationEnabled;
+            case BLOOD_EFFECT -> BloodEffectClient.mode() != BloodEffectClient.Mode.OFF;
             case CLOUD_SYNC -> BetterUCConfig.INSTANCE.cloudSettingsEnabled;
             case SCREENSHOTS -> BetterUCConfig.INSTANCE.screenshotActionsEnabled;
             case CLIPS -> BetterUCConfig.INSTANCE.clipsEnabled;
@@ -3147,6 +3165,7 @@ public class BetterUCScreen extends Screen {
         ZOOM(Category.GAMEPLAY, "Zoom", "Weicher, frei einstellbarer Kamera-Zoom", 0xFF60A5FA, true),
         HAND_TOGGLE(Category.GAMEPLAY, "Hand-Toggle", "Haupthand per Hotkey wechseln", 0xFFA78BFA, true),
         WEAPON_ANIMATION(Category.GAMEPLAY, "Waffen-Animation", "Schnelleres Ziehen erkannter Waffen", 0xFFFFAA33, true),
+        BLOOD_EFFECT(Category.GAMEPLAY, "Treffer-Effekt", "Animierter Blut-Burst auf UnicaCity", 0xFFDC2626, true),
         AUTO_STATS(Category.GAMEPLAY, "Auto Stats", "Automatisches /stats", 0xFF34D399, true),
         AUTOMATIONS(Category.GAMEPLAY, "Automationen", "Job-Helfer einzeln steuern", 0xFFFBBF24, false),
         CHAT(Category.GAMEPLAY, "Chat", "Zeitstempel & Customization", 0xFF38BDF8, false),

@@ -1,5 +1,6 @@
 package com.betteruc;
 
+import com.betteruc.client.BloodEffectParticles;
 import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +11,7 @@ public class BetterUCMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        BloodEffectParticles.register();
         LOGGER.info("betterUC loaded!");
     }
 }

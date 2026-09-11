@@ -19,6 +19,7 @@ import com.betteruc.client.AutoTransportClient;
 import com.betteruc.client.AutoWinzerClient;
 import com.betteruc.client.AutomationController;
 import com.betteruc.client.BetterUCAuthClient;
+import com.betteruc.client.BloodEffectClient;
 import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ClientCompat;
 import com.betteruc.client.ClientScheduler;
@@ -205,6 +206,7 @@ public class BetterUCClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         BetterUCConfig.load();
+        BloodEffectClient.initialize();
         CloudSettingsClient.initialize();
         BetterUCFontManager.initialize();
         ScreenshotActionsClient.initialize();

@@ -90,6 +90,7 @@ public class BetterUCConfig {
             "zoomRememberLevel", "zoomSensitivityScalingEnabled", "zoomFactor", "zoomAnimationDurationMs",
             "handToggleEnabled", "handToggleNotificationEnabled", "handToggleRememberLastHand",
             "weaponEquipAnimationEnabled", "weaponEquipAnimationMode",
+            "bloodEffectMode",
             "chatTimestampsEnabled", "chatCustomizationEnabled", "chatActionTextStyle", "chatHeadlineSeparatorStyle",
             "chatCustomizationGradientEnabled", "chatLinksClickableEnabled", "chatLinkHighlightEnabled",
             "chatCommandConfirmationEnabled",
@@ -526,6 +527,7 @@ public class BetterUCConfig {
     public boolean handToggleRememberLastHand = true;
     public boolean weaponEquipAnimationEnabled = true;
     public String weaponEquipAnimationMode = "fast";
+    public String bloodEffectMode = "subtle";
     public boolean autoStatsOnJoinEnabled = true;
     public boolean manualStatsKdVisible = true;
     public boolean autoFactionBankOnBalanceEnabled = false;
