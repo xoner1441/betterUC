@@ -26,7 +26,9 @@ public class BankBalanceHud {
     private static final Pattern CHAT_TIMESTAMP_PATTERN = Pattern.compile("^\\s*\\d{1,2}:\\d{2}:\\d{2}\\s+");
     private static final String PLAYER_TOKEN = "(?:\\[[^\\]]+\\]\\s*)?[A-Za-z0-9_]{2,16}";
     private static final Pattern BANK_BALANCE_PATTERN = Pattern.compile(
-            "(?i)^(?:ihr\\s+bankguthaben\\s+betr(?:a|ae|\\u00E4)gt\\s*:?|neuer\\s+(?:bank\\s*)?kontostand\\s*:?|neuer\\s+betrag\\s*:?)\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$\\s*[.!]?\\s*$"
+            "(?i)^(?:ihr\\s+bankguthaben\\s+betr(?:a|ae|\\u00E4)gt\\s*:?|neuer\\s+(?:bank\\s*)?kontostand\\s*:?|neuer\\s+betrag\\s*:?)"
+                    + "\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$"
+                    + "(?:\\s*\\(\\s*[+-]\\s*[0-9][0-9\\.]*\\s*\\$\\s*\\))?\\s*[.!]?\\s*$"
     );
     private static final Pattern PERSONAL_BANK_BALANCE_PATTERN = Pattern.compile(
             "(?i)^ihr\\s+bankguthaben\\s+betr(?:a|ae|\\u00E4)gt\\s*:?\\s*[+-]?[0-9][0-9\\.]*\\s*\\$\\s*[.!]?\\s*$"
@@ -61,6 +63,7 @@ public class BankBalanceHud {
     );
 
     private static int currentBankBalance = -1;
+    private static boolean currentBankBalanceFresh = false;
     private static long lastBalanceUpdateMs = 0L;
     private static String lastBankDeltaKey = "";
     private static long lastBankDeltaMs = 0L;
@@ -76,22 +79,25 @@ public class BankBalanceHud {
         });
     }
 
-    public static void updateFromChatLine(String raw) {
-        if (raw == null || raw.isBlank()) return;
+    public static boolean updateFromChatLine(String raw) {
+        if (raw == null || raw.isBlank()) return false;
         String cleanedRaw = stripFormatting(raw);
+        boolean recognized = false;
         for (String line : cleanedRaw.split("\\R+")) {
-            updateFromCleanLine(stripChatPrefix(line));
+            recognized |= updateFromCleanLine(stripChatPrefix(line));
         }
+        return recognized;
     }
 
-    private static void updateFromCleanLine(String raw) {
-        if (raw == null || raw.isBlank()) return;
+    private static boolean updateFromCleanLine(String raw) {
+        if (raw == null || raw.isBlank()) return false;
 
+        boolean atmMessage = matchesFullAtmMessage(raw);
         requestForcedDepositIfConfigured(raw);
 
         if (matchesDailyRewardHeader(raw)) {
             dailyRewardMoneyPendingUntilMs = System.currentTimeMillis() + DAILY_REWARD_MONEY_WINDOW_MS;
-            return;
+            return true;
         }
 
         if (dailyRewardMoneyPendingUntilMs > 0L) {
@@ -103,7 +109,7 @@ public class BankBalanceHud {
                             dailyRewardMoney,
                             "daily-reward:" + normalizeRawKey(raw)
                     );
-                    return;
+                    return true;
                 }
             } else {
                 dailyRewardMoneyPendingUntilMs = 0L;
@@ -116,7 +122,7 @@ public class BankBalanceHud {
             if (parsed != null) {
                 subtractBalanceAndPersist(parsed, "bank-transfer-sent:" + normalizeRawKey(raw));
             }
-            return;
+            return true;
         }
 
         Matcher transferReceivedMatcher = BANK_TRANSFER_RECEIVED_PATTERN.matcher(raw);
@@ -125,7 +131,7 @@ public class BankBalanceHud {
             if (parsed != null) {
                 addBalanceAndPersist(parsed, "bank-transfer-received:" + normalizeRawKey(raw));
             }
-            return;
+            return true;
         }
 
         Matcher battlePassRewardMatcher = BATTLE_PASS_REWARD_PATTERN.matcher(raw);
@@ -134,28 +140,33 @@ public class BankBalanceHud {
             if (parsed != null) {
                 addBalanceAndPersist(parsed, "battle-pass-reward:" + normalizeRawKey(raw));
             }
-            return;
+            return true;
         }
 
         Integer absoluteBalance = parseBankBalanceMessage(raw);
         if (absoluteBalance != null) {
-            setBalanceAndPersist(Math.max(0, absoluteBalance));
+            setBalanceAndPersist(Math.max(0, absoluteBalance), true);
             requestBankFollowupsAfterPersonalBalance(raw);
-            return;
+            return true;
         }
 
-        if (currentBankBalance >= 0) return;
         Matcher previousMatcher = PREVIOUS_BALANCE_PATTERN.matcher(raw);
         if (previousMatcher.matches()) {
             Integer parsed = parseMoneyValue(previousMatcher.group(1));
-            if (parsed != null) {
+            if (parsed != null && currentBankBalance < 0) {
                 setBalanceAndPersist(Math.max(0, parsed));
             }
+            return parsed != null;
         }
+        return atmMessage;
     }
 
     public static int getCurrentBankBalance() {
         return currentBankBalance;
+    }
+
+    public static boolean isCurrentBankBalanceFresh() {
+        return currentBankBalance >= 0 && currentBankBalanceFresh;
     }
 
     public static long getBalanceAgeMs() {
@@ -181,6 +192,10 @@ public class BankBalanceHud {
 
         int x = BetterUCConfig.INSTANCE.bankHudX;
         int y = BetterUCConfig.INSTANCE.bankHudY;
+        boolean fresh = isCurrentBankBalanceFresh();
+        int displayColor = fresh
+                ? BetterUCConfig.INSTANCE.bankHudColor
+                : ModernHudRenderer.staleHudColor(BetterUCConfig.INSTANCE.bankHudColor);
         String value = formatMoney(currentBankBalance) + "$";
         String style = BetterUCConfig.INSTANCE.bankHudStyle;
         String displayText = BetterUCConfig.prefixedHudText(
@@ -197,13 +212,13 @@ public class BankBalanceHud {
                 x,
                 y,
                 BetterUCConfig.INSTANCE.bankHudScale,
-                BetterUCConfig.INSTANCE.bankHudGradientEnabled,
+                fresh && BetterUCConfig.INSTANCE.bankHudGradientEnabled,
                 BetterUCConfig.INSTANCE.bankHudGradientColor,
                 () -> {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
-                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.bankHudCustomFont, displayText, 0, 0, BetterUCConfig.INSTANCE.bankHudColor);
+                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.bankHudCustomFont, displayText, 0, 0, displayColor);
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                ModernHudRenderer.drawHudTextWithShadow(context, client.font, displayText, 0, 0, BetterUCConfig.INSTANCE.bankHudColor);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.font, displayText, 0, 0, displayColor);
             } else {
                 ModernHudRenderer.drawModule(
                         context,
@@ -212,7 +227,8 @@ public class BankBalanceHud {
                         0,
                         moduleLabel,
                         value,
-                        BetterUCConfig.INSTANCE.bankHudColor
+                        displayColor,
+                        fresh ? ModernHudRenderer.TEXT_PRIMARY : ModernHudRenderer.TEXT_DIM
                 );
             }
         });
@@ -231,6 +247,7 @@ public class BankBalanceHud {
 
     private static void restoreFromConfig() {
         currentBankBalance = Math.max(-1, BetterUCConfig.INSTANCE.lastKnownBankBalance);
+        currentBankBalanceFresh = false;
         lastBalanceUpdateMs = 0L;
     }
 
@@ -253,10 +270,15 @@ public class BankBalanceHud {
     }
 
     private static void setBalanceAndPersist(int newBalance) {
+        setBalanceAndPersist(newBalance, false);
+    }
+
+    private static void setBalanceAndPersist(int newBalance, boolean authoritative) {
         if (newBalance < 0) return;
         boolean changed = currentBankBalance != newBalance
                 || BetterUCConfig.INSTANCE.lastKnownBankBalance != newBalance;
         currentBankBalance = newBalance;
+        if (authoritative) currentBankBalanceFresh = true;
         lastBalanceUpdateMs = System.currentTimeMillis();
         BetterUCConfig.INSTANCE.lastKnownBankBalance = newBalance;
         if (changed) {

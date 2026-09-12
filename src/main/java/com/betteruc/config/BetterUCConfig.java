@@ -90,7 +90,8 @@ public class BetterUCConfig {
             "zoomRememberLevel", "zoomSensitivityScalingEnabled", "zoomFactor", "zoomAnimationDurationMs",
             "handToggleEnabled", "handToggleNotificationEnabled", "handToggleRememberLastHand",
             "weaponEquipAnimationEnabled", "weaponEquipAnimationMode",
-            "bloodEffectMode",
+            "bloodEffectMode", "bloodEffectIntensityPercent", "bloodEffectSizePercent",
+            "bloodEffectLifetimePercent", "bloodEffectParticlePercent", "bloodEffectColor",
             "chatTimestampsEnabled", "chatCustomizationEnabled", "chatActionTextStyle", "chatHeadlineSeparatorStyle",
             "chatCustomizationGradientEnabled", "chatLinksClickableEnabled", "chatLinkHighlightEnabled",
             "chatCommandConfirmationEnabled",
@@ -528,6 +529,11 @@ public class BetterUCConfig {
     public boolean weaponEquipAnimationEnabled = true;
     public String weaponEquipAnimationMode = "fast";
     public String bloodEffectMode = "subtle";
+    public int bloodEffectIntensityPercent = 100;
+    public int bloodEffectSizePercent = 100;
+    public int bloodEffectLifetimePercent = 100;
+    public int bloodEffectParticlePercent = 100;
+    public int bloodEffectColor = 0xFFD01824;
     public boolean autoStatsOnJoinEnabled = true;
     public boolean manualStatsKdVisible = true;
     public boolean autoFactionBankOnBalanceEnabled = false;
@@ -976,6 +982,22 @@ public class BetterUCConfig {
                 ? "fast"
                 : INSTANCE.weaponEquipAnimationMode.trim().toLowerCase(Locale.ROOT);
         INSTANCE.weaponEquipAnimationMode = "instant".equals(mode) ? "instant" : "fast";
+    }
+
+    private static void sanitizeBloodEffect() {
+        String mode = INSTANCE.bloodEffectMode == null
+                ? "subtle"
+                : INSTANCE.bloodEffectMode.trim().toLowerCase(Locale.ROOT);
+        INSTANCE.bloodEffectMode = switch (mode) {
+            case "off", "redux", "volumetric" -> mode;
+            case "3d" -> "volumetric";
+            default -> "subtle";
+        };
+        INSTANCE.bloodEffectIntensityPercent = Math.max(25, Math.min(150, INSTANCE.bloodEffectIntensityPercent));
+        INSTANCE.bloodEffectSizePercent = Math.max(50, Math.min(200, INSTANCE.bloodEffectSizePercent));
+        INSTANCE.bloodEffectLifetimePercent = Math.max(50, Math.min(200, INSTANCE.bloodEffectLifetimePercent));
+        INSTANCE.bloodEffectParticlePercent = Math.max(25, Math.min(200, INSTANCE.bloodEffectParticlePercent));
+        INSTANCE.bloodEffectColor = sanitizeHudColor(INSTANCE.bloodEffectColor, 0xFFD01824);
     }
 
     private static void sanitizeReinfColors() {
@@ -1740,6 +1762,7 @@ public class BetterUCConfig {
         sanitizeSecondChat();
         sanitizeZoomSettings();
         sanitizeWeaponEquipAnimation();
+        sanitizeBloodEffect();
         sanitizePingRelay();
         sanitizeDiscordInvite();
         sanitizeTrackedFactions();
@@ -1857,6 +1880,7 @@ public class BetterUCConfig {
             sanitizeAmmoHud();
             sanitizeZoomSettings();
             sanitizeWeaponEquipAnimation();
+            sanitizeBloodEffect();
             sanitizePingRelay();
             sanitizeDiscordInvite();
             if (INSTANCE.blReasons == null || INSTANCE.blReasons.isEmpty()) {
@@ -1951,6 +1975,7 @@ public class BetterUCConfig {
         sanitizeAmmoHud();
         sanitizeZoomSettings();
         sanitizeWeaponEquipAnimation();
+        sanitizeBloodEffect();
         sanitizePingRelay();
         sanitizeDiscordInvite();
         sanitizeTrackedFactions();

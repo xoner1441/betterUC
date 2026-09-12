@@ -429,6 +429,22 @@ public class BetterUCScreen extends Screen {
                 y = addInfo(x, y, controlW, "Dezent", "Kleiner Burst und wenige Tropfen");
                 y = addInfo(x, y, controlW, "Redux", "Großer Burst mit schnellen Streifen");
                 y = addInfo(x, y, controlW, "3D", "Räumlich gestaffelt und richtungsabhängig");
+                y = addSectionHeader(x, y, controlW, "Feinabstimmung", BetterUCConfig.INSTANCE.bloodEffectColor);
+                y = addRangeIntSlider(x, y, controlW, "Intensität %",
+                        BetterUCConfig.INSTANCE.bloodEffectIntensityPercent, 25, 150,
+                        value -> BetterUCConfig.INSTANCE.bloodEffectIntensityPercent = value);
+                y = addRangeIntSlider(x, y, controlW, "Größe %",
+                        BetterUCConfig.INSTANCE.bloodEffectSizePercent, 50, 200,
+                        value -> BetterUCConfig.INSTANCE.bloodEffectSizePercent = value);
+                y = addRangeIntSlider(x, y, controlW, "Dauer %",
+                        BetterUCConfig.INSTANCE.bloodEffectLifetimePercent, 50, 200,
+                        value -> BetterUCConfig.INSTANCE.bloodEffectLifetimePercent = value);
+                y = addRangeIntSlider(x, y, controlW, "Partikelmenge %",
+                        BetterUCConfig.INSTANCE.bloodEffectParticlePercent, 25, 200,
+                        value -> BetterUCConfig.INSTANCE.bloodEffectParticlePercent = value);
+                y = addColorButton(x, y, controlW, "Effektfarbe", BetterUCConfig.INSTANCE.bloodEffectColor,
+                        color -> BetterUCConfig.INSTANCE.bloodEffectColor = color);
+                y = addButton(x, y, controlW, "Feinabstimmung zurücksetzen", b -> resetBloodEffectSettings());
             }
             case AUTO_STATS -> {
                 y = addSectionHeader(x, y, controlW, "Automatik", 0xFF4ADE80);
@@ -1150,6 +1166,11 @@ public class BetterUCScreen extends Screen {
                     "Beschleunigt ausschließlich die visuelle Einblendanimation von Goldäxten in der Hand.";
             case "Betroffene Items" ->
                     "Gilt ausschließlich für P69, Scatter3, KR47, TS19, AX12, Extenso18 und Viper9.";
+            case "Intensität %" -> "Regelt Deckkraft sowie Geschwindigkeit und Streuung des Treffer-Effekts.";
+            case "Größe %" -> "Skaliert Burst, Tropfen und Streifen gemeinsam.";
+            case "Dauer %" -> "Bestimmt, wie lange die erzeugten Effektpartikel sichtbar bleiben.";
+            case "Partikelmenge %" -> "Regelt die Anzahl der Tropfen und Streifen pro Treffer.";
+            case "Feinabstimmung zurücksetzen" -> "Setzt Effektstärke, Größe, Dauer, Menge und Farbe auf den Standard zurück.";
             case "Auto-Stats Join" -> "Ruft beim Beitritt und nach AFK automatisch und unsichtbar /stats ab.";
             case "K/D anzeigen" ->
                     "Zeigt die K/D-Zeile bei einem manuell ausgeführten /stats. Automatische Abfragen bleiben immer unsichtbar.";
@@ -1328,6 +1349,16 @@ public class BetterUCScreen extends Screen {
         BetterUCConfig.INSTANCE.reinfTextColor = BetterUCConfig.DEFAULT_REINF_TEXT_COLOR;
         BetterUCConfig.INSTANCE.reinfDistanceColor = BetterUCConfig.DEFAULT_REINF_DISTANCE_COLOR;
         BetterUCConfig.INSTANCE.reinfUniformColor = BetterUCConfig.DEFAULT_REINF_UNIFORM_COLOR;
+        saveConfig();
+        refreshWidgets();
+    }
+
+    private void resetBloodEffectSettings() {
+        BetterUCConfig.INSTANCE.bloodEffectIntensityPercent = 100;
+        BetterUCConfig.INSTANCE.bloodEffectSizePercent = 100;
+        BetterUCConfig.INSTANCE.bloodEffectLifetimePercent = 100;
+        BetterUCConfig.INSTANCE.bloodEffectParticlePercent = 100;
+        BetterUCConfig.INSTANCE.bloodEffectColor = 0xFFD01824;
         saveConfig();
         refreshWidgets();
     }

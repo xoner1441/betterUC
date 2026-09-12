@@ -126,6 +126,13 @@ public final class ModernHudRenderer {
         return hudGradientColor(baseColor, 0.45F);
     }
 
+    public static int staleHudColor(int baseColor) {
+        int red = (((baseColor >> 16) & 0xFF) + 2 * 0x94) / 3;
+        int green = (((baseColor >> 8) & 0xFF) + 2 * 0xA3) / 3;
+        int blue = ((baseColor & 0xFF) + 2 * 0xB8) / 3;
+        return 0xFF000000 | (red << 16) | (green << 8) | blue;
+    }
+
     public static void drawHudTextWithShadow(
             GuiGraphicsExtractor context,
             Font renderer,

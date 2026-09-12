@@ -32,10 +32,12 @@ public class CashHud {
             "(?i)^" + OPTIONAL_SERVER_TAG + "eingezahlt\\s*:?\\s*([+-]?[0-9][0-9\\.]*)\\s*\\$\\s*[.!]?\\s*$"
     );
     private static final Pattern FACTION_BANK_DEPOSIT_PATTERN = Pattern.compile(
-            "(?i)^\\[\\s*F-?Bank\\s*]\\s+(.+?)\\s+hat\\s+([0-9][0-9\\.]*)\\s*\\$\\s+(?:auf|in)\\s+die\\s+Fraktionsbank\\s+eingezahlt\\s*[.!]?\\s*$"
+            "(?i)^\\[\\s*F-?Bank\\s*]\\s+(.+?)\\s+hat\\s+([0-9][0-9\\.]*)\\s*\\$\\s+(?:auf|in)\\s+die\\s+Fraktionsbank\\s+eingezahlt\\s*[.!]?"
+                    + "(?:\\s+Grund\\s*:\\s*.+)?\\s*$"
     );
     private static final Pattern FACTION_BANK_WITHDRAW_PATTERN = Pattern.compile(
-            "(?i)^\\[\\s*F-?Bank\\s*]\\s+(.+?)\\s+hat\\s+([0-9][0-9\\.]*)\\s*\\$\\s+aus\\s+der\\s+Fraktionsbank\\s+genommen\\s*[.!]?\\s*$"
+            "(?i)^\\[\\s*F-?Bank\\s*]\\s+(.+?)\\s+hat\\s+([0-9][0-9\\.]*)\\s*\\$\\s+aus\\s+der\\s+Fraktionsbank\\s+genommen\\s*[.!]?"
+                    + "(?:\\s+Grund\\s*:\\s*.+)?\\s*$"
     );
     private static final Pattern PLAYER_MONEY_SENT_PATTERN = Pattern.compile(
             "(?i)^du\\s+hast\\s+(" + PLAYER_TOKEN + ")\\s+([0-9][0-9\\.]*)\\s*\\$\\s+gegeben\\s*[.!]?\\s*$"
@@ -66,6 +68,7 @@ public class CashHud {
     private static final DecimalFormat MONEY_FORMAT = createMoneyFormat();
 
     private static int currentCash = -1;
+    private static boolean currentCashFresh = false;
     private static int lastSemanticDeltaAmount = -1;
     private static char lastSemanticDeltaSign = '\0';
     private static DeltaSource lastSemanticDeltaSource = DeltaSource.CONTEXT;
@@ -80,39 +83,36 @@ public class CashHud {
         });
     }
 
-    public static void updateFromStatsLine(String raw) {
-        if (raw == null || raw.isBlank()) return;
+    public static boolean updateFromStatsLine(String raw) {
+        if (raw == null || raw.isBlank()) return false;
         String cleanedRaw = stripFormatting(raw);
+        boolean recognized = false;
         for (String line : cleanedRaw.split("\\R+")) {
-            updateFromCleanLine(stripChatPrefix(line));
+            recognized |= updateFromCleanLine(stripChatPrefix(line));
         }
+        return recognized;
     }
 
-    private static void updateFromCleanLine(String raw) {
-        if (raw == null || raw.isBlank()) return;
+    private static boolean updateFromCleanLine(String raw) {
+        if (raw == null || raw.isBlank()) return false;
 
         if (isCemeteryEntryMessage(raw)) {
             resetDeltaDeduplication();
-            setCashAndPersist(0);
-            return;
+            setCashAndPersist(0, true);
+            return true;
         }
 
-        Matcher factionDepositMatcher = FACTION_BANK_DEPOSIT_PATTERN.matcher(raw);
-        if (factionDepositMatcher.find() && isCurrentPlayer(factionDepositMatcher.group(1))) {
-            Integer parsed = parseMoneyValue(factionDepositMatcher.group(2));
-            if (parsed != null) {
-                applyDeltaAndPersist('-', parsed, "fbank-deposit:" + normalizeRawKey(raw), DeltaSource.CONTEXT);
+        FactionBankCashDelta factionBankDelta = parseFactionBankCashDelta(raw);
+        if (factionBankDelta != null) {
+            if (isCurrentPlayer(factionBankDelta.playerName())) {
+                applyDeltaAndPersist(
+                        factionBankDelta.sign(),
+                        factionBankDelta.amount(),
+                        "fbank:" + normalizeRawKey(raw),
+                        DeltaSource.CONTEXT
+                );
             }
-            return;
-        }
-
-        Matcher factionWithdrawMatcher = FACTION_BANK_WITHDRAW_PATTERN.matcher(raw);
-        if (factionWithdrawMatcher.find() && isCurrentPlayer(factionWithdrawMatcher.group(1))) {
-            Integer parsed = parseMoneyValue(factionWithdrawMatcher.group(2));
-            if (parsed != null) {
-                applyDeltaAndPersist('+', parsed, "fbank-withdraw:" + normalizeRawKey(raw), DeltaSource.CONTEXT);
-            }
-            return;
+            return true;
         }
 
         Matcher moneySentMatcher = PLAYER_MONEY_SENT_PATTERN.matcher(raw);
@@ -121,7 +121,7 @@ public class CashHud {
             if (parsed != null) {
                 applyDeltaAndPersist('-', parsed, "pay-sent:" + normalizeRawKey(raw), DeltaSource.CONTEXT);
             }
-            return;
+            return true;
         }
 
         Matcher moneyReceivedMatcher = PLAYER_MONEY_RECEIVED_PATTERN.matcher(raw);
@@ -130,19 +130,19 @@ public class CashHud {
             if (parsed != null) {
                 applyDeltaAndPersist('+', parsed, "pay-received:" + normalizeRawKey(raw), DeltaSource.CONTEXT);
             }
-            return;
+            return true;
         }
 
         Integer itemSaleAmount = parsePlayerItemSaleAmount(raw);
         if (itemSaleAmount != null) {
             applyDeltaAndPersist('+', itemSaleAmount, "item-sale:" + normalizeRawKey(raw), DeltaSource.CONTEXT);
-            return;
+            return true;
         }
 
         Integer fangComboAmount = parseFangComboCashAmount(raw);
         if (fangComboAmount != null) {
             applyDeltaAndPersist('+', fangComboAmount, "fang-combo:" + normalizeRawKey(raw), DeltaSource.CONTEXT);
-            return;
+            return true;
         }
 
         CasinoCashDelta casinoDelta = parseCasinoCashDelta(raw);
@@ -153,7 +153,7 @@ public class CashHud {
                     "casino:" + normalizeRawKey(raw),
                     DeltaSource.CONTEXT
             );
-            return;
+            return true;
         }
 
         Integer absoluteCash = parseCashBalanceMessage(raw);
@@ -162,8 +162,8 @@ public class CashHud {
                 int amount = Math.abs(absoluteCash - currentCash);
                 recordSemanticDelta(absoluteCash > currentCash ? '+' : '-', amount, DeltaSource.ABSOLUTE_BALANCE);
             }
-            setCashAndPersist(Math.max(0, absoluteCash));
-            return;
+            setCashAndPersist(Math.max(0, absoluteCash), true);
+            return true;
         }
 
         Matcher payoutMatcher = CASH_PAYOUT_PATTERN.matcher(raw);
@@ -173,7 +173,7 @@ public class CashHud {
                 int amount = Math.abs(parsed);
                 applyDeltaAndPersist('+', amount, "payout:" + normalizeRawKey(raw), DeltaSource.CONTEXT);
             }
-            return;
+            return true;
         }
 
         Matcher depositMatcher = CASH_DEPOSIT_PATTERN.matcher(raw);
@@ -183,7 +183,7 @@ public class CashHud {
                 int amount = Math.abs(parsed);
                 applyDeltaAndPersist('-', amount, "deposit:" + normalizeRawKey(raw), DeltaSource.CONTEXT);
             }
-            return;
+            return true;
         }
 
         Matcher signedDeltaMatcher = CASH_SIGNED_DELTA_PATTERN.matcher(raw);
@@ -198,15 +198,24 @@ public class CashHud {
                         DeltaSource.SIGNED_LINE
                 );
             }
-            return;
+            return true;
         }
 
+        return false;
     }
 
     private static boolean isCurrentPlayer(String name) {
+        if (isOwnPlayerReference(name, null)) return true;
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.player == null || name == null) return false;
-        return name.trim().equalsIgnoreCase(client.player.getName().getString());
+        return isOwnPlayerReference(name, client.player.getName().getString());
+    }
+
+    static boolean isOwnPlayerReference(String name, String currentPlayerName) {
+        if (name == null) return false;
+        String candidate = name.trim();
+        if (candidate.equalsIgnoreCase("<PLAYER>")) return true;
+        return currentPlayerName != null && candidate.equalsIgnoreCase(currentPlayerName.trim());
     }
 
     private static String stripFormatting(String raw) {
@@ -222,6 +231,10 @@ public class CashHud {
 
     public static int getCurrentCash() {
         return currentCash;
+    }
+
+    public static boolean isCurrentCashFresh() {
+        return currentCash >= 0 && currentCashFresh;
     }
 
     public static String formatMoney(int value) {
@@ -241,6 +254,10 @@ public class CashHud {
 
         int x = BetterUCConfig.INSTANCE.cashHudX;
         int y = BetterUCConfig.INSTANCE.cashHudY;
+        boolean fresh = isCurrentCashFresh();
+        int displayColor = fresh
+                ? BetterUCConfig.INSTANCE.cashHudColor
+                : ModernHudRenderer.staleHudColor(BetterUCConfig.INSTANCE.cashHudColor);
         String value = formatMoney(currentCash) + "$";
         String style = BetterUCConfig.INSTANCE.cashHudStyle;
         String displayText = BetterUCConfig.prefixedHudText(
@@ -258,13 +275,13 @@ public class CashHud {
                 x,
                 y,
                 BetterUCConfig.INSTANCE.cashHudScale,
-                BetterUCConfig.INSTANCE.cashHudGradientEnabled,
+                fresh && BetterUCConfig.INSTANCE.cashHudGradientEnabled,
                 BetterUCConfig.INSTANCE.cashHudGradientColor,
                 () -> {
             if (BetterUCConfig.isStylizedHudStyle(style)) {
-                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.cashHudCustomFont, displayText, 0, 0, BetterUCConfig.INSTANCE.cashHudColor);
+                ModernHudRenderer.drawStyledText(context, client, style, BetterUCConfig.INSTANCE.cashHudCustomFont, displayText, 0, 0, displayColor);
             } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                ModernHudRenderer.drawHudTextWithShadow(context, client.font, displayText, 0, 0, BetterUCConfig.INSTANCE.cashHudColor);
+                ModernHudRenderer.drawHudTextWithShadow(context, client.font, displayText, 0, 0, displayColor);
             } else {
                 ModernHudRenderer.drawModule(
                         context,
@@ -273,7 +290,8 @@ public class CashHud {
                         0,
                         moduleLabel,
                         value,
-                        BetterUCConfig.INSTANCE.cashHudColor
+                        displayColor,
+                        fresh ? ModernHudRenderer.TEXT_PRIMARY : ModernHudRenderer.TEXT_DIM
                 );
             }
         });
@@ -328,6 +346,28 @@ public class CashHud {
         return amount == null || amount <= 0 ? null : amount;
     }
 
+    static FactionBankCashDelta parseFactionBankCashDelta(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String cleaned = stripChatPrefix(stripFormatting(raw));
+
+        Matcher deposit = FACTION_BANK_DEPOSIT_PATTERN.matcher(cleaned);
+        if (deposit.matches()) {
+            Integer amount = parseMoneyValue(deposit.group(2));
+            return amount == null || amount <= 0
+                    ? null
+                    : new FactionBankCashDelta(deposit.group(1).trim(), '-', amount);
+        }
+
+        Matcher withdraw = FACTION_BANK_WITHDRAW_PATTERN.matcher(cleaned);
+        if (withdraw.matches()) {
+            Integer amount = parseMoneyValue(withdraw.group(2));
+            return amount == null || amount <= 0
+                    ? null
+                    : new FactionBankCashDelta(withdraw.group(1).trim(), '+', amount);
+        }
+        return null;
+    }
+
     static boolean isCemeteryEntryMessage(String raw) {
         if (raw == null || raw.isBlank()) return false;
         String cleaned = stripChatPrefix(stripFormatting(raw));
@@ -349,15 +389,24 @@ public class CashHud {
     record CasinoCashDelta(char sign, int amount) {
     }
 
+    record FactionBankCashDelta(String playerName, char sign, int amount) {
+    }
+
     private static void restoreFromConfig() {
         currentCash = Math.max(-1, BetterUCConfig.INSTANCE.lastKnownCash);
+        currentCashFresh = false;
     }
 
     private static void setCashAndPersist(int newCash) {
+        setCashAndPersist(newCash, false);
+    }
+
+    private static void setCashAndPersist(int newCash, boolean authoritative) {
         if (newCash < 0) return;
         boolean changed = currentCash != newCash
                 || BetterUCConfig.INSTANCE.lastKnownCash != newCash;
         currentCash = newCash;
+        if (authoritative) currentCashFresh = true;
         BetterUCConfig.INSTANCE.lastKnownCash = newCash;
         if (changed) {
             BetterUCConfig.save();

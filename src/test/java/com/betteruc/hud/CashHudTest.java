@@ -135,4 +135,46 @@ class CashHudTest {
                 CashHud.DeltaSource.CONTEXT
         ));
     }
+
+    @Test
+    void factionBankDepositAcceptsExactServerFormatButRejectsPlayerChat() {
+        CashHud.FactionBankCashDelta delta = CashHud.parseFactionBankCashDelta(
+                "17:33:11 [F-Bank] FABI1441 hat 8000$ in die Fraktionsbank eingezahlt."
+        );
+
+        assertNotNull(delta);
+        assertEquals("FABI1441", delta.playerName());
+        assertEquals('-', delta.sign());
+        assertEquals(8_000, delta.amount());
+        assertNull(CashHud.parseFactionBankCashDelta(
+                "17:33:11 FBI pixel412: [F-Bank] FABI1441 hat 8000$ in die Fraktionsbank eingezahlt."
+        ));
+    }
+
+    @Test
+    void factionBankWithdrawalAddsCash() {
+        CashHud.FactionBankCashDelta delta = CashHud.parseFactionBankCashDelta(
+                "[F-Bank] FABI1441 hat 12.500$ aus der Fraktionsbank genommen."
+        );
+
+        assertNotNull(delta);
+        assertEquals('+', delta.sign());
+        assertEquals(12_500, delta.amount());
+    }
+
+    @Test
+    void factionBankAcceptsServerPlayerPlaceholderAndReasonSuffix() {
+        CashHud.FactionBankCashDelta delta = CashHud.parseFactionBankCashDelta(
+                "23:21:14 [F-Bank] <PLAYER> hat 4000$ in die Fraktionsbank eingezahlt. Grund: skev"
+        );
+
+        assertNotNull(delta);
+        assertEquals("<PLAYER>", delta.playerName());
+        assertEquals('-', delta.sign());
+        assertEquals(4_000, delta.amount());
+        assertTrue(CashHud.isOwnPlayerReference(delta.playerName(), "FABI1441"));
+        assertNull(CashHud.parseFactionBankCashDelta(
+                "23:21:14 FBI pixel412: [F-Bank] <PLAYER> hat 4000$ in die Fraktionsbank eingezahlt. Grund: fake"
+        ));
+    }
 }

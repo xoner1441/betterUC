@@ -34,6 +34,7 @@ import com.betteruc.hud.CashHud;
 import com.betteruc.hud.DealerTimerHud;
 import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.MaskTimerHud;
+import com.betteruc.hud.MoneyHudDiagnostics;
 import com.betteruc.hud.PaydayHud;
 import com.betteruc.hud.PlantageHud;
 import com.betteruc.hud.ProductionTimerHud;
@@ -327,10 +328,19 @@ public class ChatBlacklistMixin {
     }
 
     private void updateMoney(String raw, ChatMessageOrigin origin) {
-        if (origin == ChatMessageOrigin.PLAYER) return;
+        // Some UnicaCity plugin messages (notably [F-Bank]) arrive through Minecraft's
+        // player-message path. Both HUD parsers use anchored server formats and reject
+        // the visible rank/name prefix of ordinary player chat, so they remain safe here.
+        boolean bankRecognized = BankBalanceHud.updateFromChatLine(raw);
+        boolean cashRecognized = CashHud.updateFromStatsLine(raw);
+        MoneyHudDiagnostics.recordIfSuspicious(
+                raw,
+                bankRecognized,
+                cashRecognized,
+                origin == ChatMessageOrigin.PLAYER
+        );
 
-        BankBalanceHud.updateFromChatLine(raw);
-        CashHud.updateFromStatsLine(raw);
+        if (origin == ChatMessageOrigin.PLAYER) return;
         updateCurrentFaction(raw);
 
         Matcher blackMoneyMatcher = BLACK_MONEY_PATTERN.matcher(raw);

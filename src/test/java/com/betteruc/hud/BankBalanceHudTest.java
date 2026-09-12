@@ -20,6 +20,18 @@ class BankBalanceHudTest {
         assertNull(BankBalanceHud.parseBankBalanceMessage(
                 "21:10:04 [FBI] pixel412: Ihr Bankguthaben beträgt: +123.564$"
         ));
+        assertEquals(57_135, BankBalanceHud.parseBankBalanceMessage(
+                "17:33:04 Neuer Kontostand 57.135$"
+        ));
+        assertNull(BankBalanceHud.parseBankBalanceMessage(
+                "17:33:04 FBI pixel412: Neuer Kontostand 999.999$"
+        ));
+        assertEquals(59_794, BankBalanceHud.parseBankBalanceMessage(
+                "19:18:51 » Neuer Betrag 59794$ (+1324$)"
+        ));
+        assertNull(BankBalanceHud.parseBankBalanceMessage(
+                "19:18:51 FBI pixel412: Neuer Betrag 999999$ (+999999$)"
+        ));
     }
 
     @Test
