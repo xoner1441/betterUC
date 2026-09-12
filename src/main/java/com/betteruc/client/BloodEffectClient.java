@@ -39,8 +39,8 @@ public final class BloodEffectClient {
 
     public static void initialize() {
         ParticleProviderRegistry.getInstance().register(BloodEffectParticles.BURST,
-                sprites -> (options, level, x, y, z, scale, spin, unused, random) ->
-                        new BurstParticle(level, x, y, z, scale, spin, sprites));
+                sprites -> (options, level, x, y, z, scale, spin, lifetime, random) ->
+                        new BurstParticle(level, x, y, z, scale, spin, (int) Math.round(lifetime), sprites));
         ParticleProviderRegistry.getInstance().register(BloodEffectParticles.DROP,
                 sprites -> (options, level, x, y, z, dx, dy, dz, random) ->
                         new DropParticle(level, x, y, z, dx, dy, dz, sprites));
@@ -170,9 +170,13 @@ public final class BloodEffectClient {
         boolean volumetric = mode == Mode.VOLUMETRIC;
         var random = level.getRandom();
         Vec3 direction = normalizeDirection(rawDirection);
-        double burstScale = volumetric ? 0.92D : redux ? 1.15D : 0.72D;
+        double sizeScale = percentScale(BetterUCConfig.INSTANCE.bloodEffectSizePercent);
+        double intensity = percentScale(BetterUCConfig.INSTANCE.bloodEffectIntensityPercent);
+        double motionScale = 0.55D + intensity * 0.45D;
+        double burstScale = (volumetric ? 0.92D : redux ? 1.15D : 0.72D) * sizeScale;
         double spin = (random.nextDouble() - 0.5D) * (volumetric ? 0.28D : redux ? 0.20D : 0.12D);
-        level.addParticle(BloodEffectParticles.BURST, x, y, z, burstScale, spin, 0);
+        level.addParticle(BloodEffectParticles.BURST, x, y, z, burstScale, spin,
+                volumetric ? 13 : redux ? 13 : 9);
 
         if (volumetric) {
             Vec3 side = horizontalPerpendicular(direction);
@@ -180,17 +184,17 @@ public final class BloodEffectClient {
                     x + direction.x * 0.16D + side.x * 0.13D,
                     y + 0.10D,
                     z + direction.z * 0.16D + side.z * 0.13D,
-                    0.54D, -spin * 1.35D, 0);
+                    0.54D * sizeScale, -spin * 1.35D, 11);
             level.addParticle(BloodEffectParticles.BURST,
                     x + direction.x * 0.30D - side.x * 0.11D,
                     y - 0.07D,
                     z + direction.z * 0.30D - side.z * 0.11D,
-                    0.38D, spin * 1.65D, 0);
+                    0.38D * sizeScale, spin * 1.65D, 9);
         }
 
-        int drops = volumetric ? 12 : redux ? 9 : 4;
-        double speed = volumetric ? 0.25D : redux ? 0.22D : 0.13D;
-        double directionalPush = volumetric ? 0.19D : redux ? 0.08D : 0.035D;
+        int drops = scaledCount(volumetric ? 12 : redux ? 9 : 4);
+        double speed = (volumetric ? 0.25D : redux ? 0.22D : 0.13D) * motionScale;
+        double directionalPush = (volumetric ? 0.19D : redux ? 0.08D : 0.035D) * motionScale;
         for (int i = 0; i < drops; i++) {
             double dx = random.triangle(0, speed) + direction.x * directionalPush;
             double dy = random.nextDouble() * speed + 0.035D;
@@ -201,10 +205,10 @@ public final class BloodEffectClient {
                     z + random.triangle(0, 0.08D), dx, dy, dz);
         }
 
-        int streaks = volumetric ? 9 : redux ? 2 : 0;
+        int streaks = scaledCount(volumetric ? 9 : redux ? 2 : 0);
         for (int i = 0; i < streaks; i++) {
-            double spread = volumetric ? 0.10D : 0.06D;
-            double push = volumetric ? 0.19D : 0.14D;
+            double spread = (volumetric ? 0.10D : 0.06D) * motionScale;
+            double push = (volumetric ? 0.19D : 0.14D) * motionScale;
             double dx = direction.x * push + random.triangle(0, spread);
             double dy = 0.025D + random.nextDouble() * (volumetric ? 0.10D : 0.07D);
             double dz = direction.z * push + random.triangle(0, spread);
@@ -228,22 +232,51 @@ public final class BloodEffectClient {
                 : new Vec3(-direction.z / length, 0, direction.x / length);
     }
 
+    private static double percentScale(int percent) {
+        return percent / 100.0D;
+    }
+
+    private static int scaledCount(int base) {
+        if (base <= 0) return 0;
+        return Math.max(1, (int) Math.round(base * percentScale(BetterUCConfig.INSTANCE.bloodEffectParticlePercent)));
+    }
+
+    private static int scaledLifetime(int base) {
+        return Math.max(2, (int) Math.round(base * percentScale(BetterUCConfig.INSTANCE.bloodEffectLifetimePercent)));
+    }
+
+    private static float effectOpacity() {
+        float intensity = BetterUCConfig.INSTANCE.bloodEffectIntensityPercent / 100.0F;
+        return Mth.clamp(0.45F + intensity * 0.55F, 0.25F, 1.0F);
+    }
+
+    private static void applyEffectColor(SingleQuadParticle particle) {
+        int color = BetterUCConfig.INSTANCE.bloodEffectColor;
+        particle.setColor(
+                ((color >> 16) & 0xFF) / 255.0F,
+                ((color >> 8) & 0xFF) / 255.0F,
+                (color & 0xFF) / 255.0F
+        );
+    }
+
     private static final class BurstParticle extends SingleQuadParticle {
         private final float baseSize;
         private final float spin;
+        private final float opacity;
 
         private BurstParticle(ClientLevel level, double x, double y, double z,
-                              double scale, double spin, SpriteSet sprites) {
+                              double scale, double spin, int baseLifetime, SpriteSet sprites) {
             super(level, x, y, z, sprites.first());
             this.baseSize = (float) scale;
             this.spin = (float) spin;
-            lifetime = scale > 0.9D ? 13 : 9;
+            this.opacity = effectOpacity();
+            lifetime = scaledLifetime(Math.max(2, baseLifetime));
             hasPhysics = false;
             gravity = 0;
             friction = 1;
             roll = random.nextFloat() * Mth.TWO_PI;
             oRoll = roll;
-            setColor(1, 1, 1);
+            applyEffectColor(this);
             setAlpha(0);
         }
 
@@ -252,7 +285,10 @@ public final class BloodEffectClient {
             oRoll = roll;
             roll += spin;
             float progress = Math.min(1, age / (float) lifetime);
-            setAlpha(progress < 0.12F ? progress / 0.12F : 1F - Mth.clamp((progress - 0.58F) / 0.42F, 0, 1));
+            float fade = progress < 0.12F
+                    ? progress / 0.12F
+                    : 1F - Mth.clamp((progress - 0.58F) / 0.42F, 0, 1);
+            setAlpha(opacity * fade);
         }
 
         @Override public float getQuadSize(float partialTick) {
@@ -267,6 +303,7 @@ public final class BloodEffectClient {
     private static final class DropParticle extends SingleQuadParticle {
         private final float baseSize;
         private final float spin;
+        private final float opacity;
 
         private DropParticle(ClientLevel level, double x, double y, double z,
                              double dx, double dy, double dz, SpriteSet sprites) {
@@ -274,15 +311,18 @@ public final class BloodEffectClient {
             this.xd = dx;
             this.yd = dy;
             this.zd = dz;
-            baseSize = 0.055F + random.nextFloat() * 0.075F;
+            baseSize = (0.055F + random.nextFloat() * 0.075F)
+                    * (float) percentScale(BetterUCConfig.INSTANCE.bloodEffectSizePercent);
             spin = (random.nextFloat() - 0.5F) * 0.45F;
-            lifetime = 11 + random.nextInt(10);
+            opacity = effectOpacity();
+            lifetime = scaledLifetime(11 + random.nextInt(10));
             gravity = 0.55F;
             friction = 0.88F;
             hasPhysics = true;
             roll = random.nextFloat() * Mth.TWO_PI;
             oRoll = roll;
-            setColor(0.88F + random.nextFloat() * 0.12F, 0.78F, 0.78F);
+            applyEffectColor(this);
+            setAlpha(opacity);
         }
 
         @Override public void tick() {
@@ -290,7 +330,7 @@ public final class BloodEffectClient {
             oRoll = roll;
             roll += spin;
             float progress = Math.min(1, age / (float) lifetime);
-            setAlpha(1F - Mth.clamp((progress - 0.62F) / 0.38F, 0, 1));
+            setAlpha(opacity * (1F - Mth.clamp((progress - 0.62F) / 0.38F, 0, 1)));
         }
 
         @Override public float getQuadSize(float partialTick) {
@@ -303,6 +343,7 @@ public final class BloodEffectClient {
     private static final class StreakParticle extends SingleQuadParticle {
         private final float baseSize;
         private final float spin;
+        private final float opacity;
 
         private StreakParticle(ClientLevel level, double x, double y, double z,
                                double dx, double dy, double dz, SpriteSet sprites) {
@@ -310,16 +351,18 @@ public final class BloodEffectClient {
             this.xd = dx;
             this.yd = dy;
             this.zd = dz;
-            baseSize = 0.40F + random.nextFloat() * 0.20F;
+            baseSize = (0.40F + random.nextFloat() * 0.20F)
+                    * (float) percentScale(BetterUCConfig.INSTANCE.bloodEffectSizePercent);
             spin = (random.nextFloat() - 0.5F) * 0.12F;
-            lifetime = 14 + random.nextInt(6);
+            opacity = effectOpacity();
+            lifetime = scaledLifetime(14 + random.nextInt(6));
             gravity = 0.10F;
             friction = 0.94F;
             hasPhysics = false;
             roll = random.nextFloat() * Mth.TWO_PI;
             oRoll = roll;
-            setColor(1F, 1F, 1F);
-            setAlpha(1F);
+            applyEffectColor(this);
+            setAlpha(opacity);
         }
 
         @Override public void tick() {
@@ -327,7 +370,7 @@ public final class BloodEffectClient {
             oRoll = roll;
             roll += spin;
             float progress = Math.min(1, age / (float) lifetime);
-            setAlpha(1F - Mth.clamp((progress - 0.58F) / 0.42F, 0, 1));
+            setAlpha(opacity * (1F - Mth.clamp((progress - 0.58F) / 0.42F, 0, 1)));
         }
 
         @Override public float getQuadSize(float partialTick) {
