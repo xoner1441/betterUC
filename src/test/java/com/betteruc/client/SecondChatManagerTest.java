@@ -28,6 +28,10 @@ class SecondChatManagerTest {
                 "FBI Agent007 kommt zum Verst\u00E4rkungsruf von FABI1441! (40 Meter entfernt)"
         ));
         assertTrue(SecondChatManager.isReinforcementMessage(
+                "[System] [CHAT] 20:56:31 Polizei blockspielbtw kommt zum Verst\u00E4rkungsruf "
+                        + "von FABI1441! (630 Meter entfernt) (Start: Farm)"
+        ));
+        assertTrue(SecondChatManager.isReinforcementMessage(
                 "Drogenabnahme! Polizei Dlulusional ben\u00F6tigt Unterst\u00FCtzung in der N\u00E4he von Schmiede! "
                         + "(544 Meter entfernt) (26g Pulver, 30g Kr\u00E4uter)"
         ));

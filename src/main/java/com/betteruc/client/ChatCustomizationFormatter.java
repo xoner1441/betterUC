@@ -118,7 +118,7 @@ public final class ChatCustomizationFormatter {
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern SUPPORT_RESPONSE_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(.+?)\\s+([^\\s]+)\\s+kommt\\s+zum\\s+Verst\\u00E4rkungsruf\\s+von\\s+([^\\s]+)!\\s*\\((\\d+)\\s*Meter\\s+entfernt\\)\\s*$",
+            "^\\s*(?:(?:\\[System\\]\\s*)?\\[CHAT\\]\\s*)?(?:\\d{1,2}:\\d{2}:\\d{2}\\s*)?(?:\\W+\\s*)?(.+?)\\s+([^\\s]+)\\s+kommt\\s+zum\\s+Verst\\u00E4rkungsruf\\s+von\\s+([^\\s]+)!\\s*\\((\\d+)\\s*Meter\\s+entfernt\\)\\s*(?:\\(Start:\\s*([^()]+?)\\))?\\s*$",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern DRUG_AMOUNT_ENTRY_PATTERN = Pattern.compile(
@@ -274,9 +274,13 @@ public final class ChatCustomizationFormatter {
             String actor = supportResponse.group(2);
             String target = supportResponse.group(3);
             String meters = supportResponse.group(4);
+            String start = supportResponse.group(5);
+            String route = start == null || start.isBlank()
+                    ? "zu " + target
+                    : start.trim() + " → " + target;
             return Result.replaceReinforcement(List.of(
                     supportHeadline("UNTERWEGS", actor, reinforcementStyle),
-                    supportDetail(isKnownFaction(source) ? source : "", "zu " + target, meters + "m",
+                    supportDetail(isKnownFaction(source) ? source : "", route, meters + "m",
                             reinforcementStyle)
             ));
         }
@@ -328,9 +332,9 @@ public final class ChatCustomizationFormatter {
 
         Matcher personalPlantageBurned = PERSONAL_PLANTAGE_BURNED_PATTERN.matcher(clean);
         if (personalPlantageBurned.matches()) {
-            return Result.replace(List.of(
-                    plantageSuccessHeadline(headlineStyle)
-            ));
+            // The following HQ broadcast already carries the actor and plantation type.
+            // Suppress this duplicate personal confirmation instead of rendering a second headline.
+            return Result.suppress();
         }
 
         Matcher hqPlantageBurned = HQ_PLANTAGE_BURNED_PATTERN.matcher(clean);
@@ -545,12 +549,6 @@ public final class ChatCustomizationFormatter {
                 .append(actorName(actor, headlineStyle))
                 .append(separator(headlineDirectionSeparator(headlineStyle)))
                 .append(targetName(target, headlineStyle));
-    }
-
-    private static Component plantageSuccessHeadline(HeadlineStyle headlineStyle) {
-        return plantageAction("PLANTAGE VERBRANNT", headlineStyle)
-                .append(separator(headlineLeadSeparator(headlineStyle)))
-                .append(plantageDetailText("Erfolgreich", headlineStyle));
     }
 
     private static Component plantageHeadline(String actor, HeadlineStyle headlineStyle) {

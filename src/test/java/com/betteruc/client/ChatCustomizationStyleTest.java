@@ -218,7 +218,7 @@ class ChatCustomizationStyleTest {
     }
 
     @Test
-    void formatsPersonalPlantageBurnAsCompactSuccessMessage() {
+    void suppressesDuplicatePersonalPulverPlantageConfirmation() {
         ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
                 "[System] [CHAT] 23:52:56 Du hast erfolgreich eine Pulver Plant verbrannt.",
                 true,
@@ -229,17 +229,13 @@ class ChatCustomizationStyleTest {
         );
 
         assertNotNull(result);
+        assertTrue(result.cancelOriginal());
         assertFalse(result.hq());
-        assertEquals(1, result.replacementMessages().size());
-        assertEquals("ᴘʟᴀɴᴛᴀɢᴇ ᴠᴇʀʙʀᴀɴɴᴛ // Erfolgreich",
-                result.replacementMessages().get(0).getString());
-        List<Component> segments = result.replacementMessages().get(0).toFlatList();
-        assertEquals(0xFF3B30, segments.get(0).getStyle().getColor().getValue());
-        assertTrue(segments.get(0).getStyle().isBold());
+        assertTrue(result.replacementMessages().isEmpty());
     }
 
     @Test
-    void formatsPersonalKraeuterPlantageBurnAsCompactSuccessMessage() {
+    void suppressesDuplicatePersonalKraeuterPlantageConfirmation() {
         ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
                 "[System] [CHAT] 23:52:56 Du hast erfolgreich eine Kräuter Plant verbrannt.",
                 true,
@@ -250,14 +246,13 @@ class ChatCustomizationStyleTest {
         );
 
         assertNotNull(result);
+        assertTrue(result.cancelOriginal());
         assertFalse(result.hq());
-        assertEquals(1, result.replacementMessages().size());
-        assertEquals("ᴘʟᴀɴᴛᴀɢᴇ ᴠᴇʀʙʀᴀɴɴᴛ // Erfolgreich",
-                result.replacementMessages().get(0).getString());
+        assertTrue(result.replacementMessages().isEmpty());
     }
 
     @Test
-    void formatsPersonalBluetenharzPlantageBurnAsCompactSuccessMessage() {
+    void suppressesDuplicatePersonalBluetenharzPlantageConfirmation() {
         ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
                 "[System] [CHAT] 16:20:16 Du hast erfolgreich eine Blütenharz Plant verbrannt.",
                 true,
@@ -268,10 +263,9 @@ class ChatCustomizationStyleTest {
         );
 
         assertNotNull(result);
+        assertTrue(result.cancelOriginal());
         assertFalse(result.hq());
-        assertEquals(1, result.replacementMessages().size());
-        assertEquals("ᴘʟᴀɴᴛᴀɢᴇ ᴠᴇʀʙʀᴀɴɴᴛ // Erfolgreich",
-                result.replacementMessages().get(0).getString());
+        assertTrue(result.replacementMessages().isEmpty());
     }
 
     @Test
@@ -407,6 +401,42 @@ class ChatCustomizationStyleTest {
                 result.replacementMessages().get(0).getString());
         assertEquals("» Schmiede ✦ 544 m entfernt",
                 result.replacementMessages().get(1).getString());
+    }
+
+    @Test
+    void formatsAcceptedReinforcementWithStartAsCompactRoute() {
+        ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
+                "[System] [CHAT] 20:56:31 Polizei blockspielbtw kommt zum Verstärkungsruf "
+                        + "von FABI1441! (630 Meter entfernt) (Start: Farm)",
+                false,
+                true,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
+        );
+
+        assertNotNull(result);
+        assertTrue(result.reinforcement());
+        assertEquals(2, result.replacementMessages().size());
+        assertEquals("unterwegs ◆ blockspielbtw", result.replacementMessages().get(0).getString());
+        assertEquals("» Polizei | Farm → FABI1441 | 630m",
+                result.replacementMessages().get(1).getString());
+    }
+
+    @Test
+    void keepsAcceptedReinforcementWithoutStartCompatible() {
+        ChatCustomizationFormatter.Result result = ChatCustomizationFormatter.transform(
+                "FBI Agent007 kommt zum Verstärkungsruf von FABI1441! (40 Meter entfernt)",
+                false,
+                true,
+                BetterUCConfig.CHAT_ACTION_TEXT_SMALL_CAPS,
+                BetterUCConfig.CHAT_SEPARATOR_TECHNICAL,
+                true
+        );
+
+        assertNotNull(result);
+        assertTrue(result.reinforcement());
+        assertEquals("» FBI | zu FABI1441 | 40m", result.replacementMessages().get(1).getString());
     }
 
     @Test
