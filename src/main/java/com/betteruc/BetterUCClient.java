@@ -1052,6 +1052,9 @@ public class BetterUCClient implements ClientModInitializer {
             BetterUCFontManager.tick(client);
             VersionChecker.tick(client);
             maybeOpenWelcomeChangelog(client);
+            // Account verification must run while disconnected. Keeping this before the player
+            // guard prevents betterUC from issuing a second Mojang join while already on a server.
+            BetterUCAuthClient.tick(client);
             if (client.player == null) return;
 
             HackTimerHud.tick();
@@ -1061,7 +1064,6 @@ public class BetterUCClient implements ClientModInitializer {
             PlantageHud.tick();
             AmmoHud.tickReloadKey(client);
             RemoteFeatureFlagsClient.tick(client);
-            BetterUCAuthClient.tick(client);
             applyRemoteFeatureState(client);
             PingRelayClient.tick(client);
             if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.CLOUD_SETTINGS)) {

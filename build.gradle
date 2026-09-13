@@ -41,6 +41,7 @@ sourceSets {
 
 apply from: 'gradle/clip-natives.gradle'
 def clipNativesJar = tasks.named('clipNativesJar')
+configurations { clipRuntimeBundle }
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
@@ -63,13 +64,15 @@ dependencies {
 
     // Clip prototype: in-process FFmpeg, no executables or runtime downloads.
     // Deliberately do not depend on javacv-platform (which includes unrelated libraries/platforms).
-    ["org.bytedeco:javacpp:1.5.13", "org.bytedeco:javacpp:1.5.13:windows-x86_64",
-     "org.bytedeco:ffmpeg:8.0.1-1.5.13"].each { coordinate ->
-        implementation(coordinate) { transitive = false }
-        include(coordinate) { transitive = false }
+    ["org.bytedeco:javacpp:1.5.13", "org.bytedeco:ffmpeg:8.0.1-1.5.13"].each { coordinate ->
+        compileOnly(coordinate) { transitive = false }
+        testImplementation(coordinate) { transitive = false }
+        clipRuntimeBundle(coordinate) { transitive = false }
     }
+    testRuntimeOnly("org.bytedeco:javacpp:1.5.13:windows-x86_64") { transitive = false }
+    clipRuntimeBundle("org.bytedeco:javacpp:1.5.13:windows-x86_64") { transitive = false }
     clipNative('org.bytedeco:ffmpeg:8.0.1-1.5.13:windows-x86_64') { transitive = false }
-    implementation files(clipNativesJar)
+    testRuntimeOnly files(clipNativesJar)
 }
 
 processResources {
@@ -107,8 +110,44 @@ java {
     withSourcesJar()
 }
 
+def clipRuntimeClassPatterns = [
+        'com/betteruc/client/clips/HardwareClipEncoder*.class',
+        'com/betteruc/client/clips/ClipEncoderSelection*.class',
+        'com/betteruc/client/clips/ClipAudioEncoder*.class',
+        'com/betteruc/client/clips/ClipNativeErrors*.class',
+        'com/betteruc/client/clips/ClipSettings*.class',
+        'com/betteruc/client/clips/ClipPacket*.class',
+        'com/betteruc/client/clips/ClipPcmSource*.class',
+        'com/betteruc/client/clips/ClipAudioBuffer*.class',
+        'com/betteruc/client/clips/ClipNativeThumbnail*.class',
+        'com/betteruc/client/clips/ClipRuntimeEntry*.class'
+]
+def clipRuntimeOnlyClassPatterns = [
+        'com/betteruc/client/clips/HardwareClipEncoder*.class',
+        'com/betteruc/client/clips/ClipEncoderSelection*.class',
+        'com/betteruc/client/clips/ClipAudioEncoder*.class',
+        'com/betteruc/client/clips/ClipNativeErrors*.class',
+        'com/betteruc/client/clips/ClipNativeThumbnail*.class',
+        'com/betteruc/client/clips/ClipRuntimeEntry*.class'
+]
+def clipRuntimeJar = tasks.register('clipRuntimeJar', Jar) {
+    dependsOn tasks.named('classes'), clipNativesJar
+    archiveFileName = 'betteruc-clip-runtime-isolated.jar'
+    destinationDirectory = layout.buildDirectory.dir('clip-libraries')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(sourceSets.main.output) { include clipRuntimeClassPatterns }
+    from({ configurations.clipRuntimeBundle.collect { zipTree(it) } }) {
+        exclude 'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.DSA', 'META-INF/MANIFEST.MF'
+    }
+    from({ zipTree(clipNativesJar.get().archiveFile.get().asFile) }) {
+        exclude 'fabric.mod.json', 'META-INF/MANIFEST.MF'
+    }
+}
+
 jar {
-    from(clipNativesJar) { into "META-INF/jars" }
+    dependsOn clipRuntimeJar
+    exclude clipRuntimeOnlyClassPatterns
+    from(clipRuntimeJar.flatMap { it.archiveFile }) { into "META-INF/betteruc-runtime" }
     from("LICENSE") { rename { "${it}_${project.base.archivesName.get()}" } }
     from("CLIPS-THIRD-PARTY.md")
     from("third-party/clips") { into "META-INF/licenses/clips" }
@@ -118,8 +157,51 @@ jar {
     }
 }
 
+def verifyClipIsolation = tasks.register('verifyClipIsolation') {
+    dependsOn tasks.named('jar'), clipRuntimeJar
+    inputs.files(tasks.named('jar').flatMap { it.archiveFile }, clipRuntimeJar.flatMap { it.archiveFile })
+    doLast {
+        new java.util.zip.ZipFile(clipRuntimeJar.get().archiveFile.get().asFile).withCloseable { zip ->
+            def names = Collections.list(zip.entries()).collect { it.name }
+            [
+                    'com/betteruc/client/clips/ClipRuntimeEntry.class',
+                    'com/betteruc/client/clips/ClipNativeThumbnail.class',
+                    'org/bytedeco/javacpp/Loader.class',
+                    'org/bytedeco/javacpp/windows-x86_64/jnijavacpp.dll',
+                    'org/bytedeco/ffmpeg/global/avutil.class',
+                    'org/bytedeco/ffmpeg/windows-x86_64/jniavutil.dll',
+                    'org/bytedeco/ffmpeg/windows-x86_64/avutil-60.dll'
+            ].each { required ->
+                if (!names.contains(required)) throw new GradleException("Missing isolated clip runtime entry: ${required}")
+            }
+            if (names.contains('fabric.mod.json')) {
+                throw new GradleException('The private clip runtime must not be discovered as a Fabric mod.')
+            }
+        }
+        new java.util.zip.ZipFile(tasks.named('jar').get().archiveFile.get().asFile).withCloseable { zip ->
+            def names = Collections.list(zip.entries()).collect { it.name }
+            if (!names.contains('META-INF/betteruc-runtime/betteruc-clip-runtime-isolated.jar')) {
+                throw new GradleException('The mod JAR does not contain its private clip runtime.')
+            }
+            if (names.any { it.startsWith('org/bytedeco/')
+                    || (it.startsWith('META-INF/jars/') && (it.contains('javacpp') || it.contains('ffmpeg'))) }) {
+                throw new GradleException('JavaCPP/FFmpeg leaked onto Fabric shared mod classpath.')
+            }
+            clipRuntimeOnlyClassPatterns.each { pattern ->
+                String prefix = pattern.replace('*.class', '')
+                if (names.any { it.startsWith(prefix) && it.endsWith('.class') }) {
+                    throw new GradleException("Private clip implementation leaked into the main classpath: ${prefix}")
+                }
+            }
+        }
+    }
+}
+tasks.named('check') { dependsOn verifyClipIsolation }
+
 test {
+    dependsOn clipRuntimeJar
     useJUnitPlatform()
+    systemProperty 'betteruc.clip.runtime.jar', clipRuntimeJar.get().archiveFile.get().asFile.absolutePath
     systemProperty 'betteruc.clipHardwareTest', project.hasProperty('clipHardwareTest').toString()
     systemProperty 'betteruc.clipAudioHardwareTest', project.hasProperty('clipAudioHardwareTest').toString()
 }
@@ -213,11 +295,13 @@ def transformLegacyJavaSource = { String source ->
             ".gameMode"                                                        : ".interactionManager",
             ".level"                                                           : ".world",
             "client.font"                                                      : "client.textRenderer",
+            "client.gui.screen()"                                              : "client.currentScreen",
             "minecraft.font"                                                   : "minecraft.textRenderer",
             ".keySprint"                                                       : ".sprintKey",
             "net.minecraft.client.gui.screens.inventory.MenuAccess"            : "net.minecraft.client.gui.screen.ingame.HandledScreen",
             "MenuAccess"                                                       : "HandledScreen",
             "net.minecraft.client.gui.screens.TitleScreen"                     : "net.minecraft.client.gui.screen.TitleScreen",
+            "net.minecraft.client.gui.screens.ConnectScreen"                   : "net.minecraft.client.gui.screen.ConnectScreen",
             "net.minecraft.client.gui.screens.Screen"                          : "net.minecraft.client.gui.screen.Screen",
             "net.minecraft.client.gui.components.AbstractSliderButton"         : "net.minecraft.client.gui.widget.SliderWidget",
             "net.minecraft.client.gui.components.AbstractWidget"               : "net.minecraft.client.gui.widget.ClickableWidget",

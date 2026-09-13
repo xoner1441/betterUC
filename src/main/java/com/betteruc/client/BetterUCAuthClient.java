@@ -10,6 +10,7 @@ import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.User;
+import net.minecraft.client.gui.screens.ConnectScreen;
 
 import java.net.Proxy;
 import java.net.URI;
@@ -36,10 +37,15 @@ public final class BetterUCAuthClient {
     private static final MinecraftSessionService MINECRAFT_SESSION_SERVICE =
             new YggdrasilAuthenticationService(Proxy.NO_PROXY).createMinecraftSessionService();
     private static final long RETRY_DELAY_MS = 15_000L;
+    private static final long MAX_RETRY_DELAY_MS = 5 * 60_000L;
     private static final long EXPIRY_MARGIN_MS = 60_000L;
 
     private static volatile boolean joined;
     private static volatile boolean inFlight;
+    private static volatile boolean authenticationAllowed;
+    private static volatile boolean minecraftSessionBlocked;
+    private static volatile int transientFailures;
+    private static volatile long attemptGeneration;
     private static volatile long nextRetryAtMs;
     private static volatile String status = "Nicht verbunden";
 
@@ -48,25 +54,51 @@ public final class BetterUCAuthClient {
 
     public static void onJoin(Minecraft client) {
         joined = true;
+        authenticationAllowed = false;
+        attemptGeneration++;
         inFlight = false;
         nextRetryAtMs = 0L;
-        status = hasValidSession(client) ? "Automatisch angemeldet" : "Automatische Anmeldung";
-        tick(client);
+        status = hasValidSession(client)
+                ? "Automatisch angemeldet"
+                : minecraftSessionBlocked
+                        ? blockedStatus()
+                        : "Anmeldung nach Servertrennung";
     }
 
     public static void onDisconnect() {
         joined = false;
+        authenticationAllowed = false;
+        attemptGeneration++;
         inFlight = false;
-        status = "Nicht verbunden";
+        nextRetryAtMs = 0L;
+        status = hasLocallyUsableSession()
+                ? "Automatisch angemeldet"
+                : minecraftSessionBlocked ? blockedStatus() : "Automatische Anmeldung";
     }
 
     public static void tick(Minecraft client) {
-        if (!joined || client == null || client.player == null || client.getConnection() == null) return;
+        if (client == null) return;
         if (hasValidSession(client)) {
             if (!inFlight) status = "Automatisch angemeldet";
             return;
         }
         clearInvalidSession(client, false);
+        boolean safe = isAuthenticationSafe(client);
+        if (!safe) {
+            if (authenticationAllowed) {
+                authenticationAllowed = false;
+                attemptGeneration++;
+                inFlight = false;
+            }
+            if (!minecraftSessionBlocked) status = "Anmeldung nach Servertrennung";
+            else status = blockedStatus();
+            return;
+        }
+        authenticationAllowed = true;
+        if (minecraftSessionBlocked) {
+            status = blockedStatus();
+            return;
+        }
         if (inFlight || System.currentTimeMillis() < nextRetryAtMs) return;
         authenticate(client);
     }
@@ -98,6 +130,8 @@ public final class BetterUCAuthClient {
 
     public static void renew(Minecraft client) {
         clearInvalidSession(client, true);
+        minecraftSessionBlocked = false;
+        transientFailures = 0;
         nextRetryAtMs = 0L;
         status = "Sitzung wird erneuert";
         tick(client);
@@ -107,7 +141,7 @@ public final class BetterUCAuthClient {
         User user = client.getUser();
         if (user == null || user.getProfileId() == null || safe(user.getName()).isBlank()
                 || safe(user.getAccessToken()).isBlank()) {
-            fail("Minecraft-Anmeldung nicht verfügbar", null);
+            blockMinecraftSession("Minecraft-Anmeldung nicht verfügbar", null);
             return;
         }
 
@@ -126,11 +160,13 @@ public final class BetterUCAuthClient {
         requestBody.addProperty("version", modVersion());
         requestBody.addProperty("gameVersion", gameVersion());
 
+        long generation = ++attemptGeneration;
         inFlight = true;
         status = "Minecraft-Sitzung wird bestätigt";
         HttpRequest challengeRequest = jsonPost(challengeUri, requestBody);
         HTTP_CLIENT.sendAsync(challengeRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
                 .thenCompose(response -> {
+                    ensureAttemptAllowed(client, generation);
                     JsonObject body = responseBody(response);
                     if (response.statusCode() < 200 || response.statusCode() >= 300 || !boolValue(body, "ok")) {
                         return CompletableFuture.failedFuture(new IllegalStateException(
@@ -144,6 +180,7 @@ public final class BetterUCAuthClient {
                         return CompletableFuture.failedFuture(new IllegalStateException("Ungültige Anmelde-Challenge."));
                     }
                     return CompletableFuture.supplyAsync(() -> {
+                        ensureAttemptAllowed(client, generation);
                         try {
                             // Only Mojang receives the Minecraft access token.
                             MINECRAFT_SESSION_SERVICE.joinServer(uuid, user.getAccessToken(), challenge.serverId());
@@ -154,6 +191,7 @@ public final class BetterUCAuthClient {
                     });
                 })
                 .thenCompose(challenge -> {
+                    ensureAttemptAllowed(client, generation);
                     JsonObject completeBody = new JsonObject();
                     completeBody.addProperty("challengeId", challenge.id());
                     completeBody.addProperty("version", modVersion());
@@ -164,6 +202,7 @@ public final class BetterUCAuthClient {
                     );
                 })
                 .whenComplete((response, error) -> client.execute(() -> {
+                    if (generation != attemptGeneration) return;
                     if (error != null) {
                         fail("Automatische Anmeldung fehlgeschlagen", error);
                         return;
@@ -183,6 +222,7 @@ public final class BetterUCAuthClient {
                     BetterUCConfig.INSTANCE.pingRelaySessionName = name;
                     BetterUCConfig.save();
                     inFlight = false;
+                    transientFailures = 0;
                     nextRetryAtMs = 0L;
                     status = "Automatisch angemeldet";
 
@@ -206,9 +246,33 @@ public final class BetterUCAuthClient {
 
     private static void fail(String message, Throwable error) {
         inFlight = false;
-        nextRetryAtMs = System.currentTimeMillis() + RETRY_DELAY_MS;
+        if (isDeferred(error)) {
+            nextRetryAtMs = 0L;
+            status = "Anmeldung nach Servertrennung";
+            return;
+        }
+        if (isCredentialFailure(error)) {
+            blockMinecraftSession(message, error);
+            return;
+        }
+        transientFailures++;
+        nextRetryAtMs = System.currentTimeMillis() + retryDelayMs(transientFailures);
         status = legacyCredential().isBlank() ? message : "Migration über bisherigen Zugang";
         if (error != null) BetterUCMod.LOGGER.debug("betterUC automatic authentication failed", error);
+    }
+
+    private static void blockMinecraftSession(String message, Throwable error) {
+        inFlight = false;
+        minecraftSessionBlocked = true;
+        nextRetryAtMs = Long.MAX_VALUE;
+        status = blockedStatus();
+        if (error != null) BetterUCMod.LOGGER.debug(message, error);
+    }
+
+    private static String blockedStatus() {
+        return legacyCredential().isBlank()
+                ? "Minecraft-Sitzung im Launcher erneuern"
+                : "Bisheriger Zugang aktiv; Minecraft-Sitzung erneuern";
     }
 
     private static boolean hasValidSession(Minecraft client) {
@@ -307,8 +371,70 @@ public final class BetterUCAuthClient {
                 .orElse("unknown");
     }
 
+    private static boolean isAuthenticationSafe(Minecraft client) {
+        return isAuthenticationSafeState(
+                joined,
+                client.player != null,
+                client.getConnection() != null,
+                client.getCurrentServer() != null,
+                client.isLocalServer(),
+                client.gui.screen() instanceof ConnectScreen
+        );
+    }
+
+    static boolean isAuthenticationSafeState(
+            boolean joined,
+            boolean playerPresent,
+            boolean hasConnection,
+            boolean hasCurrentServer,
+            boolean localServer,
+            boolean connectionScreen
+    ) {
+        return !joined && !playerPresent && !hasConnection && !hasCurrentServer && !localServer && !connectionScreen;
+    }
+
+    private static void ensureAttemptAllowed(Minecraft client, long generation) {
+        if (generation != attemptGeneration || !authenticationAllowed || !isAuthenticationSafe(client)) {
+            throw new CompletionException(new AuthenticationDeferredException());
+        }
+    }
+
+    private static boolean isDeferred(Throwable error) {
+        for (Throwable current = error; current != null; current = current.getCause()) {
+            if (current instanceof AuthenticationDeferredException) return true;
+            if (current.getCause() == current) break;
+        }
+        return false;
+    }
+
+    static boolean isCredentialFailure(Throwable error) {
+        for (Throwable current = error; current != null; current = current.getCause()) {
+            String type = current.getClass().getName().toLowerCase(Locale.ROOT);
+            String message = safe(current.getMessage()).toLowerCase(Locale.ROOT);
+            if (type.contains("invalidcredentials") || type.contains("forbiddenoperation")
+                    || message.contains("invalid token") || message.contains("token invalid")
+                    || message.contains("token is invalid") || message.contains("access token invalid")
+                    || message.contains("access token revoked") || message.contains("invalid session")) {
+                return true;
+            }
+            if (current.getCause() == current) break;
+        }
+        return false;
+    }
+
+    static long retryDelayMs(int failures) {
+        int exponent = Math.min(5, Math.max(0, failures - 1));
+        return Math.min(MAX_RETRY_DELAY_MS, RETRY_DELAY_MS << exponent);
+    }
+
     private static String safe(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private static final class AuthenticationDeferredException extends RuntimeException {
+        private AuthenticationDeferredException() {
+            super("Minecraft connection started while betterUC authentication was pending");
+        }
     }
 
     private record AuthChallenge(String id, String serverId) {
