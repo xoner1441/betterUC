@@ -122,7 +122,7 @@ public final class ClipRecorderSession implements AutoCloseable {
     private void run() {
         try {
             if (!running) return;
-            try (HardwareClipEncoder encoder = HardwareClipEncoder.open(settings, diagnostics)) {
+            try (ClipEncoderRuntime.Encoder encoder = ClipEncoderRuntime.open(settings, diagnostics)) {
                 encoderName = encoder.name();
                 synchronized (this) {
                     if (running && audioOptions.enabled()) gameAudio = new ClipAudioRecorder(settings.seconds(), audioOptions, diagnostics, notification);
@@ -191,13 +191,20 @@ public final class ClipRecorderSession implements AutoCloseable {
         }
     }
 
-    private void export(HardwareClipEncoder encoder, Path destination) {
+    private void export(ClipEncoderRuntime.Encoder encoder, Path destination) {
         var packets = ring.snapshot();
         if (packets.size() < 2 || ring.seconds(settings.fps()) < 1) {
             notification.accept(ClipNotice.info("Noch zu wenig Videomaterial. Bitte warten."));
             return;
         }
-        var header = encoder.header();
+        ClipEncoderRuntime.Header header;
+        try {
+            header = encoder.header();
+        } catch (Exception error) {
+            diagnostics.accept("Encoder-Kopf konnte nicht gelesen werden: " + error);
+            notification.accept(ClipNotice.exportFailed());
+            return;
+        }
         ClipPcmSource audioSlice = null;
         ClipAudioRecorder currentAudio = gameAudio;
         if (currentAudio != null && timelineStartNanos != 0) {
@@ -219,15 +226,15 @@ public final class ClipRecorderSession implements AutoCloseable {
                         + "_" + UUID.randomUUID().toString().substring(0, 8);
                 temporary = destination.resolve(name + ".part");
                 Path output = destination.resolve(name + ".mp4");
-                ClipAudioEncoder.Encoded audio = null;
+                ClipEncoderRuntime.EncodedAudio audio = null;
                 if (hasAudio) {
-                    try { audio = ClipAudioEncoder.encode(selectedAudio); }
+                    try { audio = ClipEncoderRuntime.encodeAudio(selectedAudio); }
                     catch (Exception | LinkageError error) {
                         diagnostics.accept("AAC fehlgeschlagen; speichere Video ohne Ton: " + error);
                         notification.accept(ClipNotice.saving(false));
                     }
                 }
-                HardwareClipEncoder.writeMp4(temporary, header, packets, audio);
+                ClipEncoderRuntime.writeMp4(temporary, header, packets, audio);
                 Files.move(temporary, output);
                 ClipPacket last = packets.getLast();
                 double seconds = (last.pts() + Math.max(1, last.duration()) - packets.getFirst().pts()) / (double) settings.fps();

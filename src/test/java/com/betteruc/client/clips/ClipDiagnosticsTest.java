@@ -13,7 +13,8 @@ class ClipDiagnosticsTest {
         assertTrue(report.contains("jniavutil.dll: missing dependency"));
         assertTrue(report.contains("Could not initialize class avutil"));
         assertTrue(report.contains("java.version:"));
-        assertTrue(report.contains("org/bytedeco/ffmpeg/windows-x86_64/avutil-60.dll:"));
+        assertTrue(report.contains("FFmpeg-Laufzeit:"));
+        assertTrue(report.contains("betteruc-clip-runtime-isolated.jar"));
     }
 
     @Test void summaryIncludesRootCauseButNoChatControlCharacters() {
