@@ -16,7 +16,8 @@
     "test:teamspeak": "node --test scripts/test-teamspeak-faction-sync.js",
     "test:police-roster": "node --test scripts/test-police-roster.js",
     "test:swat-roster": "node --test scripts/test-swat-roster.js",
-    "test:account-resolution": "node --test scripts/test-account-resolution.js"
+    "test:account-resolution": "node --test scripts/test-account-resolution.js",
+    "test:discord-tickets": "node --test scripts/test-discord-ticket-permissions.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1126.0",

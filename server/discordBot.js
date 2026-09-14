@@ -29,6 +29,11 @@ const VIP_ROLE_NAME = clean(process.env.DISCORD_VIP_ROLE_NAME) || "VIP";
 const PARTNER_ROLE_NAME = clean(process.env.DISCORD_PARTNER_ROLE_NAME) || "Partner";
 const HELPER_ROLE_NAME = clean(process.env.DISCORD_HELPER_ROLE_NAME) || "Helper";
 const ADMIN_ROLE_NAME = clean(process.env.DISCORD_ADMIN_ROLE_NAME) || "Admin";
+const TICKET_TEAM_ROLE_NAMES = ticketTeamRoleNames(
+  TEAM_ROLE_NAMES,
+  HELPER_ROLE_NAME,
+  ADMIN_ROLE_NAME
+);
 const UPDATE_CHANNEL_NAME = clean(process.env.DISCORD_UPDATE_CHANNEL_NAME) || "updates";
 const CHANGELOG_CHANNEL_ID = clean(process.env.DISCORD_CHANGELOG_CHANNEL_ID);
 const CHANGELOG_CHANNEL_NAME = clean(process.env.DISCORD_CHANGELOG_CHANNEL_NAME) || "changelog";
@@ -874,6 +879,18 @@ function ticketPrefix(topic) {
   return "support";
 }
 
+function ticketTeamRoleNames(configuredRoleNames, helperRoleName, adminRoleName) {
+  const names = [...(Array.isArray(configuredRoleNames) ? configuredRoleNames : []), helperRoleName, adminRoleName];
+  const unique = new Map();
+  for (const name of names) {
+    const normalized = clean(name);
+    if (!normalized) continue;
+    const key = normalized.toLowerCase();
+    if (!unique.has(key)) unique.set(key, normalized);
+  }
+  return [...unique.values()];
+}
+
 function slug(value) {
   return String(value || "")
     .toLowerCase()
@@ -898,7 +915,7 @@ async function findOrCreateTicketCategory(guild, teamRoles) {
 }
 
 function resolveTeamRoles(guild) {
-  const lowerNames = TEAM_ROLE_NAMES.map(name => name.toLowerCase());
+  const lowerNames = TICKET_TEAM_ROLE_NAMES.map(name => name.toLowerCase());
   return guild.roles.cache.filter(role => lowerNames.includes(role.name.toLowerCase()));
 }
 
@@ -1027,12 +1044,22 @@ function ticketChannelOverwrites(guild, openerId, teamRoles) {
   ];
 }
 
-function isTicketTeamMember(interaction) {
+function isTicketTeamMember(interaction, context) {
   if (interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) return true;
-  const memberRoles = interaction.member?.roles?.cache;
-  if (!memberRoles) return false;
-  const allowed = new Set(TEAM_ROLE_NAMES.map(name => name.toLowerCase()));
-  return memberRoles.some(role => allowed.has(role.name.toLowerCase()));
+  if (hasTicketTeamRole(interaction.member?.roles?.cache, TICKET_TEAM_ROLE_NAMES)) return true;
+  const account = context?.findAccountByDiscordId?.(interaction.user?.id);
+  return isBetterUcTicketTeamAccount(account);
+}
+
+function hasTicketTeamRole(memberRoles, allowedRoleNames) {
+  if (!memberRoles || typeof memberRoles.some !== "function") return false;
+  const allowed = new Set((allowedRoleNames || []).map(name => clean(name).toLowerCase()).filter(Boolean));
+  return memberRoles.some(role => allowed.has(clean(role?.name).toLowerCase()));
+}
+
+function isBetterUcTicketTeamAccount(account) {
+  if (!account || account.status === "revoked") return false;
+  return account.role === "helper" || account.role === "admin";
 }
 
 function ticketOpenerId(channel) {
@@ -1215,7 +1242,7 @@ async function claimTicket(interaction, context) {
     await interaction.reply({ content: "Dieser Button funktioniert nur in einem offenen Ticket.", ephemeral: true });
     return;
   }
-  if (!isTicketTeamMember(interaction)) {
+  if (!isTicketTeamMember(interaction, context)) {
     await interaction.reply({ content: "Nur das Support-Team kann Tickets \u00fcbernehmen.", ephemeral: true });
     return;
   }
@@ -1227,10 +1254,14 @@ async function claimTicket(interaction, context) {
   await interaction.reply({ content: `${interaction.user} hat dieses Ticket \u00fcbernommen.` });
 }
 
-async function showCloseTicketModal(interaction) {
+async function showCloseTicketModal(interaction, context) {
   const channel = interaction.channel;
   if (!channel || channel.type !== ChannelType.GuildText || !channel.name.startsWith("ticket-")) {
     await interaction.reply({ content: "Dieser Button funktioniert nur in einem offenen Ticket.", ephemeral: true });
+    return;
+  }
+  if (!isTicketTeamMember(interaction, context)) {
+    await interaction.reply({ content: "Nur das Support-Team kann Tickets schlie\u00dfen.", ephemeral: true });
     return;
   }
 
@@ -1252,6 +1283,10 @@ async function closeTicket(interaction, context) {
   const channel = interaction.channel;
   if (!channel || channel.type !== ChannelType.GuildText || !channel.name.startsWith("ticket-")) {
     await interaction.reply({ content: "Dieses Ticket ist nicht mehr offen.", ephemeral: true });
+    return;
+  }
+  if (!isTicketTeamMember(interaction, context)) {
+    await interaction.reply({ content: "Nur das Support-Team kann Tickets schlie\u00dfen.", ephemeral: true });
     return;
   }
   await deferEphemeral(interaction);
@@ -1296,14 +1331,14 @@ async function closeTicket(interaction, context) {
   });
 }
 
-async function deleteTicket(interaction) {
+async function deleteTicket(interaction, context) {
   const channel = interaction.channel;
   if (!channel || channel.type !== ChannelType.GuildText || !channel.name.startsWith("closed-")) {
     await interaction.reply({ content: "Dieses Ticket muss erst geschlossen werden.", ephemeral: true });
     return;
   }
-  if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
-    await interaction.reply({ content: "Nur Teammitglieder mit Channel-Rechten koennen Tickets loeschen.", ephemeral: true });
+  if (!isTicketTeamMember(interaction, context)) {
+    await interaction.reply({ content: "Nur das Support-Team kann Tickets loeschen.", ephemeral: true });
     return;
   }
   await interaction.reply({ content: "Ticket wird geloescht...", ephemeral: true });
@@ -1828,7 +1863,7 @@ async function handleCommand(interaction, context) {
   }
 
   if (interaction.commandName === "diagnose") {
-    if (!isTicketTeamMember(interaction)) {
+    if (!isTicketTeamMember(interaction, context)) {
       await interaction.reply({ content: "Dieser Befehl ist nur f\u00fcr das betterUC Team verf\u00fcgbar.", ephemeral: true });
       return;
     }
@@ -1939,11 +1974,11 @@ async function handleInteraction(interaction, context) {
         return;
       }
       if (interaction.customId === "ticket:close") {
-        await showCloseTicketModal(interaction);
+        await showCloseTicketModal(interaction, context);
         return;
       }
       if (interaction.customId === "ticket:delete") {
-        await deleteTicket(interaction);
+        await deleteTicket(interaction, context);
         return;
       }
       if (interaction.customId.startsWith("suggestion:vote:")) {
@@ -2279,5 +2314,10 @@ async function startDiscordBot(context) {
 }
 
 module.exports = {
-  startDiscordBot
+  startDiscordBot,
+  ticketPermissionTest: {
+    ticketTeamRoleNames,
+    hasTicketTeamRole,
+    isBetterUcTicketTeamAccount
+  }
 };

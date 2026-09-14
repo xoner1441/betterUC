@@ -47,7 +47,7 @@ Node service for the betterUC website, automatic Minecraft authentication and We
 - `DISCORD_BOT_TOKEN=...` optional, starts the Discord support bot
 - `DISCORD_GUILD_ID=...` Discord server ID for fast slash-command sync
 - `DISCORD_TICKET_CATEGORY_NAME=Tickets`
-- `DISCORD_TEAM_ROLE_NAMES=Owner,Admin,Helper`
+- `DISCORD_TEAM_ROLE_NAMES=Owner,Admin,Helper` additional ticket-team role names; the configured Admin and Helper roles are always included
 - `DISCORD_MOD_USER_ROLE_NAME=Mod-User`
 - `DISCORD_USER_ROLE_NAME=...` optional extra role for normal users
 - `DISCORD_VIP_ROLE_NAME=VIP`
@@ -141,7 +141,7 @@ Slash commands:
 - `/broadcast nachricht:<text>` sends an important announcement to Discord and all connected mod users; betterUC Admin only.
 - `/ticket` opens a private support ticket.
 - `/ticket-panel` posts a button-based ticket panel. Requires Discord `Manage Server`.
-- Ticket buttons allow team members to claim a ticket. Closing requires a reason and stores/uploads a transcript.
+- Ticket buttons allow configured Admins and Helpers to claim, close and delete tickets. Closing requires a reason and stores/uploads a transcript.
 - `/rollen-sync` creates missing betterUC roles and synchronizes every linked account. Requires Discord `Manage Server`.
 - `/systemstatus` checks the public website, relay process, PostgreSQL, migrations, Cloud errors and backups.
 - `/vorschlag erstellen` posts a persistent proposal with one vote per linked account.
