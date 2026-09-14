@@ -7,6 +7,7 @@ import com.betteruc.hud.CashHud;
 import com.betteruc.hud.DateTimeHud;
 import com.betteruc.hud.HealthHud;
 import com.betteruc.hud.ModernHudRenderer;
+import com.betteruc.hud.MineIncomeHud;
 import com.betteruc.hud.PotionEffectsHud;
 import java.util.ArrayList;
 import java.util.List;
@@ -279,6 +280,7 @@ public class HudLayoutScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.showArmorHud;
             case BANK -> BetterUCConfig.INSTANCE.showBankHud;
             case CASH -> BetterUCConfig.INSTANCE.showCashHud;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.showMineIncomeHud;
             case POTION -> BetterUCConfig.INSTANCE.showPotionEffectsHud;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintEnabled && BetterUCConfig.INSTANCE.showToggleSprintHud;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.showPlantTimerHud;
@@ -306,6 +308,7 @@ public class HudLayoutScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.showArmorHud = visible;
             case BANK -> BetterUCConfig.INSTANCE.showBankHud = visible;
             case CASH -> BetterUCConfig.INSTANCE.showCashHud = visible;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.showMineIncomeHud = visible;
             case POTION -> BetterUCConfig.INSTANCE.showPotionEffectsHud = visible;
             case SPRINT -> BetterUCConfig.INSTANCE.showToggleSprintHud = visible;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.showHackTimerHud = visible;
@@ -335,6 +338,7 @@ public class HudLayoutScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.armorHudX;
             case BANK -> BetterUCConfig.INSTANCE.bankHudX;
             case CASH -> BetterUCConfig.INSTANCE.cashHudX;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudX;
             case POTION -> BetterUCConfig.INSTANCE.potionHudX;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudX;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerX;
@@ -356,6 +360,7 @@ public class HudLayoutScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.armorHudY;
             case BANK -> BetterUCConfig.INSTANCE.bankHudY;
             case CASH -> BetterUCConfig.INSTANCE.cashHudY;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudY;
             case POTION -> BetterUCConfig.INSTANCE.potionHudY;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudY;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerY;
@@ -404,6 +409,10 @@ public class HudLayoutScreen extends Screen {
                 BetterUCConfig.INSTANCE.cashHudX = x;
                 BetterUCConfig.INSTANCE.cashHudY = y;
             }
+            case MINE_INCOME -> {
+                BetterUCConfig.INSTANCE.mineIncomeHudX = x;
+                BetterUCConfig.INSTANCE.mineIncomeHudY = y;
+            }
             case POTION -> {
                 BetterUCConfig.INSTANCE.potionHudX = x;
                 BetterUCConfig.INSTANCE.potionHudY = y;
@@ -446,6 +455,7 @@ public class HudLayoutScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.armorHudScale;
             case BANK -> BetterUCConfig.INSTANCE.bankHudScale;
             case CASH -> BetterUCConfig.INSTANCE.cashHudScale;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudScale;
             case POTION -> BetterUCConfig.INSTANCE.potionHudScale;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudScale;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudScale;
@@ -468,6 +478,7 @@ public class HudLayoutScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.armorHudScale = safeScale;
             case BANK -> BetterUCConfig.INSTANCE.bankHudScale = safeScale;
             case CASH -> BetterUCConfig.INSTANCE.cashHudScale = safeScale;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudScale = safeScale;
             case POTION -> BetterUCConfig.INSTANCE.potionHudScale = safeScale;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudScale = safeScale;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudScale = safeScale;
@@ -494,6 +505,7 @@ public class HudLayoutScreen extends Screen {
             case ARMOR -> ArmorHud.previewWidth(BetterUCConfig.INSTANCE.armorHudStyle);
             case BANK -> singleLineWidth(hudLabel(module), "88.375$", prefixedText(module, "88.375$"), BetterUCConfig.INSTANCE.bankHudStyle);
             case CASH -> singleLineWidth(hudLabel(module), previewCashValue(), prefixedText(module, previewCashValue()), BetterUCConfig.INSTANCE.cashHudStyle);
+            case MINE_INCOME -> singleLineWidth(hudLabel(module), previewMineIncomeValue(), prefixedText(module, previewMineIncomeValue()), BetterUCConfig.INSTANCE.mineIncomeHudStyle);
             case POTION -> {
                 if (BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.potionHudStyle)) {
                     yield 120;
@@ -535,6 +547,7 @@ public class HudLayoutScreen extends Screen {
             case DATE_TIME_CLOCK -> DateTimeHud.previewHeight(true);
             case BANK -> singleLineHeight(BetterUCConfig.INSTANCE.bankHudStyle);
             case CASH -> singleLineHeight(BetterUCConfig.INSTANCE.cashHudStyle);
+            case MINE_INCOME -> singleLineHeight(BetterUCConfig.INSTANCE.mineIncomeHudStyle);
             case SPRINT -> singleLineHeight(BetterUCConfig.INSTANCE.toggleSprintHudStyle);
             case HACK_TIMER -> singleLineHeight(BetterUCConfig.INSTANCE.hackTimerHudStyle);
             case DEALER_TIMER -> singleLineHeight(BetterUCConfig.INSTANCE.dealerTimerHudStyle);
@@ -635,6 +648,7 @@ public class HudLayoutScreen extends Screen {
             );
             case BANK -> renderSingleLine(context, minecraft, style, fontId, x, y, hudLabel(module), "88.375$", prefixedText(module, "88.375$"), BetterUCConfig.INSTANCE.bankHudColor);
             case CASH -> renderSingleLine(context, minecraft, style, fontId, x, y, hudLabel(module), previewCashValue(), prefixedText(module, previewCashValue()), BetterUCConfig.INSTANCE.cashHudColor);
+            case MINE_INCOME -> renderSingleLine(context, minecraft, style, fontId, x, y, hudLabel(module), previewMineIncomeValue(), prefixedText(module, previewMineIncomeValue()), BetterUCConfig.INSTANCE.mineIncomeHudColor);
             case POTION -> {
                 int potionColor = BetterUCConfig.INSTANCE.potionHudColor;
                 if (modernStyle) {
@@ -729,6 +743,7 @@ public class HudLayoutScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.armorHudStyle;
             case BANK -> BetterUCConfig.INSTANCE.bankHudStyle;
             case CASH -> BetterUCConfig.INSTANCE.cashHudStyle;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudStyle;
             case POTION -> BetterUCConfig.INSTANCE.potionHudStyle;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudStyle;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudStyle;
@@ -750,6 +765,7 @@ public class HudLayoutScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.armorHudCustomFont;
             case BANK -> BetterUCConfig.INSTANCE.bankHudCustomFont;
             case CASH -> BetterUCConfig.INSTANCE.cashHudCustomFont;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudCustomFont;
             case POTION -> BetterUCConfig.INSTANCE.potionHudCustomFont;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudCustomFont;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudCustomFont;
@@ -771,6 +787,7 @@ public class HudLayoutScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.armorHudGradientEnabled;
             case BANK -> BetterUCConfig.INSTANCE.bankHudGradientEnabled;
             case CASH -> BetterUCConfig.INSTANCE.cashHudGradientEnabled;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudGradientEnabled;
             case POTION -> BetterUCConfig.INSTANCE.potionHudGradientEnabled;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudGradientEnabled;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientEnabled;
@@ -792,6 +809,7 @@ public class HudLayoutScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.armorHudGradientColor;
             case BANK -> BetterUCConfig.INSTANCE.bankHudGradientColor;
             case CASH -> BetterUCConfig.INSTANCE.cashHudGradientColor;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudGradientColor;
             case POTION -> BetterUCConfig.INSTANCE.potionHudGradientColor;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudGradientColor;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientColor;
@@ -807,6 +825,11 @@ public class HudLayoutScreen extends Screen {
         return live >= 0 ? CashHud.formatMoney(live) + "$" : CashHud.formatMoney(1278) + "$";
     }
 
+    private String previewMineIncomeValue() {
+        long live = MineIncomeHud.getCurrentIncome();
+        return MineIncomeHud.formatMoney(live > 0L ? live : 390L) + "$";
+    }
+
     private String hudLabel(HudModule module) {
         return switch (module) {
             case FPS -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.fpsHudPrefixEnabled, BetterUCConfig.INSTANCE.fpsHudPrefix);
@@ -814,6 +837,7 @@ public class HudLayoutScreen extends Screen {
             case AMMO -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.ammoHudPrefixEnabled, BetterUCConfig.INSTANCE.ammoHudPrefix);
             case BANK -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.bankHudPrefixEnabled, BetterUCConfig.INSTANCE.bankHudPrefix);
             case CASH -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.cashHudPrefixEnabled, BetterUCConfig.INSTANCE.cashHudPrefix);
+            case MINE_INCOME -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.mineIncomeHudPrefixEnabled, BetterUCConfig.INSTANCE.mineIncomeHudPrefix);
             case SPRINT -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.toggleSprintHudPrefixEnabled, BetterUCConfig.INSTANCE.toggleSprintHudPrefix);
             case HACK_TIMER -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.hackTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.hackTimerHudPrefix);
             case PLANT_TIMER -> BetterUCConfig.hudModuleLabel(BetterUCConfig.INSTANCE.plantTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.plantTimerHudPrefix);
@@ -831,6 +855,7 @@ public class HudLayoutScreen extends Screen {
             case AMMO -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.ammoHudPrefixEnabled, BetterUCConfig.INSTANCE.ammoHudPrefix, value);
             case BANK -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.bankHudPrefixEnabled, BetterUCConfig.INSTANCE.bankHudPrefix, value);
             case CASH -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.cashHudPrefixEnabled, BetterUCConfig.INSTANCE.cashHudPrefix, value);
+            case MINE_INCOME -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.mineIncomeHudPrefixEnabled, BetterUCConfig.INSTANCE.mineIncomeHudPrefix, value);
             case SPRINT -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.toggleSprintHudPrefixEnabled, BetterUCConfig.INSTANCE.toggleSprintHudPrefix, value);
             case HACK_TIMER -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.hackTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.hackTimerHudPrefix, value);
             case PLANT_TIMER -> BetterUCConfig.prefixedHudText(BetterUCConfig.INSTANCE.plantTimerHudPrefixEnabled, BetterUCConfig.INSTANCE.plantTimerHudPrefix, value);
@@ -945,6 +970,11 @@ public class HudLayoutScreen extends Screen {
                 BetterUCConfig.INSTANCE.cashHudX = defaults.cashHudX;
                 BetterUCConfig.INSTANCE.cashHudY = defaults.cashHudY;
                 BetterUCConfig.INSTANCE.cashHudScale = defaults.cashHudScale;
+            }
+            case MINE_INCOME -> {
+                BetterUCConfig.INSTANCE.mineIncomeHudX = defaults.mineIncomeHudX;
+                BetterUCConfig.INSTANCE.mineIncomeHudY = defaults.mineIncomeHudY;
+                BetterUCConfig.INSTANCE.mineIncomeHudScale = defaults.mineIncomeHudScale;
             }
             case POTION -> {
                 BetterUCConfig.INSTANCE.potionHudX = defaults.potionHudX;
@@ -1271,6 +1301,7 @@ public class HudLayoutScreen extends Screen {
         ARMOR("Armor", BetterUCConfig.DEFAULT_ARMOR_HUD_COLOR),
         BANK("Bank", BetterUCConfig.DEFAULT_BANK_HUD_COLOR),
         CASH("Bargeld", BetterUCConfig.DEFAULT_CASH_HUD_COLOR),
+        MINE_INCOME("Minen-Einnahmen", BetterUCConfig.DEFAULT_MINE_INCOME_HUD_COLOR),
         POTION("Potion", 0xFF9328FF),
         SPRINT("Sprint", BetterUCConfig.DEFAULT_TOGGLE_SPRINT_HUD_COLOR),
         HACK_TIMER("Hack Timer", 0xFF60A5FA),

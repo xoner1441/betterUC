@@ -29,6 +29,7 @@ import com.betteruc.hud.DateTimeHud;
 import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.HealthHud;
 import com.betteruc.hud.ModernHudRenderer;
+import com.betteruc.hud.MineIncomeHud;
 import com.betteruc.hud.PotionEffectsHud;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.util.Util;
@@ -288,6 +289,14 @@ public class BetterUCScreen extends Screen {
                         () -> BetterUCConfig.INSTANCE.showCashHud = !BetterUCConfig.INSTANCE.showCashHud);
                 y = addColorButton(x, y, controlW, "Bargeld Farbe", BetterUCConfig.INSTANCE.cashHudColor,
                         color -> BetterUCConfig.INSTANCE.cashHudColor = color);
+            }
+            case MINE_INCOME -> {
+                y = addSectionHeader(x, y, controlW, "Anzeige", BetterUCConfig.DEFAULT_MINE_INCOME_HUD_COLOR);
+                y = addToggle(x, y, controlW, "Minen-Einnahmen HUD", BetterUCConfig.INSTANCE.showMineIncomeHud,
+                        () -> BetterUCConfig.INSTANCE.showMineIncomeHud = !BetterUCConfig.INSTANCE.showMineIncomeHud);
+                y = addColorButton(x, y, controlW, "Minen-Einnahmen Farbe", BetterUCConfig.INSTANCE.mineIncomeHudColor,
+                        color -> BetterUCConfig.INSTANCE.mineIncomeHudColor = color);
+                y = addInfo(x, y, controlW, "Reset", "bei neuem PayDay");
             }
             case POTION -> {
                 y = addSectionHeader(x, y, controlW, "Anzeige", 0xFFA855F7);
@@ -2010,6 +2019,19 @@ public class BetterUCScreen extends Screen {
                             BetterUCConfig.INSTANCE.cashHudColor);
                 }
             }
+            case MINE_INCOME -> {
+                String value = previewMineIncomeValue();
+                if (modernStyle) {
+                    ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, hudPreviewLabel(ModuleOption.MINE_INCOME),
+                            value, BetterUCConfig.INSTANCE.mineIncomeHudColor);
+                } else if (stylizedStyle) {
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, hudPreviewText(ModuleOption.MINE_INCOME, value), previewX, previewY,
+                            BetterUCConfig.INSTANCE.mineIncomeHudColor);
+                } else {
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, hudPreviewText(ModuleOption.MINE_INCOME, value), previewX, previewY,
+                            BetterUCConfig.INSTANCE.mineIncomeHudColor);
+                }
+            }
             case POTION -> {
                 int potionColor = BetterUCConfig.INSTANCE.potionHudColor;
                 if (modernStyle) {
@@ -2593,6 +2615,7 @@ public class BetterUCScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.showArmorHud;
             case BANK -> BetterUCConfig.INSTANCE.showBankHud;
             case CASH -> BetterUCConfig.INSTANCE.showCashHud;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.showMineIncomeHud;
             case POTION -> BetterUCConfig.INSTANCE.showPotionEffectsHud;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintEnabled;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.showPlantTimerHud;
@@ -2623,6 +2646,7 @@ public class BetterUCScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.armorHudStyle;
             case BANK -> BetterUCConfig.INSTANCE.bankHudStyle;
             case CASH -> BetterUCConfig.INSTANCE.cashHudStyle;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudStyle;
             case POTION -> BetterUCConfig.INSTANCE.potionHudStyle;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudStyle;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudStyle;
@@ -2645,6 +2669,7 @@ public class BetterUCScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.armorHudStyle = style;
             case BANK -> BetterUCConfig.INSTANCE.bankHudStyle = style;
             case CASH -> BetterUCConfig.INSTANCE.cashHudStyle = style;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudStyle = style;
             case POTION -> BetterUCConfig.INSTANCE.potionHudStyle = style;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudStyle = style;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudStyle = style;
@@ -2668,6 +2693,7 @@ public class BetterUCScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.armorHudCustomFont;
             case BANK -> BetterUCConfig.INSTANCE.bankHudCustomFont;
             case CASH -> BetterUCConfig.INSTANCE.cashHudCustomFont;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudCustomFont;
             case POTION -> BetterUCConfig.INSTANCE.potionHudCustomFont;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudCustomFont;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudCustomFont;
@@ -2690,6 +2716,7 @@ public class BetterUCScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.armorHudCustomFont = fontId;
             case BANK -> BetterUCConfig.INSTANCE.bankHudCustomFont = fontId;
             case CASH -> BetterUCConfig.INSTANCE.cashHudCustomFont = fontId;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudCustomFont = fontId;
             case POTION -> BetterUCConfig.INSTANCE.potionHudCustomFont = fontId;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudCustomFont = fontId;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudCustomFont = fontId;
@@ -2712,6 +2739,7 @@ public class BetterUCScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.armorHudGradientEnabled;
             case BANK -> BetterUCConfig.INSTANCE.bankHudGradientEnabled;
             case CASH -> BetterUCConfig.INSTANCE.cashHudGradientEnabled;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudGradientEnabled;
             case POTION -> BetterUCConfig.INSTANCE.potionHudGradientEnabled;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudGradientEnabled;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientEnabled;
@@ -2733,6 +2761,7 @@ public class BetterUCScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.armorHudGradientEnabled = enabled;
             case BANK -> BetterUCConfig.INSTANCE.bankHudGradientEnabled = enabled;
             case CASH -> BetterUCConfig.INSTANCE.cashHudGradientEnabled = enabled;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudGradientEnabled = enabled;
             case POTION -> BetterUCConfig.INSTANCE.potionHudGradientEnabled = enabled;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudGradientEnabled = enabled;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientEnabled = enabled;
@@ -2755,6 +2784,7 @@ public class BetterUCScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.armorHudGradientColor;
             case BANK -> BetterUCConfig.INSTANCE.bankHudGradientColor;
             case CASH -> BetterUCConfig.INSTANCE.cashHudGradientColor;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudGradientColor;
             case POTION -> BetterUCConfig.INSTANCE.potionHudGradientColor;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudGradientColor;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientColor;
@@ -2776,6 +2806,7 @@ public class BetterUCScreen extends Screen {
             case ARMOR -> BetterUCConfig.INSTANCE.armorHudGradientColor = color;
             case BANK -> BetterUCConfig.INSTANCE.bankHudGradientColor = color;
             case CASH -> BetterUCConfig.INSTANCE.cashHudGradientColor = color;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudGradientColor = color;
             case POTION -> BetterUCConfig.INSTANCE.potionHudGradientColor = color;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudGradientColor = color;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientColor = color;
@@ -2790,7 +2821,7 @@ public class BetterUCScreen extends Screen {
 
     private boolean hasHudPrefix(ModuleOption module) {
         return switch (module) {
-            case FPS, PAYDAY, AMMO, BANK, CASH, SPRINT, HACK_TIMER, PLANT_TIMER, DEALER_TIMER, MASK_TIMER,
+            case FPS, PAYDAY, AMMO, BANK, CASH, MINE_INCOME, SPRINT, HACK_TIMER, PLANT_TIMER, DEALER_TIMER, MASK_TIMER,
                     PRODUCTION_TIMER -> true;
             default -> false;
         };
@@ -2803,6 +2834,7 @@ public class BetterUCScreen extends Screen {
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudPrefixEnabled;
             case BANK -> BetterUCConfig.INSTANCE.bankHudPrefixEnabled;
             case CASH -> BetterUCConfig.INSTANCE.cashHudPrefixEnabled;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudPrefixEnabled;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudPrefixEnabled;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudPrefixEnabled;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudPrefixEnabled;
@@ -2820,6 +2852,7 @@ public class BetterUCScreen extends Screen {
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudPrefixEnabled = enabled;
             case BANK -> BetterUCConfig.INSTANCE.bankHudPrefixEnabled = enabled;
             case CASH -> BetterUCConfig.INSTANCE.cashHudPrefixEnabled = enabled;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudPrefixEnabled = enabled;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudPrefixEnabled = enabled;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudPrefixEnabled = enabled;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudPrefixEnabled = enabled;
@@ -2838,6 +2871,7 @@ public class BetterUCScreen extends Screen {
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudPrefix;
             case BANK -> BetterUCConfig.INSTANCE.bankHudPrefix;
             case CASH -> BetterUCConfig.INSTANCE.cashHudPrefix;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudPrefix;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudPrefix;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudPrefix;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudPrefix;
@@ -2855,6 +2889,7 @@ public class BetterUCScreen extends Screen {
             case AMMO -> BetterUCConfig.INSTANCE.ammoHudPrefix = prefix;
             case BANK -> BetterUCConfig.INSTANCE.bankHudPrefix = prefix;
             case CASH -> BetterUCConfig.INSTANCE.cashHudPrefix = prefix;
+            case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudPrefix = prefix;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudPrefix = prefix;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudPrefix = prefix;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudPrefix = prefix;
@@ -2882,6 +2917,11 @@ public class BetterUCScreen extends Screen {
     private String previewCashValue() {
         int live = CashHud.getCurrentCash();
         return live >= 0 ? CashHud.formatMoney(live) + "$" : CashHud.formatMoney(1278) + "$";
+    }
+
+    private String previewMineIncomeValue() {
+        long live = MineIncomeHud.getCurrentIncome();
+        return MineIncomeHud.formatMoney(live > 0L ? live : 390L) + "$";
     }
 
     private String pingScopeLabel() {
@@ -3185,6 +3225,7 @@ public class BetterUCScreen extends Screen {
         ARMOR(Category.HUD, "Armor", "Rüstung und Haltbarkeit", BetterUCConfig.DEFAULT_ARMOR_HUD_COLOR, true),
         BANK(Category.HUD, "Bank", "Kontostand im HUD", BetterUCConfig.DEFAULT_BANK_HUD_COLOR, true),
         CASH(Category.HUD, "Bargeld", "Geld & Bargeldbestand", BetterUCConfig.DEFAULT_CASH_HUD_COLOR, true),
+        MINE_INCOME(Category.HUD, "Minen-Einnahmen", "Auszahlung am nächsten PayDay", BetterUCConfig.DEFAULT_MINE_INCOME_HUD_COLOR, true),
         POTION(Category.HUD, "Potion", "Aktive Effekte", 0xFF9328FF, true),
         SPRINT(Category.HUD, "Sprint", "ToggleSprint Anzeige", BetterUCConfig.DEFAULT_TOGGLE_SPRINT_HUD_COLOR, true),
         HACK_TIMER(Category.HUD, "Hack Timer", "Timer-Position", 0xFF60A5FA, false),
