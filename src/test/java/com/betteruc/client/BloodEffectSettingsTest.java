@@ -25,15 +25,18 @@ class BloodEffectSettingsTest {
             JsonObject snapshot = BetterUCConfig.cloudSettingsSnapshot();
 
             assertTrue(snapshot.has("bloodEffectIntensityPercent"));
+            assertTrue(snapshot.has("bloodEffectMotif"));
             assertTrue(snapshot.has("bloodEffectSizePercent"));
             assertTrue(snapshot.has("bloodEffectLifetimePercent"));
             assertTrue(snapshot.has("bloodEffectParticlePercent"));
             assertTrue(snapshot.has("bloodEffectColor"));
             assertEquals(100, BetterUCConfig.INSTANCE.bloodEffectIntensityPercent);
+            assertEquals("blood", BetterUCConfig.INSTANCE.bloodEffectMotif);
             assertEquals(0xFFD01824, BetterUCConfig.INSTANCE.bloodEffectColor);
 
             JsonObject remote = new JsonObject();
             remote.addProperty("bloodEffectMode", "3d");
+            remote.addProperty("bloodEffectMotif", "NEON");
             remote.addProperty("bloodEffectIntensityPercent", 999);
             remote.addProperty("bloodEffectSizePercent", -10);
             remote.addProperty("bloodEffectLifetimePercent", 999);
@@ -42,6 +45,7 @@ class BloodEffectSettingsTest {
             BetterUCConfig.applyCloudSettings(remote);
 
             assertEquals("volumetric", BetterUCConfig.INSTANCE.bloodEffectMode);
+            assertEquals("neon", BetterUCConfig.INSTANCE.bloodEffectMotif);
             assertEquals(150, BetterUCConfig.INSTANCE.bloodEffectIntensityPercent);
             assertEquals(50, BetterUCConfig.INSTANCE.bloodEffectSizePercent);
             assertEquals(200, BetterUCConfig.INSTANCE.bloodEffectLifetimePercent);

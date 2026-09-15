@@ -35,6 +35,14 @@ public final class BloodEffectClient {
         public String label() { return label; }
     }
 
+    public enum Motif {
+        BLOOD("Blut"), NEON("Schmetterlinge");
+
+        private final String label;
+        Motif(String label) { this.label = label; }
+        public String label() { return label; }
+    }
+
     private BloodEffectClient() {}
 
     public static void initialize() {
@@ -47,6 +55,9 @@ public final class BloodEffectClient {
         ParticleProviderRegistry.getInstance().register(BloodEffectParticles.STREAK,
                 sprites -> (options, level, x, y, z, dx, dy, dz, random) ->
                         new StreakParticle(level, x, y, z, dx, dy, dz, sprites));
+        ParticleProviderRegistry.getInstance().register(BloodEffectParticles.NEON_BUTTERFLY,
+                sprites -> (options, level, x, y, z, dx, dy, dz, random) ->
+                        new NeonButterflyParticle(level, x, y, z, dx, dy, dz, sprites));
     }
 
     public static Mode mode() {
@@ -62,6 +73,13 @@ public final class BloodEffectClient {
 
     public static String modeLabel() { return mode().label(); }
 
+    public static Motif motif() {
+        String raw = BetterUCConfig.INSTANCE.bloodEffectMotif;
+        return raw != null && raw.trim().equalsIgnoreCase("neon") ? Motif.NEON : Motif.BLOOD;
+    }
+
+    public static String motifLabel() { return motif().label(); }
+
     public static void cycleMode() {
         BetterUCConfig.INSTANCE.bloodEffectMode = switch (mode()) {
             case OFF -> "subtle";
@@ -69,6 +87,10 @@ public final class BloodEffectClient {
             case REDUX -> "volumetric";
             case VOLUMETRIC -> "off";
         };
+    }
+
+    public static void cycleMotif() {
+        BetterUCConfig.INSTANCE.bloodEffectMotif = motif() == Motif.BLOOD ? "neon" : "blood";
     }
 
     public static boolean replace(ParticleOptions option, double x, double y, double z) {
@@ -166,6 +188,11 @@ public final class BloodEffectClient {
     }
 
     private static void spawn(ClientLevel level, Mode mode, double x, double y, double z, Vec3 rawDirection) {
+        if (motif() == Motif.NEON) {
+            spawnNeon(level, mode, x, y, z, rawDirection);
+            return;
+        }
+
         boolean redux = mode == Mode.REDUX;
         boolean volumetric = mode == Mode.VOLUMETRIC;
         var random = level.getRandom();
@@ -216,6 +243,33 @@ public final class BloodEffectClient {
                     x + direction.x * 0.08D + random.triangle(0, 0.13D),
                     y + random.triangle(0, 0.13D),
                     z + direction.z * 0.08D + random.triangle(0, 0.13D), dx, dy, dz);
+        }
+    }
+
+    private static void spawnNeon(ClientLevel level, Mode mode, double x, double y, double z,
+                                  Vec3 rawDirection) {
+        boolean redux = mode == Mode.REDUX;
+        boolean volumetric = mode == Mode.VOLUMETRIC;
+        var random = level.getRandom();
+        Vec3 direction = normalizeDirection(rawDirection);
+        Vec3 side = horizontalPerpendicular(direction);
+        double intensity = percentScale(BetterUCConfig.INSTANCE.bloodEffectIntensityPercent);
+
+        int butterflies = scaledCount(volumetric ? 10 : redux ? 7 : 4);
+        double lateralSpeed = (volumetric ? 0.24D : redux ? 0.21D : 0.17D)
+                * (0.70D + intensity * 0.30D);
+        for (int i = 0; i < butterflies; i++) {
+            double sign = (i & 1) == 0 ? 1D : -1D;
+            double lateral = sign * lateralSpeed * (0.65D + random.nextDouble() * 0.55D);
+            double depth = (random.nextDouble() - 0.30D) * (volumetric ? 0.17D : 0.09D);
+            double dx = side.x * lateral + direction.x * depth;
+            double dz = side.z * lateral + direction.z * depth;
+            double dy = 0.025D + random.nextDouble() * (volumetric ? 0.14D : 0.10D);
+            level.addParticle(BloodEffectParticles.NEON_BUTTERFLY,
+                    x + side.x * sign * 0.06D + random.triangle(0, 0.025D),
+                    y + random.triangle(0, 0.06D),
+                    z + side.z * sign * 0.06D + random.triangle(0, 0.025D),
+                    dx, dy, dz);
         }
     }
 
@@ -377,6 +431,50 @@ public final class BloodEffectClient {
             float progress = Mth.clamp((age + partialTick) / lifetime, 0, 1);
             float appear = Mth.clamp(progress * 7F, 0, 1);
             return baseSize * appear * (1F - progress * 0.24F);
+        }
+
+        @Override protected Layer getLayer() { return Layer.TRANSLUCENT; }
+    }
+
+    private static final class NeonButterflyParticle extends SingleQuadParticle {
+        private final float baseSize;
+        private final float spin;
+        private final float opacity;
+
+        private NeonButterflyParticle(ClientLevel level, double x, double y, double z,
+                                      double dx, double dy, double dz, SpriteSet sprites) {
+            super(level, x, y, z, sprites.first());
+            this.xd = dx;
+            this.yd = dy;
+            this.zd = dz;
+            this.baseSize = (0.105F + random.nextFloat() * 0.075F)
+                    * (float) percentScale(BetterUCConfig.INSTANCE.bloodEffectSizePercent);
+            this.spin = (random.nextFloat() - 0.5F) * 0.22F;
+            this.opacity = effectOpacity();
+            lifetime = scaledLifetime(13 + random.nextInt(7));
+            hasPhysics = false;
+            gravity = 0.035F;
+            friction = 0.91F;
+            roll = random.nextFloat() * Mth.TWO_PI;
+            oRoll = roll;
+            setColor(1F, 1F, 1F);
+            setAlpha(0);
+        }
+
+        @Override public void tick() {
+            super.tick();
+            oRoll = roll;
+            roll += spin + Mth.sin(age * 1.65F) * 0.018F;
+            float progress = Math.min(1, age / (float) lifetime);
+            float appear = Mth.clamp(progress * 6F, 0, 1);
+            float fade = 1F - Mth.clamp((progress - 0.55F) / 0.45F, 0, 1);
+            setAlpha(opacity * appear * fade);
+        }
+
+        @Override public float getQuadSize(float partialTick) {
+            float progress = Mth.clamp((age + partialTick) / lifetime, 0, 1);
+            float flutter = 0.90F + Mth.sin((age + partialTick) * 1.8F) * 0.10F;
+            return baseSize * flutter * (1F - progress * 0.18F);
         }
 
         @Override protected Layer getLayer() { return Layer.TRANSLUCENT; }
