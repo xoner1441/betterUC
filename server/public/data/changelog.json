@@ -7,19 +7,108 @@
     "pages": [
       {
         "eyebrow": "NÄCHSTE VERSION",
-        "title": "Weitere Verbesserungen folgen",
-        "description": "Neue Funktionen und Korrekturen werden hier gesammelt, sobald die Arbeit am nächsten Update beginnt.",
+        "title": "Version 1.5.0 ist bereit",
+        "description": "Das neue Feature-Release bündelt Clips, Medienfreigabe, Treffer-Effekte und zuverlässigere HUD-Daten.",
         "lines": [
-          "Version 1.4.3 beschleunigt erkannte Waffen, schützt das Ammo-HUD vor fremden Actionbar-Fortschritten und erweitert HUD-Editor, Bedienung sowie Relay-Stabilität."
+          "Version 1.5.0 führt einen integrierten Replay-Buffer mit Ton, Clip-Uploads, neue Treffer-Motive und das Minen-Einnahmen-HUD ein."
         ]
       }
     ]
   },
   "releases": [
     {
+      "version": "1.5.0",
+      "date": "15.09.2026",
+      "current": true,
+      "pages": [
+        {
+          "eyebrow": "CLIPS & AUDIO",
+          "title": "Spielmomente direkt in betterUC festhalten",
+          "description": "Der integrierte Replay-Buffer erstellt flüssige Clips ohne zusätzliches Aufnahmeprogramm und bietet flexible Einstellungen für den eigenen Rechner.",
+          "lines": [
+            "Clips können mit bis zu 60 FPS, frei wählbarer Länge, Auflösung und Speicherort aufgenommen werden.",
+            "Spiel- und Hintergrundton sowie das eigene Mikrofon lassen sich getrennt aktivieren und werden synchron in den Clip gemischt.",
+            "Der Replay-Buffer läuft beim Austabben weiter und informiert über unaufdringliche Toast-Meldungen statt einer Bossbar.",
+            "Hardware-Encoder werden passend zur Grafikkarte geprüft; verständliche Diagnosen helfen bei Treiber- oder Mod-Konflikten.",
+            "Die isolierte FFmpeg-Laufzeit verhindert Konflikte mit Mods wie Flashback und benötigt keine externen Downloads."
+          ]
+        },
+        {
+          "eyebrow": "UPLOADS & MEDIENGALERIE",
+          "title": "Clips sicher hochladen und teilen",
+          "description": "Aufnahmen lassen sich aus dem Clip-Menü in die bestehende betterUC-Mediengalerie übertragen und über kurze Links teilen.",
+          "lines": [
+            "Uploads werden im privaten Cloudflare-R2-Speicher innerhalb der EU abgelegt.",
+            "Freigabelinks verwenden das kompakte Format betteruc.de/c/… und öffnen eine eigene Clip-Ansicht.",
+            "Vorschaubilder erscheinen gemeinsam mit Screenshots und Clips in der persönlichen Galerie.",
+            "Temporäre Upload-Dateien sowie veröffentlichte Clips und Poster werden durch feste Aufbewahrungsregeln automatisch bereinigt."
+          ]
+        },
+        {
+          "eyebrow": "TREFFER-EFFEKTE",
+          "title": "Treffer erhalten neue animierte Motive",
+          "description": "Clientseitige Partikel ersetzen die bisherigen Blockfragmente ausschließlich bei echtem Spielerschaden auf UnicaCity.",
+          "lines": [
+            "Die Varianten Dezent, Redux und 3D bestimmen Größe, Dynamik und räumliche Staffelung des Effekts.",
+            "Intensität, Größe, Dauer, Partikelmenge und die Farbe des Blutmotivs können frei angepasst werden.",
+            "Neben dem überarbeiteten Blut-Burst steht ein goldener Schmetterlings-Effekt zur Verfügung, der seitlich aus dem getroffenen Spieler explodiert.",
+            "Eine Vorschau im Menü ermöglicht die Feinabstimmung ohne einen tatsächlichen Treffer."
+          ]
+        },
+        {
+          "eyebrow": "HUDS & SERVERFORMATE",
+          "title": "Finanzen und Servermeldungen bleiben nachvollziehbar",
+          "description": "Neue Parser und Sicherheitsregeln halten HUD-Werte auch bei komplexen Kontoauszügen und aktualisierten Serverformaten korrekt.",
+          "lines": [
+            "Das neue Minen-Einnahmen-HUD summiert Verkäufe bis zum Payday, erscheint erst beim ersten Verkauf und verschwindet nach der Auszahlung.",
+            "Cash- und Bank-HUD verarbeiten Sammelabrechnungen sowie Einzahlungen in die Fraktionsbank zuverlässiger und schützen bestätigte Werte vor veralteten Meldungen.",
+            "Aktualisierte Verstärkungs-, Drogenabnahme- und Plantagenmeldungen werden in den Custom-Chatformaten vollständig erkannt.",
+            "Die Polizeiliste verwendet das Ingame-Limit von 44 Plätzen; feste SWAT-Prüfer bleiben auch ohne aktuelle Kanalanzeige erhalten.",
+            "Helper können Discord-Tickets annehmen, schließen und löschen, ohne allgemeine Administratorrechte zu erhalten."
+          ]
+        }
+      ],
+      "summary": [
+        {
+          "title": "Integrierte Clips",
+          "description": "Replay-Buffer, 60 FPS, Systemton und Mikrofon arbeiten direkt in betterUC.",
+          "color": "cyan"
+        },
+        {
+          "title": "Sicher teilen",
+          "description": "EU-Uploads, kurze Links und die Mediengalerie machen Clips sofort zugänglich.",
+          "color": "green"
+        },
+        {
+          "title": "Neue Treffer-Motive",
+          "description": "Blut-Burst und explodierende Schmetterlinge bieten mehrere animierte Darstellungen.",
+          "color": "purple"
+        },
+        {
+          "title": "Verlässliche HUDs",
+          "description": "Minen-Einnahmen sowie Cash- und Bankwerte folgen den tatsächlichen Serverabläufen.",
+          "color": "amber"
+        }
+      ],
+      "changes": [
+        "Ein integrierter Replay-Buffer zeichnet Spielmomente ohne externes Aufnahmeprogramm auf.",
+        "Clip-Länge, Auflösung, Bildrate und Speicherort sind konfigurierbar.",
+        "Systemton und Mikrofon können getrennt aufgenommen und synchron gemischt werden.",
+        "Die Aufnahme läuft beim Austabben weiter und verwendet kompakte Toast-Meldungen.",
+        "Hardware-Encoder-Diagnosen und eine isolierte FFmpeg-Laufzeit verbessern die Mod-Kompatibilität.",
+        "Clips lassen sich in die betterUC-Mediengalerie hochladen und über kurze betteruc.de-Links teilen.",
+        "Cloudflare R2 speichert Clips und Vorschaubilder im EU-Bereich mit automatischer Bereinigung.",
+        "Animierte Blut- und Schmetterlingsmotive ersetzen passende Schadenspartikel clientseitig.",
+        "Das Minen-Einnahmen-HUD summiert offene Auszahlungen und blendet sich passend zum Payday-Zyklus ein und aus.",
+        "Cash- und Bank-HUD erkennen weitere Sammelabrechnungen und Fraktionsbank-Einzahlungen.",
+        "Custom-Chatformate unterstützen neue Verstärkungs-, Drogenabnahme- und Plantagenmeldungen.",
+        "Polizeiliste, SWAT-Prüferzuordnung und Discord-Ticketrechte wurden an die tatsächlichen Teamabläufe angepasst.",
+        "Die Minecraft-Anmeldung behandelt ungültige Sitzungen und konkurrierende Mod-Bibliotheken robuster."
+      ]
+    },
+    {
       "version": "1.4.3",
       "date": "30.08.2026",
-      "current": true,
       "pages": [
         {
           "eyebrow": "WAFFEN & AMMO-HUD",
