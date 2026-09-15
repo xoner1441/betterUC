@@ -22,6 +22,7 @@ public class ChangelogScreen extends Screen {
     private static final int SOFT = 0xFFCBD5E1;
     private static final int MUTED = 0xFF94A3B8;
     private static final int BUTTON_H = 20;
+    private static final int SIDEBAR_ITEM_H = 42;
     private static final String MOD_VERSION = FabricLoader.getInstance()
             .getModContainer(BetterUCMod.MOD_ID)
             .map(container -> container.getMetadata().getVersion().getFriendlyString())
@@ -127,19 +128,30 @@ public class ChangelogScreen extends Screen {
         int x = panelX + 14;
         int y = panelY + 68;
         int width = sidebarW();
-        int itemH = 30;
+        int titleWidth = width - 18;
         for (int i = 0; i < pages.length; i++) {
             boolean selected = i == pageIndex;
-            boolean hovered = inBounds(mouseX, mouseY, x, y, width, itemH - 4);
+            boolean hovered = inBounds(mouseX, mouseY, x, y, width, SIDEBAR_ITEM_H - 4);
             if (selected || hovered) {
-                context.fill(x, y, x + width, y + itemH - 4, selected ? 0xC2253342 : 0x80334152);
+                context.fill(x, y, x + width, y + SIDEBAR_ITEM_H - 4,
+                        selected ? 0xC2253342 : 0x80334152);
             }
-            context.fill(x, y + 3, x + 2, y + itemH - 7, selected ? ACCENT : 0xFF475569);
-            context.text(font, Component.literal(pages[i].title()), x + 9, y + 5, selected ? TEXT : SOFT);
-            context.text(font, Component.literal((i + 1) + " / " + pages.length), x + 9, y + 16, MUTED);
-            y += itemH;
-            if (y + itemH > panelY + panelH - 38) break;
+            context.fill(x, y + 3, x + 2, y + SIDEBAR_ITEM_H - 7,
+                    selected ? ACCENT : 0xFF475569);
+
+            String[] titleLines = sidebarTitleLines(pages[i].title(), titleWidth);
+            for (int line = 0; line < titleLines.length; line++) {
+                context.text(font, Component.literal(titleLines[line]), x + 9, y + 4 + line * 10,
+                        selected ? TEXT : SOFT);
+            }
+            int counterY = y + (titleLines.length > 1 ? 26 : 17);
+            context.text(font, Component.literal((i + 1) + " / " + pages.length), x + 9, counterY, MUTED);
+            y += SIDEBAR_ITEM_H;
+            if (y + SIDEBAR_ITEM_H > panelY + panelH - 38) break;
         }
+
+        int dividerX = panelX + sidebarW() + 22;
+        context.fill(dividerX, panelY + 66, dividerX + 1, panelY + panelH - 40, 0xFF273341);
     }
 
     private void renderPage(GuiGraphicsExtractor context, int panelX, int panelY, int panelW, int panelH) {
@@ -182,7 +194,7 @@ public class ChangelogScreen extends Screen {
         int footerY = y + height - 37;
         context.fill(x + 10, footerY, x + width - 10, footerY + 1, 0xFF273341);
         context.text(font, Component.literal("Seite " + (pageIndex + 1) + " von " + pages.length),
-                x + 18, footerY + 13, MUTED);
+                x + 92, footerY + 13, MUTED);
     }
 
     private int drawWrapped(
@@ -261,14 +273,14 @@ public class ChangelogScreen extends Screen {
         int x = panelX() + 14;
         int y = panelY() + 68;
         for (int i = 0; i < pages.length; i++) {
-            if (inBounds(event.x(), event.y(), x, y, sidebarW(), 26)) {
+            if (inBounds(event.x(), event.y(), x, y, sidebarW(), SIDEBAR_ITEM_H - 4)) {
                 pageIndex = i;
                 contentScroll = 0;
                 refreshWidgets();
                 return true;
             }
-            y += 30;
-            if (y + 30 > panelY() + panelH() - 38) break;
+            y += SIDEBAR_ITEM_H;
+            if (y + SIDEBAR_ITEM_H > panelY() + panelH() - 38) break;
         }
         return false;
     }
@@ -311,7 +323,7 @@ public class ChangelogScreen extends Screen {
     }
 
     private int sidebarW() {
-        return Math.min(174, panelW() / 3);
+        return Math.min(220, panelW() * 35 / 100);
     }
 
     private int contentX() {
@@ -333,6 +345,32 @@ public class ChangelogScreen extends Screen {
             }
         }
         return text;
+    }
+
+    private String[] sidebarTitleLines(String text, int maxWidth) {
+        String clean = text == null ? "" : text.trim();
+        if (clean.isEmpty() || font.width(clean) <= maxWidth) {
+            return new String[]{clean};
+        }
+
+        String first = takeFittingText(clean, maxWidth);
+        String remaining = clean.substring(first.length()).trim();
+        if (remaining.isEmpty()) {
+            return new String[]{first};
+        }
+        return new String[]{first, fitWithEllipsis(remaining, maxWidth)};
+    }
+
+    private String fitWithEllipsis(String text, int maxWidth) {
+        if (font.width(text) <= maxWidth) return text;
+
+        String suffix = "...";
+        int availableWidth = Math.max(1, maxWidth - font.width(suffix));
+        String fitted = takeFittingText(text, availableWidth);
+        while (!fitted.isEmpty() && font.width(fitted + suffix) > maxWidth) {
+            fitted = fitted.substring(0, fitted.length() - 1).stripTrailing();
+        }
+        return fitted + suffix;
     }
 
     private void drawBorder(GuiGraphicsExtractor context, int x, int y, int w, int h, int color) {
