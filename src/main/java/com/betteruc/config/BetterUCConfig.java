@@ -90,7 +90,7 @@ public class BetterUCConfig {
             "zoomRememberLevel", "zoomSensitivityScalingEnabled", "zoomFactor", "zoomAnimationDurationMs",
             "handToggleEnabled", "handToggleNotificationEnabled", "handToggleRememberLastHand",
             "weaponEquipAnimationEnabled", "weaponEquipAnimationMode",
-            "bloodEffectMode", "bloodEffectIntensityPercent", "bloodEffectSizePercent",
+            "bloodEffectMode", "bloodEffectMotif", "bloodEffectIntensityPercent", "bloodEffectSizePercent",
             "bloodEffectLifetimePercent", "bloodEffectParticlePercent", "bloodEffectColor",
             "chatTimestampsEnabled", "chatCustomizationEnabled", "chatActionTextStyle", "chatHeadlineSeparatorStyle",
             "chatCustomizationGradientEnabled", "chatLinksClickableEnabled", "chatLinkHighlightEnabled",
@@ -542,6 +542,7 @@ public class BetterUCConfig {
     public boolean weaponEquipAnimationEnabled = true;
     public String weaponEquipAnimationMode = "fast";
     public String bloodEffectMode = "subtle";
+    public String bloodEffectMotif = "blood";
     public int bloodEffectIntensityPercent = 100;
     public int bloodEffectSizePercent = 100;
     public int bloodEffectLifetimePercent = 100;
@@ -1009,6 +1010,10 @@ public class BetterUCConfig {
             case "3d" -> "volumetric";
             default -> "subtle";
         };
+        String motif = INSTANCE.bloodEffectMotif == null
+                ? "blood"
+                : INSTANCE.bloodEffectMotif.trim().toLowerCase(Locale.ROOT);
+        INSTANCE.bloodEffectMotif = "neon".equals(motif) ? "neon" : "blood";
         INSTANCE.bloodEffectIntensityPercent = Math.max(25, Math.min(150, INSTANCE.bloodEffectIntensityPercent));
         INSTANCE.bloodEffectSizePercent = Math.max(50, Math.min(200, INSTANCE.bloodEffectSizePercent));
         INSTANCE.bloodEffectLifetimePercent = Math.max(50, Math.min(200, INSTANCE.bloodEffectLifetimePercent));

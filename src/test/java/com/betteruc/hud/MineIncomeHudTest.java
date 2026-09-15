@@ -3,7 +3,9 @@ package com.betteruc.hud;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MineIncomeHudTest {
 
@@ -26,5 +28,12 @@ class MineIncomeHudTest {
         assertNull(MineIncomeHud.parseMineIncome(
                 "Spieler: [PayDay] Du bekommst deine Mine Einnahmen von 30$ am PayDay ausgezahlt"
         ));
+    }
+
+    @Test
+    void hudOnlyAppearsWhileIncomeIsWaitingForPayday() {
+        assertFalse(MineIncomeHud.shouldShow(0L));
+        assertFalse(MineIncomeHud.shouldShow(-1L));
+        assertTrue(MineIncomeHud.shouldShow(30L));
     }
 }

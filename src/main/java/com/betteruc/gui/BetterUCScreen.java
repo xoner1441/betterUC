@@ -432,12 +432,18 @@ public class BetterUCScreen extends Screen {
                     saveConfig();
                     refreshWidgets();
                 });
+                y = addButton(x, y, controlW, "Motiv: " + BloodEffectClient.motifLabel(), b -> {
+                    BloodEffectClient.cycleMotif();
+                    saveConfig();
+                    refreshWidgets();
+                });
                 y = addButton(x, y, controlW, "Effekt jetzt testen", b -> BloodEffectClient.preview());
                 y = addInfo(x, y, controlW, "Auslöser", "Schaden an einem anderen Spieler");
                 y = addInfo(x, y, controlW, "Gültigkeit", "Ausschließlich auf UnicaCity");
                 y = addInfo(x, y, controlW, "Dezent", "Kleiner Burst und wenige Tropfen");
                 y = addInfo(x, y, controlW, "Redux", "Großer Burst mit schnellen Streifen");
                 y = addInfo(x, y, controlW, "3D", "Räumlich gestaffelt und richtungsabhängig");
+                y = addInfo(x, y, controlW, "Schmetterlinge", "Explodieren beim Treffer seitlich aus dem Ziel");
                 y = addSectionHeader(x, y, controlW, "Feinabstimmung", BetterUCConfig.INSTANCE.bloodEffectColor);
                 y = addRangeIntSlider(x, y, controlW, "Intensität %",
                         BetterUCConfig.INSTANCE.bloodEffectIntensityPercent, 25, 150,
@@ -1363,6 +1369,7 @@ public class BetterUCScreen extends Screen {
     }
 
     private void resetBloodEffectSettings() {
+        BetterUCConfig.INSTANCE.bloodEffectMotif = "blood";
         BetterUCConfig.INSTANCE.bloodEffectIntensityPercent = 100;
         BetterUCConfig.INSTANCE.bloodEffectSizePercent = 100;
         BetterUCConfig.INSTANCE.bloodEffectLifetimePercent = 100;

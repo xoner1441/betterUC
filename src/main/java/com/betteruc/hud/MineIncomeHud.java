@@ -95,7 +95,8 @@ public final class MineIncomeHud {
 
     private static void render(GuiGraphicsExtractor context) {
         Minecraft client = Minecraft.getInstance();
-        if (client.player == null || !BetterUCConfig.INSTANCE.showMineIncomeHud) return;
+        if (client.player == null || !BetterUCConfig.INSTANCE.showMineIncomeHud
+                || !shouldShow(currentIncome)) return;
 
         String value = formatMoney(currentIncome) + "$";
         String style = BetterUCConfig.INSTANCE.mineIncomeHudStyle;
@@ -167,6 +168,10 @@ public final class MineIncomeHud {
         if (right <= 0L) return Math.max(0L, left);
         if (left > Long.MAX_VALUE - right) return Long.MAX_VALUE;
         return left + right;
+    }
+
+    static boolean shouldShow(long income) {
+        return income > 0L;
     }
 
     private static String stripFormatting(String raw) {
