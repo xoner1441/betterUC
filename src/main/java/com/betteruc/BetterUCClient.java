@@ -32,6 +32,7 @@ import com.betteruc.client.TrustedChatCommands;
 import com.betteruc.client.BetterUCFontManager;
 import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.MovementController;
+import com.betteruc.client.MinecartCheckClient;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.RemoteFeatureFlagsClient;
 import com.betteruc.client.ReinforcementAcceptClient;
@@ -213,6 +214,7 @@ public class BetterUCClient implements ClientModInitializer {
         ScreenshotActionsClient.initialize();
         ClipCaptureClient.initialize(BETTERUC_KEY_CATEGORY);
         AutoGaertnerClient.initialize();
+        MinecartCheckClient.initialize();
         registerKeyMappings();
         registerHudElements();
         registerConnectionEvents();
