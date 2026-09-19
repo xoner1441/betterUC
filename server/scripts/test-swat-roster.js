@@ -40,6 +40,7 @@ test("persists and groups an uploaded SWAT roster", async () => {
     }
   };
   try {
+    // A stale deployment override and stale uploaded roles must not keep the former examiner active.
     const store = createSwatRosterStore({ file, renderer, slotLimit: 13, supervisorOverrides: "mteii" });
     await store.load();
     const roster = await store.update({
@@ -47,14 +48,17 @@ test("persists and groups an uploaded SWAT roster", async () => {
       members: [
         { username: "36Flo", factionRank: 6, role: "leader" },
         { username: "FABI1441", factionRank: 4, role: "supervisor" },
-        { username: "mteii", factionRank: 4, role: "member" }
+        { username: "mteii", factionRank: 4, role: "supervisor" },
+        { username: "Aidjn", factionRank: 3, role: "member" }
       ]
     }, "FABI1441");
 
-    assert.equal(roster.count, 3);
+    assert.equal(roster.count, 4);
     assert.equal(roster.slotLimit, 13);
     assert.deepEqual(roster.groups.map(group => group.label), ["Leitung", "SWAT-Prüfer", "Member"]);
-    assert.deepEqual(roster.groups.map(group => group.members.length), [1, 2, 3]);
+    assert.deepEqual(roster.groups.map(group => group.members.length), [1, 2, 4]);
+    assert.equal(roster.members.find(member => member.username === "Aidjn").role, "supervisor");
+    assert.equal(roster.members.find(member => member.username === "mteii").role, "member");
     assert.equal(roster.updatedBy, "FABI1441");
     assert.match(roster.hash, /^[a-f0-9]{12}$/);
     assert.equal((await store.getImage()).buffer.toString(), "png");
@@ -62,8 +66,9 @@ test("persists and groups an uploaded SWAT roster", async () => {
 
     const reloaded = createSwatRosterStore({ file, renderer, slotLimit: 13, supervisorOverrides: "mteii" });
     await reloaded.load();
-    assert.deepEqual(reloaded.getRoster().members.map(member => member.username), ["36Flo", "FABI1441", "mteii"]);
-    assert.equal(reloaded.getRoster().members.find(member => member.username === "mteii").role, "supervisor");
+    assert.deepEqual(reloaded.getRoster().members.map(member => member.username), ["36Flo", "FABI1441", "Aidjn", "mteii"]);
+    assert.equal(reloaded.getRoster().members.find(member => member.username === "Aidjn").role, "supervisor");
+    assert.equal(reloaded.getRoster().members.find(member => member.username === "mteii").role, "member");
   } finally {
     await fs.rm(directory, { recursive: true, force: true });
   }
@@ -87,7 +92,7 @@ test("uses the current SWAT channel roster until the first automatic upload", as
     assert.deepEqual(roster.groups.map(group => group.members.length), [1, 2, 11]);
     assert.deepEqual(
       roster.groups.find(group => group.key === "member").members.slice(0, 6).map(member => member.username),
-      ["36Flo", "DuckOderSo", "H4cksLikeLoris", "mteii", "73nici", "FABI1441"]
+      ["36Flo", "DuckOderSo", "H4cksLikeLoris", "73nici", "mteii", "Aidjn"]
     );
   } finally {
     await fs.rm(directory, { recursive: true, force: true });

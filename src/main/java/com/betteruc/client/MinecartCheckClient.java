@@ -1,5 +1,6 @@
 package com.betteruc.client;
 
+import com.betteruc.config.BetterUCConfig;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.protocol.game.ServerboundInteractPacket;
@@ -27,6 +28,7 @@ public final class MinecartCheckClient {
     public static void initialize() {
         UseEntityCallback.EVENT.register((player, level, hand, entity, hitResult) -> {
             if (!matchesShortcut(
+                    BetterUCConfig.INSTANCE.minecartCheckHelperEnabled,
                     level.isClientSide(),
                     hand == InteractionHand.MAIN_HAND,
                     player.isShiftKeyDown(),
@@ -49,7 +51,8 @@ public final class MinecartCheckClient {
                 Vec3 hitOffset = hitResult.getLocation().subtract(
                         entity.getX(), entity.getY(), entity.getZ());
                 ClientScheduler.runDelayedOnClient(client, FOLLOW_UP_INTERACTION_DELAY_MS, () -> {
-                    if (client.player != player
+                    if (!BetterUCConfig.INSTANCE.minecartCheckHelperEnabled
+                            || client.player != player
                             || client.getConnection() == null
                             || entity.isRemoved()
                             || entity.level() != client.level) {
@@ -71,8 +74,14 @@ public final class MinecartCheckClient {
         });
     }
 
-    static boolean matchesShortcut(boolean clientSide, boolean mainHand, boolean sneaking, boolean minecart) {
-        return clientSide && mainHand && sneaking && minecart;
+    static boolean matchesShortcut(
+            boolean enabled,
+            boolean clientSide,
+            boolean mainHand,
+            boolean sneaking,
+            boolean minecart
+    ) {
+        return enabled && clientSide && mainHand && sneaking && minecart;
     }
 
     static boolean isRepeatedInteraction(int minecartId, long now, int previousMinecartId, long previousUseAt) {

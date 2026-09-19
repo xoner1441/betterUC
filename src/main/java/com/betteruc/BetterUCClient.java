@@ -61,6 +61,7 @@ import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.HealthHud;
 import com.betteruc.hud.MaskTimerHud;
 import com.betteruc.hud.MineIncomeHud;
+import com.betteruc.hud.SalaryIncomeHud;
 import com.betteruc.hud.PaydayHud;
 import com.betteruc.hud.PingHud;
 import com.betteruc.hud.PlantageHud;
@@ -244,6 +245,7 @@ public class BetterUCClient implements ClientModInitializer {
         BankBalanceHud.register();
         CashHud.register();
         MineIncomeHud.register();
+        SalaryIncomeHud.register();
         DealerTimerHud.register();
         MaskTimerHud.register();
         ProductionTimerHud.register();
@@ -270,6 +272,7 @@ public class BetterUCClient implements ClientModInitializer {
             BankBalanceHud.clear();
             CashHud.clear();
             MineIncomeHud.clear();
+            SalaryIncomeHud.clear();
             DealerTimerHud.clear();
             MaskTimerHud.clear();
             ProductionTimerHud.clear();
@@ -1326,6 +1329,7 @@ public class BetterUCClient implements ClientModInitializer {
         BankBalanceHud.clear();
         CashHud.clear();
         MineIncomeHud.clear();
+        SalaryIncomeHud.clear();
         DealerTimerHud.clear();
         MaskTimerHud.clear();
         ProductionTimerHud.clear();

@@ -6,15 +6,15 @@ const path = require("path");
 
 const fsp = fs.promises;
 const VALID_ROLES = new Set(["leader", "supervisor", "member"]);
-const DEFAULT_SUPERVISOR_OVERRIDES = "mteii";
+const DEFAULT_SUPERVISOR_OVERRIDES = "Aidjn";
 const DEFAULT_SWAT_MEMBERS = Object.freeze([
   { username: "36Flo", factionRank: 6, role: "leader" },
   { username: "DuckOderSo", factionRank: 5, role: "member" },
   { username: "H4cksLikeLoris", factionRank: 5, role: "member" },
-  { username: "mteii", factionRank: 4, role: "supervisor" },
+  { username: "mteii", factionRank: 4, role: "member" },
   { username: "73nici", factionRank: 4, role: "member" },
   { username: "FABI1441", factionRank: 3, role: "supervisor" },
-  { username: "Aidjn", factionRank: 3, role: "member" },
+  { username: "Aidjn", factionRank: 3, role: "supervisor" },
   { username: "Schbastyyy787", factionRank: 3, role: "member" },
   { username: "reaax72", factionRank: 3, role: "member" },
   { username: "Eymenn", factionRank: 3, role: "member" },
@@ -68,6 +68,21 @@ function normalizeMembers(entries, options = {}) {
     if (!previous || rolePriority(member.role) > rolePriority(previous.role)) byName.set(key, member);
   }
   return [...byName.values()].sort((left, right) => (
+    rolePriority(right.role) - rolePriority(left.role)
+    || right.factionRank - left.factionRank
+    || left.username.localeCompare(right.username, "de", { sensitivity: "base" })
+  ));
+}
+
+/** Applies the current fixed examiner assignment, including persisted legacy rosters. */
+function applyCurrentExaminerAssignments(members) {
+  return members.map(member => {
+    if (member.role === "leader") return member;
+    const username = member.username.toLowerCase();
+    if (username === "aidjn") return { ...member, role: "supervisor" };
+    if (username === "mteii") return { ...member, role: "member" };
+    return member;
+  }).sort((left, right) => (
     rolePriority(right.role) - rolePriority(left.role)
     || right.factionRank - left.factionRank
     || left.username.localeCompare(right.username, "de", { sensitivity: "base" })
@@ -128,7 +143,9 @@ function createSwatRosterStore(options = {}) {
       ? DEFAULT_SUPERVISOR_OVERRIDES
       : options.supervisorOverrides
   );
-  const defaultMembers = normalizeMembers(options.defaultMembers || DEFAULT_SWAT_MEMBERS, { supervisorOverrides });
+  const defaultMembers = applyCurrentExaminerAssignments(
+    normalizeMembers(options.defaultMembers || DEFAULT_SWAT_MEMBERS, { supervisorOverrides })
+  );
   let state = {
     version: 1,
     slotLimit: defaultSlotLimit,
@@ -142,7 +159,9 @@ function createSwatRosterStore(options = {}) {
   async function load() {
     try {
       const parsed = JSON.parse(await fsp.readFile(file, "utf8"));
-      const parsedMembers = normalizeMembers(parsed.members, { supervisorOverrides });
+      const parsedMembers = applyCurrentExaminerAssignments(
+        normalizeMembers(parsed.members, { supervisorOverrides })
+      );
       const members = parsedMembers.length > 0 ? parsedMembers : defaultMembers;
       const slotLimit = positiveInteger(parsed.slotLimit, defaultSlotLimit);
       state = {
@@ -167,7 +186,9 @@ function createSwatRosterStore(options = {}) {
   }
 
   async function update(payload, updatedBy) {
-    const members = normalizeMembers(payload?.members, { supervisorOverrides });
+    const members = applyCurrentExaminerAssignments(
+      normalizeMembers(payload?.members, { supervisorOverrides })
+    );
     if (members.length === 0) throw new Error("Die SWAT-Liste enthält keine gültigen Mitglieder.");
     const slotLimit = positiveInteger(payload?.slotLimit, defaultSlotLimit);
     state = {

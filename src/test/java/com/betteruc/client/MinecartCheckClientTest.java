@@ -9,11 +9,12 @@ class MinecartCheckClientTest {
 
     @Test
     void shortcutRequiresClientMainHandSneakingAndMinecart() {
-        assertTrue(MinecartCheckClient.matchesShortcut(true, true, true, true));
-        assertFalse(MinecartCheckClient.matchesShortcut(false, true, true, true));
-        assertFalse(MinecartCheckClient.matchesShortcut(true, false, true, true));
-        assertFalse(MinecartCheckClient.matchesShortcut(true, true, false, true));
-        assertFalse(MinecartCheckClient.matchesShortcut(true, true, true, false));
+        assertTrue(MinecartCheckClient.matchesShortcut(true, true, true, true, true));
+        assertFalse(MinecartCheckClient.matchesShortcut(false, true, true, true, true));
+        assertFalse(MinecartCheckClient.matchesShortcut(true, false, true, true, true));
+        assertFalse(MinecartCheckClient.matchesShortcut(true, true, false, true, true));
+        assertFalse(MinecartCheckClient.matchesShortcut(true, true, true, false, true));
+        assertFalse(MinecartCheckClient.matchesShortcut(true, true, true, true, false));
     }
 
     @Test

@@ -30,6 +30,7 @@ import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.HealthHud;
 import com.betteruc.hud.ModernHudRenderer;
 import com.betteruc.hud.MineIncomeHud;
+import com.betteruc.hud.SalaryIncomeHud;
 import com.betteruc.hud.PotionEffectsHud;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.util.Util;
@@ -298,6 +299,14 @@ public class BetterUCScreen extends Screen {
                         color -> BetterUCConfig.INSTANCE.mineIncomeHudColor = color);
                 y = addInfo(x, y, controlW, "Reset", "bei neuem PayDay");
             }
+            case SALARY_INCOME -> {
+                y = addSectionHeader(x, y, controlW, "Anzeige", BetterUCConfig.DEFAULT_SALARY_INCOME_HUD_COLOR);
+                y = addToggle(x, y, controlW, "Gehalt HUD", BetterUCConfig.INSTANCE.showSalaryIncomeHud,
+                        () -> BetterUCConfig.INSTANCE.showSalaryIncomeHud = !BetterUCConfig.INSTANCE.showSalaryIncomeHud);
+                y = addColorButton(x, y, controlW, "Gehalt Farbe", BetterUCConfig.INSTANCE.salaryIncomeHudColor,
+                        color -> BetterUCConfig.INSTANCE.salaryIncomeHudColor = color);
+                y = addInfo(x, y, controlW, "Reset", "bei neuem PayDay");
+            }
             case POTION -> {
                 y = addSectionHeader(x, y, controlW, "Anzeige", 0xFFA855F7);
                 y = addToggle(x, y, controlW, "Potion HUD", BetterUCConfig.INSTANCE.showPotionEffectsHud,
@@ -444,6 +453,8 @@ public class BetterUCScreen extends Screen {
                 y = addInfo(x, y, controlW, "Redux", "Großer Burst mit schnellen Streifen");
                 y = addInfo(x, y, controlW, "3D", "Räumlich gestaffelt und richtungsabhängig");
                 y = addInfo(x, y, controlW, "Schmetterlinge", "Explodieren beim Treffer seitlich aus dem Ziel");
+                y = addInfo(x, y, controlW, "Sterne / Herzen", "Neue Motive beim Treffer, jeweils mit eigenem Schwung");
+                y = addInfo(x, y, controlW, "Classic", "Originale Server-Partikel ohne zusätzlichen Effekt");
                 y = addSectionHeader(x, y, controlW, "Feinabstimmung", BetterUCConfig.INSTANCE.bloodEffectColor);
                 y = addRangeIntSlider(x, y, controlW, "Intensität %",
                         BetterUCConfig.INSTANCE.bloodEffectIntensityPercent, 25, 150,
@@ -703,6 +714,15 @@ public class BetterUCScreen extends Screen {
                 y = addPingControls(x, y, controlW);
             }
             case COMMANDS -> y = addButton(x, y, controlW, "Command Menu", b -> openScreen(new CommandGui()));
+            case VEHICLE_CHECK -> {
+                y = addSectionHeader(x, y, controlW, "Fahrzeug-Check", 0xFF22C55E);
+                y = addToggle(x, y, controlW, "Shift + Rechtsklick",
+                        BetterUCConfig.INSTANCE.minecartCheckHelperEnabled,
+                        () -> BetterUCConfig.INSTANCE.minecartCheckHelperEnabled =
+                                !BetterUCConfig.INSTANCE.minecartCheckHelperEnabled);
+                y = addInfo(x, y, controlW, "Ablauf", "/checkkfz + Minecart auswählen");
+                y = addInfo(x, y, controlW, "Gültigkeit", "Minecarts auf UnicaCity");
+            }
             case TRASH_FILTER -> {
                 y = addSectionHeader(x, y, controlW, "Filter", 0xFF4ADE80);
                 y = addToggle(x, y, controlW, "Mülleimer Filter", BetterUCConfig.INSTANCE.trashFilterEnabled,
@@ -2039,6 +2059,19 @@ public class BetterUCScreen extends Screen {
                             BetterUCConfig.INSTANCE.mineIncomeHudColor);
                 }
             }
+            case SALARY_INCOME -> {
+                String value = previewSalaryIncomeValue();
+                if (modernStyle) {
+                    ModernHudRenderer.drawModule(context, minecraft, previewX, previewY, hudPreviewLabel(ModuleOption.SALARY_INCOME),
+                            value, BetterUCConfig.INSTANCE.salaryIncomeHudColor);
+                } else if (stylizedStyle) {
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId, hudPreviewText(ModuleOption.SALARY_INCOME, value), previewX, previewY,
+                            BetterUCConfig.INSTANCE.salaryIncomeHudColor);
+                } else {
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font, hudPreviewText(ModuleOption.SALARY_INCOME, value), previewX, previewY,
+                            BetterUCConfig.INSTANCE.salaryIncomeHudColor);
+                }
+            }
             case POTION -> {
                 int potionColor = BetterUCConfig.INSTANCE.potionHudColor;
                 if (modernStyle) {
@@ -2183,6 +2216,8 @@ public class BetterUCScreen extends Screen {
                     BetterUCConfig.INSTANCE.pingRelayEnabled ? "Aktiv" : "Aus",
                     BetterUCConfig.INSTANCE.pingRelayEnabled);
             case COMMANDS -> drawMiniInfo(context, previewX, previewY, "Tools", "Command Menu", true);
+            case VEHICLE_CHECK -> drawMiniInfo(context, previewX, previewY, "KFZ-Check",
+                    "Shift + Rechtsklick", BetterUCConfig.INSTANCE.minecartCheckHelperEnabled);
             case TRASH_FILTER -> drawMiniInfo(context, previewX, previewY, "Mülleimer Filter",
                     BetterUCConfig.INSTANCE.trashFilterEnabled ? "Markierung aktiv" : "Aus",
                     BetterUCConfig.INSTANCE.trashFilterEnabled);
@@ -2623,6 +2658,7 @@ public class BetterUCScreen extends Screen {
             case BANK -> BetterUCConfig.INSTANCE.showBankHud;
             case CASH -> BetterUCConfig.INSTANCE.showCashHud;
             case MINE_INCOME -> BetterUCConfig.INSTANCE.showMineIncomeHud;
+            case SALARY_INCOME -> BetterUCConfig.INSTANCE.showSalaryIncomeHud;
             case POTION -> BetterUCConfig.INSTANCE.showPotionEffectsHud;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintEnabled;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.showPlantTimerHud;
@@ -2639,6 +2675,7 @@ public class BetterUCScreen extends Screen {
             case CLIPS -> BetterUCConfig.INSTANCE.clipsEnabled;
             case PING -> BetterUCConfig.INSTANCE.pingRelayEnabled;
             case TRASH_FILTER -> BetterUCConfig.INSTANCE.trashFilterEnabled;
+            case VEHICLE_CHECK -> BetterUCConfig.INSTANCE.minecartCheckHelperEnabled;
             default -> true;
         };
     }
@@ -2654,6 +2691,7 @@ public class BetterUCScreen extends Screen {
             case BANK -> BetterUCConfig.INSTANCE.bankHudStyle;
             case CASH -> BetterUCConfig.INSTANCE.cashHudStyle;
             case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudStyle;
+            case SALARY_INCOME -> BetterUCConfig.INSTANCE.salaryIncomeHudStyle;
             case POTION -> BetterUCConfig.INSTANCE.potionHudStyle;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudStyle;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudStyle;
@@ -2677,6 +2715,7 @@ public class BetterUCScreen extends Screen {
             case BANK -> BetterUCConfig.INSTANCE.bankHudStyle = style;
             case CASH -> BetterUCConfig.INSTANCE.cashHudStyle = style;
             case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudStyle = style;
+            case SALARY_INCOME -> BetterUCConfig.INSTANCE.salaryIncomeHudStyle = style;
             case POTION -> BetterUCConfig.INSTANCE.potionHudStyle = style;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudStyle = style;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudStyle = style;
@@ -2701,6 +2740,7 @@ public class BetterUCScreen extends Screen {
             case BANK -> BetterUCConfig.INSTANCE.bankHudCustomFont;
             case CASH -> BetterUCConfig.INSTANCE.cashHudCustomFont;
             case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudCustomFont;
+            case SALARY_INCOME -> BetterUCConfig.INSTANCE.salaryIncomeHudCustomFont;
             case POTION -> BetterUCConfig.INSTANCE.potionHudCustomFont;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudCustomFont;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudCustomFont;
@@ -2724,6 +2764,7 @@ public class BetterUCScreen extends Screen {
             case BANK -> BetterUCConfig.INSTANCE.bankHudCustomFont = fontId;
             case CASH -> BetterUCConfig.INSTANCE.cashHudCustomFont = fontId;
             case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudCustomFont = fontId;
+            case SALARY_INCOME -> BetterUCConfig.INSTANCE.salaryIncomeHudCustomFont = fontId;
             case POTION -> BetterUCConfig.INSTANCE.potionHudCustomFont = fontId;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudCustomFont = fontId;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudCustomFont = fontId;
@@ -2747,6 +2788,7 @@ public class BetterUCScreen extends Screen {
             case BANK -> BetterUCConfig.INSTANCE.bankHudGradientEnabled;
             case CASH -> BetterUCConfig.INSTANCE.cashHudGradientEnabled;
             case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudGradientEnabled;
+            case SALARY_INCOME -> BetterUCConfig.INSTANCE.salaryIncomeHudGradientEnabled;
             case POTION -> BetterUCConfig.INSTANCE.potionHudGradientEnabled;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudGradientEnabled;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientEnabled;
@@ -2769,6 +2811,7 @@ public class BetterUCScreen extends Screen {
             case BANK -> BetterUCConfig.INSTANCE.bankHudGradientEnabled = enabled;
             case CASH -> BetterUCConfig.INSTANCE.cashHudGradientEnabled = enabled;
             case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudGradientEnabled = enabled;
+            case SALARY_INCOME -> BetterUCConfig.INSTANCE.salaryIncomeHudGradientEnabled = enabled;
             case POTION -> BetterUCConfig.INSTANCE.potionHudGradientEnabled = enabled;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudGradientEnabled = enabled;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientEnabled = enabled;
@@ -2792,6 +2835,7 @@ public class BetterUCScreen extends Screen {
             case BANK -> BetterUCConfig.INSTANCE.bankHudGradientColor;
             case CASH -> BetterUCConfig.INSTANCE.cashHudGradientColor;
             case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudGradientColor;
+            case SALARY_INCOME -> BetterUCConfig.INSTANCE.salaryIncomeHudGradientColor;
             case POTION -> BetterUCConfig.INSTANCE.potionHudGradientColor;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudGradientColor;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientColor;
@@ -2814,6 +2858,7 @@ public class BetterUCScreen extends Screen {
             case BANK -> BetterUCConfig.INSTANCE.bankHudGradientColor = color;
             case CASH -> BetterUCConfig.INSTANCE.cashHudGradientColor = color;
             case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudGradientColor = color;
+            case SALARY_INCOME -> BetterUCConfig.INSTANCE.salaryIncomeHudGradientColor = color;
             case POTION -> BetterUCConfig.INSTANCE.potionHudGradientColor = color;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudGradientColor = color;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudGradientColor = color;
@@ -2828,7 +2873,7 @@ public class BetterUCScreen extends Screen {
 
     private boolean hasHudPrefix(ModuleOption module) {
         return switch (module) {
-            case FPS, PAYDAY, AMMO, BANK, CASH, MINE_INCOME, SPRINT, HACK_TIMER, PLANT_TIMER, DEALER_TIMER, MASK_TIMER,
+            case FPS, PAYDAY, AMMO, BANK, CASH, MINE_INCOME, SALARY_INCOME, SPRINT, HACK_TIMER, PLANT_TIMER, DEALER_TIMER, MASK_TIMER,
                     PRODUCTION_TIMER -> true;
             default -> false;
         };
@@ -2842,6 +2887,7 @@ public class BetterUCScreen extends Screen {
             case BANK -> BetterUCConfig.INSTANCE.bankHudPrefixEnabled;
             case CASH -> BetterUCConfig.INSTANCE.cashHudPrefixEnabled;
             case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudPrefixEnabled;
+            case SALARY_INCOME -> BetterUCConfig.INSTANCE.salaryIncomeHudPrefixEnabled;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudPrefixEnabled;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudPrefixEnabled;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudPrefixEnabled;
@@ -2860,6 +2906,7 @@ public class BetterUCScreen extends Screen {
             case BANK -> BetterUCConfig.INSTANCE.bankHudPrefixEnabled = enabled;
             case CASH -> BetterUCConfig.INSTANCE.cashHudPrefixEnabled = enabled;
             case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudPrefixEnabled = enabled;
+            case SALARY_INCOME -> BetterUCConfig.INSTANCE.salaryIncomeHudPrefixEnabled = enabled;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudPrefixEnabled = enabled;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudPrefixEnabled = enabled;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudPrefixEnabled = enabled;
@@ -2879,6 +2926,7 @@ public class BetterUCScreen extends Screen {
             case BANK -> BetterUCConfig.INSTANCE.bankHudPrefix;
             case CASH -> BetterUCConfig.INSTANCE.cashHudPrefix;
             case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudPrefix;
+            case SALARY_INCOME -> BetterUCConfig.INSTANCE.salaryIncomeHudPrefix;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudPrefix;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudPrefix;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudPrefix;
@@ -2897,6 +2945,7 @@ public class BetterUCScreen extends Screen {
             case BANK -> BetterUCConfig.INSTANCE.bankHudPrefix = prefix;
             case CASH -> BetterUCConfig.INSTANCE.cashHudPrefix = prefix;
             case MINE_INCOME -> BetterUCConfig.INSTANCE.mineIncomeHudPrefix = prefix;
+            case SALARY_INCOME -> BetterUCConfig.INSTANCE.salaryIncomeHudPrefix = prefix;
             case SPRINT -> BetterUCConfig.INSTANCE.toggleSprintHudPrefix = prefix;
             case HACK_TIMER -> BetterUCConfig.INSTANCE.hackTimerHudPrefix = prefix;
             case PLANT_TIMER -> BetterUCConfig.INSTANCE.plantTimerHudPrefix = prefix;
@@ -2929,6 +2978,11 @@ public class BetterUCScreen extends Screen {
     private String previewMineIncomeValue() {
         long live = MineIncomeHud.getCurrentIncome();
         return MineIncomeHud.formatMoney(live > 0L ? live : 390L) + "$";
+    }
+
+    private String previewSalaryIncomeValue() {
+        long live = SalaryIncomeHud.getCurrentIncome();
+        return SalaryIncomeHud.formatMoney(live > 0L ? live : 250L) + "$";
     }
 
     private String pingScopeLabel() {
@@ -3233,6 +3287,7 @@ public class BetterUCScreen extends Screen {
         BANK(Category.HUD, "Bank", "Kontostand im HUD", BetterUCConfig.DEFAULT_BANK_HUD_COLOR, true),
         CASH(Category.HUD, "Bargeld", "Geld & Bargeldbestand", BetterUCConfig.DEFAULT_CASH_HUD_COLOR, true),
         MINE_INCOME(Category.HUD, "Minen-Einnahmen", "Auszahlung am nächsten PayDay", BetterUCConfig.DEFAULT_MINE_INCOME_HUD_COLOR, true),
+        SALARY_INCOME(Category.HUD, "Gehalt", "Gesammeltes Gehalt bis zum PayDay", BetterUCConfig.DEFAULT_SALARY_INCOME_HUD_COLOR, true),
         POTION(Category.HUD, "Potion", "Aktive Effekte", 0xFF9328FF, true),
         SPRINT(Category.HUD, "Sprint", "ToggleSprint Anzeige", BetterUCConfig.DEFAULT_TOGGLE_SPRINT_HUD_COLOR, true),
         HACK_TIMER(Category.HUD, "Hack Timer", "Timer-Position", 0xFF60A5FA, false),
@@ -3256,6 +3311,7 @@ public class BetterUCScreen extends Screen {
         BLACKLIST(Category.TOOLS, "Blacklist", "Gründe und Sync", 0xFFF97316, false),
         PING(Category.TOOLS, "Ping", "Private Mod-Pings", 0xFF38BDF8, true),
         COMMANDS(Category.TOOLS, "Commands", "Command Menu", 0xFF22C55E, false),
+        VEHICLE_CHECK(Category.TOOLS, "KFZ-Check", "Minecart per Shift-Rechtsklick prüfen", 0xFF22C55E, true),
         TRASH_FILTER(Category.TOOLS, "Mülleimer Filter", "Fundstücke hervorheben", 0xFF4ADE80, true),
         DISCORD(Category.TOOLS, "Discord", "Community Invite", 0xFF5865F2, false),
         UPDATES(Category.TOOLS, "Updates", "Changelog und neue Features", 0xFF38BDF8, false);
