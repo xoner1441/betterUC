@@ -10,10 +10,12 @@ import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundDamageEventPacket;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayDeque;
@@ -36,10 +38,14 @@ public final class BloodEffectClient {
     }
 
     public enum Motif {
-        BLOOD("Blut"), NEON("Schmetterlinge");
+        BLOOD("blood", "Blut"), NEON("neon", "Schmetterlinge"),
+        STARS("stars", "Sterne"), HEARTS("hearts", "Herzen"),
+        CLASSIC("classic", "Classic (Server)");
 
+        private final String key;
         private final String label;
-        Motif(String label) { this.label = label; }
+        Motif(String key, String label) { this.key = key; this.label = label; }
+        public String key() { return key; }
         public String label() { return label; }
     }
 
@@ -58,6 +64,12 @@ public final class BloodEffectClient {
         ParticleProviderRegistry.getInstance().register(BloodEffectParticles.NEON_BUTTERFLY,
                 sprites -> (options, level, x, y, z, dx, dy, dz, random) ->
                         new NeonButterflyParticle(level, x, y, z, dx, dy, dz, sprites));
+        ParticleProviderRegistry.getInstance().register(BloodEffectParticles.STAR,
+                sprites -> (options, level, x, y, z, dx, dy, dz, random) ->
+                        new SymbolParticle(level, x, y, z, dx, dy, dz, sprites, true));
+        ParticleProviderRegistry.getInstance().register(BloodEffectParticles.HEART,
+                sprites -> (options, level, x, y, z, dx, dy, dz, random) ->
+                        new SymbolParticle(level, x, y, z, dx, dy, dz, sprites, false));
     }
 
     public static Mode mode() {
@@ -75,7 +87,14 @@ public final class BloodEffectClient {
 
     public static Motif motif() {
         String raw = BetterUCConfig.INSTANCE.bloodEffectMotif;
-        return raw != null && raw.trim().equalsIgnoreCase("neon") ? Motif.NEON : Motif.BLOOD;
+        if (raw == null) return Motif.BLOOD;
+        return switch (raw.trim().toLowerCase(Locale.ROOT)) {
+            case "neon" -> Motif.NEON;
+            case "stars" -> Motif.STARS;
+            case "hearts" -> Motif.HEARTS;
+            case "classic" -> Motif.CLASSIC;
+            default -> Motif.BLOOD;
+        };
     }
 
     public static String motifLabel() { return motif().label(); }
@@ -90,13 +109,15 @@ public final class BloodEffectClient {
     }
 
     public static void cycleMotif() {
-        BetterUCConfig.INSTANCE.bloodEffectMotif = motif() == Motif.BLOOD ? "neon" : "blood";
+        Motif[] motifs = Motif.values();
+        BetterUCConfig.INSTANCE.bloodEffectMotif = motifs[(motif().ordinal() + 1) % motifs.length].key();
     }
 
     public static boolean replace(ParticleOptions option, double x, double y, double z) {
         Mode mode = mode();
+        if (mode == Mode.OFF || motif() == Motif.CLASSIC) return false;
         Minecraft client = Minecraft.getInstance();
-        if (mode == Mode.OFF || !ServerGate.isAllowedServer(client) || client.level == null) return false;
+        if (!ServerGate.isAllowedServer(client) || client.level == null) return false;
 
         ClientLevel level = client.level;
         ensureLevel(level);
@@ -106,9 +127,10 @@ public final class BloodEffectClient {
 
     /** Uses the real player-damage packet as the reliable trigger, independent of server particle encoding. */
     public static void onPlayerDamage(ClientboundDamageEventPacket packet) {
+        if (mode() == Mode.OFF || motif() == Motif.CLASSIC) return;
         Minecraft client = Minecraft.getInstance();
         ClientLevel level = client.level;
-        if (mode() == Mode.OFF || level == null || !ServerGate.isAllowedServer(client)) return;
+        if (level == null || !ServerGate.isAllowedServer(client)) return;
 
         Entity entity = level.getEntity(packet.entityId());
         if (!(entity instanceof Player) || entity == client.player) return;
@@ -182,15 +204,36 @@ public final class BloodEffectClient {
         Minecraft client = Minecraft.getInstance();
         if (client.level == null || client.player == null) return false;
         Vec3 position = client.player.getEyePosition().add(client.player.getLookAngle().scale(2.2D));
+        if (motif() == Motif.CLASSIC) {
+            var random = client.level.getRandom();
+            var block = new BlockParticleOption(ParticleTypes.BLOCK, Blocks.REDSTONE_BLOCK.defaultBlockState());
+            for (int i = 0; i < 10; i++) {
+                client.level.addParticle(block,
+                        position.x + random.triangle(0, 0.14D),
+                        position.y + random.triangle(0, 0.14D),
+                        position.z + random.triangle(0, 0.14D),
+                        random.triangle(0, 0.12D), random.nextDouble() * 0.14D,
+                        random.triangle(0, 0.12D));
+            }
+            return true;
+        }
         Mode previewMode = mode() == Mode.OFF ? Mode.SUBTLE : mode();
         spawn(client.level, previewMode, position.x, position.y, position.z, client.player.getLookAngle());
         return true;
     }
 
     private static void spawn(ClientLevel level, Mode mode, double x, double y, double z, Vec3 rawDirection) {
-        if (motif() == Motif.NEON) {
-            spawnNeon(level, mode, x, y, z, rawDirection);
-            return;
+        switch (motif()) {
+            case NEON -> {
+                spawnNeon(level, mode, x, y, z, rawDirection);
+                return;
+            }
+            case STARS, HEARTS -> {
+                spawnSymbols(level, mode, motif() == Motif.STARS, x, y, z, rawDirection);
+                return;
+            }
+            case CLASSIC -> { return; }
+            case BLOOD -> { }
         }
 
         boolean redux = mode == Mode.REDUX;
@@ -270,6 +313,26 @@ public final class BloodEffectClient {
                     y + random.triangle(0, 0.06D),
                     z + side.z * sign * 0.06D + random.triangle(0, 0.025D),
                     dx, dy, dz);
+        }
+    }
+
+    private static void spawnSymbols(ClientLevel level, Mode mode, boolean stars,
+                                     double x, double y, double z, Vec3 rawDirection) {
+        boolean volumetric = mode == Mode.VOLUMETRIC;
+        boolean redux = mode == Mode.REDUX;
+        var random = level.getRandom();
+        Vec3 direction = normalizeDirection(rawDirection);
+        int count = scaledCount(volumetric ? 12 : redux ? 9 : 6);
+        double speed = (stars ? 0.18D : 0.11D) * (0.60D + percentScale(
+                BetterUCConfig.INSTANCE.bloodEffectIntensityPercent) * 0.40D);
+        for (int i = 0; i < count; i++) {
+            double dx = random.triangle(0, speed) + direction.x * speed * (volumetric ? 0.45D : 0.20D);
+            double dy = (stars ? 0.04D : 0.07D) + random.nextDouble() * speed * 0.65D;
+            double dz = random.triangle(0, speed) + direction.z * speed * (volumetric ? 0.45D : 0.20D);
+            level.addParticle(stars ? BloodEffectParticles.STAR : BloodEffectParticles.HEART,
+                    x + random.triangle(0, 0.11D),
+                    y + random.triangle(0, 0.11D),
+                    z + random.triangle(0, 0.11D), dx, dy, dz);
         }
     }
 
@@ -475,6 +538,55 @@ public final class BloodEffectClient {
             float progress = Mth.clamp((age + partialTick) / lifetime, 0, 1);
             float flutter = 0.90F + Mth.sin((age + partialTick) * 1.8F) * 0.10F;
             return baseSize * flutter * (1F - progress * 0.18F);
+        }
+
+        @Override protected Layer getLayer() { return Layer.TRANSLUCENT; }
+    }
+
+    private static final class SymbolParticle extends SingleQuadParticle {
+        private final float baseSize;
+        private final float spin;
+        private final float opacity;
+
+        private SymbolParticle(ClientLevel level, double x, double y, double z,
+                               double dx, double dy, double dz, SpriteSet sprites, boolean star) {
+            super(level, x, y, z, sprites.first());
+            xd = dx;
+            yd = dy;
+            zd = dz;
+            baseSize = (star ? 0.14F + random.nextFloat() * 0.10F
+                    : 0.16F + random.nextFloat() * 0.09F)
+                    * (float) percentScale(BetterUCConfig.INSTANCE.bloodEffectSizePercent);
+            spin = (random.nextFloat() - 0.5F) * (star ? 0.38F : 0.12F);
+            opacity = effectOpacity();
+            lifetime = scaledLifetime((star ? 12 : 17) + random.nextInt(7));
+            hasPhysics = false;
+            gravity = star ? 0.12F : -0.025F;
+            friction = star ? 0.88F : 0.91F;
+            roll = random.nextFloat() * Mth.TWO_PI;
+            oRoll = roll;
+            if (star) {
+                setColor(1F, 0.86F + random.nextFloat() * 0.12F, 0.37F + random.nextFloat() * 0.18F);
+            } else {
+                setColor(1F, 0.82F + random.nextFloat() * 0.18F, 0.82F + random.nextFloat() * 0.18F);
+            }
+            setAlpha(0);
+        }
+
+        @Override public void tick() {
+            super.tick();
+            oRoll = roll;
+            roll += spin;
+            float progress = Math.min(1, age / (float) lifetime);
+            float appear = Mth.clamp(progress * 6F, 0, 1);
+            float fade = 1F - Mth.clamp((progress - 0.60F) / 0.40F, 0, 1);
+            setAlpha(opacity * appear * fade);
+        }
+
+        @Override public float getQuadSize(float partialTick) {
+            float progress = Mth.clamp((age + partialTick) / lifetime, 0, 1);
+            return baseSize * (0.80F + Mth.clamp(progress * 5F, 0, 1) * 0.20F)
+                    * (1F - progress * 0.18F);
         }
 
         @Override protected Layer getLayer() { return Layer.TRANSLUCENT; }

@@ -13,6 +13,8 @@ public final class BloodEffectParticles {
     public static final SimpleParticleType DROP = FabricParticleTypes.simple();
     public static final SimpleParticleType STREAK = FabricParticleTypes.simple();
     public static final SimpleParticleType NEON_BUTTERFLY = FabricParticleTypes.simple();
+    public static final SimpleParticleType STAR = FabricParticleTypes.simple();
+    public static final SimpleParticleType HEART = FabricParticleTypes.simple();
 
     private BloodEffectParticles() {}
 
@@ -21,6 +23,8 @@ public final class BloodEffectParticles {
         Registry.register(BuiltInRegistries.PARTICLE_TYPE, id("blood_drop"), DROP);
         Registry.register(BuiltInRegistries.PARTICLE_TYPE, id("blood_streak"), STREAK);
         Registry.register(BuiltInRegistries.PARTICLE_TYPE, id("neon_butterfly"), NEON_BUTTERFLY);
+        Registry.register(BuiltInRegistries.PARTICLE_TYPE, id("hit_star"), STAR);
+        Registry.register(BuiltInRegistries.PARTICLE_TYPE, id("hit_heart"), HEART);
     }
 
     private static Identifier id(String path) {

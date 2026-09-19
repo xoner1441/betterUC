@@ -9,6 +9,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BloodEffectSettingsTest {
@@ -51,6 +52,17 @@ class BloodEffectSettingsTest {
             assertEquals(200, BetterUCConfig.INSTANCE.bloodEffectLifetimePercent);
             assertEquals(25, BetterUCConfig.INSTANCE.bloodEffectParticlePercent);
             assertEquals(0xFF123456, BetterUCConfig.INSTANCE.bloodEffectColor);
+
+            for (String motif : new String[]{"STARS", "HEARTS", "CLASSIC"}) {
+                JsonObject update = new JsonObject();
+                update.addProperty("bloodEffectMotif", motif);
+                BetterUCConfig.applyCloudSettings(update);
+                assertEquals(motif.toLowerCase(java.util.Locale.ROOT), BetterUCConfig.INSTANCE.bloodEffectMotif);
+            }
+            assertEquals(BloodEffectClient.Motif.CLASSIC, BloodEffectClient.motif());
+            assertFalse(BloodEffectClient.replace(null, 0, 0, 0));
+            BloodEffectClient.cycleMotif();
+            assertEquals(BloodEffectClient.Motif.BLOOD, BloodEffectClient.motif());
         } finally {
             BetterUCConfig.INSTANCE = previous;
             configDirectory.set(loader, previousDirectory);
