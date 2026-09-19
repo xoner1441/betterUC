@@ -36,6 +36,7 @@ import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.MaskTimerHud;
 import com.betteruc.hud.MoneyHudDiagnostics;
 import com.betteruc.hud.MineIncomeHud;
+import com.betteruc.hud.SalaryIncomeHud;
 import com.betteruc.hud.PaydayHud;
 import com.betteruc.hud.PlantageHud;
 import com.betteruc.hud.ProductionTimerHud;
@@ -219,6 +220,7 @@ public class ChatBlacklistMixin {
         handlePaydayReset(raw);
         if (origin != ChatMessageOrigin.PLAYER) {
             MineIncomeHud.updateFromChatLine(raw);
+            SalaryIncomeHud.updateFromChatLine(raw);
         }
         updateMoney(raw, origin);
 
@@ -291,6 +293,7 @@ public class ChatBlacklistMixin {
         if (PAYDAY_HEADER_PATTERN.matcher(raw.trim()).matches()) {
             PaydayHud.resetForNewPayday();
             MineIncomeHud.resetForNewPayday();
+            SalaryIncomeHud.resetForNewPayday();
             RichTaxAlertHud.resetForNewPayday();
         }
 
