@@ -562,6 +562,9 @@ public class BetterUCConfig {
     public int bloodEffectParticlePercent = 100;
     public int bloodEffectColor = 0xFFD01824;
     public boolean autoStatsOnJoinEnabled = true;
+    // Local opt-in: this feature sends /licenses to the game server.
+    public boolean kraeuterLicenseWarningEnabled = false;
+    public int kraeuterLicenseWarningDays = 7;
     public boolean manualStatsKdVisible = true;
     public boolean autoFactionBankOnBalanceEnabled = false;
     public boolean autoAtmInfoOnBalanceEnabled = false;

@@ -27,6 +27,7 @@ import com.betteruc.client.CloudSettingsClient;
 import com.betteruc.client.CommandShortcutClient;
 import com.betteruc.client.DutyRejoinClient;
 import com.betteruc.client.HandToggleController;
+import com.betteruc.client.KraeuterLicenseWarningClient;
 import com.betteruc.client.TrashFilterClient;
 import com.betteruc.client.TrustedChatCommands;
 import com.betteruc.client.BetterUCFontManager;
@@ -289,6 +290,7 @@ public class BetterUCClient implements ClientModInitializer {
             PingRelayClient.onJoin(client);
             CloudSettingsClient.onJoin(client);
             SwatRosterClient.onJoin(client);
+            KraeuterLicenseWarningClient.onJoin();
             statsOnJoinDelay = BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled
                     ? AUTO_STATS_ON_JOIN_DELAY_TICKS
                     : -1;
@@ -303,6 +305,7 @@ public class BetterUCClient implements ClientModInitializer {
             PingRelayClient.onDisconnect();
             CloudSettingsClient.onDisconnect();
             SwatRosterClient.reset();
+            KraeuterLicenseWarningClient.onDisconnect();
             resetRemoteFeatureStateTracking();
             resetRuntimeState(client);
         });
@@ -1095,6 +1098,7 @@ public class BetterUCClient implements ClientModInitializer {
             AutoBuyClient.tick(client);
             TrashFilterClient.tick(client);
             SwatRosterClient.tick(client);
+            KraeuterLicenseWarningClient.tick(client);
             tickStatsOnJoin(client);
             ReinforcementAcceptClient.tick(client);
             DutyRejoinClient.tick(client);

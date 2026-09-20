@@ -10,6 +10,7 @@ import com.betteruc.client.CloudSettingsClient;
 import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.ChatCustomizationFormatter;
 import com.betteruc.client.HandToggleController;
+import com.betteruc.client.KraeuterLicenseWarningClient;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.RemoteFeatureFlagsClient;
 import com.betteruc.client.SyncRefreshActions;
@@ -723,6 +724,21 @@ public class BetterUCScreen extends Screen {
                                 !BetterUCConfig.INSTANCE.minecartCheckHelperEnabled);
                 y = addInfo(x, y, controlW, "Ablauf", "/checkkfz + Minecart auswählen");
                 y = addInfo(x, y, controlW, "Gültigkeit", "Minecarts auf UnicaCity");
+            }
+            case LICENSE_WARNING -> {
+                y = addSectionHeader(x, y, controlW, "Kräuter-Lizenz", 0xFF4ADE80);
+                y = addToggle(x, y, controlW, "Ablaufwarnung", BetterUCConfig.INSTANCE.kraeuterLicenseWarningEnabled,
+                        () -> BetterUCConfig.INSTANCE.kraeuterLicenseWarningEnabled =
+                                !BetterUCConfig.INSTANCE.kraeuterLicenseWarningEnabled);
+                y = addRangeIntSlider(x, y, controlW, "Warnung vorher (Tage)",
+                        BetterUCConfig.INSTANCE.kraeuterLicenseWarningDays, 1, 14,
+                        value -> BetterUCConfig.INSTANCE.kraeuterLicenseWarningDays = value);
+                y = addInfo(x, y, controlW, "Status", KraeuterLicenseWarningClient.statusLabel());
+                y = addInfo(x, y, controlW, "Prüfung", "Bei Join + alle 12 Std.");
+                y = addInfo(x, y, controlW, "Chat", "/licenses bleibt sichtbar");
+                if (BetterUCConfig.INSTANCE.kraeuterLicenseWarningEnabled) {
+                    y = addButton(x, y, controlW, "Jetzt /licenses prüfen", b -> KraeuterLicenseWarningClient.requestNow(minecraft));
+                }
             }
             case TRASH_FILTER -> {
                 y = addSectionHeader(x, y, controlW, "Filter", 0xFF4ADE80);
@@ -2254,6 +2270,8 @@ public class BetterUCScreen extends Screen {
             case COMMANDS -> drawMiniInfo(context, previewX, previewY, "Tools", "Command Menu", true);
             case VEHICLE_CHECK -> drawMiniInfo(context, previewX, previewY, "KFZ-Check",
                     "Shift + Rechtsklick", BetterUCConfig.INSTANCE.minecartCheckHelperEnabled);
+            case LICENSE_WARNING -> drawMiniInfo(context, previewX, previewY, "Kräuter-Lizenz",
+                    KraeuterLicenseWarningClient.statusLabel(), BetterUCConfig.INSTANCE.kraeuterLicenseWarningEnabled);
             case TRASH_FILTER -> drawMiniInfo(context, previewX, previewY, "Mülleimer Filter",
                     BetterUCConfig.INSTANCE.trashFilterEnabled ? "Markierung aktiv" : "Aus",
                     BetterUCConfig.INSTANCE.trashFilterEnabled);
@@ -2712,6 +2730,7 @@ public class BetterUCScreen extends Screen {
             case PING -> BetterUCConfig.INSTANCE.pingRelayEnabled;
             case TRASH_FILTER -> BetterUCConfig.INSTANCE.trashFilterEnabled;
             case VEHICLE_CHECK -> BetterUCConfig.INSTANCE.minecartCheckHelperEnabled;
+            case LICENSE_WARNING -> BetterUCConfig.INSTANCE.kraeuterLicenseWarningEnabled;
             default -> true;
         };
     }
@@ -3348,6 +3367,7 @@ public class BetterUCScreen extends Screen {
         PING(Category.TOOLS, "Ping", "Private Mod-Pings", 0xFF38BDF8, true),
         COMMANDS(Category.TOOLS, "Commands", "Command Menu", 0xFF22C55E, false),
         VEHICLE_CHECK(Category.TOOLS, "KFZ-Check", "Minecart per Shift-Rechtsklick prüfen", 0xFF22C55E, true),
+        LICENSE_WARNING(Category.TOOLS, "Lizenzwarnung", "Kräuter-Lizenz rechtzeitig erneuern", 0xFF4ADE80, true),
         TRASH_FILTER(Category.TOOLS, "Mülleimer Filter", "Fundstücke hervorheben", 0xFF4ADE80, true),
         DISCORD(Category.TOOLS, "Discord", "Community Invite", 0xFF5865F2, false),
         UPDATES(Category.TOOLS, "Updates", "Changelog und neue Features", 0xFF38BDF8, false);

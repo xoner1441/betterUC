@@ -19,6 +19,7 @@ import com.betteruc.client.ChatLinkifier;
 import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.DutyRejoinClient;
+import com.betteruc.client.KraeuterLicenseWarningClient;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.RemoteFeatureFlagsClient;
 import com.betteruc.client.ReinforcementAcceptClient;
@@ -178,6 +179,9 @@ public class ChatBlacklistMixin {
         }
 
         String raw = message.getString();
+        if (origin == ChatMessageOrigin.SERVER_SYSTEM) {
+            KraeuterLicenseWarningClient.handleServerChatLine(Minecraft.getInstance(), raw);
+        }
         if (SwatRosterClient.handleChatLine(Minecraft.getInstance(), raw)) {
             ci.cancel();
             return;
