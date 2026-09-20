@@ -34,7 +34,9 @@ final class ClipAudioRecorder implements AutoCloseable {
     String details() { return String.join(" / ", tracks.stream().map(t -> t.label() + ": " + t.status).toList()); }
     long bytes() { return tracks.stream().mapToLong(t -> t.buffer.bytes()).sum(); }
     ClipAudioMix slice(long start, long end, ClipAudioOptions levels) {
-        return new ClipAudioMix(tracks.stream().map(t -> new ClipAudioMix.Track(t.buffer.slice(start, end),
+        // An earlier audio window places the same sound later in the exported video.
+        long shiftNanos = (long) levels.offsetMs() * 1_000_000L;
+        return new ClipAudioMix(tracks.stream().map(t -> new ClipAudioMix.Track(t.buffer.slice(start - shiftNanos, end - shiftNanos),
                 t.kind == Kind.MICROPHONE ? levels.microphoneVolume() : levels.outputVolume())).toList());
     }
     public void close() { tracks.forEach(Track::close); }

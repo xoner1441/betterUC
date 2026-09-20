@@ -1,10 +1,12 @@
 package com.betteruc.client.clips;
 
 import com.betteruc.config.BetterUCConfig;
+import java.util.OptionalInt;
 
 /** Local, explicit audio consent. Empty mode migrates the old game-only setting without broadening it. */
 public record ClipAudioOptions(Mode mode, boolean microphone, String outputDevice, String inputDevice,
-                               int outputVolume, int microphoneVolume) {
+                               int outputVolume, int microphoneVolume, int offsetMs) {
+    public static final int MAX_OFFSET_MS = 500;
     public enum Mode {
         OFF("Aus"), GAME("Nur Minecraft"), SYSTEM("Gesamter Ausgabeton");
         private final String label;
@@ -18,6 +20,7 @@ public record ClipAudioOptions(Mode mode, boolean microphone, String outputDevic
         inputDevice = inputDevice == null ? "" : inputDevice;
         outputVolume = Math.clamp(outputVolume, 0, 100);
         microphoneVolume = Math.clamp(microphoneVolume, 0, 100);
+        offsetMs = Math.clamp(offsetMs, -MAX_OFFSET_MS, MAX_OFFSET_MS);
     }
     public static ClipAudioOptions fromConfig(BetterUCConfig config) {
         Mode mode = Mode.OFF;
@@ -27,10 +30,20 @@ public record ClipAudioOptions(Mode mode, boolean microphone, String outputDevic
             try { mode = Mode.valueOf(value); } catch (IllegalArgumentException ignored) { /* Fail closed. */ }
         }
         return new ClipAudioOptions(mode, config.clipsMicrophoneEnabled, config.clipOutputDevice,
-                config.clipInputDevice, config.clipOutputVolume, config.clipMicrophoneVolume);
+                config.clipInputDevice, config.clipOutputVolume, config.clipMicrophoneVolume, config.clipAudioOffsetMs);
     }
     public static ClipAudioOptions legacy(boolean game) {
-        return new ClipAudioOptions(game ? Mode.GAME : Mode.OFF, false, "", "", 100, 100);
+        return new ClipAudioOptions(game ? Mode.GAME : Mode.OFF, false, "", "", 100, 100, 0);
+    }
+    public static OptionalInt parseOffsetMs(String text) {
+        if (text == null) return OptionalInt.empty();
+        try {
+            int value = Integer.parseInt(text.trim());
+            return value >= -MAX_OFFSET_MS && value <= MAX_OFFSET_MS
+                    ? OptionalInt.of(value) : OptionalInt.empty();
+        } catch (NumberFormatException ignored) {
+            return OptionalInt.empty();
+        }
     }
     public boolean enabled() { return mode != Mode.OFF || microphone; }
     public boolean sameSources(ClipAudioOptions other) {

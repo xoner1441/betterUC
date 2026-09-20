@@ -63,7 +63,7 @@
             "Das neue Minen-Einnahmen-HUD summiert Verkäufe bis zum Payday, erscheint erst beim ersten Verkauf und verschwindet nach der Auszahlung.",
             "Cash- und Bank-HUD verarbeiten Sammelabrechnungen sowie Einzahlungen in die Fraktionsbank zuverlässiger und schützen bestätigte Werte vor veralteten Meldungen.",
             "Aktualisierte Verstärkungs-, Drogenabnahme- und Plantagenmeldungen werden in den Custom-Chatformaten vollständig erkannt.",
-            "Sneaken und Rechtsklicken auf ein Minecart führt /checkkfz aus und bestätigt den Fahrzeug-Check automatisch.",
+            "Der abschaltbare KFZ-Check führt per Shift-Rechtsklick auf ein Minecart /checkkfz aus und bestätigt die Auswahl automatisch.",
             "Die Polizeiliste verwendet das Ingame-Limit von 44 Plätzen; feste SWAT-Prüfer bleiben auch ohne aktuelle Kanalanzeige erhalten.",
             "Helper können Discord-Tickets annehmen, schließen und löschen, ohne allgemeine Administratorrechte zu erhalten."
           ]

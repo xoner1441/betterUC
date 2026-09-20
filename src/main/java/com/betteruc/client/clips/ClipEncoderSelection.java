@@ -1,6 +1,8 @@
 package com.betteruc.client.clips;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -31,12 +33,22 @@ final class ClipEncoderSelection {
                 String status = error instanceof MissingEncoderException ? "fehlt in Test-JAR"
                         : error instanceof LinkageError ? "Bibliothek nicht ladbar" : "Start fehlgeschlagen";
                 failures.add(candidate.label() + ": " + status);
-                String detail = ClipDiagnostics.stackTrace(error);
+                // This class runs inside the private FFmpeg classloader. Keep
+                // diagnostics JDK-only so a failed GPU candidate can never
+                // depend on a class from Fabric's main mod classloader.
+                String detail = stackTrace(error);
                 diagnostics.accept(candidate.label() + " / " + candidate.codec() + ": " + detail);
             }
         }
         // Do not present the first (usually NVIDIA) native failure as THE error on an AMD PC.
         throw new IOException("Hardware-Aufnahme nicht verfügbar. " + String.join("; ", failures)
                 + ". Technische Details stehen in latest.log (Clips). Kein CPU-Fallback.");
+    }
+
+    private static String stackTrace(Throwable error) {
+        var text = new StringWriter();
+        error.printStackTrace(new PrintWriter(text));
+        String result = text.toString();
+        return result.length() <= 16_000 ? result : result.substring(0, 16_000) + " [gekürzt]";
     }
 }

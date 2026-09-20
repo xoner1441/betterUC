@@ -28,6 +28,7 @@ class ClipPrivacyConfigTest {
             assertEquals(30, BetterUCConfig.INSTANCE.clipBufferSeconds);
             assertEquals(1080, BetterUCConfig.INSTANCE.clipResolutionHeight);
             assertEquals(60, BetterUCConfig.INSTANCE.clipFramesPerSecond);
+            assertEquals(0, BetterUCConfig.INSTANCE.clipAudioOffsetMs);
             assertEquals("", BetterUCConfig.INSTANCE.clipStorageParent);
             JsonObject remote = new JsonObject();
             remote.addProperty("clipsEnabled", true);
@@ -39,6 +40,7 @@ class ClipPrivacyConfigTest {
             remote.addProperty("clipInputDevice", "remote-microphone");
             remote.addProperty("clipOutputVolume", 1);
             remote.addProperty("clipMicrophoneVolume", 1);
+            remote.addProperty("clipAudioOffsetMs", 250);
             remote.addProperty("clipBufferSeconds", 60);
             remote.addProperty("clipResolutionHeight", 720);
             remote.addProperty("clipFramesPerSecond", 30);
@@ -49,6 +51,7 @@ class ClipPrivacyConfigTest {
             assertEquals("", BetterUCConfig.INSTANCE.clipInputDevice);
             assertEquals(100, BetterUCConfig.INSTANCE.clipOutputVolume);
             assertEquals(100, BetterUCConfig.INSTANCE.clipMicrophoneVolume);
+            assertEquals(0, BetterUCConfig.INSTANCE.clipAudioOffsetMs);
             assertFalse(BetterUCConfig.INSTANCE.clipsEnabled);
             assertFalse(BetterUCConfig.INSTANCE.clipBackgroundRecording);
             assertFalse(BetterUCConfig.INSTANCE.clipsGameAudioEnabled);
@@ -82,6 +85,7 @@ class ClipPrivacyConfigTest {
             legacy.clipInputDevice = "my-mic";
             legacy.clipOutputVolume = 75;
             legacy.clipMicrophoneVolume = 85;
+            legacy.clipAudioOffsetMs = 20;
             assertEquals(1080, legacy.clipResolutionHeight);
             assertEquals(60, legacy.clipFramesPerSecond);
             assertEquals("", legacy.clipStorageParent);
@@ -94,6 +98,7 @@ class ClipPrivacyConfigTest {
             assertEquals(30, restored.clipFramesPerSecond);
             assertEquals(137, restored.clipBufferSeconds);
             assertEquals(legacy.clipStorageParent, restored.clipStorageParent);
+            assertEquals(20, restored.clipAudioOffsetMs);
             assertTrue(restored.clipsEnabled);
             assertTrue(restored.clipBackgroundRecording);
             assertTrue(restored.clipsGameAudioEnabled);

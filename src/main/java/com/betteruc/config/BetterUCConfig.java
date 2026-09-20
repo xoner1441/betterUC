@@ -724,6 +724,7 @@ public class BetterUCConfig {
     public String clipInputDevice = "";
     public int clipOutputVolume = 100;
     public int clipMicrophoneVolume = 100;
+    public int clipAudioOffsetMs = 0;
     public int clipBufferSeconds = 30;
     public int clipResolutionHeight = 1080;
     public int clipFramesPerSecond = 60;

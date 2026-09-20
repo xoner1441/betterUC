@@ -272,6 +272,7 @@ public final class BetterUCFontManager {
         BetterUCConfig.INSTANCE.toggleSprintHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.toggleSprintHudCustomFont, legacy);
         BetterUCConfig.INSTANCE.fpsHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.fpsHudCustomFont, legacy);
         BetterUCConfig.INSTANCE.paydayHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.paydayHudCustomFont, legacy);
+        BetterUCConfig.INSTANCE.salaryIncomeHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.salaryIncomeHudCustomFont, legacy);
         BetterUCConfig.INSTANCE.ammoHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.ammoHudCustomFont, legacy);
         BetterUCConfig.INSTANCE.bankHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.bankHudCustomFont, legacy);
         BetterUCConfig.INSTANCE.cashHudCustomFont = sanitizeModuleFont(BetterUCConfig.INSTANCE.cashHudCustomFont, legacy);

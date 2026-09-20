@@ -89,6 +89,7 @@ public class BetterUCScreen extends Screen {
     private int updatesContentHeight = 0;
     private String hudProfileNameDraft;
     private String clipDurationDraft;
+    private String clipAudioOffsetDraft;
     private boolean hudProfileDropdownOpen = false;
     private boolean hudProfileDeleteConfirmation = false;
     private Button bugReportButton;
@@ -890,10 +891,45 @@ public class BetterUCScreen extends Screen {
         if (options.microphone()) y = addRangeIntSlider(x, y, width,
                 "Mikrofon %", options.microphoneVolume(), 0, 100, value -> BetterUCConfig.INSTANCE.clipMicrophoneVolume = value);
         y = addInfo(x, y, width, "Lautstärke", "Gilt für den nächsten Export / eine Tonspur");
+        y = addClipAudioOffsetControls(x, y, width, options.offsetMs());
         y = addInfo(x, y, width, "Echo vermeiden", "Headset nutzen / kein Mikrofon-Mithören");
         y = addInfo(x, y, width, "Ohne Spielfokus", BetterUCConfig.INSTANCE.clipBackgroundRecording
                 ? "Puffer + erlaubter Ton laufen weiter" : "Aufnahme und erlaubter Ton pausieren");
         return y;
+    }
+
+    private int addClipAudioOffsetControls(int x, int y, int width, int offsetMs) {
+        y = addSectionHeader(x, y, width, "Audio-Synchronisation", 0xFF38BDF8);
+        y = addInfo(x, y, width, "Ton-Versatz", String.format(Locale.ROOT, "%+d ms", offsetMs));
+        y = addInfo(x, y, width, "Richtung", "+ = Ton später, − = Ton früher");
+        EditBox field = new EditBox(font, x, y, width, BUTTON_H, Component.literal("Ton-Versatz in Millisekunden"));
+        field.setMaxLength(5);
+        field.setHint(Component.literal("−500 bis +500 ms"));
+        Button apply = Button.builder(Component.literal("Ton-Versatz übernehmen"), b -> {
+            var parsed = ClipAudioOptions.parseOffsetMs(field.getValue());
+            if (parsed.isEmpty()) return;
+            BetterUCConfig.INSTANCE.clipAudioOffsetMs = parsed.getAsInt();
+            clipAudioOffsetDraft = String.valueOf(parsed.getAsInt());
+            saveConfig(); refreshWidgets();
+        }).bounds(x, y + 24, width, BUTTON_H).build();
+        field.setResponder(value -> {
+            clipAudioOffsetDraft = value;
+            boolean valid = ClipAudioOptions.parseOffsetMs(value).isPresent();
+            field.setTextColor(valid ? TEXT_PRIMARY : 0xFFFF5555);
+            apply.active = valid;
+        });
+        field.setValue(clipAudioOffsetDraft == null ? String.valueOf(offsetMs) : clipAudioOffsetDraft);
+        apply.active = ClipAudioOptions.parseOffsetMs(field.getValue()).isPresent();
+        addScrollableControl(field);
+        addScrollableControl(apply);
+        registerTooltip(field, "Ganze Millisekunden von −500 bis +500. Zum Beispiel +20, wenn Ton im Clip zu früh ist.");
+        registerTooltip(apply, "Wirkt ab dem nächsten gespeicherten Clip; der Replay-Puffer läuft weiter.");
+        y += 48;
+        return addButton(x, y, width, "Ton-Versatz auf 0 ms zurücksetzen", b -> {
+            BetterUCConfig.INSTANCE.clipAudioOffsetMs = 0;
+            clipAudioOffsetDraft = "0";
+            saveConfig(); refreshWidgets();
+        });
     }
 
     private int addClipAudioDeviceButton(int x, int y, int width, boolean microphone) {

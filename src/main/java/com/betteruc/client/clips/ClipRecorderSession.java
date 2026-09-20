@@ -90,6 +90,7 @@ public final class ClipRecorderSession implements AutoCloseable {
         return String.format(Locale.ROOT, "%s | %.1f FPS | %.0f MB | %d ausgelassen | %s",
                 encoderName, encodedFps, (bufferBytes() + (current == null ? 0 : current.bytes())) / 1048576.0, skipped,
                 current == null ? audioStatus() : current.details())
+                + (audioOptions.enabled() ? String.format(Locale.ROOT, " | Ton-Versatz %+d ms", audioOptions.offsetMs()) : "")
                 + " | Video-Pufferlimit " + settings.maxBufferBytes() / 1048576 + " MiB"
                 + (ring.memoryLimited() ? " | RAM-Grenze erreicht: Clips ggf. kürzer" : "");
     }

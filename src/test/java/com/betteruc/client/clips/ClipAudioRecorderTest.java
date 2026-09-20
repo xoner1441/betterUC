@@ -1,6 +1,7 @@
 package com.betteruc.client.clips;
 
 import org.junit.jupiter.api.Test;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -14,12 +15,16 @@ class ClipAudioRecorderTest {
     private static final long ORIGIN = 10_000_000_000L;
     static final class FakeSource implements ClipAudioCaptureSource {
         final AtomicBoolean closed = new AtomicBoolean();
+        final long startNanos;
+        final byte[] pcm;
         boolean sent;
+        FakeSource() { this(ORIGIN, new byte[480 * 4]); }
+        FakeSource(long startNanos, byte[] pcm) { this.startNanos = startNanos; this.pcm = pcm; }
         public void awaitSamples() { LockSupport.parkNanos(1_000_000); }
         public WindowsProcessAudioCapture.Samples read() {
             if (sent) return null;
             sent = true;
-            return new WindowsProcessAudioCapture.Samples(ORIGIN, new byte[480 * 4], false);
+            return new WindowsProcessAudioCapture.Samples(startNanos, pcm, false);
         }
         public void close() { closed.set(true); }
     }
@@ -38,7 +43,7 @@ class ClipAudioRecorderTest {
     @Test void systemAndMicrophoneUseExactlyTwoIndependentSourcesAndSnapshotsSurviveClose() {
         var kinds = new CopyOnWriteArrayList<ClipAudioRecorder.Kind>();
         var sources = new CopyOnWriteArrayList<FakeSource>();
-        var options = new ClipAudioOptions(ClipAudioOptions.Mode.SYSTEM, true, "headset", "mic", 80, 100);
+        var options = new ClipAudioOptions(ClipAudioOptions.Mode.SYSTEM, true, "headset", "mic", 80, 100, 0);
         var recorder = new ClipAudioRecorder(30, options, s -> {}, n -> fail(n.toString()), (kind, device) -> {
             kinds.add(kind);
             assertEquals(kind == ClipAudioRecorder.Kind.MICROPHONE ? "mic" : "headset", device);
@@ -60,7 +65,7 @@ class ClipAudioRecorderTest {
         var notices = new CopyOnWriteArrayList<ClipNotice>();
         var calls = new CopyOnWriteArrayList<String>();
         var source = new FakeSource();
-        var options = new ClipAudioOptions(ClipAudioOptions.Mode.GAME, true, "", "missing-mic", 100, 100);
+        var options = new ClipAudioOptions(ClipAudioOptions.Mode.GAME, true, "", "missing-mic", 100, 100, 0);
         try (var recorder = new ClipAudioRecorder(30, options, s -> {}, notices::add, (kind, device) -> {
             calls.add(kind + ":" + device);
             if (kind == ClipAudioRecorder.Kind.MICROPHONE) throw new java.io.IOException("Unplugged");
@@ -79,7 +84,7 @@ class ClipAudioRecorderTest {
         var opening = new CountDownLatch(1);
         var finish = new CountDownLatch(1);
         var source = new FakeSource();
-        var options = new ClipAudioOptions(ClipAudioOptions.Mode.OFF, true, "", "mic", 100, 100);
+        var options = new ClipAudioOptions(ClipAudioOptions.Mode.OFF, true, "", "mic", 100, 100, 0);
         var recorder = new ClipAudioRecorder(30, options, s -> {}, n -> {}, (kind, device) -> {
             assertEquals(ClipAudioRecorder.Kind.MICROPHONE, kind);
             opening.countDown();
@@ -93,5 +98,31 @@ class ClipAudioRecorderTest {
             assertEquals(0, recorder.bytes());
             assertFalse(source.sent, "No microphone packets read after stop");
         } finally { recorder.close(); finish.countDown(); }
+    }
+
+    @Test void positiveOffsetDelaysAudioAndNegativeOffsetAdvancesIt() {
+        byte[] pulse = new byte[480 * ClipAudioBuffer.FRAME_BYTES];
+        Arrays.fill(pulse, (byte) 1);
+        var captured = new FakeSource(ORIGIN + 20_000_000L, pulse);
+        var neutral = new ClipAudioOptions(ClipAudioOptions.Mode.GAME, false, "", "", 100, 100, 0);
+        try (var recorder = new ClipAudioRecorder(30, neutral, s -> {}, n -> fail(n.toString()),
+                (kind, device) -> captured)) {
+            await(() -> recorder.bytes() == pulse.length);
+            long end = ORIGIN + 50_000_000L;
+            assertEquals(960, firstAudibleFrame(recorder.slice(ORIGIN, end, neutral)));
+            assertEquals(1920, firstAudibleFrame(recorder.slice(ORIGIN, end,
+                    new ClipAudioOptions(ClipAudioOptions.Mode.GAME, false, "", "", 100, 100, 20))));
+            assertEquals(0, firstAudibleFrame(recorder.slice(ORIGIN, end,
+                    new ClipAudioOptions(ClipAudioOptions.Mode.GAME, false, "", "", 100, 100, -20))));
+        }
+    }
+
+    private static int firstAudibleFrame(ClipAudioMix mix) {
+        byte[] pcm = new byte[mix.frames() * ClipAudioBuffer.FRAME_BYTES];
+        assertEquals(mix.frames(), mix.reader().read(pcm));
+        for (int frame = 0; frame < mix.frames(); frame++) {
+            if (pcm[frame * ClipAudioBuffer.FRAME_BYTES] != 0) return frame;
+        }
+        return -1;
     }
 }
