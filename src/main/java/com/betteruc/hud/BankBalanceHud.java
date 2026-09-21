@@ -169,6 +169,13 @@ public class BankBalanceHud {
         return currentBankBalance >= 0 && currentBankBalanceFresh;
     }
 
+    /** Applies a confirmed local card purchase when the server does not publish a new balance. */
+    public static boolean applyPurchaseDebit(int amount, String transactionKey) {
+        if (amount <= 0 || currentBankBalance < 0) return false;
+        subtractBalanceAndPersist(amount, "purchase:" + normalizeRawKey(transactionKey));
+        return true;
+    }
+
     public static long getBalanceAgeMs() {
         if (lastBalanceUpdateMs <= 0L) return Long.MAX_VALUE;
         return Math.max(0L, System.currentTimeMillis() - lastBalanceUpdateMs);

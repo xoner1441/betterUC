@@ -100,6 +100,7 @@ public abstract class TrashFilterScreenMixin {
         Slot clickedSlot = betteruc$slotAt(event.x(), event.y());
         if (clickedSlot != null) {
             AutoBuyClient.rememberProductSelection(MinecraftClient.getInstance(), screen, clickedSlot);
+            AutoBuyClient.rememberPaymentSelection(MinecraftClient.getInstance(), screen, clickedSlot);
         }
     }
 

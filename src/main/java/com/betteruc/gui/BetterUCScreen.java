@@ -508,6 +508,8 @@ public class BetterUCScreen extends Screen {
                 y = addSectionHeader(x, y, controlW, "Einkaufen", 0xFF38BDF8);
                 y = addToggle(x, y, controlW, "Auto-Kauf /abuy", BetterUCConfig.INSTANCE.autoBuyEnabled,
                         () -> BetterUCConfig.INSTANCE.autoBuyEnabled = !BetterUCConfig.INSTANCE.autoBuyEnabled);
+                y = addInfo(x, y, controlW, "Zahlungsart", "Wird pro /abuy einmal gewählt und übernommen");
+                y = addInfo(x, y, controlW, "Kartenzahlung", "Kaufpreis inkl. Gebühr wird vom Bank-HUD abgezogen");
 
                 y = addSectionHeader(x, y, controlW, "Erste Hilfe", 0xFFFF6B6B);
                 y = addToggle(x, y, controlW, "Folgeannahmen", BetterUCConfig.INSTANCE.autoFirstAidEnabled,
