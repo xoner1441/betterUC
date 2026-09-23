@@ -21,6 +21,13 @@ let TextInputStyle;
 
 const BOT_TOKEN = clean(process.env.DISCORD_BOT_TOKEN);
 const GUILD_ID = clean(process.env.DISCORD_GUILD_ID);
+const WELCOME_ENABLED = String(process.env.DISCORD_WELCOME_ENABLED || "false").toLowerCase() === "true";
+const WELCOME_CHANNEL_ID = clean(process.env.DISCORD_WELCOME_CHANNEL_ID);
+const WELCOME_CHANNEL_NAME = clean(process.env.DISCORD_WELCOME_CHANNEL_NAME) || "willkommen";
+const WELCOME_START_CHANNEL_ID = clean(process.env.DISCORD_WELCOME_START_CHANNEL_ID);
+const WELCOME_START_CHANNEL_NAME = clean(process.env.DISCORD_WELCOME_START_CHANNEL_NAME) || "download";
+const WELCOME_HELP_CHANNEL_ID = clean(process.env.DISCORD_WELCOME_HELP_CHANNEL_ID);
+const WELCOME_HELP_CHANNEL_NAME = clean(process.env.DISCORD_WELCOME_HELP_CHANNEL_NAME) || "hilfe";
 const TICKET_CATEGORY_NAME = clean(process.env.DISCORD_TICKET_CATEGORY_NAME) || "Tickets";
 const TEAM_ROLE_NAMES = listEnv(process.env.DISCORD_TEAM_ROLE_NAMES || "Owner,Admin,Helper");
 const MOD_USER_ROLE_NAME = clean(process.env.DISCORD_MOD_USER_ROLE_NAME) || "Mod-User";
@@ -162,6 +169,45 @@ function display(value, fallback = "-") {
 function formatMoney(value) {
   if (typeof value !== "number") return "-";
   return `${value.toLocaleString("de-DE")}$`;
+}
+
+function discordChannelMention(channel, fallbackName) {
+  if (channel?.id) return `<#${channel.id}>`;
+  return fallbackName ? `#${fallbackName}` : "den passenden Kanal";
+}
+
+function welcomeDate(value = new Date()) {
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "Europe/Berlin"
+  }).format(value);
+}
+
+function welcomeDescription(memberId, memberCount, startChannel, helpChannel) {
+  const number = Number.isFinite(Number(memberCount)) ? Math.max(1, Number(memberCount)) : 1;
+  return [
+    `**Willkommen <@${memberId}>! [#${number}]**`,
+    "",
+    "Schön, dass du da bist – schau dich gerne um!",
+    "",
+    `**Bereit loszulegen?** ${discordChannelMention(startChannel, WELCOME_START_CHANNEL_NAME)}`,
+    `**Du brauchst Hilfe?** ${discordChannelMention(helpChannel, WELCOME_HELP_CHANNEL_NAME)}`,
+    "**Entdecke den Server**, lerne die Community kennen und hab Spaß!"
+  ].join("\n");
+}
+
+function welcomeEmbed(member, startChannel, helpChannel) {
+  const guildIcon = member.guild.iconURL({ extension: "png", size: 64 });
+  const footer = { text: `${member.guild.name} • ${welcomeDate()}` };
+  if (guildIcon) footer.iconURL = guildIcon;
+
+  return new EmbedBuilder()
+    .setColor(0x38bdf8)
+    .setDescription(welcomeDescription(member.id, member.guild.memberCount, startChannel, helpChannel))
+    .setThumbnail(member.user.displayAvatarURL({ extension: "png", size: 256 }))
+    .setFooter(footer);
 }
 
 function formatStats(account) {
@@ -2040,6 +2086,7 @@ async function startDiscordBot(context) {
   }
 
   const intents = [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages];
+  if (WELCOME_ENABLED) intents.push(GatewayIntentBits.GuildMembers);
   const client = new Client({
     intents
   });
@@ -2055,6 +2102,9 @@ async function startDiscordBot(context) {
   let suggestionGuideTimer = null;
   let suggestionGuideRun = Promise.resolve();
   let announcementChannel = null;
+  let welcomeChannel = null;
+  let welcomeStartChannel = null;
+  let welcomeHelpChannel = null;
   let ticketLogChannel = null;
   let suggestionChannel = null;
   let bugForumChannel = null;
@@ -2234,6 +2284,11 @@ async function startDiscordBot(context) {
         const guild = await client.guilds.fetch(GUILD_ID);
         await guild.commands.set(buildCommands());
         console.log(`betterUC Discord commands synced for ${guild.name}`);
+        if (WELCOME_ENABLED) {
+          welcomeChannel = await resolveTextChannel(guild, WELCOME_CHANNEL_ID, WELCOME_CHANNEL_NAME);
+          welcomeStartChannel = await resolveTextChannel(guild, WELCOME_START_CHANNEL_ID, WELCOME_START_CHANNEL_NAME);
+          welcomeHelpChannel = await resolveTextChannel(guild, WELCOME_HELP_CHANNEL_ID, WELCOME_HELP_CHANNEL_NAME);
+        }
         announcementChannel = await resolveTextChannel(guild, ANNOUNCEMENT_CHANNEL_ID, ANNOUNCEMENT_CHANNEL_NAME);
         ticketLogChannel = await resolveTextChannel(guild, TICKET_LOG_CHANNEL_ID, TICKET_LOG_CHANNEL_NAME);
         suggestionChannel = await resolveTextChannel(guild, SUGGESTION_CHANNEL_ID, SUGGESTION_CHANNEL_NAME);
@@ -2244,6 +2299,9 @@ async function startDiscordBot(context) {
         await ensureUpdateNotificationRole(guild).catch(error => {
           console.warn("Discord update notification role setup failed", error.message);
         });
+        if (WELCOME_ENABLED && !welcomeChannel) {
+          console.warn(`Discord welcome channel not found (${WELCOME_CHANNEL_ID || WELCOME_CHANNEL_NAME})`);
+        }
         if (!announcementChannel) {
           console.warn(`Discord announcement channel not found (${ANNOUNCEMENT_CHANNEL_ID || ANNOUNCEMENT_CHANNEL_NAME})`);
         }
@@ -2283,6 +2341,30 @@ async function startDiscordBot(context) {
   });
 
   client.on("interactionCreate", interaction => handleInteraction(interaction, commandContext));
+  client.on("guildMemberAdd", async member => {
+    if (!WELCOME_ENABLED || member.user.bot) return;
+    if (GUILD_ID && member.guild.id !== GUILD_ID) return;
+
+    try {
+      const channel = welcomeChannel?.guild?.id === member.guild.id
+        ? welcomeChannel
+        : await resolveTextChannel(member.guild, WELCOME_CHANNEL_ID, WELCOME_CHANNEL_NAME);
+      if (!channel) return;
+      const startChannel = welcomeStartChannel?.guild?.id === member.guild.id
+        ? welcomeStartChannel
+        : await resolveTextChannel(member.guild, WELCOME_START_CHANNEL_ID, WELCOME_START_CHANNEL_NAME);
+      const helpChannel = welcomeHelpChannel?.guild?.id === member.guild.id
+        ? welcomeHelpChannel
+        : await resolveTextChannel(member.guild, WELCOME_HELP_CHANNEL_ID, WELCOME_HELP_CHANNEL_NAME);
+
+      await channel.send({
+        embeds: [welcomeEmbed(member, startChannel, helpChannel)],
+        allowedMentions: { parse: [] }
+      });
+    } catch (error) {
+      console.warn("Discord welcome message failed", error.message);
+    }
+  });
   client.on("messageCreate", async message => {
     if (suggestionChannel
         && message.guild?.id === GUILD_ID
@@ -2315,6 +2397,11 @@ async function startDiscordBot(context) {
 
 module.exports = {
   startDiscordBot,
+  welcomeMessageTest: {
+    discordChannelMention,
+    welcomeDate,
+    welcomeDescription
+  },
   ticketPermissionTest: {
     ticketTeamRoleNames,
     hasTicketTeamRole,

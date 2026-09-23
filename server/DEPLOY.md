@@ -22,6 +22,13 @@ grep -q '^POSTGRES_BACKUP_DIR=' /etc/betteruc-relay.env || echo "POSTGRES_BACKUP
 # Optional Discord bot. Fill these manually if the bot should run on the relay:
 # DISCORD_BOT_TOKEN=...
 # DISCORD_GUILD_ID=...
+# DISCORD_WELCOME_ENABLED=true
+# DISCORD_WELCOME_CHANNEL_ID=
+# DISCORD_WELCOME_CHANNEL_NAME=willkommen
+# DISCORD_WELCOME_START_CHANNEL_ID=
+# DISCORD_WELCOME_START_CHANNEL_NAME=download
+# DISCORD_WELCOME_HELP_CHANNEL_ID=
+# DISCORD_WELCOME_HELP_CHANNEL_NAME=hilfe
 # DISCORD_TICKET_CATEGORY_NAME=Tickets
 # DISCORD_TEAM_ROLE_NAMES=Owner,Admin,Helper # configured Helper/Admin roles are always included
 # DISCORD_MOD_USER_ROLE_NAME=Mod-User
@@ -191,9 +198,15 @@ bot
 applications.commands
 ```
 
+Enable **Server Members Intent** under `Developer Portal > Bot > Privileged Gateway Intents` so the bot receives
+new-member events for the welcome message. The message is posted in `DISCORD_WELCOME_CHANNEL_ID` or, by default,
+the `willkommen` channel. After enabling the intent, set `DISCORD_WELCOME_ENABLED=true`; it remains disabled by
+default so a missing privileged intent cannot prevent the bot from starting.
+
 The bot supports:
 
 - ticket channels through `/ticket` and `/ticket-panel`
+- a personalized welcome embed for every new human member
 - automatic release posts in `DISCORD_UPDATE_CHANNEL_NAME` with an optional opt-in role mention
 - automatic full release notes in `DISCORD_CHANGELOG_CHANNEL_ID` or `DISCORD_CHANGELOG_CHANNEL_NAME`
 - public changelog access through `/changelog` and `/changelog version:<version>`
