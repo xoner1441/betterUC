@@ -10,7 +10,7 @@ public final class CommandShortcutClient {
 
     private static final Pattern PLAYER_NAME_PATTERN =
             Pattern.compile("[A-Za-z0-9_]{1,16}");
-    private static final int MAX_ATTEMPTED_MURDER_PLAYERS = 6;
+    private static final int MAX_WANTED_REASON_PLAYERS = 6;
 
     private CommandShortcutClient() {
     }
@@ -23,13 +23,14 @@ public final class CommandShortcutClient {
         boolean slashPrefixed = input.startsWith("/");
         String command = (slashPrefixed ? input.substring(1) : input).trim();
         String[] parts = command.split("\\s+");
-        if (parts.length < 2 || !parts[0].equalsIgnoreCase("vm")) {
+        String reason = shortcutReason(parts[0]);
+        if (parts.length < 2 || reason == null) {
             return lowercaseCommandName(input);
         }
 
         StringBuilder players = new StringBuilder();
         for (int index = 1; index < parts.length; index++) {
-            if (index > MAX_ATTEMPTED_MURDER_PLAYERS
+            if (index > MAX_WANTED_REASON_PLAYERS
                     || !PLAYER_NAME_PATTERN.matcher(parts[index]).matches()) {
                 return lowercaseCommandName(input);
             }
@@ -40,8 +41,15 @@ public final class CommandShortcutClient {
         }
 
         return lowercaseCommandName(
-                (slashPrefixed ? "/" : "") + buildAttemptedMurderServerCommand(players.toString())
+                (slashPrefixed ? "/" : "") + buildWantedReasonServerCommand(players.toString(), reason)
         );
+    }
+
+    private static String shortcutReason(String commandName) {
+        if (commandName == null) return null;
+        if (commandName.equalsIgnoreCase("vm")) return "Versuchter Mord";
+        if (commandName.equalsIgnoreCase("pn")) return "Pfandnahme";
+        return null;
     }
 
     static String lowercaseCommandName(String input) {
@@ -70,12 +78,19 @@ public final class CommandShortcutClient {
     }
 
     public static String buildAttemptedMurderServerCommand(String playerInput) {
+        return buildWantedReasonServerCommand(playerInput, "Versuchter Mord");
+    }
+
+    public static String buildWantedReasonServerCommand(String playerInput, String reason) {
         if (playerInput == null || playerInput.isBlank()) {
+            return null;
+        }
+        if (!"Versuchter Mord".equals(reason) && !"Pfandnahme".equals(reason)) {
             return null;
         }
 
         String[] players = playerInput.trim().split("\\s+");
-        if (players.length > MAX_ATTEMPTED_MURDER_PLAYERS) {
+        if (players.length > MAX_WANTED_REASON_PLAYERS) {
             return null;
         }
         for (String player : players) {
@@ -84,6 +99,6 @@ public final class CommandShortcutClient {
             }
         }
 
-        return "asu " + String.join(" ", players) + " Versuchter Mord";
+        return "asu " + String.join(" ", players) + " " + reason;
     }
 }

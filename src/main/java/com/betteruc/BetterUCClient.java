@@ -333,7 +333,7 @@ public class BetterUCClient implements ClientModInitializer {
             registerUserPanelCommand(dispatcher);
             registerUpdateCommand(dispatcher);
             registerBankShortcutCommands(dispatcher);
-            registerAttemptedMurderShortcutCommand(dispatcher);
+            registerWantedReasonShortcutCommands(dispatcher);
             registerAutoBuyCommand(dispatcher);
             registerAutoDropDrinkCommand(dispatcher);
             registerMuellmannAreaCommand(dispatcher);
@@ -473,12 +473,21 @@ public class BetterUCClient implements ClientModInitializer {
                         ) ? 1 : 0)));
     }
 
-    private void registerAttemptedMurderShortcutCommand(
+    private void registerWantedReasonShortcutCommands(
             CommandDispatcher<FabricClientCommandSource> dispatcher
     ) {
-        dispatcher.register(ClientCommands.literal("vm")
+        registerWantedReasonShortcutCommand(dispatcher, "vm", "Versuchter Mord");
+        registerWantedReasonShortcutCommand(dispatcher, "pn", "Pfandnahme");
+    }
+
+    private void registerWantedReasonShortcutCommand(
+            CommandDispatcher<FabricClientCommandSource> dispatcher,
+            String shortcut,
+            String reason
+    ) {
+        dispatcher.register(ClientCommands.literal(shortcut)
                 .then(ClientCommands.argument("spieler", StringArgumentType.greedyString())
-                        .suggests(this::suggestAttemptedMurderPlayers)
+                        .suggests(this::suggestWantedReasonPlayers)
                         .executes(context -> {
                             Minecraft client = Minecraft.getInstance();
                             if (client.player == null) return 0;
@@ -486,10 +495,11 @@ public class BetterUCClient implements ClientModInitializer {
 
                             String spieler = StringArgumentType.getString(context, "spieler");
                             String serverCommand =
-                                    CommandShortcutClient.buildAttemptedMurderServerCommand(spieler);
+                                    CommandShortcutClient.buildWantedReasonServerCommand(spieler, reason);
                             if (serverCommand == null) {
                                 client.player.sendSystemMessage(Component.literal(
-                                        "§cNutze: /vm <Spieler> [weitere Spieler] (maximal 6)"
+                                        "§cNutze: /" + shortcut
+                                                + " <Spieler> [weitere Spieler] (maximal 6)"
                                 ));
                                 return 0;
                             }
@@ -499,7 +509,7 @@ public class BetterUCClient implements ClientModInitializer {
                         })));
     }
 
-    private CompletableFuture<Suggestions> suggestAttemptedMurderPlayers(
+    private CompletableFuture<Suggestions> suggestWantedReasonPlayers(
             CommandContext<FabricClientCommandSource> context,
             SuggestionsBuilder builder
     ) {
