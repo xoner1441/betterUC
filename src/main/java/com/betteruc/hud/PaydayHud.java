@@ -6,7 +6,17 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class PaydayHud {
+
+    private static final int PAYDAY_DURATION_MINUTES = 60;
+    private static final Set<Integer> SERVER_COUNTDOWN_STAGES = Set.of(10, 5, 3, 2, 1);
+    private static final Pattern SERVER_COUNTDOWN_PATTERN = Pattern.compile(
+            "(?iu)\\bInfo\\s*:\\s*Du\\s+hast\\s+in\\s+(\\d+)\\s+Minute(?:n)?\\s+deinen\\s+PayDay\\b"
+    );
 
     private static int currentMinutes = -1;
     private static int totalMinutes = -1;
@@ -23,6 +33,43 @@ public class PaydayHud {
         currentMinutes = Math.min(current, total);
         totalMinutes = total;
         lastMinuteUpdateMs = System.currentTimeMillis();
+    }
+
+    /**
+     * Uses the server's PayDay countdown as an authoritative correction for the
+     * locally advanced HUD. The server currently announces 10, 5, 3, 2 and 1
+     * remaining minute(s).
+     */
+    public static boolean updateFromCountdownMessage(String raw) {
+        int remainingMinutes = parseCountdownRemainingMinutes(raw);
+        if (remainingMinutes < 0) return false;
+
+        totalMinutes = PAYDAY_DURATION_MINUTES;
+        currentMinutes = PAYDAY_DURATION_MINUTES - remainingMinutes;
+        lastMinuteUpdateMs = System.currentTimeMillis();
+        return true;
+    }
+
+    static int parseCountdownRemainingMinutes(String raw) {
+        if (raw == null || raw.isBlank()) return -1;
+
+        Matcher matcher = SERVER_COUNTDOWN_PATTERN.matcher(raw);
+        if (!matcher.find()) return -1;
+
+        try {
+            int minutes = Integer.parseInt(matcher.group(1));
+            return SERVER_COUNTDOWN_STAGES.contains(minutes) ? minutes : -1;
+        } catch (NumberFormatException ignored) {
+            return -1;
+        }
+    }
+
+    static int currentMinutesForTesting() {
+        return currentMinutes;
+    }
+
+    static int totalMinutesForTesting() {
+        return totalMinutes;
     }
 
     public static void resetForNewPayday() {

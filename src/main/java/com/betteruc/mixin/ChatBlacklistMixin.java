@@ -182,6 +182,9 @@ public class ChatBlacklistMixin {
         if (origin == ChatMessageOrigin.SERVER_SYSTEM) {
             KraeuterLicenseWarningClient.handleServerChatLine(Minecraft.getInstance(), raw);
         }
+        if (origin != ChatMessageOrigin.PLAYER) {
+            PaydayHud.updateFromCountdownMessage(raw);
+        }
         if (SwatRosterClient.handleChatLine(Minecraft.getInstance(), raw)) {
             ci.cancel();
             return;
