@@ -182,7 +182,7 @@ async function loadFeatureFlags() {
   return defaults.map(fallback => ({ ...fallback, ...(storedByKey.get(fallback.key) || {}) }));
 }
 
-const WASTE_TYPES = new Set(["glas", "metall", "abfall", "holz"]);
+const WASTE_TYPES = new Set(["glas", "metall", "abfall", "holz", "dropdrink"]);
 
 function publicWasteDropAreas() {
   const result = {};
@@ -191,8 +191,10 @@ function publicWasteDropAreas() {
     if (!area) continue;
     result[type] = {
       x1: Number.isInteger(area.x1) ? area.x1 : null,
+      y1: Number.isInteger(area.y1) ? area.y1 : null,
       z1: Number.isInteger(area.z1) ? area.z1 : null,
       x2: Number.isInteger(area.x2) ? area.x2 : null,
+      y2: Number.isInteger(area.y2) ? area.y2 : null,
       z2: Number.isInteger(area.z2) ? area.z2 : null,
       dimension: cleanDimension(area.dimension || ""),
       updatedAt: area.updatedAt || null
@@ -3279,7 +3281,7 @@ async function handleWsMessage(client, raw) {
     if (client.role !== "admin" || client.authType === "legacy") {
       client.ws.send(JSON.stringify({
         type: "waste_area_error",
-        message: "Nur betterUC-Admins dürfen Müllbereiche ändern."
+        message: "Nur betterUC-Admins dürfen globale Automatikbereiche ändern."
       }));
       return;
     }
@@ -3304,9 +3306,12 @@ async function handleWsMessage(client, raw) {
       delete wasteDropAreas[wasteType];
     } else {
       const x = Number(payload.x);
+      const y = Number(payload.y);
       const z = Number(payload.z);
       const dimension = cleanDimension(payload.dimension || "");
-      if (!Number.isSafeInteger(x) || !Number.isSafeInteger(z) || dimension === "unknown") {
+      const requiresY = wasteType === "dropdrink";
+      if (!Number.isSafeInteger(x) || !Number.isSafeInteger(z)
+          || (requiresY && !Number.isSafeInteger(y)) || dimension === "unknown") {
         client.ws.send(JSON.stringify({ type: "waste_area_error", message: "Position oder Dimension ist ungültig." }));
         return;
       }
@@ -3314,19 +3319,24 @@ async function handleWsMessage(client, raw) {
       const current = wasteDropAreas[wasteType] || {
         type: wasteType,
         x1: null,
+        y1: null,
         z1: null,
         x2: null,
+        y2: null,
         z2: null,
         dimension
       };
       if (current.dimension && current.dimension !== dimension) {
         current.x1 = null;
+        current.y1 = null;
         current.z1 = null;
         current.x2 = null;
+        current.y2 = null;
         current.z2 = null;
       }
       current.dimension = dimension;
       current[action === "pos1" ? "x1" : "x2"] = x;
+      current[action === "pos1" ? "y1" : "y2"] = requiresY ? y : null;
       current[action === "pos1" ? "z1" : "z2"] = z;
       wasteDropAreas[wasteType] = await database.upsertWasteDropArea(wasteType, current, actor);
     }

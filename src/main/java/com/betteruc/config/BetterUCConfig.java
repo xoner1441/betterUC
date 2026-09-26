@@ -187,6 +187,7 @@ public class BetterUCConfig {
     public List<String> manualFactionPlayers = new ArrayList<>();
     public List<String> manualBlacklistPlayers = new ArrayList<>();
     public transient Map<String, WasteDropArea> wasteDropAreas = new LinkedHashMap<>();
+    public transient WasteDropArea dropDrinkArea = new WasteDropArea();
 
     public transient List<String> remoteFactionPlayers = new ArrayList<>();
     public transient Map<String, List<String>> remoteFactionMembersByFaction = new LinkedHashMap<>();
@@ -884,8 +885,10 @@ public class BetterUCConfig {
 
     public static class WasteDropArea {
         public int x1;
+        public int y1;
         public int z1;
         public int x2;
+        public int y2;
         public int z2;
         public boolean pos1Set;
         public boolean pos2Set;
@@ -901,6 +904,12 @@ public class BetterUCConfig {
                     && x <= Math.max(x1, x2)
                     && z >= Math.min(z1, z2)
                     && z <= Math.max(z1, z2);
+        }
+
+        public boolean contains(int x, int y, int z, String currentDimension) {
+            return contains(x, z, currentDimension)
+                    && y >= Math.min(y1, y2)
+                    && y <= Math.max(y1, y2);
         }
     }
 
@@ -1747,6 +1756,7 @@ public class BetterUCConfig {
         if (INSTANCE.manualFactionPlayers == null) INSTANCE.manualFactionPlayers = new ArrayList<>();
         if (INSTANCE.manualBlacklistPlayers == null) INSTANCE.manualBlacklistPlayers = new ArrayList<>();
         if (INSTANCE.wasteDropAreas == null) INSTANCE.wasteDropAreas = new LinkedHashMap<>();
+        if (INSTANCE.dropDrinkArea == null) INSTANCE.dropDrinkArea = new WasteDropArea();
         if (INSTANCE.manualFactionPlayerKeys == null) INSTANCE.manualFactionPlayerKeys = new LinkedHashSet<>();
         if (INSTANCE.remoteFactionPlayerKeys == null) INSTANCE.remoteFactionPlayerKeys = new LinkedHashSet<>();
         if (INSTANCE.manualBlacklistPlayerKeys == null) INSTANCE.manualBlacklistPlayerKeys = new LinkedHashSet<>();

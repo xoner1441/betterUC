@@ -871,8 +871,10 @@ function createDatabase(options = {}) {
     return {
       type: row.waste_type,
       x1: nullableInteger(row.x1),
+      y1: nullableInteger(row.y1),
       z1: nullableInteger(row.z1),
       x2: nullableInteger(row.x2),
+      y2: nullableInteger(row.y2),
       z2: nullableInteger(row.z2),
       dimension: row.dimension || "",
       updatedAt: iso(row.updated_at),
@@ -882,7 +884,7 @@ function createDatabase(options = {}) {
 
   async function listWasteDropAreas() {
     const result = await pool.query(`
-      select waste_type, x1, z1, x2, z2, dimension, updated_at, updated_by
+      select waste_type, x1, y1, z1, x2, y2, z2, dimension, updated_at, updated_by
       from waste_drop_areas
       order by waste_type
     `);
@@ -892,22 +894,26 @@ function createDatabase(options = {}) {
   async function upsertWasteDropArea(type, area, actor = "admin:mod") {
     const result = await pool.query(`
       insert into waste_drop_areas(
-        waste_type, x1, z1, x2, z2, dimension, updated_at, updated_by
-      ) values ($1, $2, $3, $4, $5, $6, now(), $7)
+        waste_type, x1, y1, z1, x2, y2, z2, dimension, updated_at, updated_by
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, now(), $9)
       on conflict (waste_type) do update set
         x1 = excluded.x1,
+        y1 = excluded.y1,
         z1 = excluded.z1,
         x2 = excluded.x2,
+        y2 = excluded.y2,
         z2 = excluded.z2,
         dimension = excluded.dimension,
         updated_at = now(),
         updated_by = excluded.updated_by
-      returning waste_type, x1, z1, x2, z2, dimension, updated_at, updated_by
+      returning waste_type, x1, y1, z1, x2, y2, z2, dimension, updated_at, updated_by
     `, [
       text(type).trim().toLowerCase(),
       nullableInteger(area && area.x1),
+      nullableInteger(area && area.y1),
       nullableInteger(area && area.z1),
       nullableInteger(area && area.x2),
+      nullableInteger(area && area.y2),
       nullableInteger(area && area.z2),
       text(area && area.dimension),
       text(actor, "admin:mod")

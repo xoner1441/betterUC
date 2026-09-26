@@ -335,6 +335,7 @@ public class BetterUCClient implements ClientModInitializer {
             registerBankShortcutCommands(dispatcher);
             registerWantedReasonShortcutCommands(dispatcher);
             registerFalseParkingTicketShortcutCommand(dispatcher);
+            registerDropDrinkAreaCommand(dispatcher);
             registerAutoBuyCommand(dispatcher);
             registerAutoDropDrinkCommand(dispatcher);
             registerMuellmannAreaCommand(dispatcher);
@@ -431,6 +432,20 @@ public class BetterUCClient implements ClientModInitializer {
                     AutoDropDrinkClient.start(Minecraft.getInstance());
                     return 1;
                 }));
+    }
+
+    private void registerDropDrinkAreaCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
+        dispatcher.register(ClientCommands.literal("dropdrinkarea")
+                .then(ClientCommands.literal("status")
+                        .executes(context -> AutoDropDrinkClient.showAreaStatus(Minecraft.getInstance())))
+                .then(ClientCommands.argument("aktion", StringArgumentType.word())
+                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                new String[]{"pos1", "pos2", "clear"}, builder
+                        ))
+                        .executes(context -> AutoDropDrinkClient.configureArea(
+                                Minecraft.getInstance(),
+                                StringArgumentType.getString(context, "aktion")
+                        ))));
     }
 
     private void registerAutoBuyCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
@@ -1108,9 +1123,7 @@ public class BetterUCClient implements ClientModInitializer {
             if (RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.CLOUD_SETTINGS)) {
                 CloudSettingsClient.tick(client);
             }
-            if (AutomationController.isDropDrinkEnabled()) {
-                AutoDropDrinkClient.tick(client);
-            }
+            AutoDropDrinkClient.tick(client);
             if (AutomationController.isGaertnerEnabled()) {
                 AutoGaertnerClient.tick(client);
             }

@@ -244,6 +244,32 @@ public final class PingRelayClient {
         }
     }
 
+    public static boolean sendDropDrinkAreaUpdate(
+            String action,
+            int x,
+            int y,
+            int z,
+            String dimension
+    ) {
+        WebSocket socket = webSocket;
+        if (!connected || socket == null || !"admin".equals(role)) return false;
+        try {
+            JsonObject payload = new JsonObject();
+            payload.addProperty("type", "waste_area_update");
+            payload.addProperty("wasteType", "dropdrink");
+            payload.addProperty("action", action == null ? "" : action);
+            payload.addProperty("x", x);
+            payload.addProperty("y", y);
+            payload.addProperty("z", z);
+            payload.addProperty("dimension", dimension == null ? "" : dimension);
+            socket.sendText(GSON.toJson(payload), true);
+            return true;
+        } catch (Exception e) {
+            BetterUCMod.LOGGER.warn("Could not update global betterUC dropdrink area", e);
+            return false;
+        }
+    }
+
     public static boolean sendAnnouncement(Minecraft client, String message) {
         String cleaned = message == null ? "" : message.trim().replaceAll("\\s+", " ");
         if (cleaned.isBlank()) return false;
@@ -657,16 +683,21 @@ public final class PingRelayClient {
 
             if ("waste_areas".equals(type)) {
                 JsonElement areas = json.get("areas");
+                JsonObject areaObject = areas != null && areas.isJsonObject()
+                        ? areas.getAsJsonObject()
+                        : new JsonObject();
                 AutoMuellmannClient.applyGlobalAreas(
-                        areas != null && areas.isJsonObject() ? areas.getAsJsonObject() : new JsonObject()
+                        areaObject
                 );
+                AutoDropDrinkClient.applyGlobalAreas(areaObject);
                 return;
             }
 
             if ("waste_area_saved".equals(type)) {
                 String wasteType = stringValue(json, "wasteType", "Bereich");
                 String action = stringValue(json, "action", "");
-                sendLocalMessage(client, "Globaler Müllbereich gespeichert: " + wasteType + " " + action);
+                String label = "dropdrink".equals(wasteType) ? "Dropdrink-Bereich" : "Müllbereich " + wasteType;
+                sendLocalMessage(client, "Globaler " + label + " gespeichert: " + action);
                 return;
             }
 
