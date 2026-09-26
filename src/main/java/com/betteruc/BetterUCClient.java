@@ -334,6 +334,7 @@ public class BetterUCClient implements ClientModInitializer {
             registerUpdateCommand(dispatcher);
             registerBankShortcutCommands(dispatcher);
             registerWantedReasonShortcutCommands(dispatcher);
+            registerFalseParkingTicketShortcutCommand(dispatcher);
             registerAutoBuyCommand(dispatcher);
             registerAutoDropDrinkCommand(dispatcher);
             registerMuellmannAreaCommand(dispatcher);
@@ -478,6 +479,23 @@ public class BetterUCClient implements ClientModInitializer {
     ) {
         registerWantedReasonShortcutCommand(dispatcher, "vm", "Versuchter Mord");
         registerWantedReasonShortcutCommand(dispatcher, "pn", "Pfandnahme");
+    }
+
+    private void registerFalseParkingTicketShortcutCommand(
+            CommandDispatcher<FabricClientCommandSource> dispatcher
+    ) {
+        dispatcher.register(ClientCommands.literal("fp")
+                .executes(context -> {
+                    Minecraft client = Minecraft.getInstance();
+                    if (client.player == null) return 0;
+                    if (!ensureAllowedServerForManualCommand(client)) return 0;
+
+                    sendServerCommand(
+                            client,
+                            CommandShortcutClient.buildFalseParkingTicketServerCommand()
+                    );
+                    return 1;
+                }));
     }
 
     private void registerWantedReasonShortcutCommand(

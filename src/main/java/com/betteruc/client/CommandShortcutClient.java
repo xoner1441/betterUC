@@ -11,6 +11,7 @@ public final class CommandShortcutClient {
     private static final Pattern PLAYER_NAME_PATTERN =
             Pattern.compile("[A-Za-z0-9_]{1,16}");
     private static final int MAX_WANTED_REASON_PLAYERS = 6;
+    private static final String FALSE_PARKING_TICKET_COMMAND = "strafzettel Falschparken 250";
 
     private CommandShortcutClient() {
     }
@@ -20,9 +21,24 @@ public final class CommandShortcutClient {
             return input;
         }
 
+        return rewriteAllowedServerCommand(input);
+    }
+
+    static String rewriteAllowedServerCommand(String input) {
+        if (input == null) return null;
+
         boolean slashPrefixed = input.startsWith("/");
         String command = (slashPrefixed ? input.substring(1) : input).trim();
+        if (command.isEmpty()) return input;
+
         String[] parts = command.split("\\s+");
+        if (parts[0].equalsIgnoreCase("fp")) {
+            if (parts.length != 1) {
+                return lowercaseCommandName(input);
+            }
+            return (slashPrefixed ? "/" : "") + FALSE_PARKING_TICKET_COMMAND;
+        }
+
         String reason = shortcutReason(parts[0]);
         if (parts.length < 2 || reason == null) {
             return lowercaseCommandName(input);
@@ -79,6 +95,10 @@ public final class CommandShortcutClient {
 
     public static String buildAttemptedMurderServerCommand(String playerInput) {
         return buildWantedReasonServerCommand(playerInput, "Versuchter Mord");
+    }
+
+    public static String buildFalseParkingTicketServerCommand() {
+        return FALSE_PARKING_TICKET_COMMAND;
     }
 
     public static String buildWantedReasonServerCommand(String playerInput, String reason) {
