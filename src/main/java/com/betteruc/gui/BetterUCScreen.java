@@ -516,6 +516,16 @@ public class BetterUCScreen extends Screen {
                         () -> BetterUCConfig.INSTANCE.autoFirstAidEnabled = !BetterUCConfig.INSTANCE.autoFirstAidEnabled);
             }
             case CHAT -> {
+                y = addSectionHeader(x, y, controlW, "Emojis", 0xFFF472B6);
+                y = addToggle(x, y, controlW, "Chat-Emojis",
+                        BetterUCConfig.INSTANCE.chatEmojisEnabled,
+                        () -> BetterUCConfig.INSTANCE.chatEmojisEnabled =
+                                !BetterUCConfig.INSTANCE.chatEmojisEnabled);
+                if (BetterUCConfig.INSTANCE.chatEmojisEnabled) {
+                    y = addInfo(x, y, controlW, "Auswahl", "☺-Knopf neben der Chatzeile");
+                    y = addInfo(x, y, controlW, "Einfügen", "Symbol anklicken und direkt senden");
+                }
+
                 y = addSectionHeader(x, y, controlW, "Links & Klickaktionen", 0xFF22D3EE);
                 y = addToggle(x, y, controlW, "Links anklickbar",
                         BetterUCConfig.INSTANCE.chatLinksClickableEnabled,

@@ -15,6 +15,7 @@ import com.betteruc.client.AutoWinzerClient;
 import com.betteruc.client.AutomationController;
 import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ChatCustomizationFormatter;
+import com.betteruc.client.ChatEmojiFormatter;
 import com.betteruc.client.ChatLinkifier;
 import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.CommunicationDeviceTracker;
@@ -166,12 +167,16 @@ public class ChatBlacklistMixin {
             TrustedChatCommands.remember(message);
         }
         Component originalMessage = message;
+        message = ChatEmojiFormatter.replace(
+                message,
+                BetterUCConfig.INSTANCE.chatEmojisEnabled
+        );
         message = ChatLinkifier.linkify(
                 message,
                 BetterUCConfig.INSTANCE.chatLinksClickableEnabled,
                 BetterUCConfig.INSTANCE.chatLinkHighlightEnabled
         );
-        boolean linkStyleAdded = message != originalMessage;
+        boolean chatContentChanged = message != originalMessage;
         BetterUCSuppressFlags.cleanupStaleSilentStatsState();
         if (capturingStats && !BetterUCSuppressFlags.suppressStatsOutput && !BetterUCSuppressFlags.activeSilentStatsCapture) {
             capturingStats = false;
@@ -219,7 +224,7 @@ public class ChatBlacklistMixin {
         RichTaxAlertHud.handleChatLine(Minecraft.getInstance(), raw);
 
         if (BetterUCSuppressFlags.consumeBlacklistInfoLocalMessageBypass()) {
-            appendTimestampIfConfigured(message, linkStyleAdded, ci, origin, signatureData, indicator);
+            appendTimestampIfConfigured(message, chatContentChanged, ci, origin, signatureData, indicator);
             return;
         }
 
@@ -285,7 +290,7 @@ public class ChatBlacklistMixin {
         if (handleBlacklistHeader(raw, ci)) return;
         if (capturingBlacklist && handleCapturingBlacklist(raw, ci)) return;
 
-        appendTimestampIfConfigured(message, linkStyleAdded, ci, origin, signatureData, indicator);
+        appendTimestampIfConfigured(message, chatContentChanged, ci, origin, signatureData, indicator);
     }
 
     private boolean handleHackTimer(String raw) {

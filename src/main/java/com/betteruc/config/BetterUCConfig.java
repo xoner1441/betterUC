@@ -94,7 +94,7 @@ public class BetterUCConfig {
             "bloodEffectLifetimePercent", "bloodEffectParticlePercent", "bloodEffectColor",
             "chatTimestampsEnabled", "chatCustomizationEnabled", "chatActionTextStyle", "chatHeadlineSeparatorStyle",
             "chatCustomizationGradientEnabled", "chatLinksClickableEnabled", "chatLinkHighlightEnabled",
-            "chatCommandConfirmationEnabled",
+            "chatCommandConfirmationEnabled", "chatEmojisEnabled",
             "chatHqActionGradientStart", "chatHqActionGradientEnd",
             "chatHqActorGradientStart", "chatHqActorGradientEnd",
             "chatHqTargetGradientStart", "chatHqTargetGradientEnd",
@@ -596,6 +596,7 @@ public class BetterUCConfig {
     public boolean chatLinksClickableEnabled = true;
     public boolean chatLinkHighlightEnabled = true;
     public boolean chatCommandConfirmationEnabled = false;
+    public boolean chatEmojisEnabled = true;
     public String chatActionTextStyle = CHAT_ACTION_TEXT_SMALL_CAPS;
     public String chatHeadlineSeparatorStyle = CHAT_SEPARATOR_TECHNICAL;
     public boolean chatCustomizationGradientEnabled = true;
