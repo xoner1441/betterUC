@@ -69,6 +69,7 @@ import com.betteruc.hud.PlantageHud;
 import com.betteruc.hud.PotionEffectsHud;
 import com.betteruc.hud.ProductionTimerHud;
 import com.betteruc.hud.RichTaxAlertHud;
+import com.betteruc.hud.ServerTimerHud;
 import com.betteruc.hud.SecondChatHud;
 import com.betteruc.hud.ToggleSprintHud;
 import net.fabricmc.api.ClientModInitializer;
@@ -250,6 +251,7 @@ public class BetterUCClient implements ClientModInitializer {
         DealerTimerHud.register();
         MaskTimerHud.register();
         ProductionTimerHud.register();
+        ServerTimerHud.register();
         RichTaxAlertHud.register();
         HealthHud.register();
         ToggleSprintHud.register();
@@ -277,6 +279,7 @@ public class BetterUCClient implements ClientModInitializer {
             DealerTimerHud.clear();
             MaskTimerHud.clear();
             ProductionTimerHud.clear();
+            ServerTimerHud.clear();
             RichTaxAlertHud.clear();
             SecondChatManager.clear();
             ReinforcementAcceptClient.reset();
@@ -1115,6 +1118,7 @@ public class BetterUCClient implements ClientModInitializer {
             DealerTimerHud.tick();
             MaskTimerHud.tick();
             ProductionTimerHud.tick();
+            ServerTimerHud.tick();
             PlantageHud.tick();
             AmmoHud.tickReloadKey(client);
             RemoteFeatureFlagsClient.tick(client);
@@ -1378,6 +1382,7 @@ public class BetterUCClient implements ClientModInitializer {
         DealerTimerHud.clear();
         MaskTimerHud.clear();
         ProductionTimerHud.clear();
+        ServerTimerHud.clear();
         RichTaxAlertHud.clear();
         SecondChatManager.clear();
         ReinforcementAcceptClient.reset();

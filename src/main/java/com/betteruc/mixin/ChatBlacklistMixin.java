@@ -42,6 +42,7 @@ import com.betteruc.hud.SalaryIncomeHud;
 import com.betteruc.hud.PaydayHud;
 import com.betteruc.hud.PlantageHud;
 import com.betteruc.hud.ProductionTimerHud;
+import com.betteruc.hud.ServerTimerHud;
 import com.betteruc.hud.RichTaxAlertHud;
 import com.betteruc.parser.BlacklistParser;
 import com.betteruc.parser.FactionStatsParser;
@@ -221,6 +222,7 @@ public class ChatBlacklistMixin {
         MaskTimerHud.handleChatLine(Minecraft.getInstance(), raw);
         PlantageHud.handleChatMessage(Minecraft.getInstance(), raw);
         ProductionTimerHud.handleChatLine(Minecraft.getInstance(), raw);
+        ServerTimerHud.handleChatLine(raw);
         RichTaxAlertHud.handleChatLine(Minecraft.getInstance(), raw);
 
         if (BetterUCSuppressFlags.consumeBlacklistInfoLocalMessageBypass()) {
