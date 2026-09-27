@@ -16,7 +16,6 @@ import com.betteruc.client.AutoGaertnerClient;
 import com.betteruc.client.AutoMuellmannClient;
 import com.betteruc.client.AutoMoneyTransportClient;
 import com.betteruc.client.AutoTransportClient;
-import com.betteruc.client.AutoWinzerClient;
 import com.betteruc.client.AutomationController;
 import com.betteruc.client.BetterUCAuthClient;
 import com.betteruc.client.BloodEffectClient;
@@ -160,7 +159,6 @@ public class BetterUCClient implements ClientModInitializer {
     private boolean remoteCloudEnabled = true;
     private boolean remoteDropDrinkEnabled = true;
     private boolean remoteFisherEnabled = true;
-    private boolean remoteWinzerEnabled = true;
     private boolean remoteGaertnerEnabled = true;
     private boolean remoteMuellmannEnabled = true;
     private boolean remoteMoneyTransportEnabled = true;
@@ -1131,9 +1129,6 @@ public class BetterUCClient implements ClientModInitializer {
             if (AutomationController.isGaertnerEnabled()) {
                 AutoGaertnerClient.tick(client);
             }
-            if (AutomationController.isWinzerEnabled()) {
-                AutoWinzerClient.tick(client);
-            }
             if (AutomationController.isMuellmannEnabled()) {
                 AutoMuellmannClient.tick(client);
             }
@@ -1171,10 +1166,6 @@ public class BetterUCClient implements ClientModInitializer {
         if (!fisherEnabled && remoteFisherEnabled) AutoFisherClient.reset();
         remoteFisherEnabled = fisherEnabled;
 
-        boolean winzerEnabled = AutomationController.isWinzerEnabled();
-        if (!winzerEnabled && remoteWinzerEnabled) AutoWinzerClient.reset();
-        remoteWinzerEnabled = winzerEnabled;
-
         boolean gaertnerEnabled = AutomationController.isGaertnerEnabled();
         if (!gaertnerEnabled && remoteGaertnerEnabled) AutoGaertnerClient.reset();
         remoteGaertnerEnabled = gaertnerEnabled;
@@ -1196,7 +1187,6 @@ public class BetterUCClient implements ClientModInitializer {
         remoteCloudEnabled = true;
         remoteDropDrinkEnabled = true;
         remoteFisherEnabled = true;
-        remoteWinzerEnabled = true;
         remoteGaertnerEnabled = true;
         remoteMuellmannEnabled = true;
         remoteMoneyTransportEnabled = true;
@@ -1395,7 +1385,6 @@ public class BetterUCClient implements ClientModInitializer {
         AutoMuellmannClient.reset();
         AutoMoneyTransportClient.reset();
         AutoTransportClient.reset();
-        AutoWinzerClient.reset();
         SwatRosterClient.reset();
 
         BetterUCSuppressFlags.suppressModBlOutput = false;

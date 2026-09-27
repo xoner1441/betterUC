@@ -1,7 +1,7 @@
 package com.betteruc.client;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.betteruc.ServerGate;
+import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
@@ -20,7 +20,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.FlowerPotBlock;
@@ -30,30 +29,28 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
+/**
+ * Handles the permitted Gärtner delivery shortcut and passive pot markers.
+ * Flower and dead-bush collection deliberately remains fully manual.
+ */
 public final class AutoGaertnerClient {
     private static final Pattern FLOWER_TARGET_PATTERN = Pattern.compile("\\bpfluecke\\s+(\\d+)\\s+blumen\\s+an\\b");
     private static final long COMMAND_DELAY_MS = 250L;
-    private static final long CLICK_INTERVAL_MS = 180L;
     private static final long POT_INTERACTION_WINDOW_MS = 3_000L;
     private static final long MENU_SETTLE_MS = 350L;
     private static final int COMPLETED_POT_COLOR = 0xFF4ADE80;
     private static final VoxelShape COMPLETED_POT_SHAPE =
             Shapes.box(0.14D, -0.02D, 0.14D, 0.86D, 1.04D, 0.86D);
 
-    private static boolean jobActive;
     private static boolean awaitingGardenerArrival;
-    private static boolean bushCollectorActive;
-    private static int targetFlowers;
-    private static int currentContainerId = -1;
-    private static int collectedBushes;
-    private static long nextClickAtMs;
+    private static boolean potMarkerActive;
     private static long lastDropFlowersAtMs;
+    private static int currentContainerId = -1;
     private static BlockPos pendingPotPos;
     private static long pendingPotAtMs;
     private static BlockPos activePotPos;
     private static long menuOpenedAtMs;
     private static boolean activePotCompleted;
-    private static final Set<Integer> clickedSlotsInContainer = new HashSet<>();
     private static final Set<BlockPos> completedPotPositions = new HashSet<>();
 
     private AutoGaertnerClient() {
@@ -63,7 +60,7 @@ public final class AutoGaertnerClient {
         UseBlockCallback.EVENT.register((player, level, hand, hitResult) -> {
             if (level.isClientSide()
                     && hand == InteractionHand.MAIN_HAND
-                    && bushCollectorActive
+                    && potMarkerActive
                     && AutomationController.isGaertnerEnabled()
                     && isFlowerPot(level.getBlockState(hitResult.getBlockPos()).getBlock())) {
                 recordPotInteraction(hitResult.getBlockPos(), System.currentTimeMillis());
@@ -76,11 +73,11 @@ public final class AutoGaertnerClient {
     public static void handleChatLine(Minecraft client, String raw) {
         String clean = key(raw);
 
-        if (bushCollectorActive
+        if (potMarkerActive
                 && clean.contains("payday")
                 && clean.contains("du bekommst dein gehalt")
                 && clean.contains("ausgezahlt")) {
-            finishBushCollector(client);
+            reset();
             return;
         }
 
@@ -88,15 +85,19 @@ public final class AutoGaertnerClient {
 
         Matcher targetMatcher = FLOWER_TARGET_PATTERN.matcher(clean);
         if (targetMatcher.find()) {
-            startFlowerPhase(client, parsePositiveInt(targetMatcher.group(1)));
+            awaitingGardenerArrival = false;
+            stopPotMarkers();
+            int flowers = parsePositiveInt(targetMatcher.group(1));
+            if (client != null && client.player != null && flowers > 0) {
+                client.player.sendSystemMessage(Component.literal(
+                        "\u00A7e[betterUC] G\u00E4rtner: \u00A7f" + flowers + " Blumen manuell einsammeln."
+                ));
+            }
             return;
         }
 
-        if (clean.contains("bring die blumen")
-                && clean.contains("gaertner")
-                && clean.contains("dropblumen")) {
+        if (clean.contains("bring die blumen") && clean.contains("dropblumen")) {
             awaitingGardenerArrival = true;
-            jobActive = true;
             return;
         }
 
@@ -109,13 +110,14 @@ public final class AutoGaertnerClient {
         if (clean.contains("gehe nun zum blumenstand")
                 && clean.contains("entferne")
                 && clean.contains("verwelkten buesche")) {
-            startBushCollector(client);
+            startPotMarkers(client);
         }
     }
 
+    /** Observes the menu state only; it never clicks a slot or moves an item. */
     public static void tick(Minecraft client) {
-        if (!bushCollectorActive) return;
-        if (client == null || client.player == null || client.gameMode == null || !ServerGate.isAllowedServer(client)) {
+        if (!potMarkerActive) return;
+        if (client == null || client.player == null || !ServerGate.isAllowedServer(client)) {
             reset();
             return;
         }
@@ -134,119 +136,60 @@ public final class AutoGaertnerClient {
 
         if (menu.containerId != currentContainerId) {
             currentContainerId = menu.containerId;
-            clickedSlotsInContainer.clear();
             activePotPos = consumeRecentPotInteraction(now);
-            if (activePotPos == null) {
-                activePotPos = targetedPotPosition(client);
-            }
+            if (activePotPos == null) activePotPos = targetedPotPosition(client);
             menuOpenedAtMs = now;
             activePotCompleted = false;
         }
 
-        if (nextClickAtMs > now) return;
-
-        Slot bushSlot = findNextDeadBushSlot(client, menu);
-        if (bushSlot == null) {
-            if (!activePotCompleted
-                    && activePotPos != null
-                    && now - menuOpenedAtMs >= MENU_SETTLE_MS) {
-                completeActivePot();
-            }
-            return;
-        }
-
-        client.gameMode.handleContainerInput(menu.containerId, bushSlot.index, 0, ContainerInput.PICKUP, client.player);
-        clickedSlotsInContainer.add(bushSlot.index);
-        collectedBushes++;
-        nextClickAtMs = now + CLICK_INTERVAL_MS;
-        if (activePotPos != null && findNextDeadBushSlot(client, menu) == null) {
-            completeActivePot();
+        if (!activePotCompleted
+                && activePotPos != null
+                && now - menuOpenedAtMs >= MENU_SETTLE_MS
+                && !containsDeadBush(client, menu)) {
+            markPotCompleted(activePotPos);
+            activePotCompleted = true;
         }
     }
 
     public static void reset() {
-        jobActive = false;
         awaitingGardenerArrival = false;
-        bushCollectorActive = false;
-        targetFlowers = 0;
-        currentContainerId = -1;
-        collectedBushes = 0;
-        nextClickAtMs = 0L;
         lastDropFlowersAtMs = 0L;
-        clearPotProgress();
-        clickedSlotsInContainer.clear();
+        stopPotMarkers();
     }
 
-    private static void startFlowerPhase(Minecraft client, int flowers) {
-        jobActive = true;
-        awaitingGardenerArrival = false;
-        bushCollectorActive = false;
-        targetFlowers = flowers;
-        currentContainerId = -1;
-        collectedBushes = 0;
-        nextClickAtMs = 0L;
+    private static void startPotMarkers(Minecraft client) {
+        potMarkerActive = true;
         clearPotProgress();
-        clickedSlotsInContainer.clear();
-
-        if (client != null && client.player != null && targetFlowers > 0) {
-            client.player.sendSystemMessage(Component.literal(
-                    "\u00A7a[betterUC] Auto-G\u00E4rtner bereit: \u00A7f" + targetFlowers + " Blumen"
-            ));
-        }
-    }
-
-    private static void startBushCollector(Minecraft client) {
-        jobActive = true;
-        awaitingGardenerArrival = false;
-        bushCollectorActive = true;
-        currentContainerId = -1;
-        collectedBushes = 0;
-        nextClickAtMs = 0L;
-        clearPotProgress();
-        clickedSlotsInContainer.clear();
-
         if (client != null && client.player != null) {
             client.player.sendSystemMessage(Component.literal(
-                    "\u00A7a[betterUC] Auto-G\u00E4rtner sammelt verwelkte B\u00FCsche."
+                    "\u00A7a[betterUC] G\u00E4rtner: \u00A7fErledigte T\u00F6pfe werden gr\u00FCn markiert; Einsammeln bleibt manuell."
             ));
         }
     }
 
-    private static void finishBushCollector(Minecraft client) {
-        int total = collectedBushes;
-        boolean wasActive = bushCollectorActive || jobActive;
-        reset();
-        if (wasActive && client != null && client.player != null) {
-            client.player.sendSystemMessage(Component.literal(
-                    "\u00A7a[betterUC] Auto-G\u00E4rtner abgeschlossen: \u00A7f" + total + " B\u00FCsche"
-            ));
-        }
+    private static void stopPotMarkers() {
+        potMarkerActive = false;
+        clearPotProgress();
     }
 
     private static void sendDropFlowers(Minecraft client) {
         long now = System.currentTimeMillis();
         if (now - lastDropFlowersAtMs < 3_000L) return;
         lastDropFlowersAtMs = now;
-        ClientScheduler.runDelayedOnClient(client, COMMAND_DELAY_MS,
-                () -> {
-                    if (AutomationController.isGaertnerEnabled()) {
-                        ServerCommandUtil.send(client, "dropblumen", false);
-                    }
-                });
+        ClientScheduler.runDelayedOnClient(client, COMMAND_DELAY_MS, () -> {
+            if (AutomationController.isGaertnerEnabled()) {
+                ServerCommandUtil.send(client, "dropblumen", false);
+            }
+        });
     }
 
-    private static Slot findNextDeadBushSlot(Minecraft client, AbstractContainerMenu menu) {
+    private static boolean containsDeadBush(Minecraft client, AbstractContainerMenu menu) {
         for (Slot slot : menu.slots) {
-            if (slot == null || clickedSlotsInContainer.contains(slot.index)) continue;
+            if (slot == null || !slot.hasItem()) continue;
             if (client.player != null && slot.container == client.player.getInventory()) continue;
-            if (!slot.hasItem()) continue;
-
-            ItemStack stack = slot.getItem();
-            if (isDeadBush(stack)) {
-                return slot;
-            }
+            if (isDeadBush(slot.getItem())) return true;
         }
-        return null;
+        return false;
     }
 
     static void recordPotInteraction(BlockPos pos, long now) {
@@ -271,17 +214,9 @@ public final class AutoGaertnerClient {
         if (pos != null) completedPotPositions.add(pos.immutable());
     }
 
-    private static void completeActivePot() {
-        if (activePotCompleted || activePotPos == null) return;
-        markPotCompleted(activePotPos);
-        activePotCompleted = true;
-    }
-
     private static void captureTargetedPot(Minecraft client, long now) {
         BlockPos targetedPot = targetedPotPosition(client);
-        if (targetedPot != null) {
-            recordPotInteraction(targetedPot, now);
-        }
+        if (targetedPot != null) recordPotInteraction(targetedPot, now);
     }
 
     private static BlockPos targetedPotPosition(Minecraft client) {
@@ -316,11 +251,8 @@ public final class AutoGaertnerClient {
         return nearest == null ? null : nearest.immutable();
     }
 
-    private static boolean isFlowerPot(net.minecraft.world.level.block.Block block) {
-        return block instanceof FlowerPotBlock;
-    }
-
     private static void clearPotProgress() {
+        currentContainerId = -1;
         pendingPotPos = null;
         pendingPotAtMs = 0L;
         activePotPos = null;
@@ -330,7 +262,7 @@ public final class AutoGaertnerClient {
     }
 
     private static void renderCompletedPots(net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext context) {
-        if (!bushCollectorActive || completedPotPositions.isEmpty()) return;
+        if (!potMarkerActive || completedPotPositions.isEmpty()) return;
         if (context.poseStack() == null
                 || context.levelState().cameraRenderState == null
                 || context.levelState().cameraRenderState.pos == null) {
@@ -341,11 +273,7 @@ public final class AutoGaertnerClient {
         Vec3 camera = context.levelState().cameraRenderState.pos;
         for (BlockPos pos : Set.copyOf(completedPotPositions)) {
             poseStack.pushPose();
-            poseStack.translate(
-                    pos.getX() - camera.x,
-                    pos.getY() - camera.y,
-                    pos.getZ() - camera.z
-            );
+            poseStack.translate(pos.getX() - camera.x, pos.getY() - camera.y, pos.getZ() - camera.z);
             context.submitNodeCollector().submitShapeOutline(
                     poseStack,
                     COMPLETED_POT_SHAPE,
@@ -361,6 +289,10 @@ public final class AutoGaertnerClient {
     private static boolean isFlowerStandMenu(Screen screen) {
         String title = key(screen.getTitle().getString());
         return title.contains("blumenstand");
+    }
+
+    private static boolean isFlowerPot(net.minecraft.world.level.block.Block block) {
+        return block instanceof FlowerPotBlock;
     }
 
     private static boolean isDeadBush(ItemStack stack) {

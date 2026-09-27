@@ -498,10 +498,9 @@ public class BetterUCScreen extends Screen {
                         () -> BetterUCConfig.INSTANCE.autoDropDrinkEnabled = !BetterUCConfig.INSTANCE.autoDropDrinkEnabled);
                 y = addToggle(x, y, controlW, "Fischer", BetterUCConfig.INSTANCE.autoFisherEnabled,
                         () -> BetterUCConfig.INSTANCE.autoFisherEnabled = !BetterUCConfig.INSTANCE.autoFisherEnabled);
-                y = addToggle(x, y, controlW, "Winzer", BetterUCConfig.INSTANCE.autoWinzerEnabled,
-                        () -> BetterUCConfig.INSTANCE.autoWinzerEnabled = !BetterUCConfig.INSTANCE.autoWinzerEnabled);
-                y = addToggle(x, y, controlW, "G\u00E4rtner", BetterUCConfig.INSTANCE.autoGaertnerEnabled,
+                y = addToggle(x, y, controlW, "G\u00E4rtner /dropblumen", BetterUCConfig.INSTANCE.autoGaertnerEnabled,
                         () -> BetterUCConfig.INSTANCE.autoGaertnerEnabled = !BetterUCConfig.INSTANCE.autoGaertnerEnabled);
+                y = addInfo(x, y, controlW, "Manuelles Sammeln", "Keine Auto-Klicks; erledigte G\u00E4rtner-T\u00F6pfe werden weiterhin gr\u00FCn markiert");
                 y = addToggle(x, y, controlW, "M\u00FCllmann", BetterUCConfig.INSTANCE.autoMuellmannEnabled,
                         () -> BetterUCConfig.INSTANCE.autoMuellmannEnabled = !BetterUCConfig.INSTANCE.autoMuellmannEnabled);
                 y = addToggle(x, y, controlW, "Geldtransport /dropmoney",
@@ -1284,9 +1283,10 @@ public class BetterUCScreen extends Screen {
             case "Stats neu laden" -> "Fordert deine aktuellen Statistiken erneut vom Server an.";
             case "Lieferant /adropdrink" -> "Automatisiert die Getränkeabgabe des Lieferanten-Jobs.";
             case "Fischer" -> "Automatisiert Fischschwarm-Suche, Fangen und Abgabe.";
-            case "Winzer" -> "Sammelt in den Winzer-Inventaren automatisch alle Trauben ein.";
-            case "Gärtner" ->
-                    "Automatisiert Blumenabgabe und Unkrautentfernung und markiert erledigte Töpfe grün.";
+            case "Gärtner /dropblumen" ->
+                    "Führt die Blumenabgabe am erkannten Ziel aus und markiert manuell geleerte Töpfe grün.";
+            case "Manuelles Sammeln" ->
+                    "Die Mod klickt weder Trauben noch verwelkte Büsche an. Die grüne Markierung ist nur eine passive Orientierungshilfe.";
             case "Müllmann" -> "Automatisiert die Müllabgabe in den konfigurierten Müllhalden-Bereichen.";
             case "Geldtransport /dropmoney" ->
                     "Führt am erkannten Einzahlungsziel automatisch einmalig /dropmoney aus.";

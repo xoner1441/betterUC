@@ -11,7 +11,6 @@ import com.betteruc.client.AutoGaertnerClient;
 import com.betteruc.client.AutoMuellmannClient;
 import com.betteruc.client.AutoMoneyTransportClient;
 import com.betteruc.client.AutoTransportClient;
-import com.betteruc.client.AutoWinzerClient;
 import com.betteruc.client.AutomationController;
 import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ChatCustomizationFormatter;
@@ -208,9 +207,6 @@ public class ChatBlacklistMixin {
         }
         if (AutomationController.isGaertnerEnabled()) {
             AutoGaertnerClient.handleChatLine(Minecraft.getInstance(), raw);
-        }
-        if (AutomationController.isWinzerEnabled()) {
-            AutoWinzerClient.handleChatLine(Minecraft.getInstance(), raw);
         }
         if (AutomationController.isMuellmannEnabled()) {
             AutoMuellmannClient.handleChatLine(Minecraft.getInstance(), raw);

@@ -122,7 +122,7 @@ public class BetterUCConfig {
             "secondChatOwnNameMode", "secondChatCustom1Mode", "secondChatCustom2Mode",
             "secondChatCustom3Mode", "secondChatCustom1Text", "secondChatCustom2Text",
             "secondChatCustom3Text", "secondChatTabs", "secondChatWindows", "secondChatActiveTabId",
-            "autoDropDrinkEnabled", "autoFisherEnabled", "autoWinzerEnabled", "autoGaertnerEnabled",
+            "autoDropDrinkEnabled", "autoFisherEnabled", "autoGaertnerEnabled",
             "autoMuellmannEnabled", "autoMoneyTransportEnabled", "autoTransportEnabled",
             "autoFirstAidEnabled", "autoBuyEnabled", "minecartCheckHelperEnabled",
             "reinfCustomizationEnabled", "reinfUniformColorEnabled", "reinfLabelColor", "reinfTextColor",
@@ -585,7 +585,6 @@ public class BetterUCConfig {
     public boolean richTaxAlertSoundEnabled = true;
     public boolean autoDropDrinkEnabled = true;
     public boolean autoFisherEnabled = true;
-    public boolean autoWinzerEnabled = true;
     public boolean autoGaertnerEnabled = true;
     public boolean autoMuellmannEnabled = true;
     public boolean autoMoneyTransportEnabled = true;

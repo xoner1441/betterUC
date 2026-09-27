@@ -18,11 +18,6 @@ public final class AutomationController {
                 && RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_FISHER);
     }
 
-    public static boolean isWinzerEnabled() {
-        return BetterUCConfig.INSTANCE.autoWinzerEnabled
-                && RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_WINZER);
-    }
-
     public static boolean isGaertnerEnabled() {
         return BetterUCConfig.INSTANCE.autoGaertnerEnabled
                 && RemoteFeatureFlagsClient.isEnabled(RemoteFeatureFlagsClient.AUTO_GAERTNER);
@@ -55,7 +50,6 @@ public final class AutomationController {
         int count = 0;
         if (BetterUCConfig.INSTANCE.autoDropDrinkEnabled) count++;
         if (BetterUCConfig.INSTANCE.autoFisherEnabled) count++;
-        if (BetterUCConfig.INSTANCE.autoWinzerEnabled) count++;
         if (BetterUCConfig.INSTANCE.autoGaertnerEnabled) count++;
         if (BetterUCConfig.INSTANCE.autoMuellmannEnabled) count++;
         if (BetterUCConfig.INSTANCE.autoMoneyTransportEnabled) count++;

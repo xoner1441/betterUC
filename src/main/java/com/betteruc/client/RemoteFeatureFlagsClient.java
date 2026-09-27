@@ -28,7 +28,6 @@ public final class RemoteFeatureFlagsClient {
     public static final String CLOUD_SETTINGS = "cloud_settings";
     public static final String AUTO_DROPDRINK = "auto_dropdrink";
     public static final String AUTO_FISHER = "auto_fisher";
-    public static final String AUTO_WINZER = "auto_winzer";
     public static final String AUTO_GAERTNER = "auto_gaertner";
     public static final String AUTO_MUELLMANN = "auto_muellmann";
     public static final String AUTO_MONEY_TRANSPORT = "auto_money_transport";
@@ -42,7 +41,6 @@ public final class RemoteFeatureFlagsClient {
             CLOUD_SETTINGS,
             AUTO_DROPDRINK,
             AUTO_FISHER,
-            AUTO_WINZER,
             AUTO_GAERTNER,
             AUTO_MUELLMANN,
             AUTO_MONEY_TRANSPORT,

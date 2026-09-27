@@ -95,8 +95,7 @@ const FEATURE_FLAG_DEFINITIONS = Object.freeze([
   { key: "cloud_settings", label: "Cloud-Sync", description: "Synchronisierte Mod-Einstellungen" },
   { key: "auto_dropdrink", label: "Auto-Dropdrink", description: "Automatische Lieferjunge-Abgabe" },
   { key: "auto_fisher", label: "Auto-Fischer", description: "Automatische Fischer-Befehle" },
-  { key: "auto_winzer", label: "Auto-Winzer", description: "Automatisches Leeren der Trauben-Fenster" },
-  { key: "auto_gaertner", label: "Auto-Gärtner", description: "Automatische Blumenabgabe und Buschsammlung" },
+  { key: "auto_gaertner", label: "Gärtner-Hilfe", description: "Automatische /dropblumen-Abgabe und passive Topf-Markierung; Einsammeln bleibt manuell" },
   { key: "auto_muellmann", label: "Auto-Müllmann", description: "Automatische Müllsortierung in markierten Bereichen" },
   { key: "auto_money_transport", label: "Auto-Geldtransport", description: "Automatische Geldabgabe am erkannten Einzahlungsziel" },
   { key: "auto_transport", label: "Auto-Transport", description: "Scoreboard-gesteuerte Kistenabgabe am Lieferziel" }
