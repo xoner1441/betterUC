@@ -7,19 +7,104 @@
     "pages": [
       {
         "eyebrow": "NÄCHSTE VERSION",
-        "title": "Version 1.5.0 ist bereit",
-        "description": "Das neue Feature-Release bündelt Clips, Medienfreigabe, Treffer-Effekte und zuverlässigere HUD-Daten.",
+        "title": "Version 1.5.1 ist bereit",
+        "description": "Das Update ergänzt neue HUDs, präzisere Serverabläufe und regelkonforme Job-Hilfen.",
         "lines": [
-          "Version 1.5.0 führt einen integrierten Replay-Buffer mit Ton, Clip-Uploads, neue Treffer-Motive und das Minen-Einnahmen-HUD ein."
+          "Version 1.5.1 bringt Timer- und Gehalt-HUDs, präzisere PayDays, neue Komfortbefehle und überarbeitete Job-Hilfen."
         ]
       }
     ]
   },
   "releases": [
     {
+      "version": "1.5.1",
+      "date": "27.09.2026",
+      "current": true,
+      "pages": [
+        {
+          "eyebrow": "HUDS & TIMER",
+          "title": "Serverzeiten und Einnahmen präzise im Blick",
+          "description": "Neue Anzeigen übernehmen aktuelle Serverwerte direkt aus dem Chat und bleiben dadurch zuverlässig synchron.",
+          "lines": [
+            "Das neue Timer-HUD zeigt Timer-Nummer, sekundengenau herunterlaufende Restzeit und die angegebene Ablauf-Uhrzeit.",
+            "Das Gehalt-HUD summiert bis zum nächsten PayDay angekündigte Gehaltszahlungen und wird danach zurückgesetzt.",
+            "PayDay-Hinweise des Servers synchronisieren den Fortschritt bei 10, 5, 3, 2 und 1 verbleibenden Minuten.",
+            "Alle neuen Anzeigen unterstützen HUD-Editor, Skalierung, Farben, Stile, eigene Präfixe und Cloud-Sync."
+          ]
+        },
+        {
+          "eyebrow": "JOB-HILFEN",
+          "title": "Automationen folgen den aktuellen Serverregeln",
+          "description": "Verbotene Sammelaktionen wurden entfernt, während erlaubte Orientierung und Abgaben erhalten bleiben.",
+          "lines": [
+            "Die automatische Traubenernte beim Winzer wurde vollständig entfernt.",
+            "Beim Gärtner werden verwelkte Büsche nicht mehr automatisch angeklickt oder eingesammelt.",
+            "Manuell geleerte Gärtner-Töpfe können weiterhin passiv grün markiert werden.",
+            "Die erlaubte /dropblumen-Abgabe bleibt verfügbar; der Lieferjunge kann zentral konfigurierte Dropdrink-Bereiche verwenden."
+          ]
+        },
+        {
+          "eyebrow": "CLIPS & EFFEKTE",
+          "title": "Aufnahmen und Treffer lassen sich genauer abstimmen",
+          "description": "Diagnosen, Synchronisierung und zusätzliche Motive erweitern die bestehenden Medienfunktionen.",
+          "lines": [
+            "Ein einstellbarer Audio-Offset gleicht gerätespezifische Verschiebungen zwischen Spielton und Bild aus.",
+            "Die isolierte Clip-Laufzeit enthält alle benötigten Diagnoseklassen und bleibt von anderen FFmpeg-Mods getrennt.",
+            "Zusätzliche Treffer-Motive wie Sterne, Herzen und klassische Minecraft-Partikel erweitern die Auswahl.",
+            "Clip-Diagnosen erklären Encoder-Fallbacks, Audiotakt und ausgelassene Frames verständlicher."
+          ]
+        },
+        {
+          "eyebrow": "BEDIENUNG & SERVERFORMATE",
+          "title": "Mehr Abkürzungen und zuverlässige Abläufe",
+          "description": "Neue Befehle und Parser reduzieren wiederkehrende Eingaben und passen sich aktualisierten Servermenüs an.",
+          "lines": [
+            "/pn übernimmt den bestehenden Vorgang mit dem Grund ,Pfandnahme‘; /fp erstellt den Falschparken-Strafzettel über 250$.",
+            "Der KFZ-Check per Shift-Rechtsklick ist abschaltbar und unterstützt die notwendige zweite Minecart-Auswahl.",
+            "Auto-Buy merkt die Zahlungsart pro Kaufvorgang und berücksichtigt Kartenzahlungen im Bank-HUD.",
+            "Chat-Emojis können direkt als Symbole über die Eingabehilfe ausgewählt werden."
+          ]
+        }
+      ],
+      "summary": [
+        {
+          "title": "Neue HUDs",
+          "description": "Timer, Gehalt und PayDay-Werte folgen den aktuellen Servermeldungen.",
+          "color": "purple"
+        },
+        {
+          "title": "Regelkonforme Jobs",
+          "description": "Sammeln bleibt manuell; erlaubte Markierungen und Abgaben bleiben erhalten.",
+          "color": "green"
+        },
+        {
+          "title": "Bessere Clips",
+          "description": "Audio-Offset, Diagnosen und Laufzeitkorrekturen erhöhen die Zuverlässigkeit.",
+          "color": "cyan"
+        },
+        {
+          "title": "Schnellere Bedienung",
+          "description": "Neue Befehle, Kartenzahlung und Chat-Emojis sparen wiederkehrende Schritte.",
+          "color": "amber"
+        }
+      ],
+      "changes": [
+        "Timer-HUD mit Nummer, Restzeit und Ablauf-Uhrzeit hinzugefügt.",
+        "Gehalt-HUD und serverbasierte PayDay-Synchronisierung ergänzt.",
+        "Automatisches Einsammeln bei Winzer und Gärtner vollständig entfernt.",
+        "Passive grüne Markierung manuell geleerter Gärtner-Töpfe beibehalten.",
+        "Zentrale Dropdrink-Bereiche für den Lieferjungen ergänzt.",
+        "Konfigurierbaren Clip-Audio-Offset und robustere Laufzeitdiagnosen hinzugefügt.",
+        "Weitere Treffer-Effekte und direkte Chat-Emoji-Auswahl ergänzt.",
+        "Neue Kurzbefehle /pn und /fp sowie einen abschaltbaren KFZ-Check hinzugefügt.",
+        "Auto-Buy um prozessbezogene Bar- und Kartenzahlung erweitert.",
+        "Kräuter-Lizenzwarnungen vor dem Ablauf ergänzt."
+      ]
+    },
+    {
       "version": "1.5.0",
       "date": "15.09.2026",
-      "current": true,
+      "current": false,
       "pages": [
         {
           "eyebrow": "CLIPS & AUDIO",
