@@ -512,6 +512,13 @@ public class BetterUCScreen extends Screen {
                         () -> BetterUCConfig.INSTANCE.autoTransportEnabled =
                                 !BetterUCConfig.INSTANCE.autoTransportEnabled);
 
+                y = addSectionHeader(x, y, controlW, "Bomben-Einsatz", 0xFFA855F7);
+                y = addToggle(x, y, controlW, "Bombendraht melden",
+                        BetterUCConfig.INSTANCE.bombWireAnnouncerEnabled,
+                        () -> BetterUCConfig.INSTANCE.bombWireAnnouncerEnabled =
+                                !BetterUCConfig.INSTANCE.bombWireAnnouncerEnabled);
+                y = addInfo(x, y, controlW, "B\u00FCndnischat", "/d Draht gefunden: <Farbe>");
+
                 y = addSectionHeader(x, y, controlW, "Einkaufen", 0xFF38BDF8);
                 y = addToggle(x, y, controlW, "Auto-Kauf /abuy", BetterUCConfig.INSTANCE.autoBuyEnabled,
                         () -> BetterUCConfig.INSTANCE.autoBuyEnabled = !BetterUCConfig.INSTANCE.autoBuyEnabled);
@@ -1292,6 +1299,10 @@ public class BetterUCScreen extends Screen {
                     "Führt am erkannten Einzahlungsziel automatisch einmalig /dropmoney aus.";
             case "Transport /droptransport" ->
                     "Liefert am Ziel automatisch die im Transport-Scoreboard erkannten Kisten ab.";
+            case "Bombendraht melden" ->
+                    "Meldet einen neu aufgehobenen gr\u00FCnen, roten, blauen oder lila Draht einmalig im B\u00FCndnischat.";
+            case "Bündnischat" ->
+                    "Der Listener ist ausschließlich zwischen der Bombenfund- und der erfolgreichen oder fehlgeschlagenen Entschärfungs-News aktiv.";
             case "Auto-Kauf /abuy" -> "Erlaubt automatische Mengenkäufe über /abuy <Menge>.";
             case "Folgeannahmen" ->
                     "Nimmt nach deiner ersten manuellen Bestätigung weitere Erste-Hilfe-Angebote automatisch an.";

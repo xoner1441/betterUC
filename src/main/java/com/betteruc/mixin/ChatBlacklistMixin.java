@@ -8,6 +8,7 @@ import com.betteruc.client.AutoDropDrinkClient;
 import com.betteruc.client.AutoFisherClient;
 import com.betteruc.client.AutoFirstAidClient;
 import com.betteruc.client.AutoGaertnerClient;
+import com.betteruc.client.BombWireAnnouncer;
 import com.betteruc.client.AutoMuellmannClient;
 import com.betteruc.client.AutoMoneyTransportClient;
 import com.betteruc.client.AutoTransportClient;
@@ -189,6 +190,7 @@ public class ChatBlacklistMixin {
         }
         if (origin != ChatMessageOrigin.PLAYER) {
             PaydayHud.updateFromCountdownMessage(raw);
+            BombWireAnnouncer.handleChatLine(Minecraft.getInstance(), raw);
         }
         if (SwatRosterClient.handleChatLine(Minecraft.getInstance(), raw)) {
             ci.cancel();

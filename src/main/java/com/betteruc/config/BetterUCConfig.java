@@ -124,7 +124,7 @@ public class BetterUCConfig {
             "secondChatCustom3Text", "secondChatTabs", "secondChatWindows", "secondChatActiveTabId",
             "autoDropDrinkEnabled", "autoFisherEnabled", "autoGaertnerEnabled",
             "autoMuellmannEnabled", "autoMoneyTransportEnabled", "autoTransportEnabled",
-            "autoFirstAidEnabled", "autoBuyEnabled", "minecartCheckHelperEnabled",
+            "autoFirstAidEnabled", "autoBuyEnabled", "bombWireAnnouncerEnabled", "minecartCheckHelperEnabled",
             "reinfCustomizationEnabled", "reinfUniformColorEnabled", "reinfLabelColor", "reinfTextColor",
             "reinfDistanceColor", "reinfUniformColor", "reinfAcceptEnabled", "reinfAcceptSurvivalOnly",
             "reinfAcceptNormal", "reinfAcceptUrgent", "reinfAcceptMedic", "reinfAcceptHostage",
@@ -591,6 +591,7 @@ public class BetterUCConfig {
     public boolean autoTransportEnabled = true;
     public boolean autoFirstAidEnabled = false;
     public boolean autoBuyEnabled = true;
+    public boolean bombWireAnnouncerEnabled = true;
     public boolean minecartCheckHelperEnabled = true;
     public Map<String, PlantTimerState> plantTimerStates = new LinkedHashMap<>();
     public Map<String, JsonObject> hudProfiles = new LinkedHashMap<>();

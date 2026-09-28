@@ -19,6 +19,7 @@ import com.betteruc.client.AutoTransportClient;
 import com.betteruc.client.AutomationController;
 import com.betteruc.client.BetterUCAuthClient;
 import com.betteruc.client.BloodEffectClient;
+import com.betteruc.client.BombWireAnnouncer;
 import com.betteruc.client.CarFindTracker;
 import com.betteruc.client.ClientCompat;
 import com.betteruc.client.ClientScheduler;
@@ -285,6 +286,7 @@ public class BetterUCClient implements ClientModInitializer {
             AutoMoneyTransportClient.reset();
             AutoTransportClient.reset();
             CommunicationDeviceTracker.reset();
+            BombWireAnnouncer.reset();
             resetRemoteFeatureStateTracking();
             RemoteFeatureFlagsClient.onJoin(client);
             BetterUCAuthClient.onJoin(client);
@@ -1136,6 +1138,7 @@ public class BetterUCClient implements ClientModInitializer {
             AutoMoneyTransportClient.tick(client);
             AutoTransportClient.tick(client);
             AutoBuyClient.tick(client);
+            BombWireAnnouncer.tick(client);
             TrashFilterClient.tick(client);
             SwatRosterClient.tick(client);
             KraeuterLicenseWarningClient.tick(client);
@@ -1379,6 +1382,7 @@ public class BetterUCClient implements ClientModInitializer {
         DutyRejoinClient.reset();
         AutoDropDrinkClient.reset();
         AutoBuyClient.reset();
+        BombWireAnnouncer.reset();
         AutoFisherClient.reset();
         AutoFirstAidClient.reset();
         AutoGaertnerClient.reset();
