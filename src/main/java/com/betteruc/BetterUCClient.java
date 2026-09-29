@@ -88,6 +88,7 @@ import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
+import me.dancedown.twitchemotes.TwitchEmotes;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -210,6 +211,7 @@ public class BetterUCClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         BetterUCConfig.load();
+        TwitchEmotes.initialize();
         BloodEffectClient.initialize();
         CloudSettingsClient.initialize();
         BetterUCFontManager.initialize();

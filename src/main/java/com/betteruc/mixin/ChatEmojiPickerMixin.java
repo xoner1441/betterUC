@@ -78,7 +78,7 @@ public abstract class ChatEmojiPickerMixin {
         context.centeredText(font, "☺", buttonX + BUTTON_WIDTH / 2, buttonY + 2, ACCENT);
 
         if (buttonHovered) {
-            context.setTooltipForNextFrame(font, Component.literal("Symbole auswählen"), mouseX, mouseY);
+            context.setTooltipForNextFrame(font, Component.literal("Emojis und Symbole auswählen"), mouseX, mouseY);
         }
         if (!betteruc$emojiPickerOpen) return;
 

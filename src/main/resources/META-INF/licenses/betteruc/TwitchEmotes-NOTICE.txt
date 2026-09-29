@@ -1,0 +1,4 @@
+The image-emote rendering and provider integration in betterUC is adapted
+from DanceDown/TwitchEmotes: https://github.com/DanceDown/TwitchEmotes
+Licensed under the MIT License. Changes include betterUC configuration,
+lifecycle integration, provider image-format fallbacks and UI integration.

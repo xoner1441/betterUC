@@ -530,14 +530,15 @@ public class BetterUCScreen extends Screen {
                         () -> BetterUCConfig.INSTANCE.autoFirstAidEnabled = !BetterUCConfig.INSTANCE.autoFirstAidEnabled);
             }
             case CHAT -> {
-                y = addSectionHeader(x, y, controlW, "Emojis", 0xFFF472B6);
-                y = addToggle(x, y, controlW, "Chat-Emojis",
+                y = addSectionHeader(x, y, controlW, "Emojis & Emotes", 0xFFF472B6);
+                y = addToggle(x, y, controlW, "Chat-Emojis & Emotes",
                         BetterUCConfig.INSTANCE.chatEmojisEnabled,
                         () -> BetterUCConfig.INSTANCE.chatEmojisEnabled =
                                 !BetterUCConfig.INSTANCE.chatEmojisEnabled);
                 if (BetterUCConfig.INSTANCE.chatEmojisEnabled) {
-                    y = addInfo(x, y, controlW, "Auswahl", "☺-Knopf neben der Chatzeile");
-                    y = addInfo(x, y, controlW, "Einfügen", "Symbol anklicken und direkt senden");
+                    y = addInfo(x, y, controlW, "Symbole", "☺-Knopf neben der Chatzeile");
+                    y = addInfo(x, y, controlW, "Bild-Emotes", "Emote-Namen schreiben und mit Tab vervollständigen");
+                    y = addInfo(x, y, controlW, "Quellen", "Twitch, 7TV, BetterTTV und FrankerFaceZ");
                 }
 
                 y = addSectionHeader(x, y, controlW, "Links & Klickaktionen", 0xFF22D3EE);
