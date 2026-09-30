@@ -25,6 +25,8 @@ import me.dancedown.twitchemotes.network.TwitchEmoteProvider;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import org.slf4j.Logger;
 
 /**
@@ -89,6 +91,19 @@ public final class TwitchEmotes {
                 LOADING.set(false);
             }
         });
+    }
+
+    public static Component emotePreview(String name) {
+        Emote emote = EMOTE_REGISTRY.get(name);
+        if (emote == null) return Component.literal(name);
+        if (!EMOTE_IMAGE_CACHE.contains(emote.name())) {
+            EMOTE_IMAGE_CACHE.add(
+                    emote.name(),
+                    EMOTE_IMAGE_CACHE.downloadEmoteImage(emote),
+                    java.util.Collections.emptySet()
+            );
+        }
+        return Component.literal("\uE000").setStyle(Style.EMPTY.withInsertion(emote.name()));
     }
 
     private static void tick(Minecraft client) {

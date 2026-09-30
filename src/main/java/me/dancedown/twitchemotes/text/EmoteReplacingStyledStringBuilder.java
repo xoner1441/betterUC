@@ -73,7 +73,7 @@ public class EmoteReplacingStyledStringBuilder {
             } else
                 appendEmote();
             spaceStyleAfter = styleOfDelimiter;
-            this.emoteNames.append(emoteName);
+            this.emoteNames.append(emote.name());
             styleBuffer.forEachStylePoll((bufferStyle, bufferString) ->
                     hoverText.append(Component.literal(bufferString.toString()).withStyle(bufferStyle))
             );

@@ -34,7 +34,7 @@ public final class EmoteRegistry {
      * @return the emote object or <code>null</code> if emote is not loaded
      */
     public Emote get(@NotNull String key) {
-        return BY_NAME.get(key);
+        return BY_NAME.get(normalize(key));
     }
 
     /**
@@ -42,7 +42,7 @@ public final class EmoteRegistry {
      * @return Whether the emote is loaded (<code>true</code>) or not (<code>false</code>)
      */
     public boolean contains(@NotNull String name) {
-        return BY_NAME.containsKey(name);
+        return BY_NAME.containsKey(normalize(name));
     }
 
     /**
@@ -77,7 +77,7 @@ public final class EmoteRegistry {
 
             // Clear EmoteImageCache of that emote
             if(removedEmote != null)
-                TwitchEmotes.EMOTE_IMAGE_CACHE.remove(name);
+                TwitchEmotes.EMOTE_IMAGE_CACHE.remove(removedEmote.name());
         }
         names.clear();
     }
@@ -109,7 +109,7 @@ public final class EmoteRegistry {
      * @param entry The EmoteEntry containing the emote
      */
     public void add(EmoteEntry entry) {
-        String name = entry.getEmote().name();
+        String name = normalize(entry.getEmote().name());
         NavigableSet<EmoteEntry> set = CANDIDATES.computeIfAbsent(name, value -> new TreeSet<>(PRIORITY_ORDER));
         EmoteEntry before = set.isEmpty() ? null : set.first();
         if (!set.add(entry))
@@ -126,7 +126,15 @@ public final class EmoteRegistry {
      * @return All emote names available
      */
     public Collection<String> getKeys() {
-        return BY_NAME.keySet();
+        return BY_NAME.values().stream()
+                .map(Emote::name)
+                .distinct()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
+    }
+
+    private static String normalize(String name) {
+        return name.toLowerCase(Locale.ROOT);
     }
 }
 

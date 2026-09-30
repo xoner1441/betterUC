@@ -50,6 +50,7 @@ import com.betteruc.config.BetterUCConfig;
 import com.betteruc.gui.CommandGui;
 import com.betteruc.gui.BetterUCScreen;
 import com.betteruc.gui.ChangelogScreen;
+import com.betteruc.gui.EmoteListScreen;
 import com.betteruc.gui.PingWheelScreen;
 import com.betteruc.hud.AmmoHud;
 import com.betteruc.hud.ArmorHud;
@@ -337,6 +338,7 @@ public class BetterUCClient implements ClientModInitializer {
             registerModBlCommand(dispatcher, playerSuggestions, modBlReasonSuggestions);
             registerUserPanelCommand(dispatcher);
             registerUpdateCommand(dispatcher);
+            registerEmoteListCommand(dispatcher);
             registerBankShortcutCommands(dispatcher);
             registerWantedReasonShortcutCommands(dispatcher);
             registerFalseParkingTicketShortcutCommand(dispatcher);
@@ -384,6 +386,16 @@ public class BetterUCClient implements ClientModInitializer {
         dispatcher.register(ClientCommands.literal("betterucupdate")
                 .executes(context -> {
                     VersionChecker.installLatestUpdate(Minecraft.getInstance(), true);
+                    return 1;
+                }));
+    }
+
+    private void registerEmoteListCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
+        dispatcher.register(ClientCommands.literal("buemotes")
+                .executes(context -> {
+                    Minecraft client = Minecraft.getInstance();
+                    ClientScheduler.runDelayedOnClient(client, 50L,
+                            () -> ClientCompat.setScreen(client, new EmoteListScreen(null)));
                     return 1;
                 }));
     }

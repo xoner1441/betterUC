@@ -538,6 +538,7 @@ public class BetterUCScreen extends Screen {
                 if (BetterUCConfig.INSTANCE.chatEmojisEnabled) {
                     y = addInfo(x, y, controlW, "Symbole", "☺-Knopf neben der Chatzeile");
                     y = addInfo(x, y, controlW, "Bild-Emotes", "Emote-Namen schreiben und mit Tab vervollständigen");
+                    y = addInfo(x, y, controlW, "Emote-Liste", "/buemotes öffnet Suche und Vorschau");
                     y = addInfo(x, y, controlW, "Quellen", "Twitch, 7TV, BetterTTV und FrankerFaceZ");
                 }
 
