@@ -28,6 +28,7 @@ import com.betteruc.client.CommandShortcutClient;
 import com.betteruc.client.DutyRejoinClient;
 import com.betteruc.client.HandToggleController;
 import com.betteruc.client.KraeuterLicenseWarningClient;
+import com.betteruc.client.JobTimerClient;
 import com.betteruc.client.TrashFilterClient;
 import com.betteruc.client.TrustedChatCommands;
 import com.betteruc.client.BetterUCFontManager;
@@ -61,6 +62,7 @@ import com.betteruc.hud.DateTimeHud;
 import com.betteruc.hud.FpsHud;
 import com.betteruc.hud.HackTimerHud;
 import com.betteruc.hud.HealthHud;
+import com.betteruc.hud.JobTimerHud;
 import com.betteruc.hud.MaskTimerHud;
 import com.betteruc.hud.MineIncomeHud;
 import com.betteruc.hud.SalaryIncomeHud;
@@ -240,6 +242,7 @@ public class BetterUCClient implements ClientModInitializer {
     private void registerMessageEvents() {
         ClientSendMessageEvents.MODIFY_COMMAND.register(CommandShortcutClient::rewriteOutgoingCommand);
         ClientSendMessageEvents.COMMAND.register(CarFindTracker::handleOutgoingCommand);
+        ClientSendMessageEvents.COMMAND.register(JobTimerClient::handleOutgoingCommand);
     }
 
     private void registerHudElements() {
@@ -254,6 +257,7 @@ public class BetterUCClient implements ClientModInitializer {
         MaskTimerHud.register();
         ProductionTimerHud.register();
         ServerTimerHud.register();
+        JobTimerHud.register();
         RichTaxAlertHud.register();
         HealthHud.register();
         ToggleSprintHud.register();
@@ -297,6 +301,7 @@ public class BetterUCClient implements ClientModInitializer {
             CloudSettingsClient.onJoin(client);
             SwatRosterClient.onJoin(client);
             KraeuterLicenseWarningClient.onJoin();
+            JobTimerClient.onJoin();
             statsOnJoinDelay = BetterUCConfig.INSTANCE.autoStatsOnJoinEnabled
                     ? AUTO_STATS_ON_JOIN_DELAY_TICKS
                     : -1;
@@ -312,6 +317,7 @@ public class BetterUCClient implements ClientModInitializer {
             CloudSettingsClient.onDisconnect();
             SwatRosterClient.reset();
             KraeuterLicenseWarningClient.onDisconnect();
+            JobTimerClient.onDisconnect();
             resetRemoteFeatureStateTracking();
             resetRuntimeState(client);
         });
@@ -339,6 +345,7 @@ public class BetterUCClient implements ClientModInitializer {
             registerUserPanelCommand(dispatcher);
             registerUpdateCommand(dispatcher);
             registerEmoteListCommand(dispatcher);
+            registerJobTimerCommand(dispatcher);
             registerBankShortcutCommands(dispatcher);
             registerWantedReasonShortcutCommands(dispatcher);
             registerFalseParkingTicketShortcutCommand(dispatcher);
@@ -398,6 +405,30 @@ public class BetterUCClient implements ClientModInitializer {
                             () -> ClientCompat.setScreen(client, new EmoteListScreen(null)));
                     return 1;
                 }));
+    }
+
+    private void registerJobTimerCommand(CommandDispatcher<FabricClientCommandSource> dispatcher) {
+        dispatcher.register(ClientCommands.literal("jobtimer")
+                .executes(context -> {
+                    JobTimerClient.showStatus(Minecraft.getInstance());
+                    return 1;
+                })
+                .then(ClientCommands.literal("refresh")
+                        .executes(context -> {
+                            JobTimerClient.requestRefresh(Minecraft.getInstance());
+                            return 1;
+                        }))
+                .then(ClientCommands.literal("auto")
+                        .then(ClientCommands.literal("an")
+                                .executes(context -> {
+                                    JobTimerClient.setAutoRefresh(Minecraft.getInstance(), true);
+                                    return 1;
+                                }))
+                        .then(ClientCommands.literal("aus")
+                                .executes(context -> {
+                                    JobTimerClient.setAutoRefresh(Minecraft.getInstance(), false);
+                                    return 1;
+                                }))));
     }
 
     private void registerBankShortcutCommands(CommandDispatcher<FabricClientCommandSource> dispatcher) {
@@ -1156,6 +1187,7 @@ public class BetterUCClient implements ClientModInitializer {
             TrashFilterClient.tick(client);
             SwatRosterClient.tick(client);
             KraeuterLicenseWarningClient.tick(client);
+            JobTimerClient.tick(client);
             tickStatsOnJoin(client);
             ReinforcementAcceptClient.tick(client);
             DutyRejoinClient.tick(client);
@@ -1404,6 +1436,7 @@ public class BetterUCClient implements ClientModInitializer {
         AutoMoneyTransportClient.reset();
         AutoTransportClient.reset();
         SwatRosterClient.reset();
+        JobTimerClient.onDisconnect();
 
         BetterUCSuppressFlags.suppressModBlOutput = false;
         BetterUCSuppressFlags.modBlCallback = null;

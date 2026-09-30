@@ -22,6 +22,7 @@
     "SecondChatClearMixin",
     "InGameHudAmmoMixin",
     "ItemInHandRendererMixin",
+    "JobTimerScreenMixin",
     "ParticleEngineMixin",
     "PlayerEntityRendererMixin",
     "PlayerListHudRenderContextMixin",

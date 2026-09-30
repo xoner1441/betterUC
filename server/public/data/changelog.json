@@ -40,7 +40,8 @@
             "Die automatische Traubenernte beim Winzer wurde vollständig entfernt.",
             "Beim Gärtner werden verwelkte Büsche nicht mehr automatisch angeklickt oder eingesammelt.",
             "Manuell geleerte Gärtner-Töpfe können weiterhin passiv grün markiert werden.",
-            "Die erlaubte /dropblumen-Abgabe bleibt verfügbar; der Lieferjunge kann zentral konfigurierte Dropdrink-Bereiche verwenden."
+            "Die erlaubte /dropblumen-Abgabe bleibt verfügbar; der Lieferjunge kann zentral konfigurierte Dropdrink-Bereiche verwenden.",
+            "Der neue Job-Timer liest Nebenjob-Cooldowns automatisch und unsichtbar aus dem Job-Center und zählt sie im HUD herunter."
           ]
         },
         {
@@ -98,7 +99,8 @@
         "Weitere Treffer-Effekte und direkte Chat-Emoji-Auswahl ergänzt.",
         "Neue Kurzbefehle /pn und /fp sowie einen abschaltbaren KFZ-Check hinzugefügt.",
         "Auto-Buy um prozessbezogene Bar- und Kartenzahlung erweitert.",
-        "Kräuter-Lizenzwarnungen vor dem Ablauf ergänzt."
+        "Kräuter-Lizenzwarnungen vor dem Ablauf ergänzt.",
+        "Automatischen Job-Timer mit HUD und /jobtimer-Übersicht ergänzt."
       ]
     },
     {
