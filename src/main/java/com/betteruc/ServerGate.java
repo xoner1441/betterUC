@@ -1,16 +1,17 @@
 package com.betteruc;
 
 import java.util.Locale;
-import java.util.Set;
+import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
 
 public final class ServerGate {
 
-    private static final Set<String> ALLOWED_HOSTS = Set.of(
+    private static final List<String> ALLOWED_HOSTS = List.of(
             "unicacity.eu",
             "server.unicacity.eu",
-            "mc.unicacity.eu"
+            "mc.unicacity.eu",
+            "training.unicacity.eu"
     );
 
     private ServerGate() {
@@ -29,7 +30,7 @@ public final class ServerGate {
     }
 
     public static String allowedServersLabel() {
-        return "unicacity.eu, server.unicacity.eu, mc.unicacity.eu";
+        return String.join(", ", ALLOWED_HOSTS);
     }
 
     private static String extractHost(String rawAddress) {

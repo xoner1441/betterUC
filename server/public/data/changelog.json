@@ -7,19 +7,70 @@
     "pages": [
       {
         "eyebrow": "NÄCHSTE VERSION",
-        "title": "Version 1.5.1 ist bereit",
-        "description": "Das Update ergänzt neue HUDs, präzisere Serverabläufe und regelkonforme Job-Hilfen.",
+        "title": "Version 1.5.2 ist bereit",
+        "description": "Das Update ergänzt den automatischen Job-Timer und unterstützt den neuen Trainingsserver.",
         "lines": [
-          "Version 1.5.1 bringt Timer- und Gehalt-HUDs, präzisere PayDays, neue Komfortbefehle und überarbeitete Job-Hilfen."
+          "Version 1.5.2 hält Nebenjob-Cooldowns unauffällig aktuell und schaltet betterUC auf training.unicacity.eu frei."
         ]
       }
     ]
   },
   "releases": [
     {
+      "version": "1.5.2",
+      "date": "11.10.2026",
+      "current": true,
+      "pages": [
+        {
+          "eyebrow": "JOB-TIMER",
+          "title": "Nebenjob-Cooldowns automatisch im Blick",
+          "description": "betterUC liest die Wartezeiten unauffällig aus dem Job-Center und zeigt alle laufenden Nebenjobs übersichtlich im HUD.",
+          "lines": [
+            "Die Wartezeiten werden nach dem Beitritt und nach dem Abschluss eines Jobs automatisch und unsichtbar abgerufen.",
+            "Das HUD listet alle aktiven Nebenjobs untereinander und zählt ihre verbleibende Zeit sekundengenau herunter.",
+            "Abgelaufene Einträge verschwinden automatisch; die übrigen Jobs rücken ohne Lücken nach oben.",
+            "Mit /jobtimer lassen sich die erkannten Wartezeiten prüfen und bei Bedarf manuell aktualisieren."
+          ]
+        },
+        {
+          "eyebrow": "SERVER-KOMPATIBILITÄT",
+          "title": "betterUC unterstützt den Trainingsserver",
+          "description": "Die Mod erkennt nun auch den offiziellen Trainingsserver als zulässigen UnicaCity-Server.",
+          "lines": [
+            "training.unicacity.eu wurde zur zentralen Serverfreigabe hinzugefügt.",
+            "Alle bestehenden Sicherheitsprüfungen bleiben unverändert und gelten weiterhin nur auf freigegebenen Servern."
+          ]
+        }
+      ],
+      "summary": [
+        {
+          "title": "Automatischer Job-Timer",
+          "description": "Nebenjob-Wartezeiten erscheinen nach Join und Jobabschluss automatisch im HUD.",
+          "color": "cyan"
+        },
+        {
+          "title": "Alle Jobs sichtbar",
+          "description": "Mehrere aktive Cooldowns werden als sortierte, nach unten wachsende Liste dargestellt.",
+          "color": "green"
+        },
+        {
+          "title": "Trainingsserver",
+          "description": "training.unicacity.eu wird ab sofort vollständig von betterUC unterstützt.",
+          "color": "purple"
+        }
+      ],
+      "changes": [
+        "Automatischen Job-Timer mit HUD und /jobtimer-Übersicht ergänzt.",
+        "Verdeckte Job-Abfragen auf Beitritt und erfolgreichen Jobabschluss begrenzt.",
+        "Mehrere aktive Job-Cooldowns werden vollständig untereinander angezeigt.",
+        "Abgelaufene Job-Timer werden automatisch aus dem HUD entfernt.",
+        "training.unicacity.eu zur Liste der unterstützten Server hinzugefügt."
+      ]
+    },
+    {
       "version": "1.5.1",
       "date": "27.09.2026",
-      "current": true,
+      "current": false,
       "pages": [
         {
           "eyebrow": "HUDS & TIMER",
@@ -40,8 +91,7 @@
             "Die automatische Traubenernte beim Winzer wurde vollständig entfernt.",
             "Beim Gärtner werden verwelkte Büsche nicht mehr automatisch angeklickt oder eingesammelt.",
             "Manuell geleerte Gärtner-Töpfe können weiterhin passiv grün markiert werden.",
-            "Die erlaubte /dropblumen-Abgabe bleibt verfügbar; der Lieferjunge kann zentral konfigurierte Dropdrink-Bereiche verwenden.",
-            "Der neue Job-Timer liest Nebenjob-Cooldowns automatisch und unsichtbar aus dem Job-Center und zählt sie im HUD herunter."
+            "Die erlaubte /dropblumen-Abgabe bleibt verfügbar; der Lieferjunge kann zentral konfigurierte Dropdrink-Bereiche verwenden."
           ]
         },
         {
@@ -99,8 +149,7 @@
         "Weitere Treffer-Effekte und direkte Chat-Emoji-Auswahl ergänzt.",
         "Neue Kurzbefehle /pn und /fp sowie einen abschaltbaren KFZ-Check hinzugefügt.",
         "Auto-Buy um prozessbezogene Bar- und Kartenzahlung erweitert.",
-        "Kräuter-Lizenzwarnungen vor dem Ablauf ergänzt.",
-        "Automatischen Job-Timer mit HUD und /jobtimer-Übersicht ergänzt."
+        "Kräuter-Lizenzwarnungen vor dem Ablauf ergänzt."
       ]
     },
     {

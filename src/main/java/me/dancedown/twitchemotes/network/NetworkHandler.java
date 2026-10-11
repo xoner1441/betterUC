@@ -36,7 +36,7 @@ public class NetworkHandler {
         connection.setRequestMethod("GET");
         connection.setConnectTimeout(5000);
         connection.setReadTimeout(5000);
-        connection.setRequestProperty("User-Agent", "betterUC/1.5.1 chat-emotes");
+        connection.setRequestProperty("User-Agent", "betterUC/1.5.2 chat-emotes");
         InputStream inputStream = connection.getInputStream();
         String result = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
         return JsonParser.parseString(result);
@@ -88,7 +88,7 @@ public class NetworkHandler {
                 connection.setRequestMethod("GET");
                 connection.setConnectTimeout(5000);
                 connection.setReadTimeout(5000);
-                connection.setRequestProperty("User-Agent", "betterUC/1.5.1 chat-emotes");
+                connection.setRequestProperty("User-Agent", "betterUC/1.5.2 chat-emotes");
                 connection.addRequestProperty("Authorization", "Bearer " + auth);
                 if(clientId != null)
                     connection.addRequestProperty("Client-Id", clientId);
