@@ -373,7 +373,7 @@ public class BetterUCScreen extends Screen {
                             () -> BetterUCConfig.INSTANCE.jobTimerAutoRefreshEnabled = !BetterUCConfig.INSTANCE.jobTimerAutoRefreshEnabled);
                     y = addColorButton(x, y, controlW, "Job-Timer Farbe", BetterUCConfig.INSTANCE.jobTimerHudColor,
                             color -> BetterUCConfig.INSTANCE.jobTimerHudColor = color);
-                    y = addInfo(x, y, controlW, "Abruf", "unsichtbar nach Join und alle 10 Minuten");
+                    y = addInfo(x, y, controlW, "Abruf", "unsichtbar nach Join und Jobabschluss");
                     y = addInfo(x, y, controlW, "Details", "/jobtimer");
                 }
             }
@@ -2267,18 +2267,29 @@ public class BetterUCScreen extends Screen {
                 }
             }
             case JOB_TIMER -> {
-                String value = "Winzer 09:40 (+2)";
+                String first = "Getränkelieferant 05:41";
+                String second = "Winzer 09:40";
+                int gap = modernStyle ? 20 : 11;
                 if (modernStyle) {
                     ModernHudRenderer.drawModule(context, minecraft, previewX, previewY,
-                            hudPreviewLabel(ModuleOption.JOB_TIMER), value,
+                            hudPreviewLabel(ModuleOption.JOB_TIMER), first,
+                            BetterUCConfig.INSTANCE.jobTimerHudColor);
+                    ModernHudRenderer.drawModule(context, minecraft, previewX, previewY + gap,
+                            "", second,
                             BetterUCConfig.INSTANCE.jobTimerHudColor);
                 } else if (stylizedStyle) {
                     ModernHudRenderer.drawStyledText(context, minecraft, style, fontId,
-                            hudPreviewText(ModuleOption.JOB_TIMER, value), previewX, previewY,
+                            hudPreviewText(ModuleOption.JOB_TIMER, first), previewX, previewY,
+                            BetterUCConfig.INSTANCE.jobTimerHudColor);
+                    ModernHudRenderer.drawStyledText(context, minecraft, style, fontId,
+                            second, previewX, previewY + gap,
                             BetterUCConfig.INSTANCE.jobTimerHudColor);
                 } else {
                     ModernHudRenderer.drawHudTextWithShadow(context, this.font,
-                            hudPreviewText(ModuleOption.JOB_TIMER, value), previewX, previewY,
+                            hudPreviewText(ModuleOption.JOB_TIMER, first), previewX, previewY,
+                            BetterUCConfig.INSTANCE.jobTimerHudColor);
+                    ModernHudRenderer.drawHudTextWithShadow(context, this.font,
+                            second, previewX, previewY + gap,
                             BetterUCConfig.INSTANCE.jobTimerHudColor);
                 }
             }

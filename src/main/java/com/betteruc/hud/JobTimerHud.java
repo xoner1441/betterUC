@@ -2,20 +2,15 @@ package com.betteruc.hud;
 
 import com.betteruc.client.JobTimerClient;
 import com.betteruc.config.BetterUCConfig;
+import java.util.List;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
-/** Shows the next side-job cooldown; /jobtimer lists every known job. */
+/** Shows every active side-job cooldown as a vertically expanding list. */
 public final class JobTimerHud {
-    private static int cachedSeconds = -1;
-    private static int cachedCount = -1;
-    private static String cachedJob = "";
-    private static String cachedValue = "";
-    private static Component cachedText = Component.empty();
-
     private JobTimerHud() {
     }
 
@@ -33,17 +28,11 @@ public final class JobTimerHud {
         if (client.player == null || !BetterUCConfig.INSTANCE.showJobTimerHud || !JobTimerClient.hasData()) return;
 
         long now = System.currentTimeMillis();
-        String value = value(now);
+        List<JobTimerClient.JobState> active = JobTimerClient.activeCooldowns(now);
         String label = BetterUCConfig.hudModuleLabel(
                 BetterUCConfig.INSTANCE.jobTimerHudPrefixEnabled,
                 BetterUCConfig.INSTANCE.jobTimerHudPrefix
         );
-        String display = BetterUCConfig.prefixedHudText(
-                BetterUCConfig.INSTANCE.jobTimerHudPrefixEnabled,
-                BetterUCConfig.INSTANCE.jobTimerHudPrefix,
-                value
-        );
-        if (!display.equals(cachedText.getString())) cachedText = Component.literal(display);
         String style = BetterUCConfig.INSTANCE.jobTimerHudStyle;
         int color = BetterUCConfig.INSTANCE.jobTimerHudColor;
 
@@ -55,30 +44,48 @@ public final class JobTimerHud {
                 BetterUCConfig.INSTANCE.jobTimerHudGradientEnabled,
                 BetterUCConfig.INSTANCE.jobTimerHudGradientColor,
                 () -> {
-                    if (BetterUCConfig.isStylizedHudStyle(style)) {
-                        ModernHudRenderer.drawStyledText(context, client.font, style,
-                                BetterUCConfig.INSTANCE.jobTimerHudCustomFont, cachedText, 0, 0, color);
-                    } else if (!BetterUCConfig.isModernHudStyle(style)) {
-                        ModernHudRenderer.drawHudTextWithShadow(context, client.font, cachedText, 0, 0, color);
-                    } else {
-                        ModernHudRenderer.drawModule(context, client, 0, 0, label, value, color);
+                    int row = 0;
+                    if (active.isEmpty()) {
+                        drawRow(context, client, style, label, "Alle bereit", 0, true, color);
+                        return;
+                    }
+                    for (JobTimerClient.JobState job : active) {
+                        long seconds = JobTimerClient.remainingSeconds(job, now);
+                        String value = job.name() + " " + JobTimerClient.formatDuration(seconds);
+                        drawRow(context, client, style, label, value, row, row == 0, color);
+                        row++;
                     }
                 }
         );
     }
 
-    private static String value(long now) {
-        JobTimerClient.JobState next = JobTimerClient.nextCooldown(now);
-        int count = JobTimerClient.activeCooldownCount(now);
-        if (next == null) return "Alle bereit";
-        int seconds = (int) Math.min(Integer.MAX_VALUE, JobTimerClient.remainingSeconds(next, now));
-        if (seconds != cachedSeconds || count != cachedCount || !next.name().equals(cachedJob)) {
-            cachedSeconds = seconds;
-            cachedCount = count;
-            cachedJob = next.name();
-            cachedValue = next.name() + " " + JobTimerClient.formatDuration(seconds)
-                    + (count > 1 ? " (+" + (count - 1) + ")" : "");
+    private static void drawRow(
+            GuiGraphicsExtractor context,
+            Minecraft client,
+            String style,
+            String label,
+            String value,
+            int row,
+            boolean first,
+            int color
+    ) {
+        int y = row * (BetterUCConfig.isModernHudStyle(style) ? 20 : 11);
+        String rowLabel = first ? label : "";
+        String display = first
+                ? BetterUCConfig.prefixedHudText(
+                        BetterUCConfig.INSTANCE.jobTimerHudPrefixEnabled,
+                        BetterUCConfig.INSTANCE.jobTimerHudPrefix,
+                        value
+                )
+                : value;
+        Component text = Component.literal(display);
+        if (BetterUCConfig.isStylizedHudStyle(style)) {
+            ModernHudRenderer.drawStyledText(context, client.font, style,
+                    BetterUCConfig.INSTANCE.jobTimerHudCustomFont, text, 0, y, color);
+        } else if (!BetterUCConfig.isModernHudStyle(style)) {
+            ModernHudRenderer.drawHudTextWithShadow(context, client.font, text, 0, y, color);
+        } else {
+            ModernHudRenderer.drawModule(context, client, 0, y, rowLabel, value, color);
         }
-        return cachedValue;
     }
 }

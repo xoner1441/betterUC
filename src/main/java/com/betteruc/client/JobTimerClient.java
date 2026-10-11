@@ -24,9 +24,9 @@ import net.minecraft.world.item.component.ItemLore;
 /** Silently reads all side-job cooldowns from the server's own Job-Center. */
 public final class JobTimerClient {
     private static final long JOIN_DELAY_MS = 15_000L;
-    private static final long REFRESH_INTERVAL_MS = 10L * 60L * 1_000L;
     private static final long STEP_TIMEOUT_MS = 8_000L;
     private static final long CLICK_DELAY_MS = 180L;
+    private static final long JOB_COMPLETION_REFRESH_DELAY_MS = 1_500L;
     private static final long MANUAL_MENU_GRACE_MS = 15_000L;
     private static final String JOB_MENU_TITLE = "job center";
     private static final String SIDE_JOBS_NAME = "nebenjob";
@@ -75,6 +75,7 @@ public final class JobTimerClient {
             refreshRequested = false;
             deadlineMs = 0L;
         }
+        nextRefreshAtMs = 0L;
     }
 
     public static void tick(Minecraft client) {
@@ -94,12 +95,14 @@ public final class JobTimerClient {
             nextRefreshAtMs = 0L;
             return;
         }
+        if (!refreshRequested && nextRefreshAtMs <= 0L) return;
         if (ClientCompat.hasScreen(client) || now < manualMenuUntilMs) return;
-        if (!refreshRequested && nextRefreshAtMs > 0L && now < nextRefreshAtMs) return;
+        if (nextRefreshAtMs > 0L && now < nextRefreshAtMs) return;
         if (!ServerCommandUtil.sendAutomatic(client, "job")) return;
 
         phase = Phase.WAITING_FOR_ROOT;
         refreshRequested = false;
+        nextRefreshAtMs = 0L;
         deadlineMs = now + STEP_TIMEOUT_MS;
         nextActionAtMs = now + CLICK_DELAY_MS;
     }
@@ -112,14 +115,19 @@ public final class JobTimerClient {
         message(client, "§7[betterUC] Job-Timer werden im Hintergrund aktualisiert …");
     }
 
+    /** Queues a fresh scan after the server confirms a completed job through its salary message. */
+    public static void onJobSalaryReceived() {
+        if (!BetterUCConfig.INSTANCE.jobTimerAutoRefreshEnabled) return;
+        refreshRequested = true;
+        nextRefreshAtMs = System.currentTimeMillis() + JOB_COMPLETION_REFRESH_DELAY_MS;
+    }
+
     public static void setAutoRefresh(Minecraft client, boolean enabled) {
         BetterUCConfig.INSTANCE.jobTimerAutoRefreshEnabled = enabled;
         BetterUCConfig.save();
-        if (enabled) {
-            nextRefreshAtMs = System.currentTimeMillis() + 1_000L;
-        } else {
+        nextRefreshAtMs = 0L;
+        if (!enabled) {
             refreshRequested = false;
-            nextRefreshAtMs = 0L;
             if (phase != Phase.IDLE) abort(client);
         }
         message(client, "§b[betterUC] §fAutomatischer Job-Abruf: " + (enabled ? "§aAn" : "§cAus"));
@@ -157,11 +165,16 @@ public final class JobTimerClient {
         return count;
     }
 
-    public static JobState nextCooldown(long nowMs) {
+    public static List<JobState> activeCooldowns(long nowMs) {
         return JOBS.values().stream()
                 .filter(job -> remainingSeconds(job, nowMs) > 0L)
-                .min(Comparator.comparingLong(JobState::readyAtMs))
-                .orElse(null);
+                .sorted(Comparator.comparingLong(JobState::readyAtMs))
+                .toList();
+    }
+
+    public static JobState nextCooldown(long nowMs) {
+        List<JobState> active = activeCooldowns(nowMs);
+        return active.isEmpty() ? null : active.getFirst();
     }
 
     public static long remainingSeconds(JobState job, long nowMs) {
@@ -204,8 +217,7 @@ public final class JobTimerClient {
         JOBS.clear();
         JOBS.putAll(scanned);
         lastSuccessfulSyncMs = now;
-        nextRefreshAtMs = BetterUCConfig.INSTANCE.jobTimerAutoRefreshEnabled
-                ? Math.min(now + REFRESH_INTERVAL_MS, nextExpiryRefresh(now)) : 0L;
+        nextRefreshAtMs = 0L;
         phase = Phase.IDLE;
         deadlineMs = 0L;
         client.player.closeContainer();
@@ -243,22 +255,12 @@ public final class JobTimerClient {
         return null;
     }
 
-    private static long nextExpiryRefresh(long now) {
-        long earliest = JOBS.values().stream()
-                .mapToLong(JobState::readyAtMs)
-                .filter(value -> value > now)
-                .min()
-                .orElse(now + REFRESH_INTERVAL_MS);
-        return earliest + 1_500L;
-    }
-
     private static void abort(Minecraft client) {
         boolean ownedMenu = shouldSuppress(ClientCompat.currentScreen(client));
         phase = Phase.IDLE;
         deadlineMs = 0L;
         nextActionAtMs = 0L;
-        nextRefreshAtMs = BetterUCConfig.INSTANCE.jobTimerAutoRefreshEnabled
-                ? System.currentTimeMillis() + 60_000L : 0L;
+        nextRefreshAtMs = 0L;
         if (ownedMenu && client != null && client.player != null) {
             client.player.closeContainer();
             ClientCompat.setScreen(client, null);

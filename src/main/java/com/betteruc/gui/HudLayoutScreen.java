@@ -561,8 +561,11 @@ public class HudLayoutScreen extends Screen {
                     ? progressWidth(hudLabel(module), "#1 | 01:00 | 23:26:53")
                     : singleLineWidth(hudLabel(module), "#1 | 01:00 | 23:26:53",
                     prefixedText(module, "#1 | 01:00 | 23:26:53"), BetterUCConfig.INSTANCE.serverTimerHudStyle);
-            case JOB_TIMER -> singleLineWidth(hudLabel(module), "Winzer 09:40 (+2)",
-                    prefixedText(module, "Winzer 09:40 (+2)"), BetterUCConfig.INSTANCE.jobTimerHudStyle);
+            case JOB_TIMER -> Math.max(
+                    singleLineWidth(hudLabel(module), "Getränkelieferant 05:41",
+                            prefixedText(module, "Getränkelieferant 05:41"), BetterUCConfig.INSTANCE.jobTimerHudStyle),
+                    singleLineWidth("", "Winzer 09:40", "Winzer 09:40", BetterUCConfig.INSTANCE.jobTimerHudStyle)
+            );
             case PLANT_TIMER -> twoLineWidth(hudLabel(module), prefixedText(module, "Plantage Pulver 7/10"), "Reif: 1:30:00 | Wasser: 20:00", BetterUCConfig.INSTANCE.plantTimerHudStyle);
         };
     }
@@ -594,7 +597,7 @@ public class HudLayoutScreen extends Screen {
                     ? 24 : singleLineHeight(BetterUCConfig.INSTANCE.maskTimerHudStyle);
             case PRODUCTION_TIMER -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.productionTimerHudStyle) ? 24 : singleLineHeight(BetterUCConfig.INSTANCE.productionTimerHudStyle);
             case SERVER_TIMER -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.serverTimerHudStyle) ? 24 : singleLineHeight(BetterUCConfig.INSTANCE.serverTimerHudStyle);
-            case JOB_TIMER -> singleLineHeight(BetterUCConfig.INSTANCE.jobTimerHudStyle);
+            case JOB_TIMER -> BetterUCConfig.isModernHudStyle(BetterUCConfig.INSTANCE.jobTimerHudStyle) ? 38 : 23;
         };
     }
 
@@ -734,9 +737,16 @@ public class HudLayoutScreen extends Screen {
                             prefixedText(module, value), BetterUCConfig.INSTANCE.serverTimerHudColor);
                 }
             }
-            case JOB_TIMER -> renderSingleLine(context, minecraft, style, fontId, x, y,
-                    hudLabel(module), "Winzer 09:40 (+2)", prefixedText(module, "Winzer 09:40 (+2)"),
-                    BetterUCConfig.INSTANCE.jobTimerHudColor);
+            case JOB_TIMER -> {
+                int gap = modernStyle ? 20 : 11;
+                renderSingleLine(context, minecraft, style, fontId, x, y,
+                        hudLabel(module), "Getränkelieferant 05:41",
+                        prefixedText(module, "Getränkelieferant 05:41"),
+                        BetterUCConfig.INSTANCE.jobTimerHudColor);
+                renderSingleLine(context, minecraft, style, fontId, x, y + gap,
+                        "", "Winzer 09:40", "Winzer 09:40",
+                        BetterUCConfig.INSTANCE.jobTimerHudColor);
+            }
             case PLANT_TIMER -> renderTwoLine(context, minecraft, style, fontId, x, y, hudLabel(module), prefixedText(module, "Plantage Pulver 7/10"), "Reif: 1:30:00 | Wasser: 20:00", 0xFF6CF27D, 0xFFFFD866);
             }
         });

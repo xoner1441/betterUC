@@ -21,6 +21,7 @@ import com.betteruc.client.ClientScheduler;
 import com.betteruc.client.CommunicationDeviceTracker;
 import com.betteruc.client.DutyRejoinClient;
 import com.betteruc.client.KraeuterLicenseWarningClient;
+import com.betteruc.client.JobTimerClient;
 import com.betteruc.client.PingRelayClient;
 import com.betteruc.client.RemoteFeatureFlagsClient;
 import com.betteruc.client.ReinforcementAcceptClient;
@@ -232,7 +233,9 @@ public class ChatBlacklistMixin {
         handlePaydayReset(raw);
         if (origin != ChatMessageOrigin.PLAYER) {
             MineIncomeHud.updateFromChatLine(raw);
-            SalaryIncomeHud.updateFromChatLine(raw);
+            if (SalaryIncomeHud.updateFromChatLine(raw)) {
+                JobTimerClient.onJobSalaryReceived();
+            }
         }
         updateMoney(raw, origin);
 
