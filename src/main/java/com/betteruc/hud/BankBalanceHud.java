@@ -42,6 +42,9 @@ public class BankBalanceHud {
     private static final Pattern BANK_TRANSFER_RECEIVED_PATTERN = Pattern.compile(
             "(?i)^(" + PLAYER_TOKEN + ")\\s+hat\\s+dir\\s+([0-9][0-9\\.]*)\\s*\\$\\s+(?:\\u00FCberwiesen|ueberwiesen)\\s*[.!]?\\s*$"
     );
+    private static final Pattern EQUIP_FACTION_BANK_DEPOSIT_PATTERN = Pattern.compile(
+            "(?i)^\\[\\s*Equip\\s*]\\s*([0-9][0-9\\.]*)\\s*\\$\\s+in\\s+die\\s+F-?Bank\\s+eingezahlt\\s*[.!]?\\s*$"
+    );
     private static final Pattern BATTLE_PASS_REWARD_PATTERN = Pattern.compile(
             "(?i)^\\[battle\\s+pass]\\s*\\+\\s*([0-9][0-9\\.]*)\\s*\\$\\s+erhalten\\s*[.!]?\\s*$"
     );
@@ -131,6 +134,15 @@ public class BankBalanceHud {
             if (parsed != null) {
                 addBalanceAndPersist(parsed, "bank-transfer-received:" + normalizeRawKey(raw));
             }
+            return true;
+        }
+
+        Integer equipFactionBankDeposit = parseEquipFactionBankDeposit(raw);
+        if (equipFactionBankDeposit != null) {
+            subtractBalanceAndPersist(
+                    equipFactionBankDeposit,
+                    "equip-fbank-deposit:" + normalizeRawKey(raw)
+            );
             return true;
         }
 
@@ -311,6 +323,15 @@ public class BankBalanceHud {
         if (raw == null || raw.isBlank()) return null;
         String cleaned = stripChatPrefix(stripFormatting(raw));
         Matcher matcher = DAILY_REWARD_MONEY_PATTERN.matcher(cleaned);
+        if (!matcher.matches()) return null;
+        Integer amount = parseMoneyValue(matcher.group(1));
+        return amount == null || amount <= 0 ? null : amount;
+    }
+
+    static Integer parseEquipFactionBankDeposit(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String cleaned = stripChatPrefix(stripFormatting(raw));
+        Matcher matcher = EQUIP_FACTION_BANK_DEPOSIT_PATTERN.matcher(cleaned);
         if (!matcher.matches()) return null;
         Integer amount = parseMoneyValue(matcher.group(1));
         return amount == null || amount <= 0 ? null : amount;

@@ -52,6 +52,23 @@ class BankBalanceHudTest {
         assertEquals(12_500, BankBalanceHud.parseDailyRewardMoney(" • + 12.500$"));
         assertNull(BankBalanceHud.parseDailyRewardMoney(" • + 50 XP"));
     }
+
+    @Test
+    void equipFactionBankDepositReadsOnlyTheServerMessage() {
+        assertEquals(12_500, BankBalanceHud.parseEquipFactionBankDeposit(
+                "21:10:04 [Equip] 12.500$ in die F-Bank eingezahlt."
+        ));
+        assertEquals(450, BankBalanceHud.parseEquipFactionBankDeposit(
+                "[equip] 450$ in die FBank eingezahlt"
+        ));
+        assertNull(BankBalanceHud.parseEquipFactionBankDeposit(
+                "21:10:04 FBI pixel412: [Equip] 12.500$ in die F-Bank eingezahlt."
+        ));
+        assertNull(BankBalanceHud.parseEquipFactionBankDeposit(
+                "[F-Bank] 12.500$ eingezahlt."
+        ));
+    }
+
     @Test
     void fullAtmMessageIsRecognizedWithTimestampAndAction() {
         assertTrue(BankBalanceHud.matchesFullAtmMessage(

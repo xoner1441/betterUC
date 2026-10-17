@@ -89,7 +89,7 @@ public class BetterUCConfig {
             "zoomEnabled", "zoomToggleMode", "zoomSmoothEnabled", "zoomScrollAdjustEnabled",
             "zoomRememberLevel", "zoomSensitivityScalingEnabled", "zoomFactor", "zoomAnimationDurationMs",
             "handToggleEnabled", "handToggleNotificationEnabled", "handToggleRememberLastHand",
-            "weaponEquipAnimationEnabled", "weaponEquipAnimationMode",
+            "weaponEquipAnimationEnabled", "weaponEquipAnimationMode", "customSelfModelEnabled", "customSelfModelId",
             "bloodEffectMode", "bloodEffectMotif", "bloodEffectIntensityPercent", "bloodEffectSizePercent",
             "bloodEffectLifetimePercent", "bloodEffectParticlePercent", "bloodEffectColor",
             "chatTimestampsEnabled", "chatCustomizationEnabled", "chatActionTextStyle", "chatHeadlineSeparatorStyle",
@@ -579,6 +579,8 @@ public class BetterUCConfig {
     public boolean handToggleRememberLastHand = true;
     public boolean weaponEquipAnimationEnabled = true;
     public String weaponEquipAnimationMode = "fast";
+    public boolean customSelfModelEnabled = false;
+    public String customSelfModelId = "tung_tung_sahur";
     public String bloodEffectMode = "subtle";
     public String bloodEffectMotif = "blood";
     public int bloodEffectIntensityPercent = 100;
