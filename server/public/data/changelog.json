@@ -61,9 +61,12 @@
       ],
       "changes": [
         "Automatischen Job-Timer mit HUD und /jobtimer-Übersicht ergänzt.",
+        "Job-Timer an das neue JOBCENTER-Menü und die neue Nebenjobs-Auswahl angepasst.",
         "Verdeckte Job-Abfragen auf Beitritt und erfolgreichen Jobabschluss begrenzt.",
         "Mehrere aktive Job-Cooldowns werden vollständig untereinander angezeigt.",
         "Abgelaufene Job-Timer werden automatisch aus dem HUD entfernt.",
+        "Equip-Einzahlungen in die F-Bank werden direkt vom Bank-HUD abgezogen.",
+        "Clientseitige Eigenmodelle mit Dropdown-Auswahl für Tung Tung Tung Sahur und 67 ergänzt.",
         "training.unicacity.eu zur Liste der unterstützten Server hinzugefügt."
       ]
     },

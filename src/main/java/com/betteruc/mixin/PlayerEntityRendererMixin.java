@@ -1,6 +1,7 @@
 package com.betteruc.mixin;
 
 import com.betteruc.client.PingRelayClient;
+import com.betteruc.client.model.CustomSelfModelRenderer;
 import com.betteruc.config.BetterUCConfig;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.fabricmc.loader.api.FabricLoader;
@@ -15,17 +16,36 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(AvatarRenderer.class)
-public class PlayerEntityRendererMixin {
+public abstract class PlayerEntityRendererMixin {
     private static final double BETTERUC_LABEL_MAX_DISTANCE_SQ = 48.0D * 48.0D;
     private static final float BETTERUC_LABEL_SCALE = 0.65F;
     private static final double BETTERUC_LABEL_WORLD_OFFSET = 0.23D;
     private static final double UNIQUE_CLIENT_STACK_OFFSET = 0.28D;
     private static final boolean UNIQUE_CLIENT_LOADED = detectUniqueClient();
+
+    @Shadow
+    protected abstract void setupRotations(AvatarRenderState state, PoseStack matrices, float bodyRot, float scale);
+
+    @Inject(method = "getTextureLocation(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)Lnet/minecraft/resources/Identifier;", at = @At("HEAD"), cancellable = true)
+    private void betteruc$hideVanillaSelfModel(AvatarRenderState state, CallbackInfoReturnable<net.minecraft.resources.Identifier> cir) {
+        if (CustomSelfModelRenderer.shouldReplace(state)) {
+            cir.setReturnValue(CustomSelfModelRenderer.TRANSPARENT_TEXTURE);
+        }
+    }
+
+    @Inject(method = "shouldRenderLayers(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)Z", at = @At("HEAD"), cancellable = true)
+    private void betteruc$hideVanillaSelfLayers(AvatarRenderState state, CallbackInfoReturnable<Boolean> cir) {
+        if (CustomSelfModelRenderer.shouldReplace(state)) {
+            cir.setReturnValue(false);
+        }
+    }
 
     @Inject(
             method = "submitNameDisplay(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
@@ -38,6 +58,15 @@ public class PlayerEntityRendererMixin {
             CameraRenderState cameraState,
             CallbackInfo ci
     ) {
+        if (CustomSelfModelRenderer.shouldReplace(state)) {
+            matrices.pushPose();
+            float scale = state.scale;
+            matrices.scale(scale, scale, scale);
+            setupRotations(state, matrices, state.bodyRot, scale);
+            CustomSelfModelRenderer.submit(state, matrices, queue);
+            matrices.popPose();
+        }
+
         if (!BetterUCConfig.INSTANCE.showRoleHolograms) return;
         if (state == null || state.nameTagAttachment == null) return;
         if (state.distanceToCameraSq > BETTERUC_LABEL_MAX_DISTANCE_SQ) return;

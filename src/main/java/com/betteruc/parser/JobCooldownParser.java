@@ -7,13 +7,8 @@ import java.util.regex.Pattern;
 
 /** Parses the cooldown lore used by the server's Job-Center. */
 public final class JobCooldownParser {
-    private static final Pattern COOLDOWN_PATTERN = Pattern.compile(
-            "(?i)^noch\\s+"
-                    + "(?:(\\d+)\\s+(?:tag|tage|tagen)\\s+)?"
-                    + "(?:(\\d+)\\s+(?:stunde|stunden)\\s+)?"
-                    + "(?:(\\d+)\\s+(?:minute|minuten)\\s+)?"
-                    + "(?:(\\d+)\\s+(?:sekunde|sekunden)\\s+)?"
-                    + "wartezeit[.!]?$"
+    private static final Pattern DURATION_PART_PATTERN = Pattern.compile(
+            "(?i)(\\d+)\\s*(tag|tage|tagen|stunde|stunden|std|minute|minuten|min|sekunde|sekunden|sek)\\b"
     );
 
     private JobCooldownParser() {
@@ -22,15 +17,21 @@ public final class JobCooldownParser {
     /** @return remaining seconds, {@code 0} when ready, or {@code null} for unrelated lore. */
     public static Long parseSeconds(String raw) {
         String line = normalize(raw);
-        if (line.equals("keine wartezeit") || line.equals("keine wartezeit.")) return 0L;
+        if (line.equals("keine wartezeit") || line.equals("keine wartezeit.")
+                || line.equals("bereit") || line.equals("bereit.")) return 0L;
+        if (!line.contains("wartezeit") && !line.contains("cooldown")
+                && !line.startsWith("noch ") && !line.contains("verfugbar in")) return null;
 
-        Matcher matcher = COOLDOWN_PATTERN.matcher(line);
-        if (!matcher.matches()) return null;
-        long days = number(matcher.group(1));
-        long hours = number(matcher.group(2));
-        long minutes = number(matcher.group(3));
-        long seconds = number(matcher.group(4));
-        long total = days * 86_400L + hours * 3_600L + minutes * 60L + seconds;
+        Matcher matcher = DURATION_PART_PATTERN.matcher(line);
+        long total = 0L;
+        while (matcher.find()) {
+            long value = number(matcher.group(1));
+            String unit = matcher.group(2).toLowerCase(Locale.ROOT);
+            long multiplier = unit.startsWith("tag") ? 86_400L
+                    : unit.startsWith("st") ? 3_600L
+                    : unit.startsWith("min") ? 60L : 1L;
+            total = saturatingAdd(total, saturatingMultiply(value, multiplier));
+        }
         return total > 0L ? total : null;
     }
 
@@ -41,6 +42,15 @@ public final class JobCooldownParser {
         } catch (NumberFormatException ignored) {
             return 0L;
         }
+    }
+
+    private static long saturatingMultiply(long left, long right) {
+        if (left <= 0L || right <= 0L) return 0L;
+        return left > Long.MAX_VALUE / right ? Long.MAX_VALUE : left * right;
+    }
+
+    private static long saturatingAdd(long left, long right) {
+        return left > Long.MAX_VALUE - right ? Long.MAX_VALUE : left + right;
     }
 
     private static String normalize(String raw) {

@@ -21,6 +21,7 @@ import com.betteruc.client.ZoomController;
 import com.betteruc.client.clips.ClipCaptureClient;
 import com.betteruc.client.clips.ClipSettings;
 import com.betteruc.client.clips.ClipAudioOptions;
+import com.betteruc.client.model.CustomSelfModelOption;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import com.betteruc.config.BetterUCConfig;
 import com.betteruc.hud.BankBalanceHud;
@@ -92,6 +93,7 @@ public class BetterUCScreen extends Screen {
     private String clipDurationDraft;
     private String clipAudioOffsetDraft;
     private boolean hudProfileDropdownOpen = false;
+    private boolean customSelfModelDropdownOpen = false;
     private boolean hudProfileDeleteConfirmation = false;
     private Button bugReportButton;
 
@@ -454,6 +456,47 @@ public class BetterUCScreen extends Screen {
                                 refreshWidgets();
                             });
                 }
+            }
+            case CUSTOM_SELF_MODEL -> {
+                y = addSectionHeader(x, y, controlW, "Eigenes Spielermodell", 0xFFD97706);
+                y = addToggle(x, y, controlW, "Eigenes Modell",
+                        BetterUCConfig.INSTANCE.customSelfModelEnabled,
+                        () -> BetterUCConfig.INSTANCE.customSelfModelEnabled =
+                                !BetterUCConfig.INSTANCE.customSelfModelEnabled);
+                CustomSelfModelOption selectedModel = CustomSelfModelOption.fromId(
+                        BetterUCConfig.INSTANCE.customSelfModelId
+                );
+                y = addButton(
+                        x,
+                        y,
+                        controlW,
+                        "Modell: " + selectedModel.label() + (customSelfModelDropdownOpen ? " ^" : " v"),
+                        b -> {
+                            customSelfModelDropdownOpen = !customSelfModelDropdownOpen;
+                            refreshWidgets();
+                        }
+                );
+                if (customSelfModelDropdownOpen) {
+                    for (CustomSelfModelOption option : CustomSelfModelOption.values()) {
+                        boolean selected = option == selectedModel;
+                        y = addButton(
+                                x + 8,
+                                y,
+                                Math.max(40, controlW - 8),
+                                (selected ? "[Aktiv] " : "") + option.label(),
+                                b -> {
+                                    BetterUCConfig.INSTANCE.customSelfModelId = option.id();
+                                    customSelfModelDropdownOpen = false;
+                                    saveConfig();
+                                    refreshWidgets();
+                                }
+                        );
+                    }
+                }
+                y = addInfo(x, y, controlW, "Sichtbarkeit", "Nur dein eigener Client");
+                y = addInfo(x, y, controlW, "Ansicht", "Third Person (F5)");
+                y = addInfo(x, y, controlW, "First Person", "Vanilla bleibt unverändert");
+                y = addInfo(x, y, controlW, "Animation", "Statisch – Quelldatei hat kein Skelett");
             }
             case BLOOD_EFFECT -> {
                 y = addSectionHeader(x, y, controlW, "Trefferdarstellung", 0xFFDC2626);
@@ -2812,6 +2855,7 @@ public class BetterUCScreen extends Screen {
             case ZOOM -> BetterUCConfig.INSTANCE.zoomEnabled;
             case HAND_TOGGLE -> BetterUCConfig.INSTANCE.handToggleEnabled;
             case WEAPON_ANIMATION -> BetterUCConfig.INSTANCE.weaponEquipAnimationEnabled;
+            case CUSTOM_SELF_MODEL -> BetterUCConfig.INSTANCE.customSelfModelEnabled;
             case BLOOD_EFFECT -> BloodEffectClient.mode() != BloodEffectClient.Mode.OFF;
             case CLOUD_SYNC -> BetterUCConfig.INSTANCE.cloudSettingsEnabled;
             case SCREENSHOTS -> BetterUCConfig.INSTANCE.screenshotActionsEnabled;
@@ -3469,6 +3513,7 @@ public class BetterUCScreen extends Screen {
         ZOOM(Category.GAMEPLAY, "Zoom", "Weicher, frei einstellbarer Kamera-Zoom", 0xFF60A5FA, true),
         HAND_TOGGLE(Category.GAMEPLAY, "Hand-Toggle", "Haupthand per Hotkey wechseln", 0xFFA78BFA, true),
         WEAPON_ANIMATION(Category.GAMEPLAY, "Waffen-Animation", "Schnelleres Ziehen erkannter Waffen", 0xFFFFAA33, true),
+        CUSTOM_SELF_MODEL(Category.GAMEPLAY, "Eigenes Modell", "Lokale Charaktermodelle nur für dich", 0xFFD97706, true),
         BLOOD_EFFECT(Category.GAMEPLAY, "Treffer-Effekt", "Animierter Blut-Burst auf UnicaCity", 0xFFDC2626, true),
         AUTO_STATS(Category.GAMEPLAY, "Auto Stats", "Automatisches /stats", 0xFF34D399, true),
         AUTOMATIONS(Category.GAMEPLAY, "Automationen", "Job-Helfer einzeln steuern", 0xFFFBBF24, false),

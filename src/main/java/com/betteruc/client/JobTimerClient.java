@@ -25,10 +25,12 @@ import net.minecraft.world.item.component.ItemLore;
 public final class JobTimerClient {
     private static final long JOIN_DELAY_MS = 15_000L;
     private static final long STEP_TIMEOUT_MS = 8_000L;
-    private static final long CLICK_DELAY_MS = 180L;
+    private static final long LIST_TIMEOUT_MS = 2_000L;
+    private static final long CLICK_DELAY_MS = 75L;
     private static final long JOB_COMPLETION_REFRESH_DELAY_MS = 1_500L;
     private static final long MANUAL_MENU_GRACE_MS = 15_000L;
-    private static final String JOB_MENU_TITLE = "job center";
+    private static final int SIDE_JOBS_FALLBACK_SLOT = 13;
+    private static final String JOB_MENU_TITLE = "jobcenter";
     private static final String SIDE_JOBS_NAME = "nebenjob";
 
     private enum Phase { IDLE, WAITING_FOR_ROOT, WAITING_FOR_LIST }
@@ -40,6 +42,7 @@ public final class JobTimerClient {
     private static long nextActionAtMs;
     private static long manualMenuUntilMs;
     private static boolean refreshRequested;
+    private static boolean sendingAutomaticJobCommand;
     private static long lastSuccessfulSyncMs;
 
     private JobTimerClient() {
@@ -69,6 +72,7 @@ public final class JobTimerClient {
     public static void handleOutgoingCommand(String command) {
         String clean = command == null ? "" : command.strip().toLowerCase(Locale.ROOT);
         if (!clean.equals("job") && !clean.startsWith("job ")) return;
+        if (sendingAutomaticJobCommand) return;
         manualMenuUntilMs = System.currentTimeMillis() + MANUAL_MENU_GRACE_MS;
         if (phase != Phase.IDLE) {
             phase = Phase.IDLE;
@@ -98,7 +102,14 @@ public final class JobTimerClient {
         if (!refreshRequested && nextRefreshAtMs <= 0L) return;
         if (ClientCompat.hasScreen(client) || now < manualMenuUntilMs) return;
         if (nextRefreshAtMs > 0L && now < nextRefreshAtMs) return;
-        if (!ServerCommandUtil.sendAutomatic(client, "job")) return;
+        boolean commandSent;
+        sendingAutomaticJobCommand = true;
+        try {
+            commandSent = ServerCommandUtil.sendAutomatic(client, "job");
+        } finally {
+            sendingAutomaticJobCommand = false;
+        }
+        if (!commandSent) return;
 
         phase = Phase.WAITING_FOR_ROOT;
         refreshRequested = false;
@@ -192,13 +203,13 @@ public final class JobTimerClient {
     }
 
     public static boolean shouldSuppress(Screen screen) {
-        return phase != Phase.IDLE && isJobMenu(screen);
+        return phase != Phase.IDLE && menu(screen) != null;
     }
 
     private static void processOpenMenu(Minecraft client, long now) {
         Screen screen = ClientCompat.currentScreen(client);
         AbstractContainerMenu menu = menu(screen);
-        if (menu == null || !isJobMenu(screen) || now < nextActionAtMs) return;
+        if (menu == null || now < nextActionAtMs) return;
 
         if (phase == Phase.WAITING_FOR_ROOT) {
             Slot sideJobs = findSideJobsSlot(client, menu);
@@ -207,7 +218,7 @@ public final class JobTimerClient {
                     menu.containerId, sideJobs.index, 0, ContainerInput.PICKUP, client.player
             );
             phase = Phase.WAITING_FOR_LIST;
-            deadlineMs = now + STEP_TIMEOUT_MS;
+            deadlineMs = now + LIST_TIMEOUT_MS;
             nextActionAtMs = now + CLICK_DELAY_MS;
             return;
         }
@@ -247,12 +258,26 @@ public final class JobTimerClient {
     }
 
     private static Slot findSideJobsSlot(Minecraft client, AbstractContainerMenu menu) {
+        Slot fallback = null;
         for (Slot slot : menu.slots) {
             if (slot == null || !slot.hasItem()) continue;
             if (client.player != null && slot.container == client.player.getInventory()) continue;
-            if (key(slot.getItem().getHoverName().getString()).equals(SIDE_JOBS_NAME)) return slot;
+            ItemStack stack = slot.getItem();
+            if (isSideJobsItem(stack)) return slot;
+            if (slot.index == SIDE_JOBS_FALLBACK_SLOT) fallback = slot;
         }
-        return null;
+        return fallback;
+    }
+
+    private static boolean isSideJobsItem(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        if (isSideJobsLabel(stack.getHoverName().getString())) return true;
+        ItemLore lore = stack.get(DataComponents.LORE);
+        if (lore == null) return false;
+        for (Component line : lore.lines()) {
+            if (isSideJobsDescription(line.getString())) return true;
+        }
+        return false;
     }
 
     private static void abort(Minecraft client) {
@@ -273,7 +298,25 @@ public final class JobTimerClient {
     }
 
     private static boolean isJobMenu(Screen screen) {
-        return screen != null && key(screen.getTitle().getString()).contains(JOB_MENU_TITLE);
+        return screen != null && isJobMenuTitle(screen.getTitle().getString());
+    }
+
+    static boolean isJobMenuTitle(String title) {
+        return compactKey(title).contains(JOB_MENU_TITLE);
+    }
+
+    static boolean isSideJobsLabel(String label) {
+        String normalized = compactKey(label);
+        return normalized.equals(SIDE_JOBS_NAME) || normalized.equals(SIDE_JOBS_NAME + "s");
+    }
+
+    static boolean isSideJobsDescription(String line) {
+        String normalized = compactKey(line);
+        return normalized.contains("kurzerundenmitwartezeitdazwischen");
+    }
+
+    private static String compactKey(String raw) {
+        return key(raw).replace(" ", "");
     }
 
     private static String key(String raw) {
