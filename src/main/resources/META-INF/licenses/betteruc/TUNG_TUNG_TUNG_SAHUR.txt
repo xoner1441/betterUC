@@ -1,0 +1,13 @@
+Tung Tung Tung Sahur 3D model
+
+Creator: Eks.Art
+Creator profile: https://sketchfab.com/Eks.Art
+Source: https://sketchfab.com/3d-models/tung-tung-tung-sahur-91ddd9079bd84019ba4a12e01d93a0d6
+Supplied GLB SHA-256: 9992a307f53c18ee91f4bd45d5ed1eeeff99d7a3a5285c8e2e99a72723e10382
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+License text: https://creativecommons.org/licenses/by/4.0/
+
+Modifications by betterUC:
+- Converted the supplied GLB mesh to betterUC's compact runtime mesh format.
+- Applied the source node transforms, normalized the height to 1.8 blocks and centered the model.
+- The original embedded base-color texture is included unchanged.

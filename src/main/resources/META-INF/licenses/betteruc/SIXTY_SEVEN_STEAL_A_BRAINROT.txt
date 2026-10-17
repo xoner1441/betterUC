@@ -1,0 +1,13 @@
+67 / steal a brainrot 3D model
+
+Creator: mimomo
+Creator profile: https://sketchfab.com/mimomoabdulhamidov
+Source: https://sketchfab.com/3d-models/67-steal-a-brainrot-a7497f5f945646968e6e0584ad29f27b
+Supplied GLB SHA-256: ec108d874521c260cef31aae25a6c393fb2571dc6a639b52f1722acbc61ee494
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+License text: https://creativecommons.org/licenses/by/4.0/
+
+Modifications by betterUC:
+- Combined the five supplied meshes into betterUC's compact runtime mesh format.
+- Preserved the supplied base-color material values as per-vertex colors.
+- Applied the source node transforms, normalized the height to 1.8 blocks and centered the model.
