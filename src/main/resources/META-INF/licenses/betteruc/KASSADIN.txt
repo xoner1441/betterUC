@@ -1,0 +1,16 @@
+Kassadin (League of Legends character) 3D model
+
+Creator: SirDJCat
+Creator profile: https://sketchfab.com/SirDJCat
+Source: https://sketchfab.com/3d-models/kassadin-league-of-legends-character-ac593ecc81754eb0b122b62bb403d82d
+Supplied GLB SHA-256: 74504dcca5599a6dbc34180c290adf1b25c6643753fbeb8965a2d97c383b539f
+License: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+License text: https://creativecommons.org/licenses/by-nc/4.0/
+
+Modifications by betterUC:
+- Converted the supplied skinned mesh and base-color image to betterUC's static runtime format.
+- Normalized and centered the bind pose to a height of 1.8 blocks.
+- The source model has no display pedestal; only the character mesh is included.
+- The supplied skeleton and 23 animations are not played by the current static renderer.
+
+This asset may not be used commercially.

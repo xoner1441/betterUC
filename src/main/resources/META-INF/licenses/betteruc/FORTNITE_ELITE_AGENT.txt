@@ -1,0 +1,14 @@
+Fortnite Elite Agent 3D Model
+
+Creator: SketchSupreme
+Creator profile: https://sketchfab.com/sketchsupreme
+Source: https://sketchfab.com/3d-models/fortnite-elite-agent-3d-model-fa52d6676fa243b9bed620162765a0f2
+Supplied GLB SHA-256: 81d337cd665895a03652aee2053e9df127a8035c8c02633853081b90202375f4
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+License text: https://creativecommons.org/licenses/by/4.0/
+
+Modifications by betterUC:
+- Combined the four supplied skinned meshes into betterUC's static runtime mesh format.
+- Combined the four supplied base-color images into a texture atlas.
+- Normalized and centered the bind pose to a height of 1.8 blocks.
+- The supplied skeleton and animation are not played by the current static renderer.

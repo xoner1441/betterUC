@@ -1,0 +1,13 @@
+Verity Rigged By GranDussek 3D model
+
+Creator: Whopper Ports Official
+Creator profile: https://sketchfab.com/dntube.whopperports.wpmodels
+Source: https://sketchfab.com/3d-models/verity-rigged-by-grandussek-db8987ccdb454ad883a2e17533fb2675
+Supplied GLB SHA-256: 81f9236a53bf07483f3cb1335d0f4c97cf8110c9d5f7e8b15266cec0699631b5
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+License text: https://creativecommons.org/licenses/by/4.0/
+
+Modifications by betterUC:
+- Converted the supplied skinned mesh and base-color image to betterUC's static runtime format.
+- Normalized and centered the bind pose to a height of 1.8 blocks.
+- The supplied skeleton and animation are not played by the current static renderer.

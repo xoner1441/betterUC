@@ -1,0 +1,13 @@
+PvZ BFN - Default Foot Soldier 3D model
+
+Creator: eduardosouzabarbosadasilva
+Creator profile: https://sketchfab.com/eduardosouzabarbosadasilva
+Source: https://sketchfab.com/3d-models/pvz-bfn-default-foot-soldier-95ee42d346154e62a7132ca6adbf6846
+Supplied GLB SHA-256: febbbf5c3461211a120995b1b535e6c8a0c428683756a4baea501f737789f9cf
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+License text: https://creativecommons.org/licenses/by/4.0/
+
+Modifications by betterUC:
+- Combined the seven supplied mesh parts and five base-color materials into betterUC's static runtime format.
+- Normalized and centered the bind pose to a height of 1.8 blocks.
+- The supplied skeleton is not animated by the current static renderer.

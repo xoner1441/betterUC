@@ -1,0 +1,13 @@
+Plants Vs. Zombies Garden Warfare 2 Sunflower 3D model
+
+Creator: amuy123com123
+Creator profile: https://sketchfab.com/amuy123com123
+Source: https://sketchfab.com/3d-models/plants-vs-zombies-garden-warfare-2-sunflower-6e16fee69c5b45958997504765fd8cf9
+Supplied GLB SHA-256: b4fee9aa8e196e63b2dc0b614fc96cfe5b3acd03040da003c41dcc2710060688
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+License text: https://creativecommons.org/licenses/by/4.0/
+
+Modifications by betterUC:
+- Combined the five supplied mesh parts and four base-color images into betterUC's static runtime format.
+- Normalized and centered the bind pose to a height of 1.8 blocks.
+- The supplied skeleton is not animated by the current static renderer.

@@ -16,6 +16,41 @@ public enum CustomSelfModelOption {
             "/assets/betteruc/models/entity/sixty_seven.bumesh",
             "textures/entity/white.png",
             180.0F
+    ),
+    FORTNITE_ELITE_AGENT(
+            "fortnite_elite_agent",
+            "Fortnite Elite Agent",
+            "/assets/betteruc/models/entity/fortnite_elite_agent.bumesh",
+            "textures/entity/fortnite_elite_agent.png",
+            180.0F
+    ),
+    VERITY(
+            "verity",
+            "Verity",
+            "/assets/betteruc/models/entity/verity.bumesh",
+            "textures/entity/verity.png",
+            0.0F
+    ),
+    KASSADIN(
+            "kassadin",
+            "Kassadin",
+            "/assets/betteruc/models/entity/kassadin.bumesh",
+            "textures/entity/kassadin.png",
+            180.0F
+    ),
+    PVZ_SUNFLOWER(
+            "pvz_sunflower",
+            "PvZ: Sonnenblume",
+            "/assets/betteruc/models/entity/pvz_sunflower.bumesh",
+            "textures/entity/pvz_sunflower.png",
+            180.0F
+    ),
+    PVZ_FOOT_SOLDIER(
+            "pvz_foot_soldier",
+            "PvZ: Foot Soldier",
+            "/assets/betteruc/models/entity/pvz_foot_soldier.bumesh",
+            "textures/entity/pvz_foot_soldier.png",
+            180.0F
     );
 
     private final String id;
