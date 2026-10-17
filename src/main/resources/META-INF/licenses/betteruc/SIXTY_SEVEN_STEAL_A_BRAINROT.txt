@@ -11,3 +11,4 @@ Modifications by betterUC:
 - Combined the five supplied meshes into betterUC's compact runtime mesh format.
 - Preserved the supplied base-color material values as per-vertex colors.
 - Applied the source node transforms, normalized the height to 1.8 blocks and centered the model.
+- Rotated the disconnected arm components downward into a relaxed static pose.

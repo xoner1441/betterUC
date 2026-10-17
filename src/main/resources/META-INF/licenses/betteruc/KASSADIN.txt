@@ -9,8 +9,9 @@ License text: https://creativecommons.org/licenses/by-nc/4.0/
 
 Modifications by betterUC:
 - Converted the supplied skinned mesh and base-color image to betterUC's static runtime format.
-- Normalized and centered the bind pose to a height of 1.8 blocks.
+- Baked frame 0.248 s of the supplied kassadin_idle2 animation into a relaxed static pose.
+- Normalized and centered the resulting pose to a height of 1.8 blocks.
 - The source model has no display pedestal; only the character mesh is included.
-- The supplied skeleton and 23 animations are not played by the current static renderer.
+- The remaining supplied animations are not played by the current static renderer.
 
 This asset may not be used commercially.
